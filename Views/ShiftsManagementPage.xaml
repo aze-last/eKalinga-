@@ -1,0 +1,15 @@
+﻿<UserControl x:Class="AttendanceShiftingManagement.Views.ShiftsManagementPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes">
+    <Grid>
+        <StackPanel>
+            <DatePicker SelectedDate="{Binding WeekStart}" />
+            <ComboBox ItemsSource="{Binding Positions}" />
+            <ComboBox ItemsSource="{Binding Crew}" />
+            <Button Content="CREATE SHIFT" Command="{Binding CreateShiftCommand}" />
+        </StackPanel>
+
+        <DataGrid ItemsSource="{Binding WeeklyGrid}" />
+    </Grid>
+</UserControl>

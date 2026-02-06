@@ -1,0 +1,59 @@
+<Window x:Class="AttendanceShiftingManagement.Views.ManagerMainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        mc:Ignorable="d" 
+        d:DesignHeight="800" d:DesignWidth="1100"
+        Background="{DynamicResource MaterialDesignPaper}"
+        FontFamily="{materialDesign:MaterialDesignFont}"
+        WindowState="Maximized"
+        Title="Attendance Management System - Manager">
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="220"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Sidebar -->
+        <Border Grid.Column="0" Background="{DynamicResource PrimaryHueMidBrush}" materialDesign:ElevationAssist.Elevation="Dp4">
+            <Grid Background="#FF0916E5">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Brand/Logo -->
+                <StackPanel Grid.Row="0" Margin="16,32,16,32">
+                    <materialDesign:PackIcon Kind="ClockTimeEight" Width="48" Height="48" Foreground="White" HorizontalAlignment="Center"/>
+                    <TextBlock Text="MANAGER" Foreground="White" HorizontalAlignment="Center" FontWeight="Bold" Margin="0,8,0,0"/>
+                    <TextBlock Text="PORTAL" Foreground="White" HorizontalAlignment="Center" FontSize="10" Opacity="0.7"/>
+                </StackPanel>
+
+                <!-- Nav Buttons -->
+                <StackPanel Grid.Row="1">
+                    <Button Style="{StaticResource MaterialDesignFlatButton}" Foreground="White" Height="50" Content="Dashboard" FontSize="18"/>
+                    <Button Style="{StaticResource MaterialDesignFlatButton}" Foreground="White" Height="50" Content="Shift Planning" FontSize="18"/>
+                    <Button Style="{StaticResource MaterialDesignFlatButton}" Foreground="White" Height="50" Content="Attendance" FontSize="18"/>
+                </StackPanel>
+
+                <!-- Logout -->
+                <Button Grid.Row="2" Style="{StaticResource MaterialDesignFlatButton}" 
+                        Foreground="White" Height="50" Margin="0,0,0,16" Click="Logout_Click">
+                    <StackPanel Orientation="Horizontal" Width="180">
+                        <materialDesign:PackIcon Kind="Logout" Margin="0,0,16,0"/>
+                        <TextBlock Text="Logout"/>
+                    </StackPanel>
+                </Button>
+            </Grid>
+        </Border>
+
+        <!-- Main Content -->
+        <Grid Grid.Column="1">
+            <TextBlock Text="Manager Portal Content Area" HorizontalAlignment="Center" VerticalAlignment="Center" Style="{StaticResource MaterialDesignHeadline4TextBlock}" Opacity="0.3"/>
+        </Grid>
+    </Grid>
+</Window>
