@@ -1,0 +1,10 @@
+﻿<UserControl x:Class="AttendanceShiftingManagement.Views.CrewDashboardPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes">
+    <StackPanel>
+        <materialDesign:Card Content="{Binding StatusText}" />
+        <Button Content="TIME IN" Command="{Binding TimeInCommand}" />
+        <Button Content="TIME OUT" Command="{Binding TimeOutCommand}" />
+    </StackPanel>
+</UserControl>

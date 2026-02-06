@@ -55,10 +55,6 @@
               "target": "Package",
               "version": "[4.0.3, )"
             },
-            "LiveCharts.Wpf": {
-              "target": "Package",
-              "version": "[0.9.7, )"
-            },
             "MaterialDesignColors": {
               "target": "Package",
               "version": "[5.3.0, )"
