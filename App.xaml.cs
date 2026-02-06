@@ -1,5 +1,4 @@
 ﻿using AttendanceShiftingManagement.Data;
-using AttendanceShiftingSystem.Desktop.Data;
 using System.Windows;
 
 namespace AttendanceShiftingManagement

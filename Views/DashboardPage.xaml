@@ -13,17 +13,17 @@
             </Grid.RowDefinitions>
 
             <!-- Header -->
-            <DockPanel Grid.Row="0" Margin="0,0,0,24">
+            <DockPanel Grid.Row="0" Margin="0,0,0,24" Background="#FF101FFF">
                 <StackPanel>
-                    <TextBlock Text="Admin Dashboard" Style="{StaticResource MaterialDesignHeadline4TextBlock}" FontWeight="Bold"/>
-                    <TextBlock Text="McDonald's Branch #1024 - Management Overview" Foreground="{DynamicResource MaterialDesignBodyLight}"/>
+                    <TextBlock Text="Admin Dashboard" Style="{StaticResource MaterialDesignHeadline4TextBlock}" FontWeight="Bold" Foreground="White"/>
+                    <TextBlock Text="McDonald's Branch #1024 - Management Overview" Foreground="{DynamicResource {x:Static SystemColors.WindowBrushKey}}" FontSize="16"/>
                 </StackPanel>
 
                 <StackPanel DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Center">
                     <TextBlock Text="{Binding CurrentDateTime}" 
-                               HorizontalAlignment="Right" Style="{StaticResource MaterialDesignHeadline6TextBlock}"/>
+                               HorizontalAlignment="Right" Background="White"/>
                     <TextBlock Text="{Binding CurrentTime}" 
-                               HorizontalAlignment="Right" FontWeight="Bold" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                               HorizontalAlignment="Right" FontWeight="Bold" Background="White"/>
                 </StackPanel>
             </DockPanel>
 
