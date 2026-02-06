@@ -53,11 +53,16 @@ namespace AttendanceShiftingManagement.ViewModels
 
             if (user != null)
             {
-                // Close login window and open dashboard
-                var mainWindow = new AttendanceShiftingManagement.Views.MainWindow(user);
-                Application.Current.MainWindow = mainWindow;
-                mainWindow.WindowStartupLocation = WindowStartupLocation.CenterScreen;
-                mainWindow.Show();
+                Window dashboardWindow = user.Role switch
+                {
+                    UserRole.Manager => new Views.ManagerMainWindow(user),
+                    UserRole.Crew => new Views.CrewMainWindow(user),
+                    _ => new Views.MainWindow(user)
+                };
+
+                Application.Current.MainWindow = dashboardWindow;
+                dashboardWindow.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+                dashboardWindow.Show();
 
                 // Close login window
                 foreach (Window window in Application.Current.Windows)
