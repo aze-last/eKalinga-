@@ -47,7 +47,20 @@
         </Border>
 
         <Grid Grid.Column="1">
-            <TextBlock Text="Crew Member Portal" HorizontalAlignment="Center" VerticalAlignment="Center" Style="{StaticResource MaterialDesignHeadline4TextBlock}" Opacity="0.3"/>
+            <ContentControl Content="{Binding CurrentView}" />
+            
+            <!-- Success Dialog Overlay -->
+            <Grid x:Name="DialogOverlay" Visibility="Collapsed" Background="#99000000">
+                <materialDesign:Card UniformCornerRadius="20" HorizontalAlignment="Center" VerticalAlignment="Center" Width="400" Padding="32">
+                    <StackPanel HorizontalAlignment="Center">
+                        <materialDesign:PackIcon Kind="CheckCircle" Foreground="#43A047" Width="80" Height="80" HorizontalAlignment="Center"/>
+                        <TextBlock Text="SUCCESS!" FontSize="24" FontWeight="Bold" Margin="0,16,0,8" HorizontalAlignment="Center"/>
+                        <TextBlock Text="Your attendance has been recorded." FontSize="16" Opacity="0.7" TextAlignment="Center" Margin="0,0,0,32"/>
+                        <Button Content="CONTINUE" Width="150" materialDesign:ButtonAssist.CornerRadius="20" 
+                                Command="{Binding CloseDialogCommand}" Click="CloseDialog_Click"/>
+                    </StackPanel>
+                </materialDesign:Card>
+            </Grid>
         </Grid>
     </Grid>
 </Window>

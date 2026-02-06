@@ -1,0 +1,7 @@
+C:\Users\ASUS\source\repos\AttendanceShiftingManagement\AttendanceShiftingManagement\Views\CrewDashboardPage.xaml(30,69): error MC3072: The property 'TextBlockAssist.LetterSpacing' does not exist in XML namespace 'http://materialdesigninxaml.net/winfx/xaml/themes'. Line 30 Position 69. [C:\Users\ASUS\source\repos\AttendanceShiftingManagement\AttendanceShiftingManagement\AttendanceShiftingManagement.csproj]
+
+Build FAILED.
+    0 Warning(s)
+    1 Error(s)
+
+Time Elapsed 00:00:01.57

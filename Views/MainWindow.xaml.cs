@@ -9,23 +9,6 @@ namespace AttendanceShiftingManagement.Views
     {
         public MainWindow(User user)
         {
-            if (user.Role == UserRole.Manager)
-            {
-                var managerWin = new ManagerMainWindow(user);
-                Application.Current.MainWindow = managerWin;
-                managerWin.Show();
-                this.Close();
-                return;
-            }
-            else if (user.Role == UserRole.Crew)
-            {
-                var crewWin = new CrewMainWindow(user);
-                Application.Current.MainWindow = crewWin;
-                crewWin.Show();
-                this.Close();
-                return;
-            }
-
             InitializeComponent();
             this.DataContext = new AdminDashboardViewModel();
         }
