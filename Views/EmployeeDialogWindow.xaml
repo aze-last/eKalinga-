@@ -1,0 +1,78 @@
+﻿<Window x:Class="AttendanceShiftingManagement.Views.EmployeeDialogWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="Employee Form" 
+        Height="600" Width="500"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="NoResize"
+        Background="{DynamicResource MaterialDesignPaper}">
+
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Title -->
+        <TextBlock Text="{Binding DialogTitle}" 
+                   Style="{StaticResource MaterialDesignHeadline5TextBlock}" 
+                   FontWeight="Bold" 
+                   Margin="0,0,0,24"/>
+
+        <!-- Form -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <!-- User Selection (for new employee) or Display (for edit) -->
+                <ComboBox materialDesign:HintAssist.Hint="Select User Account *"
+                          ItemsSource="{Binding AvailableUsers}"
+                          SelectedItem="{Binding SelectedUser}"
+                          DisplayMemberPath="Username"
+                          Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                          Margin="0,0,0,16"
+                          IsEnabled="{Binding IsNewEmployee}"/>
+
+                <TextBox materialDesign:HintAssist.Hint="Full Name *"
+                         Text="{Binding FullName, UpdateSourceTrigger=PropertyChanged}"
+                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                         Margin="0,0,0,16"/>
+
+                <ComboBox materialDesign:HintAssist.Hint="Position *"
+                          ItemsSource="{Binding Positions}"
+                          SelectedItem="{Binding SelectedPosition}"
+                          DisplayMemberPath="Name"
+                          Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                          Margin="0,0,0,16"/>
+
+                <TextBox materialDesign:HintAssist.Hint="Hourly Rate (₱) *"
+                         Text="{Binding HourlyRate, UpdateSourceTrigger=PropertyChanged}"
+                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                         Margin="0,0,0,16"/>
+
+                <DatePicker materialDesign:HintAssist.Hint="Date Hired *"
+                            SelectedDate="{Binding DateHired}"
+                            Style="{StaticResource MaterialDesignOutlinedDatePicker}"
+                            Margin="0,0,0,16"/>
+
+                <ComboBox materialDesign:HintAssist.Hint="Status *"
+                          ItemsSource="{Binding Statuses}"
+                          SelectedItem="{Binding SelectedStatus}"
+                          Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                          Margin="0,0,0,16"/>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Buttons -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+            <Button Content="CANCEL" 
+                    Style="{StaticResource MaterialDesignFlatButton}"
+                    Click="Cancel_Click"
+                    Margin="0,0,8,0"/>
+
+            <Button Content="SAVE" 
+                    Command="{Binding SaveCommand}"
+                    Style="{StaticResource MaterialDesignRaisedButton}"/>
+        </StackPanel>
+    </Grid>
+</Window>

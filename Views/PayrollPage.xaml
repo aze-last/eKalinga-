@@ -1,0 +1,60 @@
+﻿<UserControl x:Class="AttendanceShiftingManagement.Views.PayrollPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             Background="{DynamicResource MaterialDesignPaper}">
+
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <TextBlock Text="Payroll Management"
+                   Style="{StaticResource MaterialDesignHeadline5TextBlock}"
+                   FontWeight="Bold"
+                   Margin="0,0,0,16"/>
+
+        <!-- Cutoff -->
+        <materialDesign:Card Grid.Row="1" Padding="16" Margin="0,0,0,16">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <DatePicker SelectedDate="{Binding StartDate}"
+                            materialDesign:HintAssist.Hint="Start Date"
+                            Style="{StaticResource MaterialDesignOutlinedDatePicker}"
+                            Width="160"/>
+
+                <DatePicker SelectedDate="{Binding EndDate}"
+                            materialDesign:HintAssist.Hint="End Date"
+                            Style="{StaticResource MaterialDesignOutlinedDatePicker}"
+                            Width="160"
+                            Margin="16,0"/>
+
+                <Button Content="GENERATE PAYROLL"
+                        Command="{Binding GeneratePayrollCommand}"
+                        Style="{StaticResource MaterialDesignRaisedButton}"/>
+            </StackPanel>
+        </materialDesign:Card>
+
+        <!-- Payroll Table -->
+        <materialDesign:Card Grid.Row="2" Padding="16">
+            <DataGrid ItemsSource="{Binding PayrollList}"
+                      AutoGenerateColumns="False"
+                      IsReadOnly="True">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Employee"
+                                        Binding="{Binding EmployeeName}" Width="*"/>
+                    <DataGridTextColumn Header="Regular Pay"
+                                        Binding="{Binding RegularPay, StringFormat=₱{0:N2}}"/>
+                    <DataGridTextColumn Header="OT Pay"
+                                        Binding="{Binding OvertimePay, StringFormat=₱{0:N2}}"/>
+                    <DataGridTextColumn Header="Holiday Pay"
+                                        Binding="{Binding HolidayPay, StringFormat=₱{0:N2}}"/>
+                    <DataGridTextColumn Header="Total Pay"
+                                        Binding="{Binding TotalPay, StringFormat=₱{0:N2}}"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </materialDesign:Card>
+    </Grid>
+</UserControl>
