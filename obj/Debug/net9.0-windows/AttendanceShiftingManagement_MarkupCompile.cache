@@ -10,11 +10,11 @@ none
 false
 TRACE;DEBUG;NET;NET9_0;NETCOREAPP;WINDOWS;WINDOWS7_0;NET5_0_OR_GREATER;NET6_0_OR_GREATER;NET7_0_OR_GREATER;NET8_0_OR_GREATER;NET9_0_OR_GREATER;NETCOREAPP3_0_OR_GREATER;NETCOREAPP3_1_OR_GREATER;WINDOWS7_0_OR_GREATER
 C:\Users\ASUS\source\repos\AttendanceShiftingManagement\AttendanceShiftingManagement\App.xaml
-201694643903
+21-1592288825
 22-1380674967
-76-373812499
+82-259523114
 225-1488835264
-Views\CrewDashboardPage.xaml;Views\CrewMainWindow.xaml;Views\DashboardPage.xaml;Views\EmployeeDialogWindow.xaml;Views\EmployeesPage.xaml;Views\HolidayDialogWindow.xaml;Views\HolidaysPage.xaml;Views\LeaveApprovalPage.xaml;Views\LeaveRequestPage.xaml;Views\LoginWindow.xaml;Views\MainWindow.xaml;Views\ManagerDashboardPage.xaml;Views\ManagerMainWindow.xaml;Views\PayrollPage.xaml;Views\PositionsPage.xaml;Views\RejectionReasonDialog.xaml;Views\ShiftsManagementPage.xaml;Views\UserDialogWindow.xaml;Views\UsersPage.xaml;Views\WeeklyCalendarPage.xaml;
+Views\CrewDashboardPage.xaml;Views\CrewMainWindow.xaml;Views\DashboardPage.xaml;Views\EmployeeDialogWindow.xaml;Views\EmployeesPage.xaml;Views\HolidayDialogWindow.xaml;Views\HolidaysPage.xaml;Views\LeaveApprovalPage.xaml;Views\LeaveRequestPage.xaml;Views\LoginWindow.xaml;Views\MainWindow.xaml;Views\ManagerDashboardPage.xaml;Views\ManagerMainWindow.xaml;Views\PayrollPage.xaml;Views\PositionsPage.xaml;Views\ProfileSettingsPage.xaml;Views\RejectionReasonDialog.xaml;Views\ShiftsManagementPage.xaml;Views\UserDialogWindow.xaml;Views\UsersPage.xaml;Views\WeeklyCalendarPage.xaml;
 
 False
 
