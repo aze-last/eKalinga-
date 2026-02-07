@@ -44,6 +44,11 @@
                           SelectedValue="{Binding SelectedPositionName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                           Width="220"
                           Margin="12,0,0,0"/>
+                <TextBox Width="240"
+                         Margin="12,0,0,0"
+                         Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                         materialDesign:HintAssist.Hint="Search employee..."
+                         Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
             </StackPanel>
 
             <ItemsControl ItemsSource="{Binding PositionCounts}" Margin="0,12,0,0">

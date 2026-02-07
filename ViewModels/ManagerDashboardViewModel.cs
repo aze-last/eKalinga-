@@ -6,6 +6,8 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System;
 using Microsoft.EntityFrameworkCore;
+using System.ComponentModel;
+using System.Windows.Data;
 
 namespace AttendanceShiftingManagement.ViewModels
 {
@@ -22,6 +24,20 @@ namespace AttendanceShiftingManagement.ViewModels
         public string TotalWeekHours { get => _totalWeekHours; set => SetProperty(ref _totalWeekHours, value); }
 
         public ObservableCollection<AttendanceDto> TodayAttendance { get; }
+        public ICollectionView TodayAttendanceView { get; }
+
+        private string _attendanceSearchText = string.Empty;
+        public string AttendanceSearchText
+        {
+            get => _attendanceSearchText;
+            set
+            {
+                if (SetProperty(ref _attendanceSearchText, value))
+                {
+                    ApplyAttendanceFilter();
+                }
+            }
+        }
 
         public System.Windows.Input.ICommand TimeInCommand { get; }
         public System.Windows.Input.ICommand TimeOutCommand { get; }
@@ -94,6 +110,37 @@ namespace AttendanceShiftingManagement.ViewModels
                    }).ToList();
 
             TodayAttendance = new ObservableCollection<AttendanceDto>(attendanceList);
+            TodayAttendanceView = CollectionViewSource.GetDefaultView(TodayAttendance);
+            ApplyAttendanceFilter();
+        }
+
+        private void ApplyAttendanceFilter()
+        {
+            if (TodayAttendanceView == null)
+            {
+                return;
+            }
+
+            var query = AttendanceSearchText?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                TodayAttendanceView.Filter = null;
+            }
+            else
+            {
+                TodayAttendanceView.Filter = item =>
+                {
+                    if (item is not AttendanceDto row)
+                    {
+                        return false;
+                    }
+
+                    return row.Name.Contains(query, StringComparison.OrdinalIgnoreCase)
+                        || row.Position.Contains(query, StringComparison.OrdinalIgnoreCase);
+                };
+            }
+
+            TodayAttendanceView.Refresh();
         }
 
         private void CheckCurrentStatus()

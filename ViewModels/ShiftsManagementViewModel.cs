@@ -6,6 +6,8 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.ComponentModel;
+using System.Windows.Data;
 using System.Windows.Input;
 
 namespace AttendanceShiftingManagement.ViewModels
@@ -32,6 +34,20 @@ namespace AttendanceShiftingManagement.ViewModels
         }
 
         public ObservableCollection<RosterRow> Roster { get; } = new();
+        public ICollectionView RosterView { get; }
+
+        private string _searchText = string.Empty;
+        public string SearchText
+        {
+            get => _searchText;
+            set
+            {
+                if (SetProperty(ref _searchText, value))
+                {
+                    ApplyRosterFilter();
+                }
+            }
+        }
         public ObservableCollection<EmployeeSelectable> Employees { get; } = new();
 
         public TimeSpan StartTime { get => _startTime; set => SetProperty(ref _startTime, value); }
@@ -55,6 +71,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
             SelectedDay = DateTime.Today;
 
+            RosterView = CollectionViewSource.GetDefaultView(Roster);
             CreateBatchCommand = new RelayCommand(_ => ExecuteBatchCreate());
             RefreshCommand = new RelayCommand(_ => LoadRoster());
 
@@ -188,6 +205,36 @@ namespace AttendanceShiftingManagement.ViewModels
                 }
                 Roster.Add(row);
             }
+
+            ApplyRosterFilter();
+        }
+
+        private void ApplyRosterFilter()
+        {
+            if (RosterView == null)
+            {
+                return;
+            }
+
+            var query = SearchText?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                RosterView.Filter = null;
+            }
+            else
+            {
+                RosterView.Filter = item =>
+                {
+                    if (item is not RosterRow row)
+                    {
+                        return false;
+                    }
+
+                    return row.EmployeeName.Contains(query, StringComparison.OrdinalIgnoreCase);
+                };
+            }
+
+            RosterView.Refresh();
         }
 
         private void ExecuteBatchCreate()
