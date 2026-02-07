@@ -49,11 +49,16 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private readonly AttendanceService _attendanceService;
         private readonly User _currentUser;
+        private readonly int _employeeId;
 
         public ManagerDashboardViewModel(AppDbContext ctx, User user)
         {
             _currentUser = user;
             _attendanceService = new AttendanceService(ctx);
+
+            // Fix: Fetch Employee ID linked to this User
+            var employee = ctx.Employees.FirstOrDefault(e => e.UserId == user.Id);
+            _employeeId = employee?.Id ?? 0;
 
             TimeInCommand = new RelayCommand(_ => ExecuteTimeIn(), _ => !IsTimedIn);
             TimeOutCommand = new RelayCommand(_ => ExecuteTimeOut(), _ => IsTimedIn);
@@ -93,12 +98,9 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private void CheckCurrentStatus()
         {
-            // Managers are also Employees in the system, usually linked by ID or Name
-            // Assuming User.Id maps to Employee.Id for now, or we need a way to link User -> Employee
-            // If User table and Employee table are separate, we might need a mapping.
-            // For this implementation, I will assume the User ID matches the Employee ID for the manager.
+            if (_employeeId == 0) return;
 
-            var attendance = _attendanceService.GetActiveAttendance(_currentUser.Id);
+            var attendance = _attendanceService.GetActiveAttendance(_employeeId);
             IsTimedIn = attendance != null;
             UpdateStatusDisplay();
         }
@@ -121,7 +123,13 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             try
             {
-                _attendanceService.TimeIn(_currentUser.Id);
+                if (_employeeId == 0)
+                {
+                    System.Windows.MessageBox.Show("Error: No Employee record found for this user.", "Error");
+                    return;
+                }
+
+                _attendanceService.TimeIn(_employeeId);
                 IsTimedIn = true;
                 UpdateStatusDisplay();
                 System.Windows.MessageBox.Show("Timed In Successfully!", "Success");
@@ -136,7 +144,13 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             try
             {
-                _attendanceService.TimeOut(_currentUser.Id);
+                if (_employeeId == 0)
+                {
+                    System.Windows.MessageBox.Show("Error: No Employee record found for this user.", "Error");
+                    return;
+                }
+
+                _attendanceService.TimeOut(_employeeId);
                 IsTimedIn = false;
                 UpdateStatusDisplay();
                 System.Windows.MessageBox.Show("Timed Out Successfully!", "Success");

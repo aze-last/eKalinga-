@@ -17,11 +17,17 @@ namespace AttendanceShiftingManagement.ViewModels
         public CrewMainViewModel(User user)
         {
             var context = new Data.AppDbContext();
+
+            // Fix: Fetch the Employee ID associated with this User
+            // Since User.Id != Employee.Id
+            var employee = context.Employees.FirstOrDefault(e => e.UserId == user.Id);
+            int empId = employee?.Id ?? 0;
+
             var attendanceService = new AttendanceService(context);
             var shiftService = new ShiftService(context);
             var payrollService = new PayrollService(context);
 
-            var dashboardVm = new CrewDashboardViewModel(attendanceService, shiftService, payrollService, user.Id);
+            var dashboardVm = new CrewDashboardViewModel(attendanceService, shiftService, payrollService, empId);
             dashboardVm.AttendanceRecorded += () => ShowSuccessRequest?.Invoke();
 
             // Set default view
