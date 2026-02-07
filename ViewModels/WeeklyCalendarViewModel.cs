@@ -15,6 +15,7 @@ namespace AttendanceShiftingManagement.ViewModels
     {
         private readonly AppDbContext _context;
         private readonly int? _employeeId;
+        private readonly int _managerUserId;
         private DateTime _currentWeekStart;
         private string _weekRangeDisplay = string.Empty;
 
@@ -55,25 +56,54 @@ namespace AttendanceShiftingManagement.ViewModels
         public string SundayHeader { get => _sundayHeader; set => SetProperty(ref _sundayHeader, value); }
 
         public ObservableCollection<EmployeeWeeklySchedule> EmployeeWeeklySchedules { get; set; }
-        public ObservableCollection<string> ScheduleWarnings { get; set; }
+        public ObservableCollection<ScheduleWarning> ScheduleWarnings { get; set; }
+        public ObservableCollection<Position> Positions { get; set; }
+
+        public event Action<string>? ScrollToEmployeeRequested;
+        public bool IsManagerView => !_employeeId.HasValue;
 
         public ICommand PreviousWeekCommand { get; }
         public ICommand NextWeekCommand { get; }
         public ICommand TodayCommand { get; }
 
-        public WeeklyCalendarViewModel(int? employeeId = null)
+        public WeeklyCalendarViewModel(int? employeeId = null, int managerUserId = 0)
         {
             _context = new AppDbContext();
             _employeeId = employeeId;
+            _managerUserId = managerUserId;
             EmployeeWeeklySchedules = new ObservableCollection<EmployeeWeeklySchedule>();
-            ScheduleWarnings = new ObservableCollection<string>();
+            ScheduleWarnings = new ObservableCollection<ScheduleWarning>();
+            Positions = new ObservableCollection<Position>();
+
+            LoadPositions();
 
             PreviousWeekCommand = new RelayCommand(_ => CurrentWeekStart = CurrentWeekStart.AddDays(-7));
             NextWeekCommand = new RelayCommand(_ => CurrentWeekStart = CurrentWeekStart.AddDays(7));
             TodayCommand = new RelayCommand(_ => CurrentWeekStart = GetMondayOfWeek(DateTime.Today));
+            ScrollToEmployeeCommand = new RelayCommand(param => ExecuteScrollToEmployee(param));
+            BeginEditCommand = new RelayCommand(param => ExecuteBeginEdit(param));
+            CancelEditCommand = new RelayCommand(param => ExecuteCancelEdit(param));
+            SaveEditCommand = new RelayCommand(param => ExecuteSaveEdit(param));
+            DeleteDayCommand = new RelayCommand(param => ExecuteDeleteDay(param));
+            AddDayCommand = new RelayCommand(param => ExecuteAddDay(param));
 
             // Initialize to current week
             CurrentWeekStart = GetMondayOfWeek(DateTime.Today);
+        }
+
+        public ICommand ScrollToEmployeeCommand { get; }
+        public ICommand BeginEditCommand { get; }
+        public ICommand CancelEditCommand { get; }
+        public ICommand SaveEditCommand { get; }
+        public ICommand DeleteDayCommand { get; }
+        public ICommand AddDayCommand { get; }
+
+        private void LoadPositions()
+        {
+            var positions = _context.Positions
+                .OrderBy(p => p.Name)
+                .ToList();
+            Positions = new ObservableCollection<Position>(positions);
         }
 
         private DateTime GetMondayOfWeek(DateTime date)
@@ -165,6 +195,14 @@ namespace AttendanceShiftingManagement.ViewModels
 
                             cell = new DayCell
                             {
+                                EmployeeId = employee.Id,
+                                ShiftAssignmentId = dayAssignments.First().Id,
+                                ShiftId = firstShift.Id,
+                                Date = currentDay.Date,
+                                HasShift = true,
+                                StartTimeText = $"{DateTime.Today.Add(firstShift.StartTime):hh:mm tt}",
+                                EndTimeText = $"{DateTime.Today.Add(firstShift.EndTime):hh:mm tt}",
+                                PositionId = firstShift.PositionId,
                                 TimeDisplay = $"{DateTime.Today.Add(firstShift.StartTime):hh:mm tt}-{DateTime.Today.Add(firstShift.EndTime):hh:mm tt}",
                                 PositionName = firstShift.Position?.Name ?? "General",
                                 CellColor = bgBrush,
@@ -176,6 +214,11 @@ namespace AttendanceShiftingManagement.ViewModels
                             // OFF
                             cell = new DayCell
                             {
+                                EmployeeId = employee.Id,
+                                ShiftAssignmentId = 0,
+                                ShiftId = 0,
+                                Date = currentDay.Date,
+                                HasShift = false,
                                 TimeDisplay = "OFF",
                                 PositionName = "",
                                 CellColor = new SolidColorBrush(Color.FromRgb(241, 245, 249)), // #F1F5F9 (slate-50)
@@ -203,11 +246,11 @@ namespace AttendanceShiftingManagement.ViewModels
                         var daysOff = 7 - workingDays;
                         if (workingDays == 7)
                         {
-                            ScheduleWarnings.Add($"{employee.FullName} is scheduled all 7 days this week.");
+                            ScheduleWarnings.Add(new ScheduleWarning(employee.FullName, $"{employee.FullName} is scheduled all 7 days this week."));
                         }
                         else if (daysOff <= 1)
                         {
-                            ScheduleWarnings.Add($"{employee.FullName} has only {daysOff} day off this week.");
+                            ScheduleWarnings.Add(new ScheduleWarning(employee.FullName, $"{employee.FullName} has only {daysOff} day off this week."));
                         }
                     }
                 }
@@ -216,6 +259,252 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 System.Windows.MessageBox.Show($"Error loading schedule: {ex.Message}");
             }
+        }
+
+        private void ExecuteScrollToEmployee(object? param)
+        {
+            if (param is string name && !string.IsNullOrWhiteSpace(name))
+            {
+                ScrollToEmployeeRequested?.Invoke(name);
+            }
+        }
+
+        private void ExecuteBeginEdit(object? param)
+        {
+            if (!IsManagerView)
+            {
+                return;
+            }
+
+            if (param is not DayCell cell || !cell.HasShift)
+            {
+                return;
+            }
+
+            cell.OriginalStartTimeText = cell.StartTimeText;
+            cell.OriginalEndTimeText = cell.EndTimeText;
+            cell.OriginalPositionId = cell.PositionId;
+            cell.IsEditing = true;
+        }
+
+        private void ExecuteAddDay(object? param)
+        {
+            if (!IsManagerView)
+            {
+                return;
+            }
+
+            if (param is not DayCell cell || cell.HasShift)
+            {
+                return;
+            }
+
+            cell.OriginalStartTimeText = string.Empty;
+            cell.OriginalEndTimeText = string.Empty;
+            cell.OriginalPositionId = 0;
+            cell.StartTimeText = "09:00 AM";
+            cell.EndTimeText = "05:00 PM";
+            cell.PositionId = Positions.FirstOrDefault()?.Id ?? 0;
+            cell.IsEditing = true;
+        }
+
+        private void ExecuteCancelEdit(object? param)
+        {
+            if (param is not DayCell cell)
+            {
+                return;
+            }
+
+            cell.StartTimeText = cell.OriginalStartTimeText;
+            cell.EndTimeText = cell.OriginalEndTimeText;
+            cell.PositionId = cell.OriginalPositionId;
+            cell.IsEditing = false;
+        }
+
+        private void ExecuteSaveEdit(object? param)
+        {
+            if (!IsManagerView)
+            {
+                return;
+            }
+
+            if (param is not DayCell cell)
+            {
+                return;
+            }
+
+            if (cell.PositionId == 0)
+            {
+                System.Windows.MessageBox.Show("Please select a position.", "Missing Position",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                return;
+            }
+
+            if (!DateTime.TryParse(cell.StartTimeText, out var startDt) ||
+                !DateTime.TryParse(cell.EndTimeText, out var endDt))
+            {
+                System.Windows.MessageBox.Show("Invalid time format. Use e.g. 9:00 AM.", "Invalid Time",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                return;
+            }
+
+            var start = startDt.TimeOfDay;
+            var end = endDt.TimeOfDay;
+            if (start >= end)
+            {
+                System.Windows.MessageBox.Show("End time must be after start time.", "Invalid Time",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                return;
+            }
+
+            var assignment = _context.ShiftAssignments
+                .Include(sa => sa.Shift)
+                .FirstOrDefault(sa => sa.Id == cell.ShiftAssignmentId);
+
+            bool overlap = _context.ShiftAssignments
+                .Include(sa => sa.Shift)
+                .Any(sa =>
+                    sa.EmployeeId == cell.EmployeeId &&
+                    sa.Id != cell.ShiftAssignmentId &&
+                    sa.Shift.ShiftDate.Date == cell.Date.Date &&
+                    start < sa.Shift.EndTime &&
+                    end > sa.Shift.StartTime);
+
+            if (overlap)
+            {
+                System.Windows.MessageBox.Show("Overlapping shift detected.", "Invalid Schedule",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                return;
+            }
+
+            int createdBy;
+            int oldShiftId = 0;
+            if (assignment != null)
+            {
+                createdBy = assignment.Shift.CreatedBy;
+                oldShiftId = assignment.ShiftId;
+            }
+            else if (_managerUserId != 0)
+            {
+                createdBy = _managerUserId;
+            }
+            else
+            {
+                createdBy = _context.Shifts
+                    .OrderByDescending(s => s.CreatedAt)
+                    .Select(s => s.CreatedBy)
+                    .FirstOrDefault();
+
+                if (createdBy == 0)
+                {
+                    System.Windows.MessageBox.Show("Unable to determine shift creator.", "Error",
+                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                    return;
+                }
+            }
+
+            var newShift = new Shift
+            {
+                ShiftDate = cell.Date.Date,
+                StartTime = start,
+                EndTime = end,
+                PositionId = cell.PositionId,
+                CreatedBy = createdBy
+            };
+
+            _context.Shifts.Add(newShift);
+            _context.SaveChanges();
+
+            if (assignment != null)
+            {
+                assignment.ShiftId = newShift.Id;
+                _context.SaveChanges();
+            }
+            else
+            {
+                _context.ShiftAssignments.Add(new ShiftAssignment
+                {
+                    ShiftId = newShift.Id,
+                    EmployeeId = cell.EmployeeId
+                });
+                _context.SaveChanges();
+            }
+
+            if (oldShiftId != 0)
+            {
+                bool oldShiftHasAssignments = _context.ShiftAssignments.Any(sa => sa.ShiftId == oldShiftId);
+                if (!oldShiftHasAssignments)
+                {
+                    var oldShift = _context.Shifts.FirstOrDefault(s => s.Id == oldShiftId);
+                    if (oldShift != null)
+                    {
+                        _context.Shifts.Remove(oldShift);
+                        _context.SaveChanges();
+                    }
+                }
+            }
+
+            cell.IsEditing = false;
+            LoadWeeklySchedule();
+        }
+
+        private void ExecuteDeleteDay(object? param)
+        {
+            if (!IsManagerView)
+            {
+                return;
+            }
+
+            if (param is not DayCell cell || !cell.HasShift)
+            {
+                return;
+            }
+
+            var confirm = System.Windows.MessageBox.Show("Delete this day from the schedule?", "Confirm Delete",
+                System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning);
+
+            if (confirm != System.Windows.MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            var assignment = _context.ShiftAssignments
+                .Include(sa => sa.Shift)
+                .FirstOrDefault(sa => sa.Id == cell.ShiftAssignmentId);
+
+            if (assignment == null)
+            {
+                return;
+            }
+
+            var shiftId = assignment.ShiftId;
+            _context.ShiftAssignments.Remove(assignment);
+            _context.SaveChanges();
+
+            bool hasOtherAssignments = _context.ShiftAssignments.Any(sa => sa.ShiftId == shiftId);
+            if (!hasOtherAssignments)
+            {
+                var shift = _context.Shifts.FirstOrDefault(s => s.Id == shiftId);
+                if (shift != null)
+                {
+                    _context.Shifts.Remove(shift);
+                    _context.SaveChanges();
+                }
+            }
+
+            LoadWeeklySchedule();
+        }
+
+        public sealed class ScheduleWarning
+        {
+            public ScheduleWarning(string employeeName, string message)
+            {
+                EmployeeName = employeeName;
+                Message = message;
+            }
+
+            public string EmployeeName { get; }
+            public string Message { get; }
         }
     }
 }
