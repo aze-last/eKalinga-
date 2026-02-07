@@ -161,8 +161,8 @@ namespace AttendanceShiftingManagement.ViewModels
                 }
 
                 return employee.FullName.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
-                    || employee.Position.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
-                    || employee.Position.Area.Contains(SearchText, StringComparison.OrdinalIgnoreCase);
+                    || employee.Position.Name.IndexOf(SearchText, StringComparison.OrdinalIgnoreCase) >= 0
+                    || employee.Position.Area.ToString().IndexOf(SearchText, StringComparison.OrdinalIgnoreCase) >= 0;
             };
 
             EmployeesView.Refresh();

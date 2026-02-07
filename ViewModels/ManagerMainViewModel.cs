@@ -48,7 +48,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 if (emp != null && emp.Position != null)
                 {
                     // Allow if position name contains "Scheduling"
-                    IsSchedulingAllowed = emp.Position.Name.Contains("Scheduling", StringComparison.OrdinalIgnoreCase);
+                    IsSchedulingAllowed = emp.Position.Name.IndexOf("Scheduling", StringComparison.OrdinalIgnoreCase) >= 0;
                 }
                 else
                 {

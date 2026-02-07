@@ -6,6 +6,19 @@
              Background="#F8FAFC">
     
     <UserControl.Resources>
+        <Style x:Key="AddShiftButtonStyle" TargetType="Button" BasedOn="{StaticResource MaterialDesignFlatButton}">
+            <Setter Property="Visibility" Value="Collapsed"/>
+            <Style.Triggers>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding HasShift}" Value="False"/>
+                        <Condition Binding="{Binding DataContext.IsManagerView, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="True"/>
+                    </MultiDataTrigger.Conditions>
+                    <Setter Property="Visibility" Value="Visible"/>
+                </MultiDataTrigger>
+            </Style.Triggers>
+        </Style>
+
         <DataTemplate x:Key="DayCellTemplate" DataType="{x:Type models:DayCell}">
             <Border Background="{Binding CellColor, FallbackValue='#F8FAFC'}" Margin="4,8" CornerRadius="8" Padding="5">
                 <Grid>
@@ -57,22 +70,9 @@
                         </StackPanel>
                         <Button x:Name="AddButton" Padding="0" Width="24" Height="24"
                                 Command="{Binding DataContext.AddDayCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                CommandParameter="{Binding}">
+                                CommandParameter="{Binding}"
+                                Style="{StaticResource AddShiftButtonStyle}">
                             <materialDesign:PackIcon Kind="Plus" Width="16" Height="16"/>
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignFlatButton}">
-                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                    <Style.Triggers>
-                                        <MultiDataTrigger>
-                                            <MultiDataTrigger.Conditions>
-                                                <Condition Binding="{Binding HasShift}" Value="False"/>
-                                                <Condition Binding="{Binding DataContext.IsManagerView, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="True"/>
-                                            </MultiDataTrigger.Conditions>
-                                            <Setter Property="Visibility" Value="Visible"/>
-                                        </MultiDataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
                         </Button>
                     </StackPanel>
 

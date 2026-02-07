@@ -37,6 +37,7 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICollectionView RosterView { get; }
 
         private string _searchText = string.Empty;
+        private bool _isAllSelected;
         public string SearchText
         {
             get => _searchText;
@@ -45,6 +46,21 @@ namespace AttendanceShiftingManagement.ViewModels
                 if (SetProperty(ref _searchText, value))
                 {
                     ApplyRosterFilter();
+                }
+            }
+        }
+
+        public bool IsAllSelected
+        {
+            get => _isAllSelected;
+            set
+            {
+                if (SetProperty(ref _isAllSelected, value))
+                {
+                    foreach (var emp in Employees)
+                    {
+                        emp.IsSelected = value;
+                    }
                 }
             }
         }
@@ -177,7 +193,18 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             Employees.Clear();
             foreach (var e in _context.Employees.Include(e => e.Position).Where(e => e.Status == EmployeeStatus.Active).ToList())
-                Employees.Add(new EmployeeSelectable { Employee = e });
+            {
+                var selectable = new EmployeeSelectable { Employee = e };
+                selectable.SelectionChanged = OnEmployeeSelectionChanged;
+                Employees.Add(selectable);
+            }
+            IsAllSelected = Employees.Count > 0 && Employees.All(e => e.IsSelected);
+        }
+
+        private void OnEmployeeSelectionChanged()
+        {
+            _isAllSelected = Employees.Count > 0 && Employees.All(e => e.IsSelected);
+            OnPropertyChanged(nameof(IsAllSelected));
         }
 
         private void LoadRoster()
@@ -396,6 +423,18 @@ namespace AttendanceShiftingManagement.ViewModels
     {
         private bool _isSelected;
         public Employee Employee { get; set; } = null!;
-        public bool IsSelected { get => _isSelected; set => SetProperty(ref _isSelected, value); }
+        public bool IsSelected
+        {
+            get => _isSelected;
+            set
+            {
+                if (SetProperty(ref _isSelected, value))
+                {
+                    SelectionChanged?.Invoke();
+                }
+            }
+        }
+
+        public Action? SelectionChanged { get; set; }
     }
 }
