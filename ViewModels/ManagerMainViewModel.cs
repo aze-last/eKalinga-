@@ -21,6 +21,7 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand ShowAttendanceCommand { get; }
         public ICommand ShowEmployeesCommand { get; }
         public ICommand ShowPositionsCommand { get; }
+        public ICommand ShowWeeklyCalendarCommand { get; }
 
         public ManagerMainViewModel(User user)
         {
@@ -31,6 +32,7 @@ namespace AttendanceShiftingManagement.ViewModels
             ShowAttendanceCommand = new RelayCommand(_ => ExecuteShowAttendance());
             ShowEmployeesCommand = new RelayCommand(_ => ExecuteShowEmployees());
             ShowPositionsCommand = new RelayCommand(_ => ExecuteShowPositions());
+            ShowWeeklyCalendarCommand = new RelayCommand(_ => ExecuteShowWeeklyCalendar());
 
             // Initialize with Dashboard
             ExecuteShowDashboard();
@@ -46,7 +48,12 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private void ExecuteShowShifts()
         {
-            CurrentView = new ShiftsManagementPage();
+            CurrentView = new ShiftsManagementPage(_currentUser);
+        }
+
+        private void ExecuteShowWeeklyCalendar()
+        {
+            CurrentView = new WeeklyCalendarPage();
         }
 
         private void ExecuteShowAttendance()
@@ -56,7 +63,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private void ExecuteShowEmployees()
         {
-            CurrentView = new EmployeesPage();
+            CurrentView = new EmployeesPage(_currentUser);
         }
 
         private void ExecuteShowPositions()

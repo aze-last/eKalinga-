@@ -8,9 +8,10 @@
              mc:Ignorable="d" 
              d:DesignHeight="800" d:DesignWidth="1100"
              Background="Transparent">
-    <UserControl.DataContext>
-        <vm:ShiftsManagementViewModel/>
-    </UserControl.DataContext>
+
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+    </UserControl.Resources>
 
     <Grid Margin="24">
         <Grid.RowDefinitions>
@@ -79,13 +80,7 @@
                                                            Style="{StaticResource MaterialDesignFloatingHintTimePicker}"/>
                             </StackPanel>
 
-                            <StackPanel Grid.Column="2">
-                                <ComboBox materialDesign:HintAssist.Hint="Position"
-                                          ItemsSource="{Binding Positions}"
-                                          DisplayMemberPath="Name"
-                                          SelectedItem="{Binding SelectedPosition}"
-                                          Style="{StaticResource MaterialDesignFloatingHintComboBox}"/>
-                            </StackPanel>
+                            <!-- Position selection removed -->
                         </Grid>
 
                         <Button Content="CREATE WEEKLY SHIFT FOR SELECTED CREW" 
@@ -158,18 +153,23 @@
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
                                                 <Border BorderBrush="#E2E8F0" BorderThickness="0,0,1,1" Height="40">
-                                                    <Grid>
-                                                        <Rectangle Fill="#F2A900" 
-                                                                   Visibility="{Binding IsActive, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                                                   Margin="1"/>
-                                                        <TextBlock Text="{Binding Label}" 
-                                                                   FontSize="8" 
-                                                                   Foreground="White"
-                                                                   FontWeight="Bold"
-                                                                   HorizontalAlignment="Center" 
-                                                                   VerticalAlignment="Center"
-                                                                   Visibility="{Binding IsActive, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                                                    </Grid>
+                                                    <Button Command="{Binding DataContext.EditShiftCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                            CommandParameter="{Binding}"
+                                                            Padding="0" Margin="0" BorderThickness="0" Background="Transparent"
+                                                            Height="40" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
+                                                        <Grid>
+                                                            <Rectangle Fill="#F2A900" 
+                                                                       Visibility="{Binding IsActive, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                       Margin="1"/>
+                                                            <TextBlock Text="{Binding Label}" 
+                                                                       FontSize="8" 
+                                                                       Foreground="White"
+                                                                       FontWeight="Bold"
+                                                                       HorizontalAlignment="Center" 
+                                                                       VerticalAlignment="Center"
+                                                                       Visibility="{Binding IsActive, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                                        </Grid>
+                                                    </Button>
                                                 </Border>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
@@ -180,6 +180,47 @@
                     </ItemsControl>
                 </Grid>
             </ScrollViewer>
+        </materialDesign:Card>
+        <!-- Edit Shift Overlay -->
+        <Grid Grid.RowSpan="2" Background="#112233" Opacity="0.5" 
+              Visibility="{Binding IsEditingShift, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+        
+        <materialDesign:Card Grid.RowSpan="2" Width="400" Height="300" 
+                             HorizontalAlignment="Center" VerticalAlignment="Center"
+                             UniformCornerRadius="12" Padding="20"
+                             Visibility="{Binding IsEditingShift, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <StackPanel>
+                <TextBlock Text="Edit Shift Details" Style="{StaticResource MaterialDesignHeadline6TextBlock}" Margin="0,0,0,20"/>
+                
+                <Grid Margin="0,0,0,20">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                        <TextBlock Text="Start Time" Foreground="Gray" FontSize="12"/>
+                        <materialDesign:TimePicker SelectedTime="{Binding SelectedShiftToEdit.StartTime}" Is24Hours="True"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                        <TextBlock Text="End Time" Foreground="Gray" FontSize="12"/>
+                        <materialDesign:TimePicker SelectedTime="{Binding SelectedShiftToEdit.EndTime}" Is24Hours="True"/>
+                    </StackPanel>
+                </Grid>
+
+                <ComboBox materialDesign:HintAssist.Hint="Position" 
+                          ItemsSource="{Binding SelectedShiftToEdit.Position.Name}" 
+                          IsEnabled="False" Margin="0,0,0,20"
+                          ToolTip="Position editing is locked to Employee's role"/>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+                    <Button Content="CANCEL" Command="{Binding CancelEditCommand}" 
+                            Style="{StaticResource MaterialDesignFlatButton}" Margin="0,0,8,0"/>
+                    <Button Content="SAVE CHANGES" Command="{Binding SaveShiftEditCommand}" 
+                            Style="{StaticResource MaterialDesignRaisedButton}"/>
+                </StackPanel>
+            </StackPanel>
         </materialDesign:Card>
     </Grid>
 </UserControl>

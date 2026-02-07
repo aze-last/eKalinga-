@@ -162,3 +162,5 @@ C:\Users\ASUS\source\repos\AttendanceShiftingManagement\AttendanceShiftingManage
 C:\Users\ASUS\source\repos\AttendanceShiftingManagement\AttendanceShiftingManagement\obj\Debug\net9.0-windows\GeneratedInternalTypeHelper.g.cs
 C:\Users\ASUS\source\repos\AttendanceShiftingManagement\AttendanceShiftingManagement\obj\Debug\net9.0-windows\AttendanceShiftingManagement_MarkupCompile.lref
 C:\Users\ASUS\source\repos\AttendanceShiftingManagement\AttendanceShiftingManagement\obj\Debug\net9.0-windows\Views\PositionsPage.baml
+C:\Users\ASUS\source\repos\AttendanceShiftingManagement\AttendanceShiftingManagement\obj\Debug\net9.0-windows\Views\WeeklyCalendarPage.g.cs
+C:\Users\ASUS\source\repos\AttendanceShiftingManagement\AttendanceShiftingManagement\obj\Debug\net9.0-windows\Views\WeeklyCalendarPage.baml
