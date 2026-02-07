@@ -84,7 +84,7 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             CurrentView = new WeeklyCalendarPage
             {
-                DataContext = new WeeklyCalendarViewModel()
+                DataContext = new WeeklyCalendarViewModel(null, _currentUser.Id)
             };
         }
 

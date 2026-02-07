@@ -1,192 +1,258 @@
 <UserControl x:Class="AttendanceShiftingManagement.Views.WeeklyCalendarPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
-             mc:Ignorable="d" 
-             d:DesignHeight="800" d:DesignWidth="1100"
-             Background="White">
+             xmlns:models="clr-namespace:AttendanceShiftingManagement.Models"
+             Background="#F8FAFC">
     
+    <UserControl.Resources>
+        <DataTemplate x:Key="DayCellTemplate" DataType="{x:Type models:DayCell}">
+            <Border Background="{Binding CellColor, FallbackValue='#F8FAFC'}" Margin="4,8" CornerRadius="8" Padding="5">
+                <Grid>
+                    <StackPanel x:Name="ViewPanel" VerticalAlignment="Center">
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsEditing}" Value="True">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
+                        <TextBlock Text="{Binding TimeDisplay}" FontWeight="Black" FontSize="10" HorizontalAlignment="Center" Foreground="{Binding ForegroundColor}"/>
+                        <Border Background="#20000000" Height="1" Margin="4,4"/>
+                        <TextBlock Text="{Binding PositionName}" FontSize="9" HorizontalAlignment="Center" FontWeight="Bold" Foreground="{Binding ForegroundColor}"/>
+                        <StackPanel x:Name="ActionPanel" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,4,0,0">
+                            <StackPanel.Style>
+                                <Style TargetType="StackPanel">
+                                    <Style.Triggers>
+                                        <MultiDataTrigger>
+                                            <MultiDataTrigger.Conditions>
+                                                <Condition Binding="{Binding HasShift}" Value="True"/>
+                                                <Condition Binding="{Binding DataContext.IsManagerView, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="True"/>
+                                            </MultiDataTrigger.Conditions>
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </MultiDataTrigger>
+                                        <DataTrigger Binding="{Binding HasShift}" Value="False">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding DataContext.IsManagerView, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="False">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </Style>
+                            </StackPanel.Style>
+                            <Button Style="{StaticResource MaterialDesignFlatButton}" Padding="0" Width="24" Height="24"
+                                    Command="{Binding DataContext.BeginEditCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    CommandParameter="{Binding}">
+                                <materialDesign:PackIcon Kind="Pencil" Width="14" Height="14"/>
+                            </Button>
+                            <Button Style="{StaticResource MaterialDesignFlatButton}" Padding="0" Width="24" Height="24" Foreground="#DA291C"
+                                    Command="{Binding DataContext.DeleteDayCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    CommandParameter="{Binding}">
+                                <materialDesign:PackIcon Kind="Delete" Width="14" Height="14"/>
+                            </Button>
+                        </StackPanel>
+                        <Button x:Name="AddButton" Padding="0" Width="24" Height="24"
+                                Command="{Binding DataContext.AddDayCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                CommandParameter="{Binding}">
+                            <materialDesign:PackIcon Kind="Plus" Width="16" Height="16"/>
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignFlatButton}">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <MultiDataTrigger>
+                                            <MultiDataTrigger.Conditions>
+                                                <Condition Binding="{Binding HasShift}" Value="False"/>
+                                                <Condition Binding="{Binding DataContext.IsManagerView, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="True"/>
+                                            </MultiDataTrigger.Conditions>
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </MultiDataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                    </StackPanel>
+
+                    <StackPanel x:Name="EditPanel" VerticalAlignment="Center">
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsEditing}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <TextBox Text="{Binding StartTimeText, UpdateSourceTrigger=PropertyChanged}" Width="60" Margin="0,0,4,0"/>
+                            <TextBlock Text="-" VerticalAlignment="Center" Foreground="#555"/>
+                            <TextBox Text="{Binding EndTimeText, UpdateSourceTrigger=PropertyChanged}" Width="60" Margin="4,0,0,0"/>
+                        </StackPanel>
+                        <ComboBox ItemsSource="{Binding DataContext.Positions, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                  DisplayMemberPath="Name"
+                                  SelectedValuePath="Id"
+                                  SelectedValue="{Binding PositionId, UpdateSourceTrigger=PropertyChanged}"
+                                  Width="130" Margin="0,4,0,0"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,6,0,0">
+                            <Button Style="{StaticResource MaterialDesignFlatButton}"
+                                    Command="{Binding DataContext.SaveEditCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    CommandParameter="{Binding}"
+                                    Content="Save" Margin="0,0,6,0"/>
+                            <Button Style="{StaticResource MaterialDesignFlatButton}"
+                                    Command="{Binding DataContext.CancelEditCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    CommandParameter="{Binding}"
+                                    Content="Cancel"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                </Grid>
+            </Border>
+        </DataTemplate>
+    </UserControl.Resources>
+
     <Grid Margin="24">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>  <!-- Header / Navigation -->
-            <RowDefinition Height="Auto"/>  <!-- Warnings -->
-            <RowDefinition Height="Auto"/>  <!-- Days Header -->
-            <RowDefinition Height="*"/>     <!-- Calendar Body -->
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- Top Navigation -->
-        <Border Grid.Row="0" Margin="0,0,0,24" Padding="0,0,0,16" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1">
+        <Border Grid.Row="0" Margin="0,0,0,20" Padding="0,0,0,15" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1">
             <DockPanel>
                 <StackPanel Orientation="Horizontal">
-                    <materialDesign:PackIcon Kind="CalendarWeek" Width="32" Height="32" Foreground="#1E293B" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                    <StackPanel>
-                        <TextBlock Text="Weekly Schedule" Style="{StaticResource MaterialDesignHeadline6TextBlock}" FontWeight="Bold" Foreground="#1E293B"/>
-                        <TextBlock Text="At-a-glance view of all employee shifts" FontSize="12" Foreground="#64748B"/>
+                    <Border Background="#27251F" Width="48" Height="48" CornerRadius="12" Margin="0,0,15,0">
+                        <materialDesign:PackIcon Kind="CalendarClock" Width="26" Height="26" Foreground="#FFC72C" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="STORE ROSTER" FontSize="22" FontWeight="Black" Foreground="#27251F"/>
+                        <TextBlock Text="Manager View: Shift Optimization" FontSize="12" Foreground="#64748B" FontWeight="Medium"/>
                     </StackPanel>
                 </StackPanel>
 
-                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button Command="{Binding PreviousWeekCommand}" Style="{StaticResource MaterialDesignIconButton}" ToolTip="Previous Week">
-                        <materialDesign:PackIcon Kind="ChevronLeft"/>
-                    </Button>
-
-                    <TextBlock Text="{Binding WeekRangeDisplay}" 
-                               FontSize="16" FontWeight="SemiBold" 
-                               VerticalAlignment="Center" Margin="16,0" MinWidth="180" TextAlignment="Center"/>
-
-                    <Button Command="{Binding NextWeekCommand}" Style="{StaticResource MaterialDesignIconButton}" ToolTip="Next Week">
-                        <materialDesign:PackIcon Kind="ChevronRight"/>
-                    </Button>
-
-                    <Button Content="TODAY" Command="{Binding TodayCommand}" 
-                            Style="{StaticResource MaterialDesignOutlinedButton}" Margin="16,0,0,0" Height="32"/>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Background="White" CornerRadius="20" Padding="5" materialDesign:ElevationAssist.Elevation="Dp1">
+                        <StackPanel Orientation="Horizontal">
+                            <Button Command="{Binding PreviousWeekCommand}" Style="{StaticResource MaterialDesignIconButton}" Width="35" Height="35">
+                                <materialDesign:PackIcon Kind="ChevronLeft" Foreground="#DA291C"/>
+                            </Button>
+                            <TextBlock Text="{Binding WeekRangeDisplay, FallbackValue='Feb 2 - Feb 8, 2026'}" 
+                                       FontSize="14" FontWeight="Bold" VerticalAlignment="Center" Margin="15,0" Foreground="#27251F"/>
+                            <Button Command="{Binding NextWeekCommand}" Style="{StaticResource MaterialDesignIconButton}" Width="35" Height="35">
+                                <materialDesign:PackIcon Kind="ChevronRight" Foreground="#DA291C"/>
+                            </Button>
+                        </StackPanel>
+                    </Border>
+                    <Button Content="TODAY" Command="{Binding TodayCommand}" Margin="15,0,0,0"
+                            Background="#27251F" Foreground="White" BorderBrush="#27251F"
+                            materialDesign:ButtonAssist.CornerRadius="18" Height="36" Width="90"/>
                 </StackPanel>
             </DockPanel>
         </Border>
 
-        <!-- Warnings -->
-        <materialDesign:Card Grid.Row="1" Padding="12" Margin="0,0,0,16" materialDesign:ElevationAssist.Elevation="Dp1">
-            <StackPanel>
-                <DockPanel Margin="0,0,0,6">
-                    <materialDesign:PackIcon Kind="AlertCircleOutline" Foreground="#D97706" Margin="0,0,8,0"/>
-                    <TextBlock Text="Scheduling Alerts" FontWeight="SemiBold" Foreground="#92400E"/>
-                </DockPanel>
-                <ItemsControl ItemsSource="{Binding ScheduleWarnings}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <TextBlock Text="{Binding}" Foreground="#444" Margin="0,2,0,0"/>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-                <TextBlock Text="No scheduling warnings this week."
-                           Foreground="#6B7280" Margin="0,2,0,0">
-                    <TextBlock.Style>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="Visibility" Value="Collapsed"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding ScheduleWarnings.Count}" Value="0">
-                                    <Setter Property="Visibility" Value="Visible"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </TextBlock.Style>
-                </TextBlock>
-            </StackPanel>
-        </materialDesign:Card>
-
-        <!-- Calendar Header -->
-        <Border Grid.Row="2" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1,1,1,0" CornerRadius="8,8,0,0">
-            <Grid Height="50">
+        <materialDesign:Card Grid.Row="1" Padding="15" Margin="0,0,0,20" UniformCornerRadius="12" Background="#FFF8E1" BorderBrush="#FFC72C" BorderThickness="1">
+            <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="200"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-
-                <TextBlock Grid.Column="0" Text="EMPLOYEE" FontWeight="Bold" VerticalAlignment="Center" Margin="20,0,0,0" Foreground="#475569"/>
-
-                <TextBlock Grid.Column="1" Text="{Binding MondayHeader}" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" Foreground="#475569"/>
-                <TextBlock Grid.Column="2" Text="{Binding TuesdayHeader}" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" Foreground="#475569"/>
-                <TextBlock Grid.Column="3" Text="{Binding WednesdayHeader}" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" Foreground="#475569"/>
-                <TextBlock Grid.Column="4" Text="{Binding ThursdayHeader}" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" Foreground="#475569"/>
-                <TextBlock Grid.Column="5" Text="{Binding FridayHeader}" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" Foreground="#475569"/>
-                <TextBlock Grid.Column="6" Text="{Binding SaturdayHeader}" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" Foreground="#475569"/>
-                <TextBlock Grid.Column="7" Text="{Binding SundayHeader}" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" Foreground="#475569"/>
+                <materialDesign:PackIcon Kind="AlertDecagram" Foreground="#DA291C" Width="24" Height="24" VerticalAlignment="Top" Margin="0,2,12,0"/>
+                <StackPanel Grid.Column="1">
+                    <TextBlock Text="Scheduling Efficiency Alerts" FontWeight="Black" Foreground="#27251F" FontSize="13" Margin="0,0,0,5"/>
+                    <ItemsControl ItemsSource="{Binding ScheduleWarnings}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Command="{Binding DataContext.ScrollToEmployeeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        CommandParameter="{Binding EmployeeName}"
+                                        Background="#FFE082" Foreground="#5D4037"
+                                        Padding="10,2" Margin="0,2,8,2"
+                                        Height="24"
+                                        materialDesign:ButtonAssist.CornerRadius="12"
+                                        Style="{StaticResource MaterialDesignFlatButton}">
+                                    <TextBlock Text="{Binding Message}" FontSize="11"/>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
             </Grid>
-        </Border>
+        </materialDesign:Card>
 
-        <!-- Calendar Body -->
-        <Border Grid.Row="3" BorderBrush="#E2E8F0" BorderThickness="1,0,1,1" CornerRadius="0,0,8,8">
-            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                <ItemsControl ItemsSource="{Binding EmployeeWeeklySchedules}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Border BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Background="White">
-                                <Grid MinHeight="80">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="200"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
+        <materialDesign:Card Grid.Row="2" UniformCornerRadius="15" materialDesign:ElevationAssist.Elevation="Dp2">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="60"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
 
-                                    <!-- Employee Name -->
-                                    <TextBlock Grid.Column="0" Text="{Binding EmployeeName}" 
-                                               FontWeight="SemiBold" VerticalAlignment="Center" Margin="20,0,0,0"
-                                               Foreground="#334155"/>
+                <Border Grid.Row="0" Background="#27251F" CornerRadius="15,15,0,0">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="180"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="TEAM MEMBER" Foreground="#FFC72C" FontWeight="Black" FontSize="11" VerticalAlignment="Center" Margin="20,0,0,0"/>
+                        <TextBlock Grid.Column="1" Text="MON" HorizontalAlignment="Center" Foreground="White" FontWeight="Bold" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="2" Text="TUE" HorizontalAlignment="Center" Foreground="White" FontWeight="Bold" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="3" Text="WED" HorizontalAlignment="Center" Foreground="White" FontWeight="Bold" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="4" Text="THU" HorizontalAlignment="Center" Foreground="White" FontWeight="Bold" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="5" Text="FRI" HorizontalAlignment="Center" Foreground="White" FontWeight="Bold" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="6" Text="SAT" HorizontalAlignment="Center" Foreground="White" FontWeight="Bold" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="7" Text="SUN" HorizontalAlignment="Center" Foreground="White" FontWeight="Bold" VerticalAlignment="Center"/>
+                    </Grid>
+                </Border>
 
-                                    <!-- Monday -->
-                                    <Border Grid.Column="1" Background="{Binding Monday.CellColor}" Margin="4" CornerRadius="6" Padding="4">
-                                        <StackPanel VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding Monday.TimeDisplay}" FontWeight="Bold" FontSize="11" HorizontalAlignment="Center" Foreground="{Binding Monday.ForegroundColor}"/>
-                                            <TextBlock Text="{Binding Monday.PositionName}" FontSize="10" HorizontalAlignment="Center" Opacity="0.9" Foreground="{Binding Monday.ForegroundColor}"/>
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl x:Name="ScheduleItemsControl" ItemsSource="{Binding EmployeeWeeklySchedules}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border BorderBrush="#F1F5F9" BorderThickness="0,0,0,1" Background="White">
+                                    <Grid MinHeight="90">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="180"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="20,0">
+                                            <TextBlock Text="{Binding EmployeeName}" FontWeight="Bold" Foreground="#27251F" FontSize="14"/>
+                                            <TextBlock Text="Full-Time" FontSize="10" Foreground="#64748B" FontWeight="SemiBold"/>
                                         </StackPanel>
-                                    </Border>
 
-                                    <!-- Tuesday -->
-                                    <Border Grid.Column="2" Background="{Binding Tuesday.CellColor}" Margin="4" CornerRadius="6" Padding="4">
-                                        <StackPanel VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding Tuesday.TimeDisplay}" FontWeight="Bold" FontSize="11" HorizontalAlignment="Center" Foreground="{Binding Tuesday.ForegroundColor}"/>
-                                            <TextBlock Text="{Binding Tuesday.PositionName}" FontSize="10" HorizontalAlignment="Center" Opacity="0.9" Foreground="{Binding Tuesday.ForegroundColor}"/>
-                                        </StackPanel>
-                                    </Border>
+                                        <ContentControl Grid.Column="1" Content="{Binding Monday}" ContentTemplate="{StaticResource DayCellTemplate}"/>
+                                        <ContentControl Grid.Column="2" Content="{Binding Tuesday}" ContentTemplate="{StaticResource DayCellTemplate}"/>
+                                        <ContentControl Grid.Column="3" Content="{Binding Wednesday}" ContentTemplate="{StaticResource DayCellTemplate}"/>
+                                        <ContentControl Grid.Column="4" Content="{Binding Thursday}" ContentTemplate="{StaticResource DayCellTemplate}"/>
+                                        <ContentControl Grid.Column="5" Content="{Binding Friday}" ContentTemplate="{StaticResource DayCellTemplate}"/>
+                                        <ContentControl Grid.Column="6" Content="{Binding Saturday}" ContentTemplate="{StaticResource DayCellTemplate}"/>
+                                        <ContentControl Grid.Column="7" Content="{Binding Sunday}" ContentTemplate="{StaticResource DayCellTemplate}"/>
 
-                                    <!-- Wednesday -->
-                                    <Border Grid.Column="3" Background="{Binding Wednesday.CellColor}" Margin="4" CornerRadius="6" Padding="4">
-                                        <StackPanel VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding Wednesday.TimeDisplay}" FontWeight="Bold" FontSize="11" HorizontalAlignment="Center" Foreground="{Binding Wednesday.ForegroundColor}"/>
-                                            <TextBlock Text="{Binding Wednesday.PositionName}" FontSize="10" HorizontalAlignment="Center" Opacity="0.9" Foreground="{Binding Wednesday.ForegroundColor}"/>
-                                        </StackPanel>
-                                    </Border>
-
-                                    <!-- Thursday -->
-                                    <Border Grid.Column="4" Background="{Binding Thursday.CellColor}" Margin="4" CornerRadius="6" Padding="4">
-                                        <StackPanel VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding Thursday.TimeDisplay}" FontWeight="Bold" FontSize="11" HorizontalAlignment="Center" Foreground="{Binding Thursday.ForegroundColor}"/>
-                                            <TextBlock Text="{Binding Thursday.PositionName}" FontSize="10" HorizontalAlignment="Center" Opacity="0.9" Foreground="{Binding Thursday.ForegroundColor}"/>
-                                        </StackPanel>
-                                    </Border>
-
-                                    <!-- Friday -->
-                                    <Border Grid.Column="5" Background="{Binding Friday.CellColor}" Margin="4" CornerRadius="6" Padding="4">
-                                        <StackPanel VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding Friday.TimeDisplay}" FontWeight="Bold" FontSize="11" HorizontalAlignment="Center" Foreground="{Binding Friday.ForegroundColor}"/>
-                                            <TextBlock Text="{Binding Friday.PositionName}" FontSize="10" HorizontalAlignment="Center" Opacity="0.9" Foreground="{Binding Friday.ForegroundColor}"/>
-                                        </StackPanel>
-                                    </Border>
-
-                                    <!-- Saturday -->
-                                    <Border Grid.Column="6" Background="{Binding Saturday.CellColor}" Margin="4" CornerRadius="6" Padding="4">
-                                        <StackPanel VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding Saturday.TimeDisplay}" FontWeight="Bold" FontSize="11" HorizontalAlignment="Center" Foreground="{Binding Saturday.ForegroundColor}"/>
-                                            <TextBlock Text="{Binding Saturday.PositionName}" FontSize="10" HorizontalAlignment="Center" Opacity="0.9" Foreground="{Binding Saturday.ForegroundColor}"/>
-                                        </StackPanel>
-                                    </Border>
-
-                                    <!-- Sunday -->
-                                    <Border Grid.Column="7" Background="{Binding Sunday.CellColor}" Margin="4" CornerRadius="6" Padding="4">
-                                        <StackPanel VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding Sunday.TimeDisplay}" FontWeight="Bold" FontSize="11" HorizontalAlignment="Center" Foreground="{Binding Sunday.ForegroundColor}"/>
-                                            <TextBlock Text="{Binding Sunday.PositionName}" FontSize="10" HorizontalAlignment="Center" Opacity="0.9" Foreground="{Binding Sunday.ForegroundColor}"/>
-                                        </StackPanel>
-                                    </Border>
-                                </Grid>
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </ScrollViewer>
-        </Border>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
+        </materialDesign:Card>
     </Grid>
 </UserControl>
