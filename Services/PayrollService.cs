@@ -10,9 +10,9 @@ namespace AttendanceShiftingManagement.Services
         private const decimal OVERTIME_MULTIPLIER = 1.25m;
         private const decimal HOLIDAY_MULTIPLIER = 2.0m;
 
-        public PayrollService()
+        public PayrollService(AppDbContext context)
         {
-            _context = new AppDbContext();
+            _context = context;
         }
 
         public List<PayrollItem> GeneratePayroll(DateTime startDate, DateTime endDate)
@@ -106,6 +106,57 @@ namespace AttendanceShiftingManagement.Services
             }
 
             _context.SaveChanges();
+        }
+        public PayrollItem GetEmployeeEarningsEstimate(int employeeId, DateTime startDate, DateTime endDate)
+        {
+            var employee = _context.Employees
+                .Include(e => e.Position)
+                .FirstOrDefault(e => e.Id == employeeId);
+
+            if (employee == null) return new PayrollItem();
+
+            var holidays = _context.Holidays
+                .Where(h => h.HolidayDate >= startDate && h.HolidayDate <= endDate && h.IsDoublePay)
+                .ToList();
+
+            var attendances = _context.Attendances
+                .Where(a => a.EmployeeId == employeeId &&
+                           a.Status == AttendanceStatus.Closed &&
+                           a.TimeIn.HasValue &&
+                           a.TimeIn.Value.Date >= startDate.Date &&
+                           a.TimeIn.Value.Date <= endDate.Date)
+                .ToList();
+
+            decimal totalHours = attendances.Sum(a => a.TotalHours);
+            decimal overtimeHours = attendances.Sum(a => a.OvertimeHours);
+            decimal holidayHours = 0;
+
+            foreach (var attendance in attendances)
+            {
+                var date = attendance.TimeIn!.Value.Date;
+                if (holidays.Any(h => h.HolidayDate.Date == date))
+                {
+                    holidayHours += attendance.TotalHours;
+                }
+            }
+
+            decimal regularHours = Math.Max(0, totalHours - overtimeHours - holidayHours);
+            decimal regularPay = regularHours * employee.HourlyRate;
+            decimal overtimePay = overtimeHours * employee.HourlyRate * OVERTIME_MULTIPLIER;
+            decimal holidayPay = holidayHours * employee.HourlyRate * HOLIDAY_MULTIPLIER;
+
+            return new PayrollItem
+            {
+                EmployeeId = employee.Id,
+                EmployeeName = employee.FullName,
+                TotalHours = totalHours,
+                OvertimeHours = overtimeHours,
+                HolidayHours = holidayHours,
+                RegularPay = regularPay,
+                OvertimePay = overtimePay,
+                HolidayPay = holidayPay,
+                TotalPay = regularPay + overtimePay + holidayPay
+            };
         }
     }
 

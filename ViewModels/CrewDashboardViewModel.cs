@@ -12,14 +12,17 @@ namespace AttendanceShiftingManagement.ViewModels
     {
         private readonly AttendanceService _attendance;
         private readonly int _employeeId;
+        private readonly ShiftService _shiftService;
+        private readonly PayrollService _payrollService;
 
-        private string _statusText = "ON DUTY";
-        private string _statusColor = "#43A047";
-        private string _statusDetails = "Shift: 08:00 AM - 04:00 PM | Kitchen";
-        private string _actionButtonText = "TIME OUT";
+        private string _statusText = "OFF DUTY";
+        private string _statusColor = "#E53935";
+        private string _statusDetails = "No active shift";
+        private string _actionButtonText = "TIME IN";
         private string _totalPay = "₱ 0.00";
         private string _totalHoursCount = "0.0h";
         private string _overtimeHoursCount = "0.0h";
+        private bool _isActionEnabled = true;
 
         public string StatusText { get => _statusText; set => SetProperty(ref _statusText, value); }
         public string StatusColor { get => _statusColor; set => SetProperty(ref _statusColor, value); }
@@ -28,6 +31,7 @@ namespace AttendanceShiftingManagement.ViewModels
         public string TotalPay { get => _totalPay; set => SetProperty(ref _totalPay, value); }
         public string TotalHoursCount { get => _totalHoursCount; set => SetProperty(ref _totalHoursCount, value); }
         public string OvertimeHoursCount { get => _overtimeHoursCount; set => SetProperty(ref _overtimeHoursCount, value); }
+        public bool IsActionEnabled { get => _isActionEnabled; set => SetProperty(ref _isActionEnabled, value); }
 
         public event Action? AttendanceRecorded;
 
@@ -36,48 +40,112 @@ namespace AttendanceShiftingManagement.ViewModels
 
         public ICommand TimeInOutCommand { get; }
 
-        public CrewDashboardViewModel(AttendanceService service, int employeeId)
+        public CrewDashboardViewModel(AttendanceService attendance, ShiftService shifts, PayrollService payroll, int employeeId)
         {
-            _attendance = service;
+            _attendance = attendance;
+            _shiftService = shifts;
+            _payrollService = payroll;
             _employeeId = employeeId;
 
             TimeInOutCommand = new RelayCommand(_ => ExecuteTimeToggle());
 
-            LoadMockData();
+            LoadRealData();
+            SyncAttendanceStatus();
+        }
+
+        private void SyncAttendanceStatus()
+        {
+            var active = _attendance.GetActiveAttendance(_employeeId);
+            var todayShift = _shiftService.GetEmployeeShiftForDate(_employeeId, DateTime.Today);
+
+            if (active != null)
+            {
+                StatusText = "ON DUTY";
+                StatusColor = "#43A047";
+                ActionButtonText = "TIME OUT";
+                StatusDetails = $"Shift: {active.Shift.StartTime:hh\\:mm} - {active.Shift.EndTime:hh\\:mm} | {active.Shift.Position?.Name}";
+                IsActionEnabled = true;
+            }
+            else if (todayShift != null)
+            {
+                StatusText = "OFF DUTY";
+                StatusColor = "#FB8C00"; // Orange/Amber for "About to work"
+                ActionButtonText = "TIME IN";
+                StatusDetails = $"Scheduled today: {todayShift.Shift.StartTime:hh\\:mm} - {todayShift.Shift.EndTime:hh\\:mm} | {todayShift.Shift.Position?.Name}";
+                IsActionEnabled = true;
+            }
+            else
+            {
+                StatusText = "RELAX / DAY OFF";
+                StatusColor = "#37474F"; // Slate Blue Gray
+                ActionButtonText = "NO SHIFT";
+                StatusDetails = "No shift scheduled for today.";
+                IsActionEnabled = false;
+            }
         }
 
         private void ExecuteTimeToggle()
         {
-            if (ActionButtonText == "TIME IN")
+            try
             {
-                _attendance.TimeIn(_employeeId);
-                StatusText = "ON DUTY";
-                StatusColor = "#43A047";
-                ActionButtonText = "TIME OUT";
-            }
-            else
-            {
-                _attendance.TimeOut(_employeeId);
-                StatusText = "OFF DUTY";
-                StatusColor = "#E53935";
-                ActionButtonText = "TIME IN";
-            }
+                if (ActionButtonText == "TIME IN")
+                {
+                    _attendance.TimeIn(_employeeId);
+                }
+                else
+                {
+                    _attendance.TimeOut(_employeeId);
+                }
 
-            AttendanceRecorded?.Invoke();
+                LoadRealData();
+                SyncAttendanceStatus();
+                AttendanceRecorded?.Invoke();
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show(ex.Message, "Attendance Error",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                SyncAttendanceStatus();
+            }
         }
 
-        private void LoadMockData()
+        private void LoadRealData()
         {
-            WeeklyShifts.Add(new CrewShiftItem { Day = "Monday", Position = "Kitchen", TimeRange = "08:00 AM - 04:00 PM" });
-            WeeklyShifts.Add(new CrewShiftItem { Day = "Wednesday", Position = "Kitchen", TimeRange = "08:00 AM - 04:00 PM" });
-            WeeklyShifts.Add(new CrewShiftItem { Day = "Friday", Position = "Kitchen", TimeRange = "10:00 AM - 06:00 PM" });
+            // Load Weekly Schedule
+            var startOfWeek = DateTime.Today.AddDays(-(int)DateTime.Today.DayOfWeek + (int)DayOfWeek.Monday);
+            var endOfWeek = startOfWeek.AddDays(6);
 
-            Notifications.Add("New health and safety protocols updated.");
-            Notifications.Add("Manager message: Great work everyone on the busy weekend!");
+            WeeklyShifts.Clear();
+            var shifts = _shiftService.GetEmployeeWeeklySchedule(_employeeId, startOfWeek, endOfWeek);
+            foreach (var s in shifts)
+            {
+                WeeklyShifts.Add(new CrewShiftItem
+                {
+                    Day = s.Shift.ShiftDate.DayOfWeek.ToString(),
+                    Position = s.Shift.Position?.Name ?? "General",
+                    TimeRange = $"{s.Shift.StartTime:hh\\:mm} - {s.Shift.EndTime:hh\\:mm}"
+                });
+            }
 
-            TotalPay = "₱ 12,450.00";
-            TotalHoursCount = "40.0h";
-            OvertimeHoursCount = "2.5h";
+            // Load Earnings Estimate
+            var estimate = _payrollService.GetEmployeeEarningsEstimate(_employeeId, startOfWeek, endOfWeek);
+            TotalPay = $"₱ {estimate.TotalPay:N2}";
+            TotalHoursCount = $"{estimate.TotalHours:F1}h";
+            OvertimeHoursCount = $"{estimate.OvertimeHours:F1}h";
+
+            // Load Notifications (History as fallback for now)
+            Notifications.Clear();
+            var history = _attendance.GetRecentAttendance(_employeeId, 3);
+            foreach (var h in history)
+            {
+                string action = h.Status == AttendanceStatus.Closed ? "Completed shift" : "Clocked in";
+                Notifications.Add($"{action} on {h.TimeIn:MMM dd, hh:mm tt}");
+            }
+
+            if (!history.Any())
+            {
+                Notifications.Add("Welcome! No recent activity recorded.");
+            }
         }
     }
 

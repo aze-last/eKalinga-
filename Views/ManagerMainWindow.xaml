@@ -1,59 +1,85 @@
 <Window x:Class="AttendanceShiftingManagement.Views.ManagerMainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
-        mc:Ignorable="d" 
-        d:DesignHeight="800" d:DesignWidth="1100"
-        Background="{DynamicResource MaterialDesignPaper}"
-        FontFamily="{materialDesign:MaterialDesignFont}"
-        WindowState="Maximized"
-        Title="Attendance Management System - Manager">
+        mc:Ignorable="d"
+        Title="Manager Command Center | Attendance System" WindowState="Maximized"
+        Background="#F0F2F5" FontFamily="{materialDesign:MaterialDesignFont}">
 
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="220"/>
+            <ColumnDefinition Width="240"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <!-- Sidebar -->
-        <Border Grid.Column="0" Background="{DynamicResource PrimaryHueMidBrush}" materialDesign:ElevationAssist.Elevation="Dp4">
-            <Grid Background="#FF0916E5">
+        <Border Grid.Column="0" Background="#0F172A">
+            <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <!-- Brand/Logo -->
-                <StackPanel Grid.Row="0" Margin="16,32,16,32">
-                    <materialDesign:PackIcon Kind="ClockTimeEight" Width="48" Height="48" Foreground="White" HorizontalAlignment="Center"/>
-                    <TextBlock Text="MANAGER" Foreground="White" HorizontalAlignment="Center" FontWeight="Bold" Margin="0,8,0,0"/>
-                    <TextBlock Text="PORTAL" Foreground="White" HorizontalAlignment="Center" FontSize="10" Opacity="0.7"/>
+                <StackPanel Grid.Row="0" Margin="20,40,20,40">
+                    <materialDesign:PackIcon Kind="ViewDashboard" Width="40" Height="40" Foreground="#F2A900" HorizontalAlignment="Center"/>
+                    <TextBlock Text="MANAGER" Foreground="White" HorizontalAlignment="Center" FontSize="20" FontWeight="ExtraBold" Margin="0,10,0,0" />
+                    <TextBlock Text="COMMAND CENTER" Foreground="#64748B" HorizontalAlignment="Center" FontSize="10" FontWeight="Bold"/>
                 </StackPanel>
 
-                <!-- Nav Buttons -->
-                <StackPanel Grid.Row="1">
-                    <Button Style="{StaticResource MaterialDesignFlatButton}" Foreground="White" Height="50" Content="Dashboard" FontSize="18"/>
-                    <Button Style="{StaticResource MaterialDesignFlatButton}" Foreground="White" Height="50" Content="Shift Planning" FontSize="18"/>
-                    <Button Style="{StaticResource MaterialDesignFlatButton}" Foreground="White" Height="50" Content="Attendance" FontSize="18"/>
+                <StackPanel Grid.Row="1" Margin="12,0">
+                    <RadioButton Style="{StaticResource MaterialDesignTabRadioButton}" IsChecked="True"
+                                 Content="DASHBOARD" Foreground="#94A3B8" Height="50" Margin="0,2"
+                                 Command="{Binding ShowDashboardCommand}"/>
+                    <RadioButton Style="{StaticResource MaterialDesignTabRadioButton}" 
+                                 Content="SHIFT PLANNING" Foreground="#94A3B8" Height="50" Margin="0,2"
+                                 Command="{Binding ShowShiftsCommand}"/>
+                    <RadioButton Style="{StaticResource MaterialDesignTabRadioButton}" 
+                                 Content="ATTENDANCE LOGS" Foreground="#94A3B8" Height="50" Margin="0,2"
+                                 Command="{Binding ShowAttendanceCommand}"/>
+                    <RadioButton Style="{StaticResource MaterialDesignTabRadioButton}" 
+                                 Content="EMPLOYEE LIST" Foreground="#94A3B8" Height="50" Margin="0,2"
+                                 Command="{Binding ShowEmployeesCommand}"/>
+                    <RadioButton Style="{StaticResource MaterialDesignTabRadioButton}" 
+                                 Content="POSITIONS" Foreground="#94A3B8" Height="50" Margin="0,2"
+                                 Command="{Binding ShowPositionsCommand}"/>
                 </StackPanel>
 
-                <!-- Logout -->
                 <Button Grid.Row="2" Style="{StaticResource MaterialDesignFlatButton}" 
-                        Foreground="White" Height="50" Margin="0,0,0,16" Click="Logout_Click">
-                    <StackPanel Orientation="Horizontal" Width="180">
-                        <materialDesign:PackIcon Kind="Logout" Margin="0,0,16,0"/>
-                        <TextBlock Text="Logout"/>
+                        Foreground="#FDA4AF" Height="50" Margin="12,0,12,30" Click="Logout_Click">
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="Logout" Margin="0,0,12,0"/>
+                        <TextBlock Text="Exit Portal" FontWeight="SemiBold"/>
                     </StackPanel>
                 </Button>
             </Grid>
         </Border>
 
-        <!-- Main Content -->
         <Grid Grid.Column="1">
-            <TextBlock Text="Manager Portal Content Area" HorizontalAlignment="Center" VerticalAlignment="Center" Style="{StaticResource MaterialDesignHeadline4TextBlock}" Opacity="0.3"/>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="70"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0" Background="White" Padding="24,0" materialDesign:ElevationAssist.Elevation="Dp2">
+                <DockPanel VerticalAlignment="Center">
+                    <TextBlock Text="Operational Overview" VerticalAlignment="Center" 
+                               Style="{StaticResource MaterialDesignHeadline6TextBlock}" FontWeight="SemiBold" Foreground="#1E293B"/>
+
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                        <materialDesign:Badged Badge="3">
+                            <Button Style="{StaticResource MaterialDesignIconButton}" Foreground="#64748B">
+                                <materialDesign:PackIcon Kind="BellOutline" />
+                            </Button>
+                        </materialDesign:Badged>
+                        <Border Background="#E2E8F0" Width="1" Height="24" Margin="16,0"/>
+                        <TextBlock Text="Store Manager #102" VerticalAlignment="Center" Margin="0,0,10,0" FontWeight="Medium"/>
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+
+            <ContentControl Grid.Row="1" Content="{Binding CurrentView}" Margin="24"/>
         </Grid>
     </Grid>
 </Window>

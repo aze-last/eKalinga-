@@ -43,7 +43,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
         public PayrollViewModel()
         {
-            _payrollService = new PayrollService();
+            _payrollService = new PayrollService(new Data.AppDbContext());
             _payrollItems = new ObservableCollection<PayrollItem>();
 
             GeneratePayrollCommand = new RelayCommand(ExecuteGeneratePayroll, CanExecuteGeneratePayroll);

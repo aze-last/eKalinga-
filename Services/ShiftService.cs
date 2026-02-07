@@ -79,5 +79,25 @@ namespace AttendanceShiftingManagement.Services
                 })
                 .ToList();
         }
+        public List<ShiftAssignment> GetEmployeeWeeklySchedule(int employeeId, DateTime start, DateTime end)
+        {
+            return _context.ShiftAssignments
+                .Include(sa => sa.Shift)
+                .ThenInclude(s => s.Position)
+                .Where(sa => sa.EmployeeId == employeeId &&
+                             sa.Shift.ShiftDate >= start &&
+                             sa.Shift.ShiftDate <= end)
+                .OrderBy(sa => sa.Shift.ShiftDate)
+                .ToList();
+        }
+
+        public ShiftAssignment? GetEmployeeShiftForDate(int employeeId, DateTime date)
+        {
+            return _context.ShiftAssignments
+                .Include(sa => sa.Shift)
+                .ThenInclude(s => s.Position)
+                .FirstOrDefault(sa => sa.EmployeeId == employeeId &&
+                                    sa.Shift.ShiftDate.Date == date.Date);
+        }
     }
 }

@@ -5,9 +5,12 @@ namespace AttendanceShiftingManagement.Models
     public class AttendanceDto
     {
         public string Name { get; set; } = string.Empty;
+        public string Position { get; set; } = string.Empty;
         public DateTime? TimeIn { get; set; }
         public DateTime? TimeOut { get; set; }
+        public string ClockInTime => TimeIn?.ToString("hh:mm tt") ?? "---";
         public string Status { get; set; } = string.Empty;
+        public string StatusColor { get; set; } = "#64748B";
     }
 
     public class WeeklyScheduleDto
