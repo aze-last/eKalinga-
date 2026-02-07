@@ -127,8 +127,18 @@
                                                            Foreground="#DA291C"
                                                            FontWeight="Bold"
                                                            FontSize="10"
-                                                           Visibility="{Binding IsRead, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}"
-                                                           HorizontalAlignment="Right"/>
+                                                           HorizontalAlignment="Right">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsRead}" Value="True">
+                                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
                                                 <Button Content="Mark Read"
                                                         Command="{Binding DataContext.MarkReadCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                         CommandParameter="{Binding}"

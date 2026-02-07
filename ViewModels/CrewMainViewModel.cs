@@ -5,6 +5,9 @@ using AttendanceShiftingManagement.Views;
 using System.Windows.Input;
 using System;
 using System.Windows;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.IO;
 
 namespace AttendanceShiftingManagement.ViewModels
 {
@@ -16,6 +19,20 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly ShiftService _shiftService;
         private readonly PayrollService _payrollService;
         private readonly User _currentUser;
+        private ImageSource? _userPhotoImage;
+        private string _userDisplayName = "Crew";
+
+        public ImageSource? UserPhotoImage
+        {
+            get => _userPhotoImage;
+            set => SetProperty(ref _userPhotoImage, value);
+        }
+
+        public string UserDisplayName
+        {
+            get => _userDisplayName;
+            set => SetProperty(ref _userDisplayName, value);
+        }
         private CrewDashboardViewModel? _dashboardVm;
         public object? CurrentView
         {
@@ -53,6 +70,8 @@ namespace AttendanceShiftingManagement.ViewModels
 
             // Set default view
             ExecuteShowTimeClock();
+
+            LoadUserSummary();
         }
 
         public event Action? ShowSuccessRequest;
@@ -103,6 +122,32 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 DataContext = new ProfileSettingsViewModel(_currentUser)
             };
+        }
+
+        private void LoadUserSummary()
+        {
+            using var ctx = new Data.AppDbContext();
+            var profile = ctx.UserProfiles.FirstOrDefault(p => p.UserId == _currentUser.Id);
+            var employee = ctx.Employees.FirstOrDefault(e => e.UserId == _currentUser.Id);
+
+            UserDisplayName = !string.IsNullOrWhiteSpace(profile?.FullName)
+                ? profile.FullName
+                : employee?.FullName ?? _currentUser.Username;
+
+            UserPhotoImage = BuildImage(profile?.PhotoPath);
+        }
+
+        private ImageSource? BuildImage(string? path)
+        {
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+                return null;
+
+            var image = new BitmapImage();
+            image.BeginInit();
+            image.CacheOption = BitmapCacheOption.OnLoad;
+            image.UriSource = new Uri(path, UriKind.Absolute);
+            image.EndInit();
+            return image;
         }
     }
 }

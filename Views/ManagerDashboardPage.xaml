@@ -95,7 +95,7 @@
                                      materialDesign:HintAssist.Hint="Write an announcement for all crew..."
                                      materialDesign:HintAssist.Foreground="#6B7280"
                                      Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                     Height="40"
+                                     Height="60"
                                      FontFamily="Segoe UI"
                                      FontSize="14"
                                      Foreground="#111"

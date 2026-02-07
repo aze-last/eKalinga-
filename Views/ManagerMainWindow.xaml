@@ -23,10 +23,27 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <StackPanel Grid.Row="0" Margin="20,40,20,40">
-                    <Image Source="/Images/McDonalds-Logo.png" Width="80" Height="48" Stretch="Uniform" HorizontalAlignment="Center"/>
-                    <TextBlock Text="MANAGER" Foreground="White" HorizontalAlignment="Center" FontSize="20" FontWeight="ExtraBold" Margin="0,10,0,0" />
-                    <TextBlock Text="COMMAND CENTER" Foreground="{StaticResource BrandYellowBrush}" HorizontalAlignment="Center" FontSize="10" FontWeight="Bold"/>
+                <StackPanel Grid.Row="0" Margin="20,32,20,24">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="64"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Border Width="56" Height="56" CornerRadius="28" Background="#1F2937" VerticalAlignment="Center">
+                            <Grid>
+                                <materialDesign:PackIcon Kind="AccountCircle" Foreground="{StaticResource BrandYellowBrush}" Width="36" Height="36" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <Image Source="{Binding UserPhotoImage}" Stretch="UniformToFill"/>
+                            </Grid>
+                        </Border>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="12,0,0,0">
+                            <TextBlock Text="{Binding UserDisplayName}" Foreground="White" FontSize="16" FontWeight="Bold" TextTrimming="CharacterEllipsis"/>
+                            <Button Content="Profile Settings"
+                                    Command="{Binding ShowProfileSettingsCommand}"
+                                    Style="{StaticResource MaterialDesignFlatButton}"
+                                    Foreground="{StaticResource BrandYellowBrush}"
+                                    Padding="0" HorizontalAlignment="Left"/>
+                        </StackPanel>
+                    </Grid>
                 </StackPanel>
 
                 <StackPanel Grid.Row="1" Margin="12,0">
@@ -40,21 +57,9 @@
                     <RadioButton Style="{StaticResource MaterialDesignTabRadioButton}" 
                                  Content="WEEKLY SCHEDULE" Foreground="White" Height="50" Margin="0,2"
                                  Command="{Binding ShowWeeklyCalendarCommand}"/>
-                    <RadioButton Style="{StaticResource MaterialDesignTabRadioButton}" 
-                                 Content="ATTENDANCE LOGS" Foreground="White" Height="50" Margin="0,2"
-                                 Command="{Binding ShowAttendanceCommand}"/>
-                    <RadioButton Style="{StaticResource MaterialDesignTabRadioButton}" 
-                                 Content="EMPLOYEE LIST" Foreground="White" Height="50" Margin="0,2"
-                                 Command="{Binding ShowEmployeesCommand}"/>
-                    <RadioButton Style="{StaticResource MaterialDesignTabRadioButton}" 
-                                 Content="POSITIONS" Foreground="White" Height="50" Margin="0,2"
-                                 Command="{Binding ShowPositionsCommand}"/>
-                    <RadioButton Style="{StaticResource MaterialDesignTabRadioButton}" 
-                                 Content="LEAVE APPROVAL" Foreground="White" Height="50" Margin="0,2"
-                                 Command="{Binding ShowLeaveApprovalCommand}"/>
-                    <RadioButton Style="{StaticResource MaterialDesignTabRadioButton}" 
-                                 Content="PROFILE SETTINGS" Foreground="White" Height="50" Margin="0,2"
-                                 Command="{Binding ShowProfileSettingsCommand}"/>
+                    <RadioButton Style="{StaticResource MaterialDesignTabRadioButton}"
+                                 Content="MY SCHEDULE" Foreground="White" Height="50" Margin="0,2"
+                                 Command="{Binding ShowMyScheduleCommand}"/>
                 </StackPanel>
 
                 <Button Grid.Row="2" Style="{StaticResource MaterialDesignFlatButton}" 
@@ -75,22 +80,38 @@
 
             <Border Grid.Row="0" Background="White" Padding="24,0" materialDesign:ElevationAssist.Elevation="Dp2">
                 <DockPanel VerticalAlignment="Center">
-                    <TextBlock Text="Operational Overview" VerticalAlignment="Center" 
-                               Style="{StaticResource MaterialDesignHeadline6TextBlock}" FontWeight="SemiBold" Foreground="#27251F"/>
+                    <Button Style="{StaticResource MaterialDesignIconButton}" Command="{Binding ToggleMenuCommand}">
+                        <materialDesign:PackIcon Kind="Menu" Foreground="#27251F"/>
+                    </Button>
 
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                        <materialDesign:Badged Badge="3">
-                            <Button Style="{StaticResource MaterialDesignIconButton}" Foreground="#64748B">
-                                <materialDesign:PackIcon Kind="BellOutline" />
-                            </Button>
-                        </materialDesign:Badged>
-                        <Border Background="#E2E8F0" Width="1" Height="24" Margin="16,0"/>
-                        <TextBlock Text="Store Manager #102" VerticalAlignment="Center" Margin="0,0,10,0" FontWeight="Medium"/>
+                        <TextBlock Text="{Binding UserDisplayName}" VerticalAlignment="Center" Margin="0,0,10,0" FontWeight="Medium"/>
                     </StackPanel>
                 </DockPanel>
             </Border>
 
             <ContentControl Grid.Row="1" Content="{Binding CurrentView}" Margin="24"/>
+
+            <Grid Grid.RowSpan="2" Panel.ZIndex="100" Visibility="{Binding IsMenuOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <Border Background="#66000000">
+                    <Border.InputBindings>
+                        <MouseBinding Gesture="LeftClick" Command="{Binding CloseMenuCommand}"/>
+                    </Border.InputBindings>
+                </Border>
+                <Border Background="White" Width="300" HorizontalAlignment="Right" Padding="20" materialDesign:ElevationAssist.Elevation="Dp8">
+                    <StackPanel>
+                        <TextBlock Text="Menu" FontWeight="Bold" FontSize="16" Margin="0,0,0,12"/>
+                        <Button Content="Attendance Logs" Style="{StaticResource MaterialDesignOutlinedButton}" Margin="0,0,0,8"
+                                Command="{Binding ShowAttendanceCommand}"/>
+                        <Button Content="Employee List" Style="{StaticResource MaterialDesignOutlinedButton}" Margin="0,0,0,8"
+                                Command="{Binding ShowEmployeesCommand}"/>
+                        <Button Content="Positions" Style="{StaticResource MaterialDesignOutlinedButton}" Margin="0,0,0,8"
+                                Command="{Binding ShowPositionsCommand}"/>
+                        <Button Content="Leave Approval" Style="{StaticResource MaterialDesignOutlinedButton}" Margin="0,0,0,8"
+                                Command="{Binding ShowLeaveApprovalCommand}"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
         </Grid>
     </Grid>
 </Window>
