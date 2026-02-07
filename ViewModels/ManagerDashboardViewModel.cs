@@ -8,6 +8,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel;
 using System.Windows.Data;
+using System.Windows.Threading;
 
 namespace AttendanceShiftingManagement.ViewModels
 {
@@ -79,6 +80,7 @@ namespace AttendanceShiftingManagement.ViewModels
         public ObservableCollection<Notification> ManagerNotifications { get; } = new();
 
         public System.Windows.Input.ICommand SendAnnouncementCommand { get; }
+        private readonly DispatcherTimer _notificationTimer;
 
         public ManagerDashboardViewModel(AppDbContext ctx, User user)
         {
@@ -130,6 +132,13 @@ namespace AttendanceShiftingManagement.ViewModels
             ApplyAttendanceFilter();
 
             LoadManagerNotifications();
+
+            _notificationTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(20)
+            };
+            _notificationTimer.Tick += (_, __) => LoadManagerNotifications();
+            _notificationTimer.Start();
         }
 
         private void ApplyAttendanceFilter()
@@ -179,9 +188,27 @@ namespace AttendanceShiftingManagement.ViewModels
             }
             else
             {
-                CurrentStatus = "OFF DUTY";
-                StatusColor = "#64748B"; // Slate
+                if (HasShiftToday())
+                {
+                    CurrentStatus = "SCHEDULED";
+                    StatusColor = "#F59E0B"; // Amber
+                }
+                else
+                {
+                    CurrentStatus = "OFF DUTY";
+                    StatusColor = "#64748B"; // Slate
+                }
             }
+        }
+
+        private bool HasShiftToday()
+        {
+            if (_employeeId == 0) return false;
+
+            var today = DateTime.Today;
+            return _context.ShiftAssignments
+                .Include(sa => sa.Shift)
+                .Any(sa => sa.EmployeeId == _employeeId && sa.Shift.ShiftDate.Date == today);
         }
 
         private void ExecuteTimeIn()

@@ -5,6 +5,9 @@ using System.Windows.Input;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
 using System;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.IO;
 
 namespace AttendanceShiftingManagement.ViewModels
 {
@@ -12,6 +15,28 @@ namespace AttendanceShiftingManagement.ViewModels
     {
         private object _currentView;
         private readonly User _currentUser;
+        private readonly int _employeeId;
+        private ImageSource? _userPhotoImage;
+        private string _userDisplayName = "Manager";
+        private bool _isMenuOpen;
+
+        public bool IsMenuOpen
+        {
+            get => _isMenuOpen;
+            set => SetProperty(ref _isMenuOpen, value);
+        }
+
+        public ImageSource? UserPhotoImage
+        {
+            get => _userPhotoImage;
+            set => SetProperty(ref _userPhotoImage, value);
+        }
+
+        public string UserDisplayName
+        {
+            get => _userDisplayName;
+            set => SetProperty(ref _userDisplayName, value);
+        }
 
         public object CurrentView
         {
@@ -27,6 +52,9 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand ShowWeeklyCalendarCommand { get; }
         public ICommand ShowLeaveApprovalCommand { get; }
         public ICommand ShowProfileSettingsCommand { get; }
+        public ICommand ShowMyScheduleCommand { get; }
+        public ICommand ToggleMenuCommand { get; }
+        public ICommand CloseMenuCommand { get; }
 
         private bool _isSchedulingAllowed;
         public bool IsSchedulingAllowed
@@ -49,14 +77,18 @@ namespace AttendanceShiftingManagement.ViewModels
 
                 if (emp != null && emp.Position != null)
                 {
+                    _employeeId = emp.Id;
                     // Allow if position name contains "Scheduling"
                     IsSchedulingAllowed = emp.Position.Name.IndexOf("Scheduling", StringComparison.OrdinalIgnoreCase) >= 0;
                 }
                 else
                 {
+                    _employeeId = 0;
                     IsSchedulingAllowed = false;
                 }
             }
+
+            LoadUserSummary();
 
             ShowDashboardCommand = new RelayCommand(_ => ExecuteShowDashboard());
             ShowShiftsCommand = new RelayCommand(_ => ExecuteShowShifts());
@@ -66,6 +98,9 @@ namespace AttendanceShiftingManagement.ViewModels
             ShowWeeklyCalendarCommand = new RelayCommand(_ => ExecuteShowWeeklyCalendar());
             ShowLeaveApprovalCommand = new RelayCommand(_ => ExecuteShowLeaveApproval());
             ShowProfileSettingsCommand = new RelayCommand(_ => ExecuteShowProfileSettings());
+            ShowMyScheduleCommand = new RelayCommand(_ => ExecuteShowMySchedule());
+            ToggleMenuCommand = new RelayCommand(_ => IsMenuOpen = !IsMenuOpen);
+            CloseMenuCommand = new RelayCommand(_ => IsMenuOpen = false);
 
             // Initialize with Dashboard
             ExecuteShowDashboard();
@@ -91,11 +126,52 @@ namespace AttendanceShiftingManagement.ViewModels
             CurrentView = new ShiftsManagementPage(_currentUser);
         }
 
+        private void LoadUserSummary()
+        {
+            using var ctx = new Data.AppDbContext();
+            var profile = ctx.UserProfiles.FirstOrDefault(p => p.UserId == _currentUser.Id);
+            var employee = ctx.Employees.FirstOrDefault(e => e.UserId == _currentUser.Id);
+
+            UserDisplayName = !string.IsNullOrWhiteSpace(profile?.FullName)
+                ? profile.FullName
+                : employee?.FullName ?? _currentUser.Username;
+
+            UserPhotoImage = BuildImage(profile?.PhotoPath);
+        }
+
+        private ImageSource? BuildImage(string? path)
+        {
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+                return null;
+
+            var image = new BitmapImage();
+            image.BeginInit();
+            image.CacheOption = BitmapCacheOption.OnLoad;
+            image.UriSource = new Uri(path, UriKind.Absolute);
+            image.EndInit();
+            return image;
+        }
+
         private void ExecuteShowWeeklyCalendar()
         {
             CurrentView = new WeeklyCalendarPage
             {
                 DataContext = new WeeklyCalendarViewModel(null, _currentUser.Id)
+            };
+        }
+
+        private void ExecuteShowMySchedule()
+        {
+            if (_employeeId == 0)
+            {
+                System.Windows.MessageBox.Show("No employee record found for this manager.", "Schedule Unavailable",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                return;
+            }
+
+            CurrentView = new WeeklyCalendarPage
+            {
+                DataContext = new WeeklyCalendarViewModel(_employeeId)
             };
         }
 
