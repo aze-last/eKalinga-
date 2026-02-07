@@ -32,8 +32,10 @@
                 </StackPanel>
 
                 <StackPanel Grid.Row="1">
-                    <Button Style="{StaticResource MaterialDesignFlatButton}" Foreground="White" Height="50" Content="My Schedule" FontSize="16"/>
-                    <Button Style="{StaticResource MaterialDesignFlatButton}" Foreground="White" Height="50" Content="Time Clock" FontSize="16"/>
+                    <Button Style="{StaticResource MaterialDesignFlatButton}" Foreground="White" Height="50" Content="My Schedule" FontSize="16"
+                            Command="{Binding ShowScheduleCommand}"/>
+                    <Button Style="{StaticResource MaterialDesignFlatButton}" Foreground="White" Height="50" Content="Time Clock" FontSize="16"
+                            Command="{Binding ShowTimeClockCommand}"/>
                 </StackPanel>
 
                 <Button Grid.Row="2" Style="{StaticResource MaterialDesignFlatButton}" 

@@ -83,12 +83,28 @@
                             <!-- Position selection removed -->
                         </Grid>
 
-                        <Button Content="CREATE WEEKLY SHIFT FOR SELECTED CREW" 
-                                Command="{Binding CreateBatchCommand}"
-                                Margin="0,20,0,0"
-                                Height="50"
-                                Style="{StaticResource MaterialDesignRaisedButton}"
-                                Background="#1E293B" BorderBrush="#1E293B"/>
+                        <Grid Margin="0,20,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <Button Grid.Column="0"
+                                    Content="CREATE WEEKLY SHIFT" 
+                                    Command="{Binding CreateBatchCommand}"
+                                    Height="50"
+                                    Style="{StaticResource MaterialDesignRaisedButton}"
+                                    Background="#1E293B" BorderBrush="#1E293B"
+                                    Margin="0,0,10,0"/>
+
+                            <Button Grid.Column="1"
+                                    Content="CLEAR" 
+                                    Command="{Binding ClearShiftsCommand}"
+                                    Height="50"
+                                    Style="{StaticResource MaterialDesignOutlinedButton}"
+                                    BorderBrush="#E53935" Foreground="#E53935"
+                                    ToolTip="Clear all shifts for this week"/>
+                        </Grid>
                     </StackPanel>
                 </Grid>
             </StackPanel>

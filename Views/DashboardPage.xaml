@@ -4,6 +4,13 @@
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
              Background="{DynamicResource MaterialDesignPaper}">
 
+    <UserControl.Resources>
+        <LinearGradientBrush x:Key="DashboardHeaderBrush" StartPoint="0,0" EndPoint="1,0">
+            <GradientStop Color="#1D3BFF" Offset="0"/>
+            <GradientStop Color="#4B6CFF" Offset="1"/>
+        </LinearGradientBrush>
+    </UserControl.Resources>
+
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <Grid Margin="24">
             <Grid.RowDefinitions>
@@ -13,23 +20,25 @@
             </Grid.RowDefinitions>
 
             <!-- Header -->
-            <DockPanel Grid.Row="0" Margin="0,0,0,24" Background="#FF101FFF">
+            <Border Grid.Row="0" Margin="0,0,0,24" Background="{StaticResource DashboardHeaderBrush}" CornerRadius="12" Padding="16">
+                <DockPanel>
                 <StackPanel>
                     <TextBlock Text="Admin Dashboard" Style="{StaticResource MaterialDesignHeadline4TextBlock}" FontWeight="Bold" Foreground="White"/>
-                    <TextBlock Text="McDonald's Branch #1024 - Management Overview" Foreground="{DynamicResource {x:Static SystemColors.WindowBrushKey}}" FontSize="16"/>
+                    <TextBlock Text="McDonald's Branch #1024 - Management Overview" Foreground="#E6ECFF" FontSize="16"/>
                 </StackPanel>
 
                 <StackPanel DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Center">
                     <TextBlock Text="{Binding CurrentDateTime}" 
-                               HorizontalAlignment="Right" Background="White"/>
+                               HorizontalAlignment="Right" Foreground="White"/>
                     <TextBlock Text="{Binding CurrentTime}" 
-                               HorizontalAlignment="Right" FontWeight="Bold" Background="White"/>
+                               HorizontalAlignment="Right" FontWeight="Bold" Foreground="White"/>
                 </StackPanel>
-            </DockPanel>
+                </DockPanel>
+            </Border>
 
             <!-- Stats Cards -->
             <UniformGrid Grid.Row="1" Columns="4" Margin="0,0,0,24">
-                <materialDesign:Card Margin="8" Background="{DynamicResource PrimaryHueMidBrush}" Foreground="White" Padding="16" materialDesign:ElevationAssist.Elevation="Dp3">
+                <materialDesign:Card Margin="8" Background="#1D3BFF" Foreground="White" Padding="16" materialDesign:ElevationAssist.Elevation="Dp3">
                     <StackPanel>
                         <materialDesign:PackIcon Kind="AccountGroup" Width="32" Height="32"/>
                         <TextBlock Text="{Binding TotalEmployees}" Style="{StaticResource MaterialDesignHeadline3TextBlock}" FontWeight="Bold"/>

@@ -125,11 +125,16 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 if (_existingEmployee != null)
                 {
-                    _existingEmployee.FullName = FullName;
-                    _existingEmployee.PositionId = SelectedPosition!.Id;
-                    _existingEmployee.HourlyRate = HourlyRate;
-                    _existingEmployee.DateHired = DateHired;
-                    _existingEmployee.Status = SelectedStatus;
+                    // Fix: Fetch the employee from the CURRENT context to ensure it's tracked
+                    var empToUpdate = _context.Employees.Find(_existingEmployee.Id);
+                    if (empToUpdate != null)
+                    {
+                        empToUpdate.FullName = FullName;
+                        empToUpdate.PositionId = SelectedPosition!.Id;
+                        empToUpdate.HourlyRate = HourlyRate;
+                        empToUpdate.DateHired = DateHired;
+                        empToUpdate.Status = SelectedStatus;
+                    }
                 }
                 else
                 {

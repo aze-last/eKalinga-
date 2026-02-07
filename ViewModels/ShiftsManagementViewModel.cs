@@ -110,6 +110,33 @@ namespace AttendanceShiftingManagement.ViewModels
             SelectedShiftToEdit = null;
         });
 
+        public ICommand DeleteShiftCommand => new RelayCommand(_ =>
+        {
+            if (SelectedShiftToEdit != null)
+            {
+                var result = System.Windows.MessageBox.Show(
+                    "Are you sure you want to delete this shift?",
+                    "Confirm Delete",
+                    System.Windows.MessageBoxButton.YesNo,
+                    System.Windows.MessageBoxImage.Warning);
+
+                if (result == System.Windows.MessageBoxResult.Yes)
+                {
+                    // Remove assignments first
+                    var assignments = _context.ShiftAssignments.Where(sa => sa.ShiftId == SelectedShiftToEdit.Id).ToList();
+                    _context.ShiftAssignments.RemoveRange(assignments);
+
+                    _context.Shifts.Remove(SelectedShiftToEdit);
+                    _context.SaveChanges();
+
+                    IsEditingShift = false;
+                    SelectedShiftToEdit = null;
+                    LoadRoster();
+                    System.Windows.MessageBox.Show("Shift deleted successfully.", "Success");
+                }
+            }
+        });
+
         private void LoadMetadata()
         {
             Employees.Clear();
@@ -260,6 +287,56 @@ namespace AttendanceShiftingManagement.ViewModels
                 var msg = ex.Message;
                 if (ex.InnerException != null) msg += "\n\nInner: " + ex.InnerException.Message;
                 System.Windows.MessageBox.Show(msg, "Error");
+            }
+        }
+
+
+        public ICommand ClearShiftsCommand => new RelayCommand(_ => ExecuteClearShifts());
+
+        private void ExecuteClearShifts()
+        {
+            try
+            {
+                var result = System.Windows.MessageBox.Show(
+                    $"Are you sure you want to clear ALL shifts for the week of {SelectedDay:MMM dd}?",
+                    "Confirm Clear Schedule",
+                    System.Windows.MessageBoxButton.YesNo,
+                    System.Windows.MessageBoxImage.Warning);
+
+                if (result == System.Windows.MessageBoxResult.Yes)
+                {
+                    var currentDay = SelectedDay;
+                    int diff = (7 + (currentDay.DayOfWeek - DayOfWeek.Monday)) % 7;
+                    var startOfWeek = currentDay.AddDays(-1 * diff).Date;
+                    var endOfWeek = startOfWeek.AddDays(7).Date;
+
+                    var shiftsToDelete = _context.Shifts
+                        .Where(s => s.ShiftDate >= startOfWeek && s.ShiftDate < endOfWeek)
+                        .ToList();
+
+                    if (shiftsToDelete.Any())
+                    {
+                        // Remove related assignments first if cascade delete isn't set (though EF usually handles this if configured)
+                        // Explicitly removing assignments just in case
+                        var shiftIds = shiftsToDelete.Select(s => s.Id).ToList();
+                        var assignmentsToDelete = _context.ShiftAssignments.Where(sa => shiftIds.Contains(sa.ShiftId)).ToList();
+
+                        _context.ShiftAssignments.RemoveRange(assignmentsToDelete);
+                        _context.Shifts.RemoveRange(shiftsToDelete);
+                        _context.SaveChanges();
+
+                        System.Windows.MessageBox.Show("Weekly schedule cleared successfully.", "Success");
+                        LoadRoster();
+                    }
+                    else
+                    {
+                        System.Windows.MessageBox.Show("No shifts found to clear for this week.", "Info");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"Error clearing shifts: {ex.Message}", "Error");
             }
         }
 

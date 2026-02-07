@@ -2,6 +2,9 @@ using AttendanceShiftingManagement.Helpers;
 using AttendanceShiftingManagement.Models;
 using AttendanceShiftingManagement.Views;
 using System.Windows.Input;
+using Microsoft.EntityFrameworkCore;
+using System.Linq;
+using System;
 
 namespace AttendanceShiftingManagement.ViewModels
 {
@@ -23,9 +26,35 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand ShowPositionsCommand { get; }
         public ICommand ShowWeeklyCalendarCommand { get; }
 
+        private bool _isSchedulingAllowed;
+        public bool IsSchedulingAllowed
+        {
+            get => _isSchedulingAllowed;
+            set => SetProperty(ref _isSchedulingAllowed, value);
+        }
+
         public ManagerMainViewModel(User user)
         {
             _currentUser = user;
+
+            // Check if user is "Scheduling Manager"
+            // We need a context to find the employee record and position
+            using (var ctx = new Data.AppDbContext())
+            {
+                var emp = ctx.Employees
+                    .Include(e => e.Position)
+                    .FirstOrDefault(e => e.UserId == user.Id);
+
+                if (emp != null && emp.Position != null)
+                {
+                    // Allow if position name contains "Scheduling"
+                    IsSchedulingAllowed = emp.Position.Name.Contains("Scheduling", StringComparison.OrdinalIgnoreCase);
+                }
+                else
+                {
+                    IsSchedulingAllowed = false;
+                }
+            }
 
             ShowDashboardCommand = new RelayCommand(_ => ExecuteShowDashboard());
             ShowShiftsCommand = new RelayCommand(_ => ExecuteShowShifts());
@@ -53,7 +82,10 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private void ExecuteShowWeeklyCalendar()
         {
-            CurrentView = new WeeklyCalendarPage();
+            CurrentView = new WeeklyCalendarPage
+            {
+                DataContext = new WeeklyCalendarViewModel()
+            };
         }
 
         private void ExecuteShowAttendance()

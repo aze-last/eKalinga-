@@ -59,7 +59,8 @@
                 <UniformGrid Columns="3" Margin="0,0,0,24">
                     <Button Style="{StaticResource MaterialDesignOutlinedButton}" Height="100" Margin="4" 
                             BorderBrush="{DynamicResource PrimaryHueMidBrush}" BorderThickness="1.5"
-                            materialDesign:ButtonAssist.CornerRadius="12" Background="White">
+                            materialDesign:ButtonAssist.CornerRadius="12" Background="White"
+                            Command="{Binding OpenScheduleCommand}">
                         <StackPanel>
                             <materialDesign:PackIcon Kind="CalendarWeek" HorizontalAlignment="Center" Width="28" Height="28"/>
                             <TextBlock Text="Schedule" Margin="0,8,0,0" FontWeight="SemiBold"/>
