@@ -134,6 +134,11 @@
                 </StackPanel>
 
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBox Width="220"
+                             Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                             materialDesign:HintAssist.Hint="Search employee..."
+                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                             Margin="0,0,12,0"/>
                     <Border Background="White" CornerRadius="20" Padding="5" materialDesign:ElevationAssist.Elevation="Dp1">
                         <StackPanel Orientation="Horizontal">
                             <Button Command="{Binding PreviousWeekCommand}" Style="{StaticResource MaterialDesignIconButton}" Width="35" Height="35">
@@ -217,7 +222,7 @@
                 </Border>
 
                 <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                    <ItemsControl x:Name="ScheduleItemsControl" ItemsSource="{Binding EmployeeWeeklySchedules}">
+                    <ItemsControl x:Name="ScheduleItemsControl" ItemsSource="{Binding EmployeeWeeklySchedulesView}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <Border BorderBrush="#F1F5F9" BorderThickness="0,0,0,1" Background="White">

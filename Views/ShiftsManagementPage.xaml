@@ -119,7 +119,7 @@
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <!-- Time Headers -->
+                    <!-- Time Headers + Search -->
                     <Grid Grid.Row="0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="200"/>
@@ -127,7 +127,14 @@
                         </Grid.ColumnDefinitions>
                         
                         <Border Grid.Column="0" Background="#F1F5F9" Padding="10" BorderBrush="#E2E8F0" BorderThickness="1,1,0,1">
-                            <TextBlock Text="CREW MEMBER" FontWeight="ExtraBold" HorizontalAlignment="Center"/>
+                            <StackPanel>
+                                <TextBlock Text="CREW MEMBER" FontWeight="ExtraBold" HorizontalAlignment="Center"/>
+                                <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                         materialDesign:HintAssist.Hint="Search employee..."
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         Margin="0,8,0,0"
+                                         Height="32"/>
+                            </StackPanel>
                         </Border>
 
                         <ItemsControl Grid.Column="1" ItemsSource="{Binding HoursLabels}">
@@ -147,7 +154,7 @@
                     </Grid>
 
                     <!-- Roster Body -->
-                    <ItemsControl Grid.Row="1" ItemsSource="{Binding Roster}">
+                    <ItemsControl Grid.Row="1" ItemsSource="{Binding RosterView}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <Grid>

@@ -8,6 +8,8 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.ComponentModel;
+using System.Windows.Data;
 
 namespace AttendanceShiftingManagement.ViewModels
 {
@@ -58,6 +60,20 @@ namespace AttendanceShiftingManagement.ViewModels
         public ObservableCollection<EmployeeWeeklySchedule> EmployeeWeeklySchedules { get; set; }
         public ObservableCollection<ScheduleWarning> ScheduleWarnings { get; set; }
         public ObservableCollection<Position> Positions { get; set; }
+        public ICollectionView EmployeeWeeklySchedulesView { get; private set; }
+
+        private string _searchText = string.Empty;
+        public string SearchText
+        {
+            get => _searchText;
+            set
+            {
+                if (SetProperty(ref _searchText, value))
+                {
+                    ApplySearchFilter();
+                }
+            }
+        }
 
         public event Action<string>? ScrollToEmployeeRequested;
         public bool IsManagerView => !_employeeId.HasValue;
@@ -74,6 +90,7 @@ namespace AttendanceShiftingManagement.ViewModels
             EmployeeWeeklySchedules = new ObservableCollection<EmployeeWeeklySchedule>();
             ScheduleWarnings = new ObservableCollection<ScheduleWarning>();
             Positions = new ObservableCollection<Position>();
+            EmployeeWeeklySchedulesView = CollectionViewSource.GetDefaultView(EmployeeWeeklySchedules);
 
             LoadPositions();
 
@@ -259,6 +276,36 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 System.Windows.MessageBox.Show($"Error loading schedule: {ex.Message}");
             }
+
+            ApplySearchFilter();
+        }
+
+        private void ApplySearchFilter()
+        {
+            if (EmployeeWeeklySchedulesView == null)
+            {
+                return;
+            }
+
+            var query = SearchText?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                EmployeeWeeklySchedulesView.Filter = null;
+            }
+            else
+            {
+                EmployeeWeeklySchedulesView.Filter = item =>
+                {
+                    if (item is not EmployeeWeeklySchedule row)
+                    {
+                        return false;
+                    }
+
+                    return row.EmployeeName.Contains(query, StringComparison.OrdinalIgnoreCase);
+                };
+            }
+
+            EmployeeWeeklySchedulesView.Refresh();
         }
 
         private void ExecuteScrollToEmployee(object? param)

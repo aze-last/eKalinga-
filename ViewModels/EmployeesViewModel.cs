@@ -23,6 +23,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private ObservableCollection<PositionFilterItem> _positionFilters;
         private ObservableCollection<PositionCount> _positionCounts;
         private string _selectedPositionName;
+        private string _searchText = string.Empty;
 
         public Visibility CrudVisibility => _currentUser.Role == UserRole.Admin ? Visibility.Visible : Visibility.Collapsed;
 
@@ -62,6 +63,18 @@ namespace AttendanceShiftingManagement.ViewModels
             set
             {
                 if (SetProperty(ref _selectedPositionName, value))
+                {
+                    ApplyFilter();
+                }
+            }
+        }
+
+        public string SearchText
+        {
+            get => _searchText;
+            set
+            {
+                if (SetProperty(ref _searchText, value))
                 {
                     ApplyFilter();
                 }
@@ -137,12 +150,19 @@ namespace AttendanceShiftingManagement.ViewModels
                     return false;
                 }
 
-                if (SelectedPositionName == "All Positions")
+                if (SelectedPositionName != "All Positions" && employee.Position.Name != SelectedPositionName)
+                {
+                    return false;
+                }
+
+                if (string.IsNullOrWhiteSpace(SearchText))
                 {
                     return true;
                 }
 
-                return employee.Position.Name == SelectedPositionName;
+                return employee.FullName.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
+                    || employee.Position.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
+                    || employee.Position.Area.Contains(SearchText, StringComparison.OrdinalIgnoreCase);
             };
 
             EmployeesView.Refresh();
