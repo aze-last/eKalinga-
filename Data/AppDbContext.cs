@@ -17,6 +17,10 @@ namespace AttendanceShiftingManagement.Data
         public DbSet<Attendance> Attendances { get; set; }
         public DbSet<Holiday> Holidays { get; set; }
         public DbSet<Payroll> Payrolls { get; set; }
+        public DbSet<LeaveRequest> LeaveRequests { get; set; }
+        public DbSet<LeaveBalance> LeaveBalances { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
+        public DbSet<ActivityLog> ActivityLogs { get; set; }
 
         public AppDbContext()
         {
@@ -35,7 +39,7 @@ namespace AttendanceShiftingManagement.Data
                     .AddJsonFile("appsettings.json", optional: false)
                     .Build();
 
-                 var connectionString = config.GetConnectionString("DefaultConnection");
+                var connectionString = config.GetConnectionString("DefaultConnection");
                 optionsBuilder.UseMySql(connectionString, new MySqlServerVersion(new Version(8, 0, 36)));
             }
         }
@@ -59,6 +63,18 @@ namespace AttendanceShiftingManagement.Data
 
             modelBuilder.Entity<Attendance>()
                 .Property(a => a.Status)
+                .HasConversion<string>();
+
+            modelBuilder.Entity<LeaveRequest>()
+                .Property(lr => lr.Type)
+                .HasConversion<string>();
+
+            modelBuilder.Entity<LeaveRequest>()
+                .Property(lr => lr.Status)
+                .HasConversion<string>();
+
+            modelBuilder.Entity<Notification>()
+                .Property(n => n.Type)
                 .HasConversion<string>();
 
             // Unique constraint for shift assignments

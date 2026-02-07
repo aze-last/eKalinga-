@@ -69,13 +69,6 @@
                             <TextBlock Text="Positions"/>
                         </StackPanel>
                     </Button>
-                    <Button Style="{StaticResource MaterialDesignFlatButton}" 
-                            Foreground="White" Height="50" Command="{Binding ShowShiftsCommand}" FontSize="18">
-                        <StackPanel Orientation="Horizontal" Width="180">
-                            <materialDesign:PackIcon Kind="CalendarClock" Margin="0,0,16,0"/>
-                            <TextBlock Text="Shifts"/>
-                        </StackPanel>
-                    </Button>
 
                     <Button Style="{StaticResource MaterialDesignFlatButton}" 
                             Foreground="White" Height="50" Command="{Binding ShowHolidaysCommand}" FontSize="18">
