@@ -36,12 +36,13 @@
                 </StackPanel>
 
                 <Button Grid.Column="1" 
-                        Style="{StaticResource MaterialDesignFlatMidPrimaryButton}"
+                        Style="{StaticResource MaterialDesignFlatButton}"
                         Background="White" Foreground="{Binding StatusColor, FallbackValue='#43A047'}"
                         Height="54" Width="160" 
                         materialDesign:ButtonAssist.CornerRadius="27"
                         Command="{Binding TimeInOutCommand}"
                         Content="{Binding ActionButtonText, FallbackValue='TIME OUT'}"
+                        IsEnabled="{Binding IsActionEnabled}"
                         FontSize="16" FontWeight="Bold"/>
             </Grid>
         </materialDesign:Card>

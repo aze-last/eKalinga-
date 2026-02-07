@@ -8,6 +8,7 @@ namespace AttendanceShiftingManagement.Views
         public ManagerMainWindow(User user)
         {
             InitializeComponent();
+            this.DataContext = new ViewModels.ManagerMainViewModel(user);
         }
 
         private void Logout_Click(object sender, RoutedEventArgs e)

@@ -16,7 +16,12 @@ namespace AttendanceShiftingManagement.ViewModels
 
         public CrewMainViewModel(User user)
         {
-            var dashboardVm = new CrewDashboardViewModel(new AttendanceService(new Data.AppDbContext()), user.Id);
+            var context = new Data.AppDbContext();
+            var attendanceService = new AttendanceService(context);
+            var shiftService = new ShiftService(context);
+            var payrollService = new PayrollService(context);
+
+            var dashboardVm = new CrewDashboardViewModel(attendanceService, shiftService, payrollService, user.Id);
             dashboardVm.AttendanceRecorded += () => ShowSuccessRequest?.Invoke();
 
             // Set default view

@@ -1,67 +1,93 @@
 ﻿using AttendanceShiftingManagement.Data;
 using AttendanceShiftingManagement.Models;
 using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
-public class AttendanceService
+namespace AttendanceShiftingManagement.Services
 {
-    private readonly AppDbContext _context;
-
-    public AttendanceService(AppDbContext context)
+    public class AttendanceService
     {
-        _context = context;
-    }
+        private readonly AppDbContext _context;
 
-    public void TimeIn(int employeeId)
-    {
-        var today = DateTime.Today;
-
-        var shift = _context.ShiftAssignments
-            .Include(sa => sa.Shift)
-            .FirstOrDefault(sa =>
-                sa.EmployeeId == employeeId &&
-                sa.Shift.ShiftDate == today);
-
-        if (shift == null)
-            throw new Exception("No shift assigned today.");
-
-        if (_context.Attendances.Any(a =>
-            a.EmployeeId == employeeId &&
-            a.Status == AttendanceStatus.Open))
-            throw new Exception("Already clocked in.");
-
-        _context.Attendances.Add(new Attendance
+        public AttendanceService(AppDbContext context)
         {
-            EmployeeId = employeeId,
-            ShiftId = shift.ShiftId,
-            TimeIn = DateTime.Now,
-            Status = AttendanceStatus.Open
-        });
+            _context = context;
+        }
 
-        _context.SaveChanges();
-    }
+        public void TimeIn(int employeeId)
+        {
+            var today = DateTime.Today;
 
-    public void TimeOut(int employeeId)
-    {
-        var attendance = _context.Attendances
-            .Include(a => a.Shift)
-            .FirstOrDefault(a =>
+            var shift = _context.ShiftAssignments
+                .Include(sa => sa.Shift)
+                .FirstOrDefault(sa =>
+                    sa.EmployeeId == employeeId &&
+                    sa.Shift.ShiftDate == today);
+
+            if (shift == null)
+                throw new Exception("No shift assigned today.");
+
+            if (_context.Attendances.Any(a =>
                 a.EmployeeId == employeeId &&
-                a.Status == AttendanceStatus.Open);
+                a.Status == AttendanceStatus.Open))
+                throw new Exception("Already clocked in.");
 
-        if (attendance == null)
-            throw new Exception("No open attendance.");
+            _context.Attendances.Add(new Attendance
+            {
+                EmployeeId = employeeId,
+                ShiftId = shift.ShiftId,
+                TimeIn = DateTime.Now,
+                Status = AttendanceStatus.Open
+            });
 
-        attendance.TimeOut = DateTime.Now;
+            _context.SaveChanges();
+        }
 
-        var total = attendance.TimeOut.Value - attendance.TimeIn.Value;
-        attendance.TotalHours = (decimal)total.TotalHours;
+        public void TimeOut(int employeeId)
+        {
+            var attendance = _context.Attendances
+                .Include(a => a.Shift)
+                .FirstOrDefault(a =>
+                    a.EmployeeId == employeeId &&
+                    a.Status == AttendanceStatus.Open);
 
-        var sched = attendance.Shift.EndTime - attendance.Shift.StartTime;
-        var scheduledHours = (decimal)sched.TotalHours;
+            if (attendance == null)
+                throw new Exception("No open attendance.");
 
-        attendance.OvertimeHours = Math.Max(0, attendance.TotalHours - scheduledHours);
-        attendance.Status = AttendanceStatus.Closed;
+            attendance.TimeOut = DateTime.Now;
 
-        _context.SaveChanges();
+            var timeIn = attendance.TimeIn ?? DateTime.Now;
+            var total = attendance.TimeOut.Value - timeIn;
+            attendance.TotalHours = (decimal)total.TotalHours;
+
+            var sched = attendance.Shift.EndTime - attendance.Shift.StartTime;
+            var scheduledHours = (decimal)sched.TotalHours;
+
+            attendance.OvertimeHours = Math.Max(0, attendance.TotalHours - scheduledHours);
+            attendance.Status = AttendanceStatus.Closed;
+
+            _context.SaveChanges();
+        }
+
+        public List<Attendance> GetRecentAttendance(int employeeId, int count)
+        {
+            return _context.Attendances
+                .Include(a => a.Shift)
+                .Where(a => a.EmployeeId == employeeId)
+                .OrderByDescending(a => a.TimeIn)
+                .Take(count)
+                .ToList();
+        }
+
+        public Attendance? GetActiveAttendance(int employeeId)
+        {
+            return _context.Attendances
+                .Include(a => a.Shift)
+                .FirstOrDefault(a =>
+                    a.EmployeeId == employeeId &&
+                    a.Status == AttendanceStatus.Open);
+        }
     }
 }

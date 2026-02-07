@@ -1,15 +1,185 @@
 ﻿<UserControl x:Class="AttendanceShiftingManagement.Views.ShiftsManagementPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes">
-    <Grid>
-        <StackPanel>
-            <DatePicker SelectedDate="{Binding WeekStart}" />
-            <ComboBox ItemsSource="{Binding Positions}" />
-            <ComboBox ItemsSource="{Binding Crew}" />
-            <Button Content="CREATE SHIFT" Command="{Binding CreateShiftCommand}" />
-        </StackPanel>
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:vm="clr-namespace:AttendanceShiftingManagement.ViewModels"
+             mc:Ignorable="d" 
+             d:DesignHeight="800" d:DesignWidth="1100"
+             Background="Transparent">
+    <UserControl.DataContext>
+        <vm:ShiftsManagementViewModel/>
+    </UserControl.DataContext>
 
-        <DataGrid ItemsSource="{Binding WeeklyGrid}" />
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Planning Tool Card -->
+        <materialDesign:Card Grid.Row="0" Margin="0,0,0,24" Padding="20" UniformCornerRadius="12">
+            <StackPanel>
+                <DockPanel>
+                    <TextBlock Text="Shift Planner" Style="{StaticResource MaterialDesignHeadline6TextBlock}" FontWeight="Bold"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <DatePicker Width="150" SelectedDate="{Binding SelectedDay}" 
+                                    materialDesign:HintAssist.Hint="Selected Date"
+                                    Style="{StaticResource MaterialDesignFloatingHintDatePicker}" Margin="0,0,12,0"/>
+                        <Button Style="{StaticResource MaterialDesignOutlinedButton}" Content="Refresh" Command="{Binding RefreshCommand}"/>
+                    </StackPanel>
+                </DockPanel>
+
+                <Separator Margin="0,15"/>
+
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="300"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Employee Selector -->
+                    <StackPanel Grid.Column="0" Margin="0,0,24,0">
+                        <TextBlock Text="Select Crew Members" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                        <Border BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Height="150">
+                            <ScrollViewer>
+                                <ItemsControl ItemsSource="{Binding Employees}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <CheckBox Content="{Binding Employee.FullName}" 
+                                                      IsChecked="{Binding IsSelected}" 
+                                                      Margin="8,4"/>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- Shift Details -->
+                    <StackPanel Grid.Column="1">
+                        <TextBlock Text="Shift Settings" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                                <materialDesign:TimePicker materialDesign:HintAssist.Hint="Start Time"
+                                                           SelectedTime="{Binding StartTime}"
+                                                           Style="{StaticResource MaterialDesignFloatingHintTimePicker}"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1" Margin="0,0,12,0">
+                                <materialDesign:TimePicker materialDesign:HintAssist.Hint="End Time"
+                                                           SelectedTime="{Binding EndTime}"
+                                                           Style="{StaticResource MaterialDesignFloatingHintTimePicker}"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="2">
+                                <ComboBox materialDesign:HintAssist.Hint="Position"
+                                          ItemsSource="{Binding Positions}"
+                                          DisplayMemberPath="Name"
+                                          SelectedItem="{Binding SelectedPosition}"
+                                          Style="{StaticResource MaterialDesignFloatingHintComboBox}"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <Button Content="CREATE WEEKLY SHIFT FOR SELECTED CREW" 
+                                Command="{Binding CreateBatchCommand}"
+                                Margin="0,20,0,0"
+                                Height="50"
+                                Style="{StaticResource MaterialDesignRaisedButton}"
+                                Background="#1E293B" BorderBrush="#1E293B"/>
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </materialDesign:Card>
+
+        <!-- Roster Table Card -->
+        <materialDesign:Card Grid.Row="1" UniformCornerRadius="12" Padding="0">
+            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                <Grid Margin="10">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Time Headers -->
+                    <Grid Grid.Row="0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="200"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <Border Grid.Column="0" Background="#F1F5F9" Padding="10" BorderBrush="#E2E8F0" BorderThickness="1,1,0,1">
+                            <TextBlock Text="CREW MEMBER" FontWeight="ExtraBold" HorizontalAlignment="Center"/>
+                        </Border>
+
+                        <ItemsControl Grid.Column="1" ItemsSource="{Binding HoursLabels}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <UniformGrid Rows="1"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="#F1F5F9" Padding="5" BorderBrush="#E2E8F0" BorderThickness="1">
+                                        <TextBlock Text="{Binding}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Grid>
+
+                    <!-- Roster Body -->
+                    <ItemsControl Grid.Row="1" ItemsSource="{Binding Roster}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="200"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <Border Grid.Column="0" Padding="12" BorderBrush="#E2E8F0" BorderThickness="1,0,1,1">
+                                        <TextBlock Text="{Binding EmployeeName}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                    </Border>
+
+                                    <ItemsControl Grid.Column="1" ItemsSource="{Binding Segments}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <UniformGrid Rows="1"/>
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border BorderBrush="#E2E8F0" BorderThickness="0,0,1,1" Height="40">
+                                                    <Grid>
+                                                        <Rectangle Fill="#F2A900" 
+                                                                   Visibility="{Binding IsActive, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                   Margin="1"/>
+                                                        <TextBlock Text="{Binding Label}" 
+                                                                   FontSize="8" 
+                                                                   Foreground="White"
+                                                                   FontWeight="Bold"
+                                                                   HorizontalAlignment="Center" 
+                                                                   VerticalAlignment="Center"
+                                                                   Visibility="{Binding IsActive, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Grid>
+            </ScrollViewer>
+        </materialDesign:Card>
     </Grid>
 </UserControl>

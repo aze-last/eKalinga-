@@ -12,8 +12,11 @@ namespace AttendanceShiftingManagement.ViewModels
     public class EmployeesViewModel : ObservableObject
     {
         private readonly AppDbContext _context;
+        private readonly User _currentUser;
         private ObservableCollection<Employee> _employees;
         private Employee? _selectedEmployee;
+
+        public Visibility CrudVisibility => _currentUser.Role == UserRole.Admin ? Visibility.Visible : Visibility.Collapsed;
 
         public ObservableCollection<Employee> Employees
         {
@@ -31,8 +34,9 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand EditEmployeeCommand { get; }
         public ICommand DeleteEmployeeCommand { get; }
 
-        public EmployeesViewModel()
+        public EmployeesViewModel(User user)
         {
+            _currentUser = user;
             _context = new AppDbContext();
             _employees = new ObservableCollection<Employee>();
 

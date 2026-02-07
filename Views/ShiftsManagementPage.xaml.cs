@@ -19,9 +19,10 @@ namespace AttendanceShiftingManagement.Views
     /// </summary>
     public partial class ShiftsManagementPage : UserControl
     {
-        public ShiftsManagementPage()
+        public ShiftsManagementPage(Models.User user)
         {
             InitializeComponent();
+            this.DataContext = new ViewModels.ShiftsManagementViewModel(user);
         }
     }
 }

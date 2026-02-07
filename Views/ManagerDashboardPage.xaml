@@ -1,15 +1,114 @@
 ﻿<UserControl x:Class="AttendanceShiftingManagement.Views.ManagerDashboardPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes">
-    <Grid>
-        <StackPanel Orientation="Horizontal">
-            <materialDesign:Card Content="Total Crew"/>
-            <materialDesign:Card Content="On Duty"/>
-            <materialDesign:Card Content="Pending Shifts"/>
-            <materialDesign:Card Content="Week Hours"/>
-        </StackPanel>
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             Background="Transparent">
 
-        <DataGrid ItemsSource="{Binding TodayAttendance}" />
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <UniformGrid Grid.Row="0" Columns="4" Margin="0,0,0,24">
+            
+            <materialDesign:Card Margin="0,0,12,0" Padding="20" UniformCornerRadius="12" Background="White">
+                <StackPanel>
+                    <materialDesign:PackIcon Kind="AccountGroupOutline" Foreground="#3B82F6" Width="28" Height="28"/>
+                    <TextBlock Text="{Binding TotalCrew, FallbackValue='42'}" FontSize="32" FontWeight="Bold" Margin="0,8,0,0"/>
+                    <TextBlock Text="Total Crew Members" Foreground="#64748B" FontSize="12" FontWeight="Medium"/>
+                </StackPanel>
+            </materialDesign:Card>
+
+            <materialDesign:Card Margin="6,0,6,0" Padding="20" UniformCornerRadius="12" Background="White">
+                <StackPanel>
+                    <materialDesign:PackIcon Kind="BriefcaseCheckOutline" Foreground="#10B981" Width="28" Height="28"/>
+                    <TextBlock Text="{Binding OnDutyCount, FallbackValue='18'}" FontSize="32" FontWeight="Bold" Margin="0,8,0,0"/>
+                    <TextBlock Text="Currently On Duty" Foreground="#64748B" FontSize="12" FontWeight="Medium"/>
+                </StackPanel>
+            </materialDesign:Card>
+
+            <materialDesign:Card Margin="6,0,6,0" Padding="20" UniformCornerRadius="12" Background="White">
+                <StackPanel>
+                    <materialDesign:PackIcon Kind="CalendarClockOutline" Foreground="#F59E0B" Width="28" Height="28"/>
+                    <TextBlock Text="{Binding PendingShifts, FallbackValue='5'}" FontSize="32" FontWeight="Bold" Margin="0,8,0,0"/>
+                    <TextBlock Text="Pending Approvals" Foreground="#64748B" FontSize="12" FontWeight="Medium"/>
+                </StackPanel>
+            </materialDesign:Card>
+
+            <materialDesign:Card Margin="12,0,0,0" Padding="20" UniformCornerRadius="12" Background="#1E293B" Foreground="White">
+                <StackPanel>
+                    <materialDesign:PackIcon Kind="TimerOutline" Foreground="#F2A900" Width="28" Height="28"/>
+                    <TextBlock Text="{Binding TotalWeekHours, FallbackValue='1,240'}" FontSize="32" FontWeight="Bold" Margin="0,8,0,0"/>
+                    <TextBlock Text="Total Labor Hours (Week)" Foreground="#94A3B8" FontSize="12" FontWeight="Medium"/>
+                </StackPanel>
+            </materialDesign:Card>
+            
+        </UniformGrid>
+
+        <materialDesign:Card Grid.Row="1" UniformCornerRadius="12" Padding="0">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <Border Background="#F8FAFC" Padding="20,15" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1">
+                    <DockPanel>
+                        <TextBlock Text="Live Attendance Feed" FontWeight="Bold" VerticalAlignment="Center" FontSize="16"/>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <TextBox Width="200" materialDesign:HintAssist.Hint="Search Employee..." 
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="0,0,10,0"/>
+                            <Button Style="{StaticResource MaterialDesignOutlinedButton}" Content="Export" Height="32" Padding="12,0"/>
+                        </StackPanel>
+                    </DockPanel>
+                </Border>
+
+                <DataGrid Grid.Row="1" ItemsSource="{Binding TodayAttendance}" 
+                          AutoGenerateColumns="False" 
+                          IsReadOnly="True"
+                          CanUserAddRows="False"
+                          HeadersVisibility="Column"
+                          Background="Transparent"
+                          BorderThickness="0"
+                          HorizontalScrollBarVisibility="Disabled">
+                    <DataGrid.Columns>
+                        <DataGridTemplateColumn Header="Crew Member" Width="*">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" Margin="10,5">
+                                        <Border Width="32" Height="32" CornerRadius="16" Background="#E2E8F0">
+                                            <materialDesign:PackIcon Kind="Account" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#64748B"/>
+                                        </Border>
+                                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center" Margin="12,0,0,0" FontWeight="SemiBold"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        
+                        <DataGridTextColumn Header="Position" Binding="{Binding Position}" Width="Auto"/>
+                        <DataGridTextColumn Header="Clock In" Binding="{Binding ClockInTime}" Width="Auto"/>
+                        
+                        <DataGridTemplateColumn Header="Status" Width="Auto">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <materialDesign:Chip Content="{Binding Status}" 
+                                                         Background="{Binding StatusColor}" 
+                                                         Foreground="White" Height="24"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        
+                        <DataGridTemplateColumn Header="Action" Width="Auto">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Button Style="{StaticResource MaterialDesignFlatButton}" Content="Details" Foreground="#3B82F6"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Grid>
+        </materialDesign:Card>
     </Grid>
 </UserControl>
