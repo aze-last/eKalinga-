@@ -6,7 +6,7 @@
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         mc:Ignorable="d"
         Title="Manager Command Center | Attendance System" WindowState="Maximized"
-        Background="#F0F2F5" FontFamily="{materialDesign:MaterialDesignFont}">
+        Background="{StaticResource BrandSurfaceBrush}" FontFamily="Segoe UI">
 
     <Grid>
         <Grid.ColumnDefinitions>
@@ -14,7 +14,7 @@
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <Border Grid.Column="0" Background="#0F172A">
+        <Border Grid.Column="0" Background="{StaticResource BrandMidnightBrush}">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -23,35 +23,35 @@
                 </Grid.RowDefinitions>
 
                 <StackPanel Grid.Row="0" Margin="20,40,20,40">
-                    <materialDesign:PackIcon Kind="ViewDashboard" Width="40" Height="40" Foreground="#F2A900" HorizontalAlignment="Center"/>
+                    <Image Source="/Images/McDonalds-Logo.png" Width="80" Height="48" Stretch="Uniform" HorizontalAlignment="Center"/>
                     <TextBlock Text="MANAGER" Foreground="White" HorizontalAlignment="Center" FontSize="20" FontWeight="ExtraBold" Margin="0,10,0,0" />
-                    <TextBlock Text="COMMAND CENTER" Foreground="#64748B" HorizontalAlignment="Center" FontSize="10" FontWeight="Bold"/>
+                    <TextBlock Text="COMMAND CENTER" Foreground="{StaticResource BrandYellowBrush}" HorizontalAlignment="Center" FontSize="10" FontWeight="Bold"/>
                 </StackPanel>
 
                 <StackPanel Grid.Row="1" Margin="12,0">
                     <RadioButton Style="{StaticResource MaterialDesignTabRadioButton}" IsChecked="True"
-                                 Content="DASHBOARD" Foreground="#94A3B8" Height="50" Margin="0,2"
+                                 Content="DASHBOARD" Foreground="White" Height="50" Margin="0,2"
                                  Command="{Binding ShowDashboardCommand}"/>
                     <RadioButton Style="{StaticResource MaterialDesignTabRadioButton}" 
-                                 Content="SHIFT PLANNING" Foreground="#94A3B8" Height="50" Margin="0,2"
+                                 Content="SHIFT PLANNING" Foreground="White" Height="50" Margin="0,2"
                                  Command="{Binding ShowShiftsCommand}"
                                  Visibility="{Binding IsSchedulingAllowed, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                     <RadioButton Style="{StaticResource MaterialDesignTabRadioButton}" 
-                                 Content="WEEKLY SCHEDULE" Foreground="#94A3B8" Height="50" Margin="0,2"
+                                 Content="WEEKLY SCHEDULE" Foreground="White" Height="50" Margin="0,2"
                                  Command="{Binding ShowWeeklyCalendarCommand}"/>
                     <RadioButton Style="{StaticResource MaterialDesignTabRadioButton}" 
-                                 Content="ATTENDANCE LOGS" Foreground="#94A3B8" Height="50" Margin="0,2"
+                                 Content="ATTENDANCE LOGS" Foreground="White" Height="50" Margin="0,2"
                                  Command="{Binding ShowAttendanceCommand}"/>
                     <RadioButton Style="{StaticResource MaterialDesignTabRadioButton}" 
-                                 Content="EMPLOYEE LIST" Foreground="#94A3B8" Height="50" Margin="0,2"
+                                 Content="EMPLOYEE LIST" Foreground="White" Height="50" Margin="0,2"
                                  Command="{Binding ShowEmployeesCommand}"/>
                     <RadioButton Style="{StaticResource MaterialDesignTabRadioButton}" 
-                                 Content="POSITIONS" Foreground="#94A3B8" Height="50" Margin="0,2"
+                                 Content="POSITIONS" Foreground="White" Height="50" Margin="0,2"
                                  Command="{Binding ShowPositionsCommand}"/>
                 </StackPanel>
 
                 <Button Grid.Row="2" Style="{StaticResource MaterialDesignFlatButton}" 
-                        Foreground="#FDA4AF" Height="50" Margin="12,0,12,30" Click="Logout_Click">
+                        Foreground="{StaticResource BrandYellowBrush}" Height="50" Margin="12,0,12,30" Click="Logout_Click">
                     <StackPanel Orientation="Horizontal">
                         <materialDesign:PackIcon Kind="Logout" Margin="0,0,12,0"/>
                         <TextBlock Text="Exit Portal" FontWeight="SemiBold"/>
@@ -69,7 +69,7 @@
             <Border Grid.Row="0" Background="White" Padding="24,0" materialDesign:ElevationAssist.Elevation="Dp2">
                 <DockPanel VerticalAlignment="Center">
                     <TextBlock Text="Operational Overview" VerticalAlignment="Center" 
-                               Style="{StaticResource MaterialDesignHeadline6TextBlock}" FontWeight="SemiBold" Foreground="#1E293B"/>
+                               Style="{StaticResource MaterialDesignHeadline6TextBlock}" FontWeight="SemiBold" Foreground="#27251F"/>
 
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
                         <materialDesign:Badged Badge="3">

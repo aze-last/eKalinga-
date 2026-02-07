@@ -6,9 +6,13 @@
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <materialDesign:BundledTheme BaseTheme="Light" PrimaryColor="DeepPurple" SecondaryColor="Lime" />
+                <materialDesign:BundledTheme BaseTheme="Light" PrimaryColor="Amber" SecondaryColor="Red" />
                 <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesign3.Defaults.xaml" />
             </ResourceDictionary.MergedDictionaries>
+            <SolidColorBrush x:Key="BrandMidnightBrush" Color="#27251F"/>
+            <SolidColorBrush x:Key="BrandYellowBrush" Color="#FFC72C"/>
+            <SolidColorBrush x:Key="BrandRedBrush" Color="#DA291C"/>
+            <SolidColorBrush x:Key="BrandSurfaceBrush" Color="#F5F5F5"/>
             <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
         </ResourceDictionary>
     </Application.Resources>

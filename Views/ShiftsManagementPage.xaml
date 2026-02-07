@@ -42,7 +42,13 @@
 
                     <!-- Employee Selector -->
                     <StackPanel Grid.Column="0" Margin="0,0,24,0">
-                        <TextBlock Text="Select Crew Members" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                        <DockPanel Margin="0,0,0,8">
+                            <TextBlock Text="Select Crew Members" FontWeight="SemiBold" DockPanel.Dock="Left"/>
+                            <CheckBox Content="Select All"
+                                      IsChecked="{Binding IsAllSelected}"
+                                      VerticalAlignment="Center"
+                                      HorizontalAlignment="Right"/>
+                        </DockPanel>
                         <Border BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Height="150">
                             <ScrollViewer>
                                 <ItemsControl ItemsSource="{Binding Employees}">
@@ -58,30 +64,14 @@
                         </Border>
                     </StackPanel>
 
-                    <!-- Shift Details -->
+                    <!-- Search -->
                     <StackPanel Grid.Column="1">
-                        <TextBlock Text="Shift Settings" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            
-                            <StackPanel Grid.Column="0" Margin="0,0,12,0">
-                                <materialDesign:TimePicker materialDesign:HintAssist.Hint="Start Time"
-                                                           SelectedTime="{Binding StartTime}"
-                                                           Style="{StaticResource MaterialDesignFloatingHintTimePicker}"/>
-                            </StackPanel>
-
-                            <StackPanel Grid.Column="1" Margin="0,0,12,0">
-                                <materialDesign:TimePicker materialDesign:HintAssist.Hint="End Time"
-                                                           SelectedTime="{Binding EndTime}"
-                                                           Style="{StaticResource MaterialDesignFloatingHintTimePicker}"/>
-                            </StackPanel>
-
-                            <!-- Position selection removed -->
-                        </Grid>
+                        <TextBlock Text="Search Crew" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                        <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                 materialDesign:HintAssist.Hint="Search employee..."
+                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                 Height="36"
+                                 Margin="0,0,0,12"/>
 
                         <Grid Margin="0,20,0,0">
                             <Grid.ColumnDefinitions>

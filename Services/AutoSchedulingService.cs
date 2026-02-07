@@ -27,7 +27,7 @@ namespace AttendanceShiftingManagement.Services
                 .Where(e => e.Status == EmployeeStatus.Active)
                 .ToList();
 
-            var managers = activeEmployees.Where(e => e.Position.Name.Contains("Manager", StringComparison.OrdinalIgnoreCase)).ToList();
+            var managers = activeEmployees.Where(e => e.Position.Name.IndexOf("Manager", StringComparison.OrdinalIgnoreCase) >= 0).ToList();
             var crew = activeEmployees.Except(managers).ToList();
 
             // 1. Assign Managers (Coverage: 1 Opener, 1 Closer per day)
@@ -37,14 +37,20 @@ namespace AttendanceShiftingManagement.Services
             {
                 var date = weekStart.AddDays(i);
 
-                // Opener
-                var mgrOpener = PickRandom(managers);
-                // In potential production, rotate fairly. For draft, random is acceptable start.
-                AddShift(newShifts, date, new TimeSpan(6, 0, 0), new TimeSpan(15, 0, 0), mgrOpener, createdByUserId);
+                // Only assign managers if we have any
+                if (managers.Any())
+                {
+                    // Opener
+                    var mgrOpener = PickRandom(managers);
+                    if (mgrOpener != null)
+                    {
+                        AddShift(newShifts, date, new TimeSpan(6, 0, 0), new TimeSpan(15, 0, 0), mgrOpener, createdByUserId);
 
-                // Closer (ensure different manager if possible)
-                var mgrCloser = PickRandom(managers.Where(m => m.Id != mgrOpener.Id).ToList()) ?? mgrOpener;
-                AddShift(newShifts, date, new TimeSpan(14, 0, 0), new TimeSpan(23, 0, 0), mgrCloser, createdByUserId);
+                        // Closer (ensure different manager if possible)
+                        var mgrCloser = PickRandom(managers.Where(m => m.Id != mgrOpener.Id).ToList()) ?? mgrOpener;
+                        AddShift(newShifts, date, new TimeSpan(14, 0, 0), new TimeSpan(23, 0, 0), mgrCloser, createdByUserId);
+                    }
+                }
             }
 
             // 2. Assign Crew (Target 3-5 days/week per person)
@@ -108,7 +114,7 @@ namespace AttendanceShiftingManagement.Services
             shifts.Add(shift);
         }
 
-        private T PickRandom<T>(List<T> list)
+        private T? PickRandom<T>(List<T> list) where T : class
         {
             if (list == null || list.Count == 0) return default;
             return list[_random.Next(list.Count)];
