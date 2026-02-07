@@ -10,6 +10,7 @@ namespace AttendanceShiftingManagement.ViewModels
     public class AdminDashboardViewModel : ObservableObject
     {
         private readonly AppDbContext _context;
+        private readonly User _currentUser;
 
         private int _totalEmployees;
         private int _absentCount;
@@ -73,9 +74,11 @@ namespace AttendanceShiftingManagement.ViewModels
         public System.Windows.Input.ICommand ShowShiftsCommand { get; }
         public System.Windows.Input.ICommand ShowHolidaysCommand { get; }
         public System.Windows.Input.ICommand ShowPayrollCommand { get; }
+        public System.Windows.Input.ICommand ShowPositionsCommand { get; }
 
-        public AdminDashboardViewModel()
+        public AdminDashboardViewModel(User user)
         {
+            _currentUser = user;
             _context = new AppDbContext();
             LoadDashboardData();
 
@@ -89,10 +92,11 @@ namespace AttendanceShiftingManagement.ViewModels
             // Navigation Commands
             ShowDashboardCommand = new RelayCommand(_ => CurrentView = new DashboardPage());
             ShowUsersCommand = new RelayCommand(_ => CurrentView = new UsersPage());
-            ShowEmployeesCommand = new RelayCommand(_ => CurrentView = new EmployeesPage());
+            ShowEmployeesCommand = new RelayCommand(_ => CurrentView = new EmployeesPage(_currentUser));
             ShowShiftsCommand = new RelayCommand(_ => MessageBox.Show("Shifts Management coming soon!", "Info"));
             ShowHolidaysCommand = new RelayCommand(_ => CurrentView = new HolidaysPage());
             ShowPayrollCommand = new RelayCommand(_ => CurrentView = new PayrollPage());
+            ShowPositionsCommand = new RelayCommand(_ => CurrentView = new PositionsPage());
 
             // Setup timer for clock
             var timer = new System.Windows.Threading.DispatcherTimer();

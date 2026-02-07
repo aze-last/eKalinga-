@@ -10,7 +10,7 @@ namespace AttendanceShiftingManagement.Views
         public MainWindow(User user)
         {
             InitializeComponent();
-            this.DataContext = new AdminDashboardViewModel();
+            this.DataContext = new AdminDashboardViewModel(user);
         }
 
         private void Logout_Click(object sender, RoutedEventArgs e)

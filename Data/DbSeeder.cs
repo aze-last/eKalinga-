@@ -30,40 +30,38 @@ namespace AttendanceShiftingManagement.Data
 
             var allPositions = context.Positions.ToList();
 
-            // 2. Users (1 Admin, 2 Managers, 10 Crew)
+            // 2. Users (1 Admin, 4 Managers, 20 Crew)
             if (!context.Users.Any())
             {
-                var adminUser = new User
+                var users = new List<User>();
+
+                // Admin
+                users.Add(new User
                 {
                     Username = "admin",
                     Email = "admin@mcdonald.com",
                     PasswordHash = BCrypt.Net.BCrypt.HashPassword("admin123"),
                     Role = UserRole.Admin,
                     IsActive = true
-                };
+                });
 
-                var manager1 = new User
+                // Managers (4)
+                for (int i = 1; i <= 4; i++)
                 {
-                    Username = "manager1",
-                    Email = "manager1@mcdonald.com",
-                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("manager123"),
-                    Role = UserRole.Manager,
-                    IsActive = true
-                };
+                    users.Add(new User
+                    {
+                        Username = $"manager{i}",
+                        Email = $"manager{i}@mcdonald.com",
+                        PasswordHash = BCrypt.Net.BCrypt.HashPassword("manager123"),
+                        Role = UserRole.Manager,
+                        IsActive = true
+                    });
+                }
 
-                var manager2 = new User
+                // Crew (20)
+                for (int i = 1; i <= 20; i++)
                 {
-                    Username = "manager2",
-                    Email = "manager2@mcdonald.com",
-                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("manager123"),
-                    Role = UserRole.Manager,
-                    IsActive = true
-                };
-
-                var crewUsers = new List<User>();
-                for (int i = 1; i <= 10; i++)
-                {
-                    crewUsers.Add(new User
+                    users.Add(new User
                     {
                         Username = $"crew{i}",
                         Email = $"crew{i}@mcdonald.com",
@@ -73,10 +71,7 @@ namespace AttendanceShiftingManagement.Data
                     });
                 }
 
-                context.Users.Add(adminUser);
-                context.Users.Add(manager1);
-                context.Users.Add(manager2);
-                context.Users.AddRange(crewUsers);
+                context.Users.AddRange(users);
                 context.SaveChanges();
             }
 
@@ -84,11 +79,13 @@ namespace AttendanceShiftingManagement.Data
             if (!context.Employees.Any())
             {
                 var adminUser = context.Users.First(u => u.Role == UserRole.Admin);
-                var manager1 = context.Users.First(u => u.Username == "manager1");
-                var manager2 = context.Users.First(u => u.Username == "manager2");
+                var managers = context.Users.Where(u => u.Role == UserRole.Manager).OrderBy(u => u.Id).ToList();
                 var crewUsers = context.Users.Where(u => u.Role == UserRole.Crew).OrderBy(u => u.Id).ToList();
 
-                var adminEmployee = new Employee
+                var employees = new List<Employee>();
+
+                // Administrator
+                employees.Add(new Employee
                 {
                     UserId = adminUser.Id,
                     FullName = "System Administrator",
@@ -96,50 +93,59 @@ namespace AttendanceShiftingManagement.Data
                     HourlyRate = 100.00m,
                     DateHired = DateTime.Now.AddYears(-2),
                     Status = EmployeeStatus.Active
-                };
+                });
 
-                var manager1Employee = new Employee
+                // Managers
+                for (int i = 0; i < managers.Count; i++)
                 {
-                    UserId = manager1.Id,
-                    FullName = "John Manager",
-                    PositionId = allPositions[0].Id,
-                    HourlyRate = 80.00m,
-                    DateHired = DateTime.Now.AddYears(-1),
-                    Status = EmployeeStatus.Active
-                };
-
-                var manager2Employee = new Employee
-                {
-                    UserId = manager2.Id,
-                    FullName = "Jane Manager",
-                    PositionId = allPositions[1].Id,
-                    HourlyRate = 80.00m,
-                    DateHired = DateTime.Now.AddYears(-1),
-                    Status = EmployeeStatus.Active
-                };
-
-                var crewEmployees = new List<Employee>();
-                string[] crewNames = { "Mark Santos", "Lisa Garcia", "Tom Cruz", "Anna Reyes",
-                                       "Ben Lopez", "Sarah Kim", "Mike Tan", "Ella Ramos",
-                                       "Jake Lee", "Nina Flores" };
-
-                for (int i = 0; i < crewUsers.Count; i++)
-                {
-                    crewEmployees.Add(new Employee
+                    employees.Add(new Employee
                     {
-                        UserId = crewUsers[i].Id,
-                        FullName = i < crewNames.Length ? crewNames[i] : $"Crew Member {i + 1}",
-                        PositionId = allPositions[i % allPositions.Count].Id,
-                        HourlyRate = 65.00m,
-                        DateHired = DateTime.Now.AddMonths(-6),
+                        UserId = managers[i].Id,
+                        FullName = $"Manager {i + 1}",
+                        PositionId = allPositions[0].Id, // Assign to first position or separate Manager position if exists
+                        HourlyRate = 80.00m,
+                        DateHired = DateTime.Now.AddYears(-1),
                         Status = EmployeeStatus.Active
                     });
                 }
 
-                context.Employees.Add(adminEmployee);
-                context.Employees.Add(manager1Employee);
-                context.Employees.Add(manager2Employee);
-                context.Employees.AddRange(crewEmployees);
+                // Crew - Distribute 5 per Area (Kitchen, POS, DT, Lobby)
+                var kitchenPos = allPositions.Where(p => p.Area == PositionArea.Kitchen).ToList();
+                var posPos = allPositions.Where(p => p.Area == PositionArea.POS).ToList();
+                var dtPos = allPositions.Where(p => p.Area == PositionArea.DT).ToList();
+                var lobbyPos = allPositions.Where(p => p.Area == PositionArea.Lobby).ToList();
+
+                // Fallback if list is empty, though we seeded it above
+                if (!kitchenPos.Any()) kitchenPos.Add(allPositions[0]);
+                if (!posPos.Any()) posPos.Add(allPositions[0]);
+                if (!dtPos.Any()) dtPos.Add(allPositions[0]);
+                if (!lobbyPos.Any()) lobbyPos.Add(allPositions[0]);
+
+                for (int i = 0; i < crewUsers.Count; i++)
+                {
+                    Position assignedPosition;
+
+                    if (i < 5) // 0-4: Kitchen
+                        assignedPosition = kitchenPos[i % kitchenPos.Count];
+                    else if (i < 10) // 5-9: POS
+                        assignedPosition = posPos[i % posPos.Count];
+                    else if (i < 15) // 10-14: DT
+                        assignedPosition = dtPos[i % dtPos.Count];
+                    else // 15-19: Lobby
+                        assignedPosition = lobbyPos[i % lobbyPos.Count];
+
+                    employees.Add(new Employee
+                    {
+                        UserId = crewUsers[i].Id,
+                        FullName = $"Crew Member {i + 1}",
+                        PositionId = assignedPosition.Id,
+                        HourlyRate = 65.00m,
+                        DateHired = DateTime.Now.AddMonths(-new Random().Next(1, 12)),
+                        Status = EmployeeStatus.Active
+                    });
+                }
+
+                context.Employees.AddRange(employees);
                 context.SaveChanges();
             }
 
@@ -156,50 +162,10 @@ namespace AttendanceShiftingManagement.Data
                 context.SaveChanges();
             }
 
-            // 5. Create sample shifts and attendance for testing payroll
+            // 5. Create sample shifts and attendance (Basic check)
             if (!context.Shifts.Any())
             {
-                var manager1 = context.Users.FirstOrDefault(u => u.Role == UserRole.Manager) ?? context.Users.First();
-                var crewEmployees = context.Employees.Where(e => e.User.Role == UserRole.Crew).ToList();
-
-                var testShift = new Shift
-                {
-                    ShiftDate = DateTime.Now.AddDays(-7),
-                    StartTime = new TimeSpan(8, 0, 0),
-                    EndTime = new TimeSpan(16, 0, 0),
-                    PositionId = allPositions[0].Id,
-                    CreatedBy = manager1.Id,
-                    CreatedAt = DateTime.Now
-                };
-                context.Shifts.Add(testShift);
-                context.SaveChanges();
-
-                // Create sample attendance records (last 2 weeks)
-                if (!context.Attendances.Any())
-                {
-                    for (int i = 0; i < crewEmployees.Count; i++)
-                    {
-                        for (int day = 14; day >= 1; day--)
-                        {
-                            var workDate = DateTime.Now.AddDays(-day);
-                            var timeIn = workDate.Date.AddHours(8);
-                            var timeOut = workDate.Date.AddHours(17); // 9 hours total, 1 hour OT
-
-                            var attendance = new Attendance
-                            {
-                                EmployeeId = crewEmployees[i].Id,
-                                ShiftId = testShift.Id,
-                                TimeIn = timeIn,
-                                TimeOut = timeOut,
-                                TotalHours = 9.0m,
-                                OvertimeHours = 1.0m,
-                                Status = AttendanceStatus.Closed
-                            };
-                            context.Attendances.Add(attendance);
-                        }
-                    }
-                    context.SaveChanges();
-                }
+                // Optional: Seed initial shifts if needed, or leave empty for fresh start
             }
         }
     }

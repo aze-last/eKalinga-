@@ -61,6 +61,14 @@
                             <TextBlock Text="Employees"/>
                         </StackPanel>
                     </Button>
+
+                    <Button Style="{StaticResource MaterialDesignFlatButton}" 
+                            Foreground="White" Height="50" Command="{Binding ShowPositionsCommand}" FontSize="20">
+                        <StackPanel Orientation="Horizontal" Width="180">
+                            <materialDesign:PackIcon Kind="Briefcase" Margin="0,0,16,0"/>
+                            <TextBlock Text="Positions"/>
+                        </StackPanel>
+                    </Button>
                     <Button Style="{StaticResource MaterialDesignFlatButton}" 
                             Foreground="White" Height="50" Command="{Binding ShowShiftsCommand}" FontSize="20">
                         <StackPanel Orientation="Horizontal" Width="180">

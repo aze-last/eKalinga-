@@ -36,6 +36,9 @@
                                  Content="SHIFT PLANNING" Foreground="#94A3B8" Height="50" Margin="0,2"
                                  Command="{Binding ShowShiftsCommand}"/>
                     <RadioButton Style="{StaticResource MaterialDesignTabRadioButton}" 
+                                 Content="WEEKLY SCHEDULE" Foreground="#94A3B8" Height="50" Margin="0,2"
+                                 Command="{Binding ShowWeeklyCalendarCommand}"/>
+                    <RadioButton Style="{StaticResource MaterialDesignTabRadioButton}" 
                                  Content="ATTENDANCE LOGS" Foreground="#94A3B8" Height="50" Margin="0,2"
                                  Command="{Binding ShowAttendanceCommand}"/>
                     <RadioButton Style="{StaticResource MaterialDesignTabRadioButton}" 

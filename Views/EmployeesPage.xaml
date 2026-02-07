@@ -18,6 +18,7 @@
                        DockPanel.Dock="Left"/>
 
             <Button Command="{Binding AddEmployeeCommand}"
+                    Visibility="{Binding CrudVisibility}"
                     Style="{StaticResource MaterialDesignRaisedButton}"
                     HorizontalAlignment="Right"
                     DockPanel.Dock="Right">
@@ -49,7 +50,7 @@
                     <DataGridTemplateColumn Header="Actions" Width="200">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <StackPanel Orientation="Horizontal">
+                                <StackPanel Orientation="Horizontal" Visibility="{Binding DataContext.CrudVisibility, RelativeSource={RelativeSource AncestorType=UserControl}}">
                                     <Button Style="{StaticResource MaterialDesignFlatButton}" 
                                             Command="{Binding DataContext.EditEmployeeCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
                                             CommandParameter="{Binding}"
