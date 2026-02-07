@@ -1,0 +1,7 @@
+C:\Users\ASUS\source\repos\AttendanceShiftingManagement\AttendanceShiftingManagement\Views\CrewMainWindow.xaml(67,37): error MC3072: The property 'Padding' does not exist in XML namespace 'http://schemas.microsoft.com/winfx/2006/xaml/presentation'. Line 67 Position 37. [C:\Users\ASUS\source\repos\AttendanceShiftingManagement\AttendanceShiftingManagement\AttendanceShiftingManagement.csproj]
+
+Build FAILED.
+    0 Warning(s)
+    1 Error(s)
+
+Time Elapsed 00:00:01.63

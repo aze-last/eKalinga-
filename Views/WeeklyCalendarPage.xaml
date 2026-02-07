@@ -11,6 +11,7 @@
     <Grid Margin="24">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>  <!-- Header / Navigation -->
+            <RowDefinition Height="Auto"/>  <!-- Warnings -->
             <RowDefinition Height="Auto"/>  <!-- Days Header -->
             <RowDefinition Height="*"/>     <!-- Calendar Body -->
         </Grid.RowDefinitions>
@@ -45,8 +46,38 @@
             </DockPanel>
         </Border>
 
+        <!-- Warnings -->
+        <materialDesign:Card Grid.Row="1" Padding="12" Margin="0,0,0,16" materialDesign:ElevationAssist.Elevation="Dp1">
+            <StackPanel>
+                <DockPanel Margin="0,0,0,6">
+                    <materialDesign:PackIcon Kind="AlertCircleOutline" Foreground="#D97706" Margin="0,0,8,0"/>
+                    <TextBlock Text="Scheduling Alerts" FontWeight="SemiBold" Foreground="#92400E"/>
+                </DockPanel>
+                <ItemsControl ItemsSource="{Binding ScheduleWarnings}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding}" Foreground="#444" Margin="0,2,0,0"/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Text="No scheduling warnings this week."
+                           Foreground="#6B7280" Margin="0,2,0,0">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding ScheduleWarnings.Count}" Value="0">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </StackPanel>
+        </materialDesign:Card>
+
         <!-- Calendar Header -->
-        <Border Grid.Row="1" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1,1,1,0" CornerRadius="8,8,0,0">
+        <Border Grid.Row="2" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1,1,1,0" CornerRadius="8,8,0,0">
             <Grid Height="50">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="200"/>
@@ -72,7 +103,7 @@
         </Border>
 
         <!-- Calendar Body -->
-        <Border Grid.Row="2" BorderBrush="#E2E8F0" BorderThickness="1,0,1,1" CornerRadius="0,0,8,8">
+        <Border Grid.Row="3" BorderBrush="#E2E8F0" BorderThickness="1,0,1,1" CornerRadius="0,0,8,8">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <ItemsControl ItemsSource="{Binding EmployeeWeeklySchedules}">
                     <ItemsControl.ItemTemplate>
