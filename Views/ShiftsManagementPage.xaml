@@ -7,7 +7,7 @@
              xmlns:vm="clr-namespace:AttendanceShiftingManagement.ViewModels"
              mc:Ignorable="d" 
              d:DesignHeight="800" d:DesignWidth="1100"
-             Background="Transparent">
+             Background="{StaticResource BrandSurfaceBrush}">
 
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
@@ -20,10 +20,10 @@
         </Grid.RowDefinitions>
 
         <!-- Planning Tool Card -->
-        <materialDesign:Card Grid.Row="0" Margin="0,0,0,24" Padding="20" UniformCornerRadius="12">
+        <materialDesign:Card Grid.Row="0" Margin="0,0,0,24" Padding="20" UniformCornerRadius="12" Background="White">
             <StackPanel>
                 <DockPanel>
-                    <TextBlock Text="Shift Planner" Style="{StaticResource MaterialDesignHeadline6TextBlock}" FontWeight="Bold"/>
+                    <TextBlock Text="Shift Planner" Style="{StaticResource MaterialDesignHeadline6TextBlock}" FontWeight="Bold" Foreground="{StaticResource BrandMidnightBrush}"/>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                         <DatePicker Width="150" SelectedDate="{Binding SelectedDay}" 
                                     materialDesign:HintAssist.Hint="Selected Date"
@@ -84,7 +84,7 @@
                                     Command="{Binding CreateBatchCommand}"
                                     Height="50"
                                     Style="{StaticResource MaterialDesignRaisedButton}"
-                                    Background="#1E293B" BorderBrush="#1E293B"
+                                    Background="{StaticResource BrandMidnightBrush}" BorderBrush="{StaticResource BrandMidnightBrush}"
                                     Margin="0,0,10,0"/>
 
                             <Button Grid.Column="1"
@@ -92,7 +92,7 @@
                                     Command="{Binding ClearShiftsCommand}"
                                     Height="50"
                                     Style="{StaticResource MaterialDesignOutlinedButton}"
-                                    BorderBrush="#E53935" Foreground="#E53935"
+                                    BorderBrush="{StaticResource BrandRedBrush}" Foreground="{StaticResource BrandRedBrush}"
                                     ToolTip="Clear all shifts for this week"/>
                         </Grid>
                     </StackPanel>
@@ -101,7 +101,7 @@
         </materialDesign:Card>
 
         <!-- Roster Table Card -->
-        <materialDesign:Card Grid.Row="1" UniformCornerRadius="12" Padding="0">
+        <materialDesign:Card Grid.Row="1" UniformCornerRadius="12" Padding="0" Background="White">
             <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
                 <Grid Margin="10">
                     <Grid.RowDefinitions>

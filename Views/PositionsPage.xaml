@@ -7,7 +7,7 @@
              xmlns:vm="clr-namespace:AttendanceShiftingManagement.ViewModels"
              mc:Ignorable="d" 
              d:DesignHeight="800" d:DesignWidth="1000"
-             Background="Transparent">
+             Background="{StaticResource BrandSurfaceBrush}">
     <UserControl.DataContext>
         <vm:PositionsViewModel/>
     </UserControl.DataContext>
@@ -19,9 +19,9 @@
         </Grid.RowDefinitions>
 
         <!-- Form Card -->
-        <materialDesign:Card Grid.Row="0" Margin="0,0,0,24" Padding="20" UniformCornerRadius="12">
+        <materialDesign:Card Grid.Row="0" Margin="0,0,0,24" Padding="20" UniformCornerRadius="12" Background="White">
             <StackPanel>
-                <TextBlock Text="Create New Position" Style="{StaticResource MaterialDesignHeadline6TextBlock}" Margin="0,0,0,16" FontWeight="Bold"/>
+                <TextBlock Text="Create New Position" Style="{StaticResource MaterialDesignHeadline6TextBlock}" Margin="0,0,0,16" FontWeight="Bold" Foreground="{StaticResource BrandMidnightBrush}"/>
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
@@ -42,21 +42,22 @@
 
                     <Button Grid.Column="2" Content="ADD" Height="50"
                             Style="{StaticResource MaterialDesignRaisedButton}"
+                            Background="{StaticResource BrandRedBrush}" Foreground="White"
                             Command="{Binding SaveCommand}"/>
                 </Grid>
             </StackPanel>
         </materialDesign:Card>
 
         <!-- List Card -->
-        <materialDesign:Card Grid.Row="1" UniformCornerRadius="12" Padding="0">
+        <materialDesign:Card Grid.Row="1" UniformCornerRadius="12" Padding="0" Background="White">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <Border Background="#F8FAFC" Padding="20,15" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1">
-                    <TextBlock Text="Available Positions" FontWeight="Bold" FontSize="16"/>
+                <Border Background="#FFF8E1" Padding="20,15" BorderBrush="{StaticResource BrandYellowBrush}" BorderThickness="0,0,0,1">
+                    <TextBlock Text="Available Positions" FontWeight="Bold" FontSize="16" Foreground="{StaticResource BrandMidnightBrush}"/>
                 </Border>
 
                 <ItemsControl Grid.Row="1" ItemsSource="{Binding Positions}" Margin="12">

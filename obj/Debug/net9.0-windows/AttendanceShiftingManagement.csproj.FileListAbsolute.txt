@@ -164,3 +164,7 @@ C:\Users\ASUS\source\repos\AttendanceShiftingManagement\AttendanceShiftingManage
 C:\Users\ASUS\source\repos\AttendanceShiftingManagement\AttendanceShiftingManagement\obj\Debug\net9.0-windows\Views\PositionsPage.baml
 C:\Users\ASUS\source\repos\AttendanceShiftingManagement\AttendanceShiftingManagement\obj\Debug\net9.0-windows\Views\WeeklyCalendarPage.g.cs
 C:\Users\ASUS\source\repos\AttendanceShiftingManagement\AttendanceShiftingManagement\obj\Debug\net9.0-windows\Views\WeeklyCalendarPage.baml
+C:\Users\ASUS\source\repos\AttendanceShiftingManagement\AttendanceShiftingManagement\obj\Debug\net9.0-windows\Views\LeaveRequestPage.baml
+C:\Users\ASUS\source\repos\AttendanceShiftingManagement\AttendanceShiftingManagement\obj\Debug\net9.0-windows\Views\LeaveRequestPage.g.cs
+C:\Users\ASUS\source\repos\AttendanceShiftingManagement\AttendanceShiftingManagement\obj\Debug\net9.0-windows\Views\RejectionReasonDialog.baml
+C:\Users\ASUS\source\repos\AttendanceShiftingManagement\AttendanceShiftingManagement\obj\Debug\net9.0-windows\Views\RejectionReasonDialog.g.cs

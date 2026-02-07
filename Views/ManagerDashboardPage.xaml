@@ -2,7 +2,7 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
-             Background="Transparent">
+             Background="{StaticResource BrandSurfaceBrush}">
 
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
@@ -33,20 +33,20 @@
                                 Command="{Binding TimeInCommand}"
                                 Visibility="{Binding IsTimedIn, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}"
                                 Style="{StaticResource MaterialDesignRaisedButton}"
-                                Background="#10B981" BorderBrush="#10B981"/>
+                                Background="{StaticResource BrandRedBrush}" BorderBrush="{StaticResource BrandRedBrush}"/>
                         
                         <Button Content="TIME OUT" 
                                 Command="{Binding TimeOutCommand}"
                                 Visibility="{Binding IsTimedIn, Converter={StaticResource BooleanToVisibilityConverter}}"
                                 Style="{StaticResource MaterialDesignRaisedButton}"
-                                Background="#EF4444" BorderBrush="#EF4444"/>
+                                Background="#27251F" BorderBrush="#27251F"/>
                     </Grid>
                 </StackPanel>
             </materialDesign:Card>
 
             <materialDesign:Card Margin="6,0,6,0" Padding="20" UniformCornerRadius="12" Background="White">
                 <StackPanel>
-                    <materialDesign:PackIcon Kind="AccountGroupOutline" Foreground="#3B82F6" Width="28" Height="28"/>
+                    <materialDesign:PackIcon Kind="AccountGroupOutline" Foreground="{StaticResource BrandRedBrush}" Width="28" Height="28"/>
                     <TextBlock Text="{Binding TotalCrew, FallbackValue='42'}" FontSize="32" FontWeight="Bold" Margin="0,8,0,0"/>
                     <TextBlock Text="Total Crew Members" Foreground="#64748B" FontSize="12" FontWeight="Medium"/>
                 </StackPanel>
@@ -54,15 +54,15 @@
 
             <materialDesign:Card Margin="6,0,6,0" Padding="20" UniformCornerRadius="12" Background="White">
                 <StackPanel>
-                    <materialDesign:PackIcon Kind="BriefcaseCheckOutline" Foreground="#10B981" Width="28" Height="28"/>
+                    <materialDesign:PackIcon Kind="BriefcaseCheckOutline" Foreground="{StaticResource BrandYellowBrush}" Width="28" Height="28"/>
                     <TextBlock Text="{Binding OnDutyCount, FallbackValue='18'}" FontSize="32" FontWeight="Bold" Margin="0,8,0,0"/>
                     <TextBlock Text="Currently On Duty" Foreground="#64748B" FontSize="12" FontWeight="Medium"/>
                 </StackPanel>
             </materialDesign:Card>
 
-            <materialDesign:Card Margin="12,0,0,0" Padding="20" UniformCornerRadius="12" Background="#1E293B" Foreground="White">
+            <materialDesign:Card Margin="12,0,0,0" Padding="20" UniformCornerRadius="12" Background="{StaticResource BrandMidnightBrush}" Foreground="White">
                 <StackPanel>
-                    <materialDesign:PackIcon Kind="TimerOutline" Foreground="#F2A900" Width="28" Height="28"/>
+                    <materialDesign:PackIcon Kind="TimerOutline" Foreground="{StaticResource BrandYellowBrush}" Width="28" Height="28"/>
                     <TextBlock Text="{Binding TotalWeekHours, FallbackValue='1,240'}" FontSize="32" FontWeight="Bold" Margin="0,8,0,0"/>
                     <TextBlock Text="Total Labor Hours (Week)" Foreground="#94A3B8" FontSize="12" FontWeight="Medium"/>
                 </StackPanel>
@@ -70,7 +70,7 @@
             
         </UniformGrid>
 
-        <materialDesign:Card Grid.Row="1" UniformCornerRadius="12" Padding="0">
+        <materialDesign:Card Grid.Row="1" UniformCornerRadius="12" Padding="0" Background="White">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>

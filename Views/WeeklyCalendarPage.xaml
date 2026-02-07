@@ -3,7 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
              xmlns:models="clr-namespace:AttendanceShiftingManagement.Models"
-             Background="#F8FAFC">
+             Background="{StaticResource BrandSurfaceBrush}">
     
     <UserControl.Resources>
         <Style x:Key="AddShiftButtonStyle" TargetType="Button" BasedOn="{StaticResource MaterialDesignFlatButton}">
@@ -124,11 +124,11 @@
         <Border Grid.Row="0" Margin="0,0,0,20" Padding="0,0,0,15" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1">
             <DockPanel>
                 <StackPanel Orientation="Horizontal">
-                    <Border Background="#27251F" Width="48" Height="48" CornerRadius="12" Margin="0,0,15,0">
-                        <materialDesign:PackIcon Kind="CalendarClock" Width="26" Height="26" Foreground="#FFC72C" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Border Background="{StaticResource BrandMidnightBrush}" Width="48" Height="48" CornerRadius="12" Margin="0,0,15,0">
+                        <materialDesign:PackIcon Kind="CalendarClock" Width="26" Height="26" Foreground="{StaticResource BrandYellowBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                     <StackPanel VerticalAlignment="Center">
-                        <TextBlock Text="STORE ROSTER" FontSize="22" FontWeight="Black" Foreground="#27251F"/>
+                        <TextBlock Text="STORE ROSTER" FontSize="22" FontWeight="Black" Foreground="{StaticResource BrandMidnightBrush}"/>
                         <TextBlock Text="Manager View: Shift Optimization" FontSize="12" Foreground="#64748B" FontWeight="Medium"/>
                     </StackPanel>
                 </StackPanel>
@@ -142,17 +142,17 @@
                     <Border Background="White" CornerRadius="20" Padding="5" materialDesign:ElevationAssist.Elevation="Dp1">
                         <StackPanel Orientation="Horizontal">
                             <Button Command="{Binding PreviousWeekCommand}" Style="{StaticResource MaterialDesignIconButton}" Width="35" Height="35">
-                                <materialDesign:PackIcon Kind="ChevronLeft" Foreground="#DA291C"/>
+                                <materialDesign:PackIcon Kind="ChevronLeft" Foreground="{StaticResource BrandRedBrush}"/>
                             </Button>
                             <TextBlock Text="{Binding WeekRangeDisplay, FallbackValue='Feb 2 - Feb 8, 2026'}" 
                                        FontSize="14" FontWeight="Bold" VerticalAlignment="Center" Margin="15,0" Foreground="#27251F"/>
                             <Button Command="{Binding NextWeekCommand}" Style="{StaticResource MaterialDesignIconButton}" Width="35" Height="35">
-                                <materialDesign:PackIcon Kind="ChevronRight" Foreground="#DA291C"/>
+                                <materialDesign:PackIcon Kind="ChevronRight" Foreground="{StaticResource BrandRedBrush}"/>
                             </Button>
                         </StackPanel>
                     </Border>
                     <Button Content="TODAY" Command="{Binding TodayCommand}" Margin="15,0,0,0"
-                            Background="#27251F" Foreground="White" BorderBrush="#27251F"
+                            Background="{StaticResource BrandMidnightBrush}" Foreground="White" BorderBrush="{StaticResource BrandMidnightBrush}"
                             materialDesign:ButtonAssist.CornerRadius="18" Height="36" Width="90"/>
                 </StackPanel>
             </DockPanel>
@@ -164,9 +164,9 @@
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                <materialDesign:PackIcon Kind="AlertDecagram" Foreground="#DA291C" Width="24" Height="24" VerticalAlignment="Top" Margin="0,2,12,0"/>
+                <materialDesign:PackIcon Kind="AlertDecagram" Foreground="{StaticResource BrandRedBrush}" Width="24" Height="24" VerticalAlignment="Top" Margin="0,2,12,0"/>
                 <StackPanel Grid.Column="1">
-                    <TextBlock Text="Scheduling Efficiency Alerts" FontWeight="Black" Foreground="#27251F" FontSize="13" Margin="0,0,0,5"/>
+                    <TextBlock Text="Scheduling Efficiency Alerts" FontWeight="Black" Foreground="{StaticResource BrandMidnightBrush}" FontSize="13" Margin="0,0,0,5"/>
                     <ItemsControl ItemsSource="{Binding ScheduleWarnings}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
@@ -177,7 +177,7 @@
                             <DataTemplate>
                                 <Button Command="{Binding DataContext.ScrollToEmployeeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                         CommandParameter="{Binding EmployeeName}"
-                                        Background="#FFE082" Foreground="#5D4037"
+                                        Background="{StaticResource BrandYellowBrush}" Foreground="#5D4037"
                                         Padding="10,2" Margin="0,2,8,2"
                                         Height="24"
                                         materialDesign:ButtonAssist.CornerRadius="12"
@@ -198,7 +198,7 @@
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <Border Grid.Row="0" Background="#27251F" CornerRadius="15,15,0,0">
+                <Border Grid.Row="0" Background="{StaticResource BrandMidnightBrush}" CornerRadius="15,15,0,0">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="180"/>
@@ -210,7 +210,7 @@
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="TEAM MEMBER" Foreground="#FFC72C" FontWeight="Black" FontSize="11" VerticalAlignment="Center" Margin="20,0,0,0"/>
+                        <TextBlock Grid.Column="0" Text="TEAM MEMBER" Foreground="{StaticResource BrandYellowBrush}" FontWeight="Black" FontSize="11" VerticalAlignment="Center" Margin="20,0,0,0"/>
                         <TextBlock Grid.Column="1" Text="MON" HorizontalAlignment="Center" Foreground="White" FontWeight="Bold" VerticalAlignment="Center"/>
                         <TextBlock Grid.Column="2" Text="TUE" HorizontalAlignment="Center" Foreground="White" FontWeight="Bold" VerticalAlignment="Center"/>
                         <TextBlock Grid.Column="3" Text="WED" HorizontalAlignment="Center" Foreground="White" FontWeight="Bold" VerticalAlignment="Center"/>
@@ -239,7 +239,7 @@
                                         </Grid.ColumnDefinitions>
 
                                         <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="20,0">
-                                            <TextBlock Text="{Binding EmployeeName}" FontWeight="Bold" Foreground="#27251F" FontSize="14"/>
+                                            <TextBlock Text="{Binding EmployeeName}" FontWeight="Bold" Foreground="{StaticResource BrandMidnightBrush}" FontSize="14"/>
                                             <TextBlock Text="Full-Time" FontSize="10" Foreground="#64748B" FontWeight="SemiBold"/>
                                         </StackPanel>
 

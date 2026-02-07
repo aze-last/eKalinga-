@@ -22,7 +22,59 @@ namespace AttendanceShiftingManagement.Migrations
 
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
 
-            modelBuilder.Entity("AttendanceShiftingManagement.Desktop.Models.Attendance", b =>
+            modelBuilder.Entity("AttendanceShiftingManagement.Models.ActivityLog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("action");
+
+                    b.Property<string>("Details")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)")
+                        .HasColumnName("details");
+
+                    b.Property<string>("Entity")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("entity");
+
+                    b.Property<int?>("EntityId")
+                        .HasColumnType("int")
+                        .HasColumnName("entity_id");
+
+                    b.Property<string>("IpAddress")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)")
+                        .HasColumnName("ip_address");
+
+                    b.Property<DateTime>("Timestamp")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("timestamp");
+
+                    b.Property<int?>("UserId")
+                        .HasColumnType("int")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("activity_logs");
+                });
+
+            modelBuilder.Entity("AttendanceShiftingManagement.Models.Attendance", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -69,7 +121,7 @@ namespace AttendanceShiftingManagement.Migrations
                     b.ToTable("attendance");
                 });
 
-            modelBuilder.Entity("AttendanceShiftingManagement.Desktop.Models.Employee", b =>
+            modelBuilder.Entity("AttendanceShiftingManagement.Models.Employee", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -115,7 +167,7 @@ namespace AttendanceShiftingManagement.Migrations
                     b.ToTable("employees");
                 });
 
-            modelBuilder.Entity("AttendanceShiftingManagement.Desktop.Models.Holiday", b =>
+            modelBuilder.Entity("AttendanceShiftingManagement.Models.Holiday", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -143,7 +195,160 @@ namespace AttendanceShiftingManagement.Migrations
                     b.ToTable("holidays");
                 });
 
-            modelBuilder.Entity("AttendanceShiftingManagement.Desktop.Models.Payroll", b =>
+            modelBuilder.Entity("AttendanceShiftingManagement.Models.LeaveBalance", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("EmployeeId")
+                        .HasColumnType("int")
+                        .HasColumnName("employee_id");
+
+                    b.Property<decimal>("SickDays")
+                        .HasColumnType("decimal(65,30)")
+                        .HasColumnName("sick_days");
+
+                    b.Property<decimal>("UsedSickDays")
+                        .HasColumnType("decimal(65,30)")
+                        .HasColumnName("used_sick_days");
+
+                    b.Property<decimal>("UsedVacationDays")
+                        .HasColumnType("decimal(65,30)")
+                        .HasColumnName("used_vacation_days");
+
+                    b.Property<decimal>("VacationDays")
+                        .HasColumnType("decimal(65,30)")
+                        .HasColumnName("vacation_days");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("int")
+                        .HasColumnName("year");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmployeeId");
+
+                    b.ToTable("leave_balances");
+                });
+
+            modelBuilder.Entity("AttendanceShiftingManagement.Models.LeaveRequest", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("ApprovedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("approved_at");
+
+                    b.Property<int?>("ApprovedBy")
+                        .HasColumnType("int")
+                        .HasColumnName("approved_by");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("EmployeeId")
+                        .HasColumnType("int")
+                        .HasColumnName("employee_id");
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("end_date");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)")
+                        .HasColumnName("reason");
+
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)")
+                        .HasColumnName("rejection_reason");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("start_date");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("status");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("leave_type");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApprovedBy");
+
+                    b.HasIndex("EmployeeId");
+
+                    b.ToTable("leave_requests");
+                });
+
+            modelBuilder.Entity("AttendanceShiftingManagement.Models.Notification", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ActionUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)")
+                        .HasColumnName("action_url");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_read");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)")
+                        .HasColumnName("message");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)")
+                        .HasColumnName("title");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("type");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("notifications");
+                });
+
+            modelBuilder.Entity("AttendanceShiftingManagement.Models.Payroll", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -197,7 +402,7 @@ namespace AttendanceShiftingManagement.Migrations
                     b.ToTable("payroll");
                 });
 
-            modelBuilder.Entity("AttendanceShiftingManagement.Desktop.Models.Position", b =>
+            modelBuilder.Entity("AttendanceShiftingManagement.Models.Position", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -222,7 +427,7 @@ namespace AttendanceShiftingManagement.Migrations
                     b.ToTable("positions");
                 });
 
-            modelBuilder.Entity("AttendanceShiftingManagement.Desktop.Models.Shift", b =>
+            modelBuilder.Entity("AttendanceShiftingManagement.Models.Shift", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -264,7 +469,7 @@ namespace AttendanceShiftingManagement.Migrations
                     b.ToTable("shifts");
                 });
 
-            modelBuilder.Entity("AttendanceShiftingManagement.Desktop.Models.ShiftAssignment", b =>
+            modelBuilder.Entity("AttendanceShiftingManagement.Models.ShiftAssignment", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -291,7 +496,7 @@ namespace AttendanceShiftingManagement.Migrations
                     b.ToTable("shift_assignments");
                 });
 
-            modelBuilder.Entity("AttendanceShiftingManagement.Desktop.Models.User", b =>
+            modelBuilder.Entity("AttendanceShiftingManagement.Models.User", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -340,15 +545,24 @@ namespace AttendanceShiftingManagement.Migrations
                     b.ToTable("users");
                 });
 
-            modelBuilder.Entity("AttendanceShiftingManagement.Desktop.Models.Attendance", b =>
+            modelBuilder.Entity("AttendanceShiftingManagement.Models.ActivityLog", b =>
                 {
-                    b.HasOne("AttendanceShiftingManagement.Desktop.Models.Employee", "Employee")
+                    b.HasOne("AttendanceShiftingManagement.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("AttendanceShiftingManagement.Models.Attendance", b =>
+                {
+                    b.HasOne("AttendanceShiftingManagement.Models.Employee", "Employee")
                         .WithMany("Attendances")
                         .HasForeignKey("EmployeeId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("AttendanceShiftingManagement.Desktop.Models.Shift", "Shift")
+                    b.HasOne("AttendanceShiftingManagement.Models.Shift", "Shift")
                         .WithMany("Attendances")
                         .HasForeignKey("ShiftId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -359,17 +573,17 @@ namespace AttendanceShiftingManagement.Migrations
                     b.Navigation("Shift");
                 });
 
-            modelBuilder.Entity("AttendanceShiftingManagement.Desktop.Models.Employee", b =>
+            modelBuilder.Entity("AttendanceShiftingManagement.Models.Employee", b =>
                 {
-                    b.HasOne("AttendanceShiftingManagement.Desktop.Models.Position", "Position")
+                    b.HasOne("AttendanceShiftingManagement.Models.Position", "Position")
                         .WithMany("Employees")
                         .HasForeignKey("PositionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("AttendanceShiftingManagement.Desktop.Models.User", "User")
+                    b.HasOne("AttendanceShiftingManagement.Models.User", "User")
                         .WithOne("Employee")
-                        .HasForeignKey("AttendanceShiftingManagement.Desktop.Models.Employee", "UserId")
+                        .HasForeignKey("AttendanceShiftingManagement.Models.Employee", "UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -378,15 +592,54 @@ namespace AttendanceShiftingManagement.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("AttendanceShiftingManagement.Desktop.Models.Payroll", b =>
+            modelBuilder.Entity("AttendanceShiftingManagement.Models.LeaveBalance", b =>
                 {
-                    b.HasOne("AttendanceShiftingManagement.Desktop.Models.Employee", "Employee")
+                    b.HasOne("AttendanceShiftingManagement.Models.Employee", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Employee");
+                });
+
+            modelBuilder.Entity("AttendanceShiftingManagement.Models.LeaveRequest", b =>
+                {
+                    b.HasOne("AttendanceShiftingManagement.Models.User", "ApprovedByUser")
+                        .WithMany()
+                        .HasForeignKey("ApprovedBy");
+
+                    b.HasOne("AttendanceShiftingManagement.Models.Employee", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ApprovedByUser");
+
+                    b.Navigation("Employee");
+                });
+
+            modelBuilder.Entity("AttendanceShiftingManagement.Models.Notification", b =>
+                {
+                    b.HasOne("AttendanceShiftingManagement.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("AttendanceShiftingManagement.Models.Payroll", b =>
+                {
+                    b.HasOne("AttendanceShiftingManagement.Models.Employee", "Employee")
                         .WithMany("Payrolls")
                         .HasForeignKey("EmployeeId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("AttendanceShiftingManagement.Desktop.Models.User", "GeneratedByUser")
+                    b.HasOne("AttendanceShiftingManagement.Models.User", "GeneratedByUser")
                         .WithMany()
                         .HasForeignKey("GeneratedBy")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -397,15 +650,15 @@ namespace AttendanceShiftingManagement.Migrations
                     b.Navigation("GeneratedByUser");
                 });
 
-            modelBuilder.Entity("AttendanceShiftingManagement.Desktop.Models.Shift", b =>
+            modelBuilder.Entity("AttendanceShiftingManagement.Models.Shift", b =>
                 {
-                    b.HasOne("AttendanceShiftingManagement.Desktop.Models.User", "CreatedByUser")
+                    b.HasOne("AttendanceShiftingManagement.Models.User", "CreatedByUser")
                         .WithMany()
                         .HasForeignKey("CreatedBy")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("AttendanceShiftingManagement.Desktop.Models.Position", "Position")
+                    b.HasOne("AttendanceShiftingManagement.Models.Position", "Position")
                         .WithMany("Shifts")
                         .HasForeignKey("PositionId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -416,15 +669,15 @@ namespace AttendanceShiftingManagement.Migrations
                     b.Navigation("Position");
                 });
 
-            modelBuilder.Entity("AttendanceShiftingManagement.Desktop.Models.ShiftAssignment", b =>
+            modelBuilder.Entity("AttendanceShiftingManagement.Models.ShiftAssignment", b =>
                 {
-                    b.HasOne("AttendanceShiftingManagement.Desktop.Models.Employee", "Employee")
+                    b.HasOne("AttendanceShiftingManagement.Models.Employee", "Employee")
                         .WithMany("ShiftAssignments")
                         .HasForeignKey("EmployeeId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("AttendanceShiftingManagement.Desktop.Models.Shift", "Shift")
+                    b.HasOne("AttendanceShiftingManagement.Models.Shift", "Shift")
                         .WithMany("ShiftAssignments")
                         .HasForeignKey("ShiftId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -435,7 +688,7 @@ namespace AttendanceShiftingManagement.Migrations
                     b.Navigation("Shift");
                 });
 
-            modelBuilder.Entity("AttendanceShiftingManagement.Desktop.Models.Employee", b =>
+            modelBuilder.Entity("AttendanceShiftingManagement.Models.Employee", b =>
                 {
                     b.Navigation("Attendances");
 
@@ -444,21 +697,21 @@ namespace AttendanceShiftingManagement.Migrations
                     b.Navigation("ShiftAssignments");
                 });
 
-            modelBuilder.Entity("AttendanceShiftingManagement.Desktop.Models.Position", b =>
+            modelBuilder.Entity("AttendanceShiftingManagement.Models.Position", b =>
                 {
                     b.Navigation("Employees");
 
                     b.Navigation("Shifts");
                 });
 
-            modelBuilder.Entity("AttendanceShiftingManagement.Desktop.Models.Shift", b =>
+            modelBuilder.Entity("AttendanceShiftingManagement.Models.Shift", b =>
                 {
                     b.Navigation("Attendances");
 
                     b.Navigation("ShiftAssignments");
                 });
 
-            modelBuilder.Entity("AttendanceShiftingManagement.Desktop.Models.User", b =>
+            modelBuilder.Entity("AttendanceShiftingManagement.Models.User", b =>
                 {
                     b.Navigation("Employee");
                 });
