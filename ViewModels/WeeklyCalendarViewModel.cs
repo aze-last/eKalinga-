@@ -55,6 +55,7 @@ namespace AttendanceShiftingManagement.ViewModels
         public string SundayHeader { get => _sundayHeader; set => SetProperty(ref _sundayHeader, value); }
 
         public ObservableCollection<EmployeeWeeklySchedule> EmployeeWeeklySchedules { get; set; }
+        public ObservableCollection<string> ScheduleWarnings { get; set; }
 
         public ICommand PreviousWeekCommand { get; }
         public ICommand NextWeekCommand { get; }
@@ -65,6 +66,7 @@ namespace AttendanceShiftingManagement.ViewModels
             _context = new AppDbContext();
             _employeeId = employeeId;
             EmployeeWeeklySchedules = new ObservableCollection<EmployeeWeeklySchedule>();
+            ScheduleWarnings = new ObservableCollection<string>();
 
             PreviousWeekCommand = new RelayCommand(_ => CurrentWeekStart = CurrentWeekStart.AddDays(-7));
             NextWeekCommand = new RelayCommand(_ => CurrentWeekStart = CurrentWeekStart.AddDays(7));
@@ -106,6 +108,7 @@ namespace AttendanceShiftingManagement.ViewModels
             try
             {
                 EmployeeWeeklySchedules.Clear();
+                ScheduleWarnings.Clear();
                 var weekEnd = CurrentWeekStart.AddDays(7); // Fetch logic is < weekEnd, so it covers up to next Monday 00:00
 
                 // Get all active employees
@@ -139,6 +142,7 @@ namespace AttendanceShiftingManagement.ViewModels
                         EmployeeName = employee.FullName
                     };
 
+                    int workingDays = 0;
                     // Fill in each day (0=Mon, 6=Sun)
                     for (int dayOffset = 0; dayOffset < 7; dayOffset++)
                     {
@@ -152,6 +156,7 @@ namespace AttendanceShiftingManagement.ViewModels
                         DayCell cell;
                         if (dayAssignments.Any())
                         {
+                            workingDays++;
                             var firstShift = dayAssignments.First().Shift;
 
                             // Color logic: Blue for regular
@@ -192,6 +197,19 @@ namespace AttendanceShiftingManagement.ViewModels
                     }
 
                     EmployeeWeeklySchedules.Add(schedule);
+
+                    if (!_employeeId.HasValue)
+                    {
+                        var daysOff = 7 - workingDays;
+                        if (workingDays == 7)
+                        {
+                            ScheduleWarnings.Add($"{employee.FullName} is scheduled all 7 days this week.");
+                        }
+                        else if (daysOff <= 1)
+                        {
+                            ScheduleWarnings.Add($"{employee.FullName} has only {daysOff} day off this week.");
+                        }
+                    }
                 }
             }
             catch (Exception ex)

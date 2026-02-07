@@ -4,6 +4,7 @@ using AttendanceShiftingManagement.Services;
 using AttendanceShiftingManagement.Views;
 using System.Windows.Input;
 using System;
+using System.Windows;
 
 namespace AttendanceShiftingManagement.ViewModels
 {
@@ -23,6 +24,8 @@ namespace AttendanceShiftingManagement.ViewModels
 
         public ICommand ShowScheduleCommand { get; }
         public ICommand ShowTimeClockCommand { get; }
+        public ICommand ShowHistoryCommand { get; }
+        public ICommand ShowPayslipCommand { get; }
 
         public CrewMainViewModel(User user)
         {
@@ -39,6 +42,8 @@ namespace AttendanceShiftingManagement.ViewModels
 
             ShowScheduleCommand = new RelayCommand(_ => ExecuteShowSchedule());
             ShowTimeClockCommand = new RelayCommand(_ => ExecuteShowTimeClock());
+            ShowHistoryCommand = new RelayCommand(_ => ExecuteShowHistory());
+            ShowPayslipCommand = new RelayCommand(_ => ExecuteShowPayslip());
 
             // Set default view
             ExecuteShowTimeClock();
@@ -64,6 +69,18 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 DataContext = new WeeklyCalendarViewModel(_employeeId)
             };
+        }
+
+        private void ExecuteShowHistory()
+        {
+            MessageBox.Show("History view is coming soon.", "Coming Soon",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        private void ExecuteShowPayslip()
+        {
+            MessageBox.Show("Payslip view is coming soon.", "Coming Soon",
+                MessageBoxButton.OK, MessageBoxImage.Information);
         }
     }
 }

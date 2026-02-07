@@ -42,15 +42,20 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand CreateBatchCommand { get; }
         public ICommand RefreshCommand { get; }
 
+        private readonly AutoSchedulingService _autoSchedulingService;
+        private readonly ValidationService _validationService;
+
         public ShiftsManagementViewModel(User user)
         {
             _currentUser = user;
             _context = new Data.AppDbContext();
             _shiftService = new ShiftService(_context);
+            _validationService = new ValidationService(_context);
+            _autoSchedulingService = new AutoSchedulingService(_context, _validationService);
 
             SelectedDay = DateTime.Today;
 
-            CreateBatchCommand = new RelayCommand(_ => ExecuteBatchCreate(), _ => Employees.Any(e => e.IsSelected));
+            CreateBatchCommand = new RelayCommand(_ => ExecuteBatchCreate());
             RefreshCommand = new RelayCommand(_ => LoadRoster());
 
             // Initialize labels for 6 AM to 11 PM
@@ -96,6 +101,20 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             if (SelectedShiftToEdit != null)
             {
+                // Validation Check
+                // We need the Employee ID. The shift has ShiftAssignments.
+                // Assuming single assignment for now as per current logic.
+                var assignment = _context.ShiftAssignments.FirstOrDefault(sa => sa.ShiftId == SelectedShiftToEdit.Id);
+                if (assignment != null)
+                {
+                    if (_validationService.IsShiftOverlapping(assignment.EmployeeId, SelectedShiftToEdit.ShiftDate,
+                        SelectedShiftToEdit.StartTime, SelectedShiftToEdit.EndTime, SelectedShiftToEdit.Id))
+                    {
+                        System.Windows.MessageBox.Show("This shift overlaps with another shift for this employee.\nPlease choose a different time.", "Validation Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                        return;
+                    }
+                }
+
                 _context.Update(SelectedShiftToEdit);
                 _context.SaveChanges();
                 IsEditingShift = false;
@@ -175,112 +194,40 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             try
             {
-                var selectedEmps = Employees.Where(e => e.IsSelected).Select(e => e.Employee).ToList();
+                var result = System.Windows.MessageBox.Show(
+                    $"Generate SMART DRAFT schedule for the week of {SelectedDay:MMM dd}?\n\nThis will create a randomized, fair schedule for all active employees.",
+                    "Confirm Auto-Schedule",
+                    System.Windows.MessageBoxButton.YesNo,
+                    System.Windows.MessageBoxImage.Question);
 
-                if (!selectedEmps.Any())
+                if (result == System.Windows.MessageBoxResult.Yes)
                 {
-                    System.Windows.MessageBox.Show("Please select at least one employee.", "Warning");
-                    return;
-                }
+                    // 1. Calculate Week Start
+                    var currentDay = SelectedDay;
+                    int diff = (7 + (currentDay.DayOfWeek - DayOfWeek.Monday)) % 7;
+                    var startOfWeek = currentDay.AddDays(-1 * diff).Date;
 
-                // 1. Separate Managers and Crew
-                var managers = selectedEmps.Where(e => e.Position.Name.Contains("Manager", StringComparison.OrdinalIgnoreCase)).ToList();
-                var crew = selectedEmps.Except(managers).ToList();
+                    // 2. Helper: Clear existing shifts first (optional, or just add to them?)
+                    // For a "Draft", usually we want a clean slate or it gets messy. 
+                    // Let's ask user or just do it. Let's assume clear for now to avoid duplicates.
+                    // But wait, user might want to fill gaps? 
+                    // User prompt says "Generate Draft", usually implies fresh.
+                    // Let's just generate. Validation will skip overlaps if we didn't clear.
 
-                // 2. Define Time Slots
-                // Crew Slots (6 Hours)
-                var slotOpenerStart = new TimeSpan(6, 0, 0);   // 6 AM - 12 PM
-                var slotOpenerEnd = new TimeSpan(12, 0, 0);
+                    var newShifts = _autoSchedulingService.GenerateWeeklyDraft(startOfWeek, _currentUser.Id);
 
-                var slotMidStart = new TimeSpan(11, 0, 0);     // 11 AM - 5 PM
-                var slotMidEnd = new TimeSpan(17, 0, 0);
-
-                var slotCloserStart = new TimeSpan(17, 0, 0);  // 5 PM - 11 PM
-                var slotCloserEnd = new TimeSpan(23, 0, 0);
-
-                // Manager Slots (9 Hours)
-                var mgrOpenerStart = new TimeSpan(6, 0, 0);    // 6 AM - 3 PM
-                var mgrOpenerEnd = new TimeSpan(15, 0, 0);
-
-                var mgrCloserStart = new TimeSpan(14, 0, 0);   // 2 PM - 11 PM
-                var mgrCloserEnd = new TimeSpan(23, 0, 0);
-
-                // 3. Generate Week Dates
-                var currentDay = SelectedDay;
-                int diff = (7 + (currentDay.DayOfWeek - DayOfWeek.Monday)) % 7;
-                var startOfWeek = currentDay.AddDays(-1 * diff).Date;
-                var weekDates = Enumerable.Range(0, 7).Select(i => startOfWeek.AddDays(i)).ToList();
-
-                var newShifts = new List<Shift>();
-
-                // 4. Assign Managers (2 per day: Opener, Closer)
-                int mgrIndex = 0;
-                if (managers.Any())
-                {
-                    foreach (var date in weekDates)
+                    if (newShifts.Any())
                     {
-                        for (int shiftNum = 1; shiftNum <= 2; shiftNum++)
-                        {
-                            var mgr = managers[mgrIndex % managers.Count];
-                            mgrIndex++;
-
-                            var start = shiftNum == 1 ? mgrOpenerStart : mgrCloserStart;
-                            var end = shiftNum == 1 ? mgrOpenerEnd : mgrCloserEnd;
-
-                            CreateShift(mgr, date, start, end, newShifts);
-                        }
+                        _context.Shifts.AddRange(newShifts);
+                        _context.SaveChanges();
+                        System.Windows.MessageBox.Show($"Draft schedule generated with {newShifts.Count} shifts!", "Success");
+                        LoadRoster();
+                    }
+                    else
+                    {
+                        System.Windows.MessageBox.Show("No shifts could be generated. Check valid employees or existing schedule conflicts.", "Info");
                     }
                 }
-
-                // 5. Assign Crew (Target ~5 shifts/week per person)
-                var crewByPosition = crew.GroupBy(e => e.PositionId).ToList();
-
-                foreach (var group in crewByPosition)
-                {
-                    var stationCrew = group.ToList();
-                    int crewCount = stationCrew.Count;
-                    if (crewCount == 0) continue;
-
-                    // Calculate slots needed per day to give everyone ~5 shifts
-                    // Total Shifts Needed = Crew * 5
-                    // Slots Per Day = Total / 7 (Rounded Up)
-                    int totalShiftsNeeded = crewCount * 5;
-                    int slotsPerDay = (int)Math.Ceiling((double)totalShiftsNeeded / 7.0);
-
-                    // Ensure at least 3 slots (Opener, Mid, Closer) if we have enough people
-                    if (slotsPerDay < 3 && crewCount >= 3) slotsPerDay = 3;
-
-                    int crewIndex = 0;
-
-                    foreach (var date in weekDates)
-                    {
-                        for (int i = 0; i < slotsPerDay; i++)
-                        {
-                            var c = stationCrew[crewIndex % crewCount];
-                            crewIndex++;
-
-                            TimeSpan start, end;
-
-                            // Distribution priority: Opener -> Closer -> Mid 1 -> Mid 2 -> Opener 2...
-                            if (i == 0) { start = slotOpenerStart; end = slotOpenerEnd; }
-                            else if (i == 1) { start = slotCloserStart; end = slotCloserEnd; }
-                            else if (i == 2) { start = slotMidStart; end = slotMidEnd; }
-                            else if (i == 3) { start = slotMidStart; end = slotMidEnd; } // Second Mid
-                            else if (i % 3 == 0) { start = slotOpenerStart; end = slotOpenerEnd; } // Extra Opener
-                            else if (i % 3 == 1) { start = slotCloserStart; end = slotCloserEnd; } // Extra Closer
-                            else { start = slotMidStart; end = slotMidEnd; } // Extra Mid
-
-                            CreateShift(c, date, start, end, newShifts);
-                        }
-                    }
-                }
-
-                // 6. Save Changes
-                _context.Shifts.AddRange(newShifts);
-                _context.SaveChanges();
-
-                System.Windows.MessageBox.Show($"Weekly shifts created successfully!\nGenerated {newShifts.Count} shifts based on {selectedEmps.Count} employees.", "Success");
-                LoadRoster();
             }
             catch (Exception ex)
             {
