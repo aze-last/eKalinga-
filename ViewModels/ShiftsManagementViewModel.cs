@@ -20,6 +20,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private TimeSpan _startTime = new TimeSpan(6, 0, 0);
         private TimeSpan _endTime = new TimeSpan(14, 0, 0);
         private readonly User _currentUser;
+        private readonly NotificationService _notificationService;
 
         public DateTime SelectedDay
         {
@@ -37,7 +38,6 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICollectionView RosterView { get; }
 
         private string _searchText = string.Empty;
-        private bool _isAllSelected;
         public string SearchText
         {
             get => _searchText;
@@ -50,6 +50,7 @@ namespace AttendanceShiftingManagement.ViewModels
             }
         }
 
+        private bool _isAllSelected;
         public bool IsAllSelected
         {
             get => _isAllSelected;
@@ -64,6 +65,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 }
             }
         }
+
         public ObservableCollection<EmployeeSelectable> Employees { get; } = new();
 
         public TimeSpan StartTime { get => _startTime; set => SetProperty(ref _startTime, value); }
@@ -84,6 +86,7 @@ namespace AttendanceShiftingManagement.ViewModels
             _shiftService = new ShiftService(_context);
             _validationService = new ValidationService(_context);
             _autoSchedulingService = new AutoSchedulingService(_context, _validationService);
+            _notificationService = new NotificationService(_context);
 
             SelectedDay = DateTime.Today;
 
@@ -106,11 +109,6 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             if (obj is ShiftSegment segment && segment.IsActive && segment.ShiftId > 0)
             {
-                // Logic to edit shift. For now, let's keep it simple:
-                // We could use a Dialog, but we need a View references or a Dialog Service.
-                // Or we can just prompt Update.
-                // Let's implement a simple "ShiftDetails" property that binds to an edit form in the UI.
-
                 SelectedShiftToEdit = _context.Shifts.Include(s => s.Position).FirstOrDefault(s => s.Id == segment.ShiftId);
                 IsEditingShift = true;
             }
@@ -134,9 +132,6 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             if (SelectedShiftToEdit != null)
             {
-                // Validation Check
-                // We need the Employee ID. The shift has ShiftAssignments.
-                // Assuming single assignment for now as per current logic.
                 var assignment = _context.ShiftAssignments.FirstOrDefault(sa => sa.ShiftId == SelectedShiftToEdit.Id);
                 if (assignment != null)
                 {
@@ -152,6 +147,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 _context.SaveChanges();
                 IsEditingShift = false;
                 System.Windows.MessageBox.Show("Shift updated successfully.", "Success");
+                NotifyShiftUpdated(SelectedShiftToEdit.Id);
                 LoadRoster();
             }
         });
@@ -174,7 +170,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
                 if (result == System.Windows.MessageBoxResult.Yes)
                 {
-                    // Remove assignments first
+                    NotifyShiftRemoved(SelectedShiftToEdit.Id);
                     var assignments = _context.ShiftAssignments.Where(sa => sa.ShiftId == SelectedShiftToEdit.Id).ToList();
                     _context.ShiftAssignments.RemoveRange(assignments);
 
@@ -236,6 +232,93 @@ namespace AttendanceShiftingManagement.ViewModels
             ApplyRosterFilter();
         }
 
+        private void ExecuteBatchCreate()
+        {
+            try
+            {
+                var result = System.Windows.MessageBox.Show(
+                    $"Generate SMART DRAFT schedule for the week of {SelectedDay:MMM dd}?\n\nThis will create a randomized, fair schedule for all active employees.",
+                    "Confirm Auto-Schedule",
+                    System.Windows.MessageBoxButton.YesNo,
+                    System.Windows.MessageBoxImage.Question);
+
+                if (result == System.Windows.MessageBoxResult.Yes)
+                {
+                    var currentDay = SelectedDay;
+                    int diff = (7 + (currentDay.DayOfWeek - DayOfWeek.Monday)) % 7;
+                    var startOfWeek = currentDay.AddDays(-1 * diff).Date;
+
+                    var newShifts = _autoSchedulingService.GenerateWeeklyDraft(startOfWeek, _currentUser.Id);
+
+                    if (newShifts.Any())
+                    {
+                        _context.Shifts.AddRange(newShifts);
+                        _context.SaveChanges();
+                        NotifyNewShifts(newShifts);
+                        System.Windows.MessageBox.Show($"Draft schedule generated with {newShifts.Count} shifts!", "Success");
+                        LoadRoster();
+                    }
+                    else
+                    {
+                        System.Windows.MessageBox.Show("No shifts could be generated. Check valid employees or existing schedule conflicts.", "Info");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                var msg = ex.Message;
+                if (ex.InnerException != null) msg += "\n\nInner: " + ex.InnerException.Message;
+                System.Windows.MessageBox.Show(msg, "Error");
+            }
+        }
+
+        public ICommand ClearShiftsCommand => new RelayCommand(_ => ExecuteClearShifts());
+
+        private void ExecuteClearShifts()
+        {
+            try
+            {
+                var result = System.Windows.MessageBox.Show(
+                    $"Are you sure you want to clear ALL shifts for the week of {SelectedDay:MMM dd}?",
+                    "Confirm Clear Schedule",
+                    System.Windows.MessageBoxButton.YesNo,
+                    System.Windows.MessageBoxImage.Warning);
+
+                if (result == System.Windows.MessageBoxResult.Yes)
+                {
+                    var currentDay = SelectedDay;
+                    int diff = (7 + (currentDay.DayOfWeek - DayOfWeek.Monday)) % 7;
+                    var startOfWeek = currentDay.AddDays(-1 * diff).Date;
+                    var endOfWeek = startOfWeek.AddDays(7).Date;
+
+                    var shiftsToDelete = _context.Shifts
+                        .Where(s => s.ShiftDate >= startOfWeek && s.ShiftDate < endOfWeek)
+                        .ToList();
+
+                    if (shiftsToDelete.Any())
+                    {
+                        var shiftIds = shiftsToDelete.Select(s => s.Id).ToList();
+                        var assignmentsToDelete = _context.ShiftAssignments.Where(sa => shiftIds.Contains(sa.ShiftId)).ToList();
+
+                        _context.ShiftAssignments.RemoveRange(assignmentsToDelete);
+                        _context.Shifts.RemoveRange(shiftsToDelete);
+                        _context.SaveChanges();
+
+                        System.Windows.MessageBox.Show("Weekly schedule cleared successfully.", "Success");
+                        LoadRoster();
+                    }
+                    else
+                    {
+                        System.Windows.MessageBox.Show("No shifts found to clear for this week.", "Info");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"Error clearing shifts: {ex.Message}", "Error");
+            }
+        }
+
         private void ApplyRosterFilter()
         {
             if (RosterView == null)
@@ -264,103 +347,6 @@ namespace AttendanceShiftingManagement.ViewModels
             RosterView.Refresh();
         }
 
-        private void ExecuteBatchCreate()
-        {
-            try
-            {
-                var result = System.Windows.MessageBox.Show(
-                    $"Generate SMART DRAFT schedule for the week of {SelectedDay:MMM dd}?\n\nThis will create a randomized, fair schedule for all active employees.",
-                    "Confirm Auto-Schedule",
-                    System.Windows.MessageBoxButton.YesNo,
-                    System.Windows.MessageBoxImage.Question);
-
-                if (result == System.Windows.MessageBoxResult.Yes)
-                {
-                    // 1. Calculate Week Start
-                    var currentDay = SelectedDay;
-                    int diff = (7 + (currentDay.DayOfWeek - DayOfWeek.Monday)) % 7;
-                    var startOfWeek = currentDay.AddDays(-1 * diff).Date;
-
-                    // 2. Helper: Clear existing shifts first (optional, or just add to them?)
-                    // For a "Draft", usually we want a clean slate or it gets messy. 
-                    // Let's ask user or just do it. Let's assume clear for now to avoid duplicates.
-                    // But wait, user might want to fill gaps? 
-                    // User prompt says "Generate Draft", usually implies fresh.
-                    // Let's just generate. Validation will skip overlaps if we didn't clear.
-
-                    var newShifts = _autoSchedulingService.GenerateWeeklyDraft(startOfWeek, _currentUser.Id);
-
-                    if (newShifts.Any())
-                    {
-                        _context.Shifts.AddRange(newShifts);
-                        _context.SaveChanges();
-                        System.Windows.MessageBox.Show($"Draft schedule generated with {newShifts.Count} shifts!", "Success");
-                        LoadRoster();
-                    }
-                    else
-                    {
-                        System.Windows.MessageBox.Show("No shifts could be generated. Check valid employees or existing schedule conflicts.", "Info");
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                var msg = ex.Message;
-                if (ex.InnerException != null) msg += "\n\nInner: " + ex.InnerException.Message;
-                System.Windows.MessageBox.Show(msg, "Error");
-            }
-        }
-
-
-        public ICommand ClearShiftsCommand => new RelayCommand(_ => ExecuteClearShifts());
-
-        private void ExecuteClearShifts()
-        {
-            try
-            {
-                var result = System.Windows.MessageBox.Show(
-                    $"Are you sure you want to clear ALL shifts for the week of {SelectedDay:MMM dd}?",
-                    "Confirm Clear Schedule",
-                    System.Windows.MessageBoxButton.YesNo,
-                    System.Windows.MessageBoxImage.Warning);
-
-                if (result == System.Windows.MessageBoxResult.Yes)
-                {
-                    var currentDay = SelectedDay;
-                    int diff = (7 + (currentDay.DayOfWeek - DayOfWeek.Monday)) % 7;
-                    var startOfWeek = currentDay.AddDays(-1 * diff).Date;
-                    var endOfWeek = startOfWeek.AddDays(7).Date;
-
-                    var shiftsToDelete = _context.Shifts
-                        .Where(s => s.ShiftDate >= startOfWeek && s.ShiftDate < endOfWeek)
-                        .ToList();
-
-                    if (shiftsToDelete.Any())
-                    {
-                        // Remove related assignments first if cascade delete isn't set (though EF usually handles this if configured)
-                        // Explicitly removing assignments just in case
-                        var shiftIds = shiftsToDelete.Select(s => s.Id).ToList();
-                        var assignmentsToDelete = _context.ShiftAssignments.Where(sa => shiftIds.Contains(sa.ShiftId)).ToList();
-
-                        _context.ShiftAssignments.RemoveRange(assignmentsToDelete);
-                        _context.Shifts.RemoveRange(shiftsToDelete);
-                        _context.SaveChanges();
-
-                        System.Windows.MessageBox.Show("Weekly schedule cleared successfully.", "Success");
-                        LoadRoster();
-                    }
-                    else
-                    {
-                        System.Windows.MessageBox.Show("No shifts found to clear for this week.", "Info");
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Windows.MessageBox.Show($"Error clearing shifts: {ex.Message}", "Error");
-            }
-        }
-
         private void CreateShift(Employee emp, DateTime date, TimeSpan start, TimeSpan end, List<Shift> shifts)
         {
             var shift = new Shift
@@ -373,13 +359,67 @@ namespace AttendanceShiftingManagement.ViewModels
                 CreatedAt = DateTime.Now
             };
 
-            // EF Core will fix up the assignment when we add it to the Shift's collection
             shift.ShiftAssignments.Add(new ShiftAssignment
             {
                 EmployeeId = emp.Id
             });
 
             shifts.Add(shift);
+        }
+
+        private void NotifyNewShifts(List<Shift> shifts)
+        {
+            var userMap = _context.Employees.ToDictionary(e => e.Id, e => e.UserId);
+            foreach (var shift in shifts)
+            {
+                foreach (var assign in shift.ShiftAssignments)
+                {
+                    if (!userMap.TryGetValue(assign.EmployeeId, out var userId)) continue;
+                    var startText = DateTime.Today.Add(shift.StartTime).ToString("hh:mm tt");
+                    var endText = DateTime.Today.Add(shift.EndTime).ToString("hh:mm tt");
+                    var posName = _context.Positions.FirstOrDefault(p => p.Id == shift.PositionId)?.Name ?? "General";
+
+                    _notificationService.Create(
+                        userId,
+                        NotificationType.ShiftAssigned,
+                        "New Shift Assigned",
+                        $"You have a shift on {shift.ShiftDate:MMM dd}: {startText} - {endText} ({posName}).");
+                }
+            }
+        }
+
+        private void NotifyShiftUpdated(int shiftId)
+        {
+            var assignment = _context.ShiftAssignments.Include(sa => sa.Shift).FirstOrDefault(sa => sa.ShiftId == shiftId);
+            if (assignment == null) return;
+
+            var userId = _context.Employees.FirstOrDefault(e => e.Id == assignment.EmployeeId)?.UserId ?? 0;
+            if (userId == 0) return;
+
+            var startText = DateTime.Today.Add(assignment.Shift.StartTime).ToString("hh:mm tt");
+            var endText = DateTime.Today.Add(assignment.Shift.EndTime).ToString("hh:mm tt");
+            var posName = _context.Positions.FirstOrDefault(p => p.Id == assignment.Shift.PositionId)?.Name ?? "General";
+
+            _notificationService.Create(
+                userId,
+                NotificationType.ShiftChanged,
+                "Shift Updated",
+                $"Your shift on {assignment.Shift.ShiftDate:MMM dd} is now {startText} - {endText} ({posName}).");
+        }
+
+        private void NotifyShiftRemoved(int shiftId)
+        {
+            var assignment = _context.ShiftAssignments.Include(sa => sa.Shift).FirstOrDefault(sa => sa.ShiftId == shiftId);
+            if (assignment == null) return;
+
+            var userId = _context.Employees.FirstOrDefault(e => e.Id == assignment.EmployeeId)?.UserId ?? 0;
+            if (userId == 0) return;
+
+            _notificationService.Create(
+                userId,
+                NotificationType.ShiftChanged,
+                "Shift Removed",
+                $"Your shift on {assignment.Shift.ShiftDate:MMM dd} was removed.");
         }
     }
 
@@ -390,7 +430,6 @@ namespace AttendanceShiftingManagement.ViewModels
 
         public RosterRow()
         {
-            // Initialize 18 slots (6 AM to 11 PM)
             for (int i = 0; i < 18; i++) Segments.Add(new ShiftSegment { IsActive = false });
         }
 

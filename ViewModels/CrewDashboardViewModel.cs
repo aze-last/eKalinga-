@@ -1,10 +1,13 @@
-﻿using AttendanceShiftingManagement.Helpers;
+using AttendanceShiftingManagement.Helpers;
 using AttendanceShiftingManagement.Services;
 using AttendanceShiftingManagement.Models;
+using AttendanceShiftingManagement.Data;
 using System.Windows.Input;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System;
+using System.Windows.Data;
+using System.ComponentModel;
 
 namespace AttendanceShiftingManagement.ViewModels
 {
@@ -14,12 +17,14 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly int _employeeId;
         private readonly ShiftService _shiftService;
         private readonly PayrollService _payrollService;
+        private readonly AppDbContext _context;
+        private readonly int _userId;
 
         private string _statusText = "OFF DUTY";
         private string _statusColor = "#E53935";
         private string _statusDetails = "No active shift";
         private string _actionButtonText = "TIME IN";
-        private string _totalPay = "₱ 0.00";
+        private string _totalPay = "? 0.00";
         private string _totalHoursCount = "0.0h";
         private string _overtimeHoursCount = "0.0h";
         private bool _isActionEnabled = true;
@@ -38,10 +43,36 @@ namespace AttendanceShiftingManagement.ViewModels
         public event Action? ScheduleRequested;
 
         public ObservableCollection<CrewShiftItem> WeeklyShifts { get; } = new();
-        public ObservableCollection<string> Notifications { get; } = new();
+        public ObservableCollection<Notification> Notifications { get; } = new();
+        public ICollectionView NotificationsView { get; }
+
+        private string _selectedNotificationType = "All";
+
+
+        public ObservableCollection<string> NotificationTypes { get; } = new()
+        {
+            "All",
+            "Leave",
+            "Shift",
+            "Announcement"
+        };
+
+        public string SelectedNotificationType
+        {
+            get => _selectedNotificationType;
+            set
+            {
+                if (SetProperty(ref _selectedNotificationType, value))
+                {
+                    ApplyNotificationFilter();
+                }
+            }
+        }
 
         public ICommand TimeInOutCommand { get; }
         public ICommand OpenScheduleCommand { get; }
+        public ICommand MarkReadCommand { get; }
+        public ICommand MarkAllReadCommand { get; }
 
         public CrewDashboardViewModel(AttendanceService attendance, ShiftService shifts, PayrollService payroll, int employeeId)
         {
@@ -49,9 +80,15 @@ namespace AttendanceShiftingManagement.ViewModels
             _shiftService = shifts;
             _payrollService = payroll;
             _employeeId = employeeId;
+            _context = new AppDbContext();
+            _userId = _context.Employees.FirstOrDefault(e => e.Id == _employeeId)?.UserId ?? 0;
 
             TimeInOutCommand = new RelayCommand(_ => ExecuteTimeToggle());
             OpenScheduleCommand = new RelayCommand(_ => ScheduleRequested?.Invoke());
+            MarkReadCommand = new RelayCommand(param => ExecuteMarkRead(param));
+            MarkAllReadCommand = new RelayCommand(_ => ExecuteMarkAllRead());
+
+            NotificationsView = CollectionViewSource.GetDefaultView(Notifications);
 
             LoadRealData();
             SyncAttendanceStatus();
@@ -143,23 +180,67 @@ namespace AttendanceShiftingManagement.ViewModels
 
             // Load Earnings Estimate
             var estimate = _payrollService.GetEmployeeEarningsEstimate(_employeeId, startOfWeek, endOfWeek);
-            TotalPay = $"₱ {estimate.TotalPay:N2}";
+            TotalPay = $"? {estimate.TotalPay:N2}";
             TotalHoursCount = $"{estimate.TotalHours:F1}h";
             OvertimeHoursCount = $"{estimate.OvertimeHours:F1}h";
 
-            // Load Notifications (History as fallback for now)
+            // Load Notifications (leave approvals/rejections, shift changes, announcements)
             Notifications.Clear();
-            var history = _attendance.GetRecentAttendance(_employeeId, 3);
-            foreach (var h in history)
+            if (_userId != 0)
             {
-                string action = h.Status == AttendanceStatus.Closed ? "Completed shift" : "Clocked in";
-                Notifications.Add($"{action} on {h.TimeIn:MMM dd, hh:mm tt}");
+                var notifs = _context.Notifications
+                    .Where(n => n.UserId == _userId)
+                    .OrderByDescending(n => n.CreatedAt)
+                    .Take(20)
+                    .ToList();
+
+                foreach (var n in notifs)
+                {
+                    Notifications.Add(n);
+                }
             }
 
-            if (!history.Any())
+            ApplyNotificationFilter();
+        }
+
+        private void ApplyNotificationFilter()
+        {
+            if (NotificationsView == null)
             {
-                Notifications.Add("Welcome! No recent activity recorded.");
+                return;
             }
+
+            var filter = SelectedNotificationType;
+            NotificationsView.Filter = item =>
+            {
+                if (item is not Notification n) return false;
+                if (filter == "All") return true;
+                if (filter == "Leave") return n.Type == NotificationType.LeaveApproved || n.Type == NotificationType.LeaveRejected;
+                if (filter == "Shift") return n.Type == NotificationType.ShiftAssigned || n.Type == NotificationType.ShiftChanged || n.Type == NotificationType.ShiftReminder;
+                if (filter == "Announcement") return n.Type == NotificationType.General || n.Type == NotificationType.SchedulePublished;
+                return true;
+            };
+            NotificationsView.Refresh();
+        }
+
+        private void ExecuteMarkRead(object? param)
+        {
+            if (param is not Notification notification) return;
+            var notif = _context.Notifications.FirstOrDefault(n => n.Id == notification.Id);
+            if (notif == null) return;
+            notif.IsRead = true;
+            _context.SaveChanges();
+            LoadRealData();
+        }
+
+        private void ExecuteMarkAllRead()
+        {
+            if (_userId == 0) return;
+            var notifs = _context.Notifications.Where(n => n.UserId == _userId && !n.IsRead).ToList();
+            if (notifs.Count == 0) return;
+            foreach (var n in notifs) n.IsRead = true;
+            _context.SaveChanges();
+            LoadRealData();
         }
     }
 

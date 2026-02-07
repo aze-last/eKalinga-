@@ -126,12 +126,6 @@
                                     <TextBlock Text="ADD NEW EMPLOYEE"/>
                                 </StackPanel>
                             </Button>
-                            <Button Style="{StaticResource MaterialDesignOutlinedButton}" Command="{Binding CreateShiftCommand}">
-                                <StackPanel Orientation="Horizontal">
-                                    <materialDesign:PackIcon Kind="CalendarPlus" Margin="0,0,8,0"/>
-                                    <TextBlock Text="CREATE NEW SHIFT"/>
-                                </StackPanel>
-                            </Button>
                         </StackPanel>
                     </materialDesign:Card>
 

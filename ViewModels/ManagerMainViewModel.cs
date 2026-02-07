@@ -25,6 +25,7 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand ShowEmployeesCommand { get; }
         public ICommand ShowPositionsCommand { get; }
         public ICommand ShowWeeklyCalendarCommand { get; }
+        public ICommand ShowLeaveApprovalCommand { get; }
 
         private bool _isSchedulingAllowed;
         public bool IsSchedulingAllowed
@@ -62,6 +63,7 @@ namespace AttendanceShiftingManagement.ViewModels
             ShowEmployeesCommand = new RelayCommand(_ => ExecuteShowEmployees());
             ShowPositionsCommand = new RelayCommand(_ => ExecuteShowPositions());
             ShowWeeklyCalendarCommand = new RelayCommand(_ => ExecuteShowWeeklyCalendar());
+            ShowLeaveApprovalCommand = new RelayCommand(_ => ExecuteShowLeaveApproval());
 
             // Initialize with Dashboard
             ExecuteShowDashboard();
@@ -77,6 +79,13 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private void ExecuteShowShifts()
         {
+            if (!IsSchedulingAllowed)
+            {
+                System.Windows.MessageBox.Show("Only Scheduling Managers can access Shift Planning.", "Access Denied",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                return;
+            }
+
             CurrentView = new ShiftsManagementPage(_currentUser);
         }
 
@@ -101,6 +110,14 @@ namespace AttendanceShiftingManagement.ViewModels
         private void ExecuteShowPositions()
         {
             CurrentView = new PositionsPage();
+        }
+
+        private void ExecuteShowLeaveApproval()
+        {
+            CurrentView = new LeaveApprovalPage
+            {
+                DataContext = new LeaveApprovalViewModel(_currentUser.Id)
+            };
         }
     }
 }

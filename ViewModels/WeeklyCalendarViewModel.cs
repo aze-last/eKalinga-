@@ -10,6 +10,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.ComponentModel;
 using System.Windows.Data;
+using AttendanceShiftingManagement.Services;
 
 namespace AttendanceShiftingManagement.ViewModels
 {
@@ -18,6 +19,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly AppDbContext _context;
         private readonly int? _employeeId;
         private readonly int _managerUserId;
+        private readonly NotificationService _notificationService;
         private DateTime _currentWeekStart;
         private string _weekRangeDisplay = string.Empty;
 
@@ -87,6 +89,7 @@ namespace AttendanceShiftingManagement.ViewModels
             _context = new AppDbContext();
             _employeeId = employeeId;
             _managerUserId = managerUserId;
+            _notificationService = new NotificationService(_context);
             EmployeeWeeklySchedules = new ObservableCollection<EmployeeWeeklySchedule>();
             ScheduleWarnings = new ObservableCollection<ScheduleWarning>();
             Positions = new ObservableCollection<Position>();
@@ -426,6 +429,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
             int createdBy;
             int oldShiftId = 0;
+            bool isNewAssignment = assignment == null;
             if (assignment != null)
             {
                 createdBy = assignment.Shift.CreatedBy;
@@ -476,6 +480,9 @@ namespace AttendanceShiftingManagement.ViewModels
                 });
                 _context.SaveChanges();
             }
+
+            NotifyEmployeeShiftChange(cell.EmployeeId, cell.Date, start, end, cell.PositionId,
+                isNewAssignment ? NotificationType.ShiftAssigned : NotificationType.ShiftChanged);
 
             if (oldShiftId != 0)
             {
@@ -539,7 +546,36 @@ namespace AttendanceShiftingManagement.ViewModels
                 }
             }
 
+            NotifyEmployeeShiftRemoved(cell.EmployeeId, cell.Date);
             LoadWeeklySchedule();
+        }
+
+        private void NotifyEmployeeShiftChange(int employeeId, DateTime date, TimeSpan start, TimeSpan end, int positionId, NotificationType type)
+        {
+            var employee = _context.Employees.Include(e => e.Position).FirstOrDefault(e => e.Id == employeeId);
+            if (employee == null) return;
+
+            var posName = _context.Positions.FirstOrDefault(p => p.Id == positionId)?.Name ?? employee.Position?.Name ?? "General";
+            var startText = DateTime.Today.Add(start).ToString("hh:mm tt");
+            var endText = DateTime.Today.Add(end).ToString("hh:mm tt");
+
+            _notificationService.Create(
+                employee.UserId,
+                type,
+                type == NotificationType.ShiftAssigned ? "Shift Assigned" : "Shift Updated",
+                $"Your shift on {date:MMM dd} is {startText} - {endText} ({posName}).");
+        }
+
+        private void NotifyEmployeeShiftRemoved(int employeeId, DateTime date)
+        {
+            var employee = _context.Employees.FirstOrDefault(e => e.Id == employeeId);
+            if (employee == null) return;
+
+            _notificationService.Create(
+                employee.UserId,
+                NotificationType.ShiftChanged,
+                "Shift Removed",
+                $"Your shift on {date:MMM dd} was removed.");
         }
 
         public sealed class ScheduleWarning

@@ -1,0 +1,57 @@
+<UserControl x:Class="AttendanceShiftingManagement.Views.LeaveApprovalPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             Background="{StaticResource BrandSurfaceBrush}">
+
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <DockPanel Grid.Row="0" Margin="0,0,0,16">
+            <TextBlock Text="Leave Approvals"
+                       Style="{StaticResource MaterialDesignHeadline5TextBlock}"
+                       FontWeight="Bold"
+                       Foreground="{StaticResource BrandMidnightBrush}"
+                       DockPanel.Dock="Left"/>
+
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                <TextBox Width="260"
+                         Text="{Binding RejectionReason, UpdateSourceTrigger=PropertyChanged}"
+                         materialDesign:HintAssist.Hint="Rejection reason..."
+                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                         Margin="0,0,12,0"/>
+                <Button Content="APPROVE"
+                        Command="{Binding ApproveCommand}"
+                        Style="{StaticResource MaterialDesignRaisedButton}"
+                        Background="{StaticResource BrandRedBrush}" Foreground="White"
+                        Margin="0,0,8,0"/>
+                <Button Content="REJECT"
+                        Command="{Binding RejectCommand}"
+                        Style="{StaticResource MaterialDesignOutlinedButton}"
+                        Foreground="{StaticResource BrandRedBrush}"
+                        BorderBrush="{StaticResource BrandRedBrush}"/>
+            </StackPanel>
+        </DockPanel>
+
+        <materialDesign:Card Grid.Row="1" Padding="16" Background="White">
+            <DataGrid ItemsSource="{Binding PendingRequests}"
+                      SelectedItem="{Binding SelectedRequest}"
+                      AutoGenerateColumns="False"
+                      CanUserAddRows="False"
+                      IsReadOnly="True">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Employee" Binding="{Binding Employee.FullName}" Width="*"/>
+                    <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="120"/>
+                    <DataGridTextColumn Header="Start" Binding="{Binding StartDate, StringFormat='yyyy-MM-dd'}" Width="120"/>
+                    <DataGridTextColumn Header="End" Binding="{Binding EndDate, StringFormat='yyyy-MM-dd'}" Width="120"/>
+                    <DataGridTextColumn Header="Days" Binding="{Binding TotalDays}" Width="60"/>
+                    <DataGridTextColumn Header="Reason" Binding="{Binding Reason}" Width="*"/>
+                    <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="120"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </materialDesign:Card>
+    </Grid>
+</UserControl>

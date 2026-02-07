@@ -168,3 +168,5 @@ C:\Users\ASUS\source\repos\AttendanceShiftingManagement\AttendanceShiftingManage
 C:\Users\ASUS\source\repos\AttendanceShiftingManagement\AttendanceShiftingManagement\obj\Debug\net9.0-windows\Views\LeaveRequestPage.g.cs
 C:\Users\ASUS\source\repos\AttendanceShiftingManagement\AttendanceShiftingManagement\obj\Debug\net9.0-windows\Views\RejectionReasonDialog.baml
 C:\Users\ASUS\source\repos\AttendanceShiftingManagement\AttendanceShiftingManagement\obj\Debug\net9.0-windows\Views\RejectionReasonDialog.g.cs
+C:\Users\ASUS\source\repos\AttendanceShiftingManagement\AttendanceShiftingManagement\obj\Debug\net9.0-windows\Views\LeaveApprovalPage.baml
+C:\Users\ASUS\source\repos\AttendanceShiftingManagement\AttendanceShiftingManagement\obj\Debug\net9.0-windows\Views\LeaveApprovalPage.g.cs

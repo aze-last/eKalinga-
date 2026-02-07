@@ -4,8 +4,9 @@ using AttendanceShiftingManagement.Models;
 using AttendanceShiftingManagement.Services;
 using Microsoft.EntityFrameworkCore;
 using System;
-using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
+using System.Windows;
 using System.Windows.Input;
 
 namespace AttendanceShiftingManagement.ViewModels
@@ -13,26 +14,13 @@ namespace AttendanceShiftingManagement.ViewModels
     public class LeaveApprovalViewModel : ObservableObject
     {
         private readonly AppDbContext _context;
-        private readonly LeaveService _leaveService;
-        private readonly NotificationService _notificationService;
         private readonly int _managerUserId;
+        private readonly NotificationService _notificationService;
 
-        private List<LeaveRequest> _pendingRequests = new();
-        private List<LeaveRequest> _allRequests = new();
         private LeaveRequest? _selectedRequest;
         private string _rejectionReason = string.Empty;
 
-        public List<LeaveRequest> PendingRequests
-        {
-            get => _pendingRequests;
-            set => SetProperty(ref _pendingRequests, value);
-        }
-
-        public List<LeaveRequest> AllRequests
-        {
-            get => _allRequests;
-            set => SetProperty(ref _allRequests, value);
-        }
+        public ObservableCollection<LeaveRequest> PendingRequests { get; } = new();
 
         public LeaveRequest? SelectedRequest
         {
@@ -48,124 +36,109 @@ namespace AttendanceShiftingManagement.ViewModels
 
         public ICommand ApproveCommand { get; }
         public ICommand RejectCommand { get; }
-        public ICommand RefreshCommand { get; }
 
         public LeaveApprovalViewModel(int managerUserId)
         {
-            _context = new AppDbContext();
-            _leaveService = new LeaveService(_context);
-            _notificationService = new NotificationService(_context);
             _managerUserId = managerUserId;
+            _context = new AppDbContext();
+            _notificationService = new NotificationService(_context);
 
-            ApproveCommand = new RelayCommand(param => ExecuteApprove(param));
-            RejectCommand = new RelayCommand(param => ExecuteReject(param));
-            RefreshCommand = new RelayCommand(_ => LoadData());
+            ApproveCommand = new RelayCommand(_ => ExecuteApprove(), _ => SelectedRequest != null);
+            RejectCommand = new RelayCommand(_ => ExecuteReject(), _ => SelectedRequest != null);
 
-            LoadData();
+            LoadPending();
         }
 
-        private void LoadData()
+        private void LoadPending()
         {
-            // Load pending requests
-            PendingRequests = _leaveService.GetPendingLeaveRequests();
+            PendingRequests.Clear();
+            var requests = _context.LeaveRequests
+                .Include(lr => lr.Employee)
+                .Where(lr => lr.Status == LeaveStatus.Pending)
+                .OrderBy(lr => lr.CreatedAt)
+                .ToList();
 
-            // Load all requests (last 30 days)
-            var startDate = DateTime.Today.AddDays(-30);
-            AllRequests = _leaveService.GetAllLeaveRequests(startDate);
-        }
-
-        private void ExecuteApprove(object? param)
-        {
-            if (param is not LeaveRequest request)
-                return;
-
-            var result = System.Windows.MessageBox.Show(
-                $"Approve {request.Type} leave for {request.Employee.FullName}?\n\n" +
-                $"Dates: {request.StartDate:MMM dd} - {request.EndDate:MMM dd} ({request.TotalDays} days)\n" +
-                $"Reason: {request.Reason}",
-                "Confirm Approval",
-                System.Windows.MessageBoxButton.YesNo,
-                System.Windows.MessageBoxImage.Question);
-
-            if (result == System.Windows.MessageBoxResult.Yes)
+            foreach (var r in requests)
             {
-                try
-                {
-                    _leaveService.ApproveLeaveRequest(request.Id, _managerUserId);
-
-                    // Send notification to employee
-                    var employee = _context.Employees
-                        .Include(e => e.User)
-                        .FirstOrDefault(e => e.Id == request.EmployeeId);
-
-                    if (employee?.User != null)
-                    {
-                        _notificationService.CreateNotification(
-                            employee.User.Id,
-                            NotificationType.LeaveApproved,
-                            "Leave Request Approved",
-                            $"Your {request.Type} leave request from {request.StartDate:MMM dd} to {request.EndDate:MMM dd} has been approved.");
-                    }
-
-                    LoadData();
-
-                    System.Windows.MessageBox.Show("Leave request approved successfully!", "Success",
-                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
-                }
-                catch (Exception ex)
-                {
-                    System.Windows.MessageBox.Show(ex.Message, "Error",
-                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
-                }
+                PendingRequests.Add(r);
             }
         }
 
-        private void ExecuteReject(object? param)
+        private void ExecuteApprove()
         {
-            if (param is not LeaveRequest request)
-                return;
+            if (SelectedRequest == null) return;
 
-            // Show rejection reason dialog
-            var dialog = new Views.RejectionReasonDialog();
-            if (dialog.ShowDialog() == true)
+            SelectedRequest.Status = LeaveStatus.Approved;
+            SelectedRequest.ApprovedBy = _managerUserId;
+            SelectedRequest.ApprovedAt = DateTime.Now;
+
+            ApplyBalance(SelectedRequest);
+
+            _context.SaveChanges();
+            NotifyEmployee(SelectedRequest, true);
+            LoadPending();
+            MessageBox.Show("Leave request approved.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        private void ExecuteReject()
+        {
+            if (SelectedRequest == null) return;
+
+            if (string.IsNullOrWhiteSpace(RejectionReason))
             {
-                var reason = dialog.RejectionReason;
+                MessageBox.Show("Please enter a rejection reason.", "Missing Reason",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
 
-                if (string.IsNullOrWhiteSpace(reason))
+            SelectedRequest.Status = LeaveStatus.Rejected;
+            SelectedRequest.RejectionReason = RejectionReason.Trim();
+            SelectedRequest.ApprovedBy = _managerUserId;
+            SelectedRequest.ApprovedAt = DateTime.Now;
+
+            _context.SaveChanges();
+            NotifyEmployee(SelectedRequest, false);
+            RejectionReason = string.Empty;
+            LoadPending();
+            MessageBox.Show("Leave request rejected.", "Updated", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        private void NotifyEmployee(LeaveRequest request, bool approved)
+        {
+            var employee = _context.Employees.FirstOrDefault(e => e.Id == request.EmployeeId);
+            if (employee == null) return;
+
+            _notificationService.Create(
+                employee.UserId,
+                approved ? NotificationType.LeaveApproved : NotificationType.LeaveRejected,
+                approved ? "Leave Approved" : "Leave Rejected",
+                approved
+                    ? $"Your {request.Type} leave ({request.StartDate:MMM dd} - {request.EndDate:MMM dd}) was approved."
+                    : $"Your {request.Type} leave ({request.StartDate:MMM dd} - {request.EndDate:MMM dd}) was rejected.");
+        }
+
+        private void ApplyBalance(LeaveRequest request)
+        {
+            int year = request.StartDate.Year;
+            var balance = _context.LeaveBalances.FirstOrDefault(b => b.EmployeeId == request.EmployeeId && b.Year == year);
+            if (balance == null)
+            {
+                balance = new LeaveBalance
                 {
-                    System.Windows.MessageBox.Show("Please provide a rejection reason.", "Rejection Reason Required",
-                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
-                    return;
-                }
+                    EmployeeId = request.EmployeeId,
+                    Year = year
+                };
+                _context.LeaveBalances.Add(balance);
+            }
 
-                try
-                {
-                    _leaveService.RejectLeaveRequest(request.Id, _managerUserId, reason);
-
-                    // Send notification to employee
-                    var employee = _context.Employees
-                        .Include(e => e.User)
-                        .FirstOrDefault(e => e.Id == request.EmployeeId);
-
-                    if (employee?.User != null)
-                    {
-                        _notificationService.CreateNotification(
-                            employee.User.Id,
-                            NotificationType.LeaveRejected,
-                            "Leave Request Rejected",
-                            $"Your {request.Type} leave request from {request.StartDate:MMM dd} to {request.EndDate:MMM dd} has been rejected. Reason: {reason}");
-                    }
-
-                    LoadData();
-
-                    System.Windows.MessageBox.Show("Leave request rejected.", "Success",
-                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
-                }
-                catch (Exception ex)
-                {
-                    System.Windows.MessageBox.Show(ex.Message, "Error",
-                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
-                }
+            var days = request.TotalDays;
+            if (request.Type == LeaveType.Vacation)
+            {
+                balance.UsedVacationDays += days;
+            }
+            else if (request.Type == LeaveType.Sick)
+            {
+                balance.UsedSickDays += days;
             }
         }
     }

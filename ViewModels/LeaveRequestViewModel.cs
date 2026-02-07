@@ -2,9 +2,11 @@ using AttendanceShiftingManagement.Data;
 using AttendanceShiftingManagement.Helpers;
 using AttendanceShiftingManagement.Models;
 using AttendanceShiftingManagement.Services;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Windows;
 using System.Windows.Input;
 
 namespace AttendanceShiftingManagement.ViewModels
@@ -12,15 +14,18 @@ namespace AttendanceShiftingManagement.ViewModels
     public class LeaveRequestViewModel : ObservableObject
     {
         private readonly AppDbContext _context;
-        private readonly LeaveService _leaveService;
         private readonly int _employeeId;
+        private readonly NotificationService _notificationService;
 
         private LeaveType _selectedLeaveType = LeaveType.Vacation;
         private DateTime _startDate = DateTime.Today;
         private DateTime _endDate = DateTime.Today;
         private string _reason = string.Empty;
-        private string _vacationBalance = "0";
-        private string _sickBalance = "0";
+
+        public ObservableCollection<LeaveRequest> MyRequests { get; } = new();
+        public ObservableCollection<LeaveBalance> Balances { get; } = new();
+
+        public Array LeaveTypes => Enum.GetValues(typeof(LeaveType));
 
         public LeaveType SelectedLeaveType
         {
@@ -31,14 +36,7 @@ namespace AttendanceShiftingManagement.ViewModels
         public DateTime StartDate
         {
             get => _startDate;
-            set
-            {
-                if (SetProperty(ref _startDate, value))
-                {
-                    if (_endDate < _startDate)
-                        EndDate = _startDate;
-                }
-            }
+            set => SetProperty(ref _startDate, value);
         }
 
         public DateTime EndDate
@@ -53,122 +51,111 @@ namespace AttendanceShiftingManagement.ViewModels
             set => SetProperty(ref _reason, value);
         }
 
-        public string VacationBalance
-        {
-            get => _vacationBalance;
-            set => SetProperty(ref _vacationBalance, value);
-        }
-
-        public string SickBalance
-        {
-            get => _sickBalance;
-            set => SetProperty(ref _sickBalance, value);
-        }
-
-        public ObservableCollection<LeaveRequest> MyLeaveRequests { get; }
-        public ObservableCollection<LeaveType> LeaveTypes { get; }
-
-        public ICommand SubmitLeaveCommand { get; }
-        public ICommand CancelLeaveCommand { get; }
-        public ICommand RefreshCommand { get; }
+        public ICommand SubmitCommand { get; }
 
         public LeaveRequestViewModel(int employeeId)
         {
-            _context = new AppDbContext();
-            _leaveService = new LeaveService(_context);
             _employeeId = employeeId;
+            _context = new AppDbContext();
+            _notificationService = new NotificationService(_context);
 
-            MyLeaveRequests = new ObservableCollection<LeaveRequest>();
-            LeaveTypes = new ObservableCollection<LeaveType>
+            SubmitCommand = new RelayCommand(_ => ExecuteSubmit());
+
+            LoadBalances();
+            LoadRequests();
+        }
+
+        private void LoadRequests()
+        {
+            MyRequests.Clear();
+            var requests = _context.LeaveRequests
+                .Include(lr => lr.Employee)
+                .Where(lr => lr.EmployeeId == _employeeId)
+                .OrderByDescending(lr => lr.CreatedAt)
+                .ToList();
+
+            foreach (var r in requests)
             {
-                LeaveType.Vacation,
-                LeaveType.Sick,
-                LeaveType.Emergency,
-                LeaveType.Personal
+                MyRequests.Add(r);
+            }
+        }
+
+        private void LoadBalances()
+        {
+            Balances.Clear();
+            int year = DateTime.Today.Year;
+            var balance = _context.LeaveBalances
+                .FirstOrDefault(b => b.EmployeeId == _employeeId && b.Year == year);
+
+            if (balance == null)
+            {
+                balance = new LeaveBalance
+                {
+                    EmployeeId = _employeeId,
+                    Year = year
+                };
+                _context.LeaveBalances.Add(balance);
+                _context.SaveChanges();
+            }
+
+            Balances.Add(balance);
+        }
+
+        private void ExecuteSubmit()
+        {
+            if (EndDate.Date < StartDate.Date)
+            {
+                MessageBox.Show("End date must be on or after start date.", "Invalid Dates",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(Reason))
+            {
+                MessageBox.Show("Please provide a reason for your leave request.", "Missing Reason",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var request = new LeaveRequest
+            {
+                EmployeeId = _employeeId,
+                Type = SelectedLeaveType,
+                StartDate = StartDate.Date,
+                EndDate = EndDate.Date,
+                Reason = Reason.Trim(),
+                Status = LeaveStatus.Pending,
+                CreatedAt = DateTime.Now
             };
 
-            SubmitLeaveCommand = new RelayCommand(_ => ExecuteSubmitLeave(), _ => CanSubmitLeave());
-            CancelLeaveCommand = new RelayCommand(param => ExecuteCancelLeave(param));
-            RefreshCommand = new RelayCommand(_ => LoadData());
+            _context.LeaveRequests.Add(request);
+            _context.SaveChanges();
 
-            LoadData();
-        }
-
-        private void LoadData()
-        {
-            // Load leave balance
-            var balance = _leaveService.GetLeaveBalance(_employeeId, DateTime.Today.Year);
-            VacationBalance = $"{balance.RemainingVacationDays:F1} days";
-            SickBalance = $"{balance.RemainingSickDays:F1} days";
-
-            // Load leave requests
-            MyLeaveRequests.Clear();
-            var requests = _leaveService.GetEmployeeLeaveRequests(_employeeId);
-            foreach (var request in requests)
+            var employee = _context.Employees.FirstOrDefault(e => e.Id == _employeeId);
+            if (employee != null)
             {
-                MyLeaveRequests.Add(request);
-            }
-        }
+                var managerIds = _context.Users
+                    .Where(u => u.Role == UserRole.Manager)
+                    .Select(u => u.Id)
+                    .ToList();
 
-        private bool CanSubmitLeave()
-        {
-            return !string.IsNullOrWhiteSpace(Reason) && StartDate >= DateTime.Today;
-        }
-
-        private void ExecuteSubmitLeave()
-        {
-            try
-            {
-                _leaveService.SubmitLeaveRequest(_employeeId, SelectedLeaveType, StartDate, EndDate, Reason);
-
-                System.Windows.MessageBox.Show("Leave request submitted successfully!", "Success",
-                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
-
-                // Reset form
-                Reason = string.Empty;
-                StartDate = DateTime.Today;
-                EndDate = DateTime.Today;
-
-                LoadData();
-            }
-            catch (Exception ex)
-            {
-                System.Windows.MessageBox.Show(ex.Message, "Error",
-                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
-            }
-        }
-
-        private void ExecuteCancelLeave(object? param)
-        {
-            if (param is not LeaveRequest request)
-                return;
-
-            if (request.Status != LeaveStatus.Pending && request.Status != LeaveStatus.Approved)
-            {
-                System.Windows.MessageBox.Show("Only pending or approved requests can be cancelled.", "Cannot Cancel",
-                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
-                return;
-            }
-
-            var result = System.Windows.MessageBox.Show($"Cancel this {request.Type} leave request?", "Confirm Cancel",
-                System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Question);
-
-            if (result == System.Windows.MessageBoxResult.Yes)
-            {
-                try
+                if (managerIds.Count > 0)
                 {
-                    _leaveService.CancelLeaveRequest(request.Id, _employeeId);
-                    LoadData();
-
-                    System.Windows.MessageBox.Show("Leave request cancelled successfully!", "Success",
-                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
-                }
-                catch (Exception ex)
-                {
-                    System.Windows.MessageBox.Show(ex.Message, "Error",
-                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                    _notificationService.CreateForUsers(
+                        managerIds,
+                        NotificationType.General,
+                        "New Leave Request",
+                        $"{employee.FullName} requested {SelectedLeaveType} leave ({StartDate:MMM dd} - {EndDate:MMM dd}).");
                 }
             }
+
+            Reason = string.Empty;
+            StartDate = DateTime.Today;
+            EndDate = DateTime.Today;
+
+            LoadRequests();
+
+            MessageBox.Show("Leave request submitted.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
         }
     }
 }
