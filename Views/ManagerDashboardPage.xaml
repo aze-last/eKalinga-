@@ -18,15 +18,20 @@
         <UniformGrid Grid.Row="0" Columns="4" Margin="0,0,0,24">
             
             <!-- Time In/Out Card -->
-            <materialDesign:Card Margin="0,0,12,0" Padding="20" UniformCornerRadius="12" Background="White">
+            <materialDesign:Card Margin="0,0,12,0" Padding="20" UniformCornerRadius="12" Background="{StaticResource BrandMidnightBrush}" Foreground="White">
                 <StackPanel>
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <materialDesign:PackIcon Kind="ClockOutline" Foreground="{Binding StatusColor}" Width="28" Height="28"/>
-                        <materialDesign:Chip Grid.Column="1" Content="{Binding CurrentStatus}" Background="{Binding StatusColor}" Foreground="White" FontSize="10" Height="24"/>
+                        <materialDesign:PackIcon Kind="ClockOutline" Foreground="{StaticResource BrandYellowBrush}" Width="28" Height="28"/>
+                        <materialDesign:Chip Grid.Column="1"
+                                             Content="{Binding CurrentStatus, FallbackValue=OFF DUTY}"
+                                             Background="{Binding StatusColor, FallbackValue=#FFC72C}"
+                                             Foreground="#27251F"
+                                             FontSize="10"
+                                             Height="24"/>
                     </Grid>
                     
                     <Grid Margin="0,12,0,0">
@@ -34,38 +39,38 @@
                                 Command="{Binding TimeInCommand}"
                                 Visibility="{Binding IsTimedIn, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}"
                                 Style="{StaticResource MaterialDesignRaisedButton}"
-                                Background="{StaticResource BrandRedBrush}" BorderBrush="{StaticResource BrandRedBrush}"/>
+                                Background="{StaticResource BrandRedBrush}" BorderBrush="{StaticResource BrandRedBrush}" Foreground="White"/>
                         
                         <Button Content="TIME OUT" 
                                 Command="{Binding TimeOutCommand}"
                                 Visibility="{Binding IsTimedIn, Converter={StaticResource BooleanToVisibilityConverter}}"
                                 Style="{StaticResource MaterialDesignRaisedButton}"
-                                Background="#27251F" BorderBrush="#27251F"/>
+                                Background="{StaticResource BrandYellowBrush}" BorderBrush="{StaticResource BrandYellowBrush}" Foreground="#27251F"/>
                     </Grid>
                 </StackPanel>
             </materialDesign:Card>
 
-            <materialDesign:Card Margin="6,0,6,0" Padding="20" UniformCornerRadius="12" Background="White">
+            <materialDesign:Card Margin="6,0,6,0" Padding="20" UniformCornerRadius="12" Background="#1F2937" Foreground="White">
                 <StackPanel>
-                    <materialDesign:PackIcon Kind="AccountGroupOutline" Foreground="{StaticResource BrandRedBrush}" Width="28" Height="28"/>
+                    <materialDesign:PackIcon Kind="AccountGroupOutline" Foreground="{StaticResource BrandYellowBrush}" Width="28" Height="28"/>
                     <TextBlock Text="{Binding TotalCrew, FallbackValue='42'}" FontSize="32" FontWeight="Bold" Margin="0,8,0,0"/>
-                    <TextBlock Text="Total Crew Members" Foreground="#64748B" FontSize="12" FontWeight="Medium"/>
+                    <TextBlock Text="Total Crew Members" Foreground="#D1D5DB" FontSize="12" FontWeight="Medium"/>
                 </StackPanel>
             </materialDesign:Card>
 
-            <materialDesign:Card Margin="6,0,6,0" Padding="20" UniformCornerRadius="12" Background="White">
+            <materialDesign:Card Margin="6,0,6,0" Padding="20" UniformCornerRadius="12" Background="#111827" Foreground="White">
                 <StackPanel>
                     <materialDesign:PackIcon Kind="BriefcaseCheckOutline" Foreground="{StaticResource BrandYellowBrush}" Width="28" Height="28"/>
                     <TextBlock Text="{Binding OnDutyCount, FallbackValue='18'}" FontSize="32" FontWeight="Bold" Margin="0,8,0,0"/>
-                    <TextBlock Text="Currently On Duty" Foreground="#64748B" FontSize="12" FontWeight="Medium"/>
+                    <TextBlock Text="Currently On Duty" Foreground="#D1D5DB" FontSize="12" FontWeight="Medium"/>
                 </StackPanel>
             </materialDesign:Card>
 
-            <materialDesign:Card Margin="12,0,0,0" Padding="20" UniformCornerRadius="12" Background="{StaticResource BrandMidnightBrush}" Foreground="White">
+            <materialDesign:Card Margin="12,0,0,0" Padding="20" UniformCornerRadius="12" Background="{StaticResource BrandRedBrush}" Foreground="White">
                 <StackPanel>
                     <materialDesign:PackIcon Kind="TimerOutline" Foreground="{StaticResource BrandYellowBrush}" Width="28" Height="28"/>
                     <TextBlock Text="{Binding TotalWeekHours, FallbackValue='1,240'}" FontSize="32" FontWeight="Bold" Margin="0,8,0,0"/>
-                    <TextBlock Text="Total Labor Hours (Week)" Foreground="#94A3B8" FontSize="12" FontWeight="Medium"/>
+                    <TextBlock Text="Total Labor Hours (Week)" Foreground="#FDE68A" FontSize="12" FontWeight="Medium"/>
                 </StackPanel>
             </materialDesign:Card>
             
@@ -88,8 +93,15 @@
                         <StackPanel>
                             <TextBox Text="{Binding AnnouncementText, UpdateSourceTrigger=PropertyChanged}"
                                      materialDesign:HintAssist.Hint="Write an announcement for all crew..."
+                                     materialDesign:HintAssist.Foreground="#6B7280"
                                      Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                     Height="40"/>
+                                     Height="40"
+                                     FontFamily="Segoe UI"
+                                     FontSize="14"
+                                     Foreground="#111"
+                                     CaretBrush="#111"
+                                     Background="White"
+                                     BorderBrush="{StaticResource BrandYellowBrush}"/>
                             <Button Content="SEND ANNOUNCEMENT"
                                     Command="{Binding SendAnnouncementCommand}"
                                     Style="{StaticResource MaterialDesignRaisedButton}"
