@@ -21,6 +21,8 @@ namespace AttendanceShiftingManagement.Data
         public DbSet<LeaveBalance> LeaveBalances { get; set; }
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<ActivityLog> ActivityLogs { get; set; }
+        public DbSet<UserProfile> UserProfiles { get; set; }
+        public DbSet<UserPreference> UserPreferences { get; set; }
 
         public AppDbContext()
         {
@@ -76,6 +78,14 @@ namespace AttendanceShiftingManagement.Data
             modelBuilder.Entity<Notification>()
                 .Property(n => n.Type)
                 .HasConversion<string>();
+
+            modelBuilder.Entity<UserProfile>()
+                .HasIndex(p => p.UserId)
+                .IsUnique();
+
+            modelBuilder.Entity<UserPreference>()
+                .HasIndex(p => p.UserId)
+                .IsUnique();
 
             // Unique constraint for shift assignments
             modelBuilder.Entity<ShiftAssignment>()

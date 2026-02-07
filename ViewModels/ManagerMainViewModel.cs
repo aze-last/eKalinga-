@@ -26,6 +26,7 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand ShowPositionsCommand { get; }
         public ICommand ShowWeeklyCalendarCommand { get; }
         public ICommand ShowLeaveApprovalCommand { get; }
+        public ICommand ShowProfileSettingsCommand { get; }
 
         private bool _isSchedulingAllowed;
         public bool IsSchedulingAllowed
@@ -64,6 +65,7 @@ namespace AttendanceShiftingManagement.ViewModels
             ShowPositionsCommand = new RelayCommand(_ => ExecuteShowPositions());
             ShowWeeklyCalendarCommand = new RelayCommand(_ => ExecuteShowWeeklyCalendar());
             ShowLeaveApprovalCommand = new RelayCommand(_ => ExecuteShowLeaveApproval());
+            ShowProfileSettingsCommand = new RelayCommand(_ => ExecuteShowProfileSettings());
 
             // Initialize with Dashboard
             ExecuteShowDashboard();
@@ -117,6 +119,14 @@ namespace AttendanceShiftingManagement.ViewModels
             CurrentView = new LeaveApprovalPage
             {
                 DataContext = new LeaveApprovalViewModel(_currentUser.Id)
+            };
+        }
+
+        private void ExecuteShowProfileSettings()
+        {
+            CurrentView = new ProfileSettingsPage
+            {
+                DataContext = new ProfileSettingsViewModel(_currentUser)
             };
         }
     }

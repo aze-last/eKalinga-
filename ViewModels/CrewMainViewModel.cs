@@ -15,6 +15,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly AttendanceService _attendanceService;
         private readonly ShiftService _shiftService;
         private readonly PayrollService _payrollService;
+        private readonly User _currentUser;
         private CrewDashboardViewModel? _dashboardVm;
         public object? CurrentView
         {
@@ -27,9 +28,11 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand ShowHistoryCommand { get; }
         public ICommand ShowPayslipCommand { get; }
         public ICommand ShowLeaveRequestCommand { get; }
+        public ICommand ShowProfileSettingsCommand { get; }
 
         public CrewMainViewModel(User user)
         {
+            _currentUser = user;
             var context = new Data.AppDbContext();
 
             // Fix: Fetch the Employee ID associated with this User
@@ -46,6 +49,7 @@ namespace AttendanceShiftingManagement.ViewModels
             ShowHistoryCommand = new RelayCommand(_ => ExecuteShowHistory());
             ShowPayslipCommand = new RelayCommand(_ => ExecuteShowPayslip());
             ShowLeaveRequestCommand = new RelayCommand(_ => ExecuteShowLeaveRequest());
+            ShowProfileSettingsCommand = new RelayCommand(_ => ExecuteShowProfileSettings());
 
             // Set default view
             ExecuteShowTimeClock();
@@ -90,6 +94,14 @@ namespace AttendanceShiftingManagement.ViewModels
             CurrentView = new LeaveRequestPage
             {
                 DataContext = new LeaveRequestViewModel(_employeeId)
+            };
+        }
+
+        private void ExecuteShowProfileSettings()
+        {
+            CurrentView = new ProfileSettingsPage
+            {
+                DataContext = new ProfileSettingsViewModel(_currentUser)
             };
         }
     }

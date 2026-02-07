@@ -46,6 +46,9 @@
                     <RadioButton Style="{StaticResource MaterialDesignTabRadioButton}"
                                  Content="LEAVE REQUEST" Foreground="White" Height="50" Margin="0,2"
                                  Command="{Binding ShowLeaveRequestCommand}"/>
+                    <RadioButton Style="{StaticResource MaterialDesignTabRadioButton}"
+                                 Content="PROFILE SETTINGS" Foreground="White" Height="50" Margin="0,2"
+                                 Command="{Binding ShowProfileSettingsCommand}"/>
                 </StackPanel>
 
                 <Button Grid.Row="2" Style="{StaticResource MaterialDesignFlatButton}"
