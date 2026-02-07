@@ -23,6 +23,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _totalHoursCount = "0.0h";
         private string _overtimeHoursCount = "0.0h";
         private bool _isActionEnabled = true;
+        private bool _hasScheduleToday;
 
         public string StatusText { get => _statusText; set => SetProperty(ref _statusText, value); }
         public string StatusColor { get => _statusColor; set => SetProperty(ref _statusColor, value); }
@@ -34,11 +35,13 @@ namespace AttendanceShiftingManagement.ViewModels
         public bool IsActionEnabled { get => _isActionEnabled; set => SetProperty(ref _isActionEnabled, value); }
 
         public event Action? AttendanceRecorded;
+        public event Action? ScheduleRequested;
 
         public ObservableCollection<CrewShiftItem> WeeklyShifts { get; } = new();
         public ObservableCollection<string> Notifications { get; } = new();
 
         public ICommand TimeInOutCommand { get; }
+        public ICommand OpenScheduleCommand { get; }
 
         public CrewDashboardViewModel(AttendanceService attendance, ShiftService shifts, PayrollService payroll, int employeeId)
         {
@@ -48,6 +51,7 @@ namespace AttendanceShiftingManagement.ViewModels
             _employeeId = employeeId;
 
             TimeInOutCommand = new RelayCommand(_ => ExecuteTimeToggle());
+            OpenScheduleCommand = new RelayCommand(_ => ScheduleRequested?.Invoke());
 
             LoadRealData();
             SyncAttendanceStatus();
@@ -63,24 +67,27 @@ namespace AttendanceShiftingManagement.ViewModels
                 StatusText = "ON DUTY";
                 StatusColor = "#43A047";
                 ActionButtonText = "TIME OUT";
-                StatusDetails = $"Shift: {active.Shift.StartTime:hh\\:mm} - {active.Shift.EndTime:hh\\:mm} | {active.Shift.Position?.Name}";
+                StatusDetails = $"Shift: {DateTime.Today.Add(active.Shift.StartTime):hh:mm tt} - {DateTime.Today.Add(active.Shift.EndTime):hh:mm tt} | {active.Shift.Position?.Name}";
                 IsActionEnabled = true;
+                _hasScheduleToday = true;
             }
             else if (todayShift != null)
             {
                 StatusText = "OFF DUTY";
                 StatusColor = "#FB8C00"; // Orange/Amber for "About to work"
                 ActionButtonText = "TIME IN";
-                StatusDetails = $"Scheduled today: {todayShift.Shift.StartTime:hh\\:mm} - {todayShift.Shift.EndTime:hh\\:mm} | {todayShift.Shift.Position?.Name}";
+                StatusDetails = $"Scheduled today: {DateTime.Today.Add(todayShift.Shift.StartTime):hh:mm tt} - {DateTime.Today.Add(todayShift.Shift.EndTime):hh:mm tt} | {todayShift.Shift.Position?.Name}";
                 IsActionEnabled = true;
+                _hasScheduleToday = true;
             }
             else
             {
                 StatusText = "RELAX / DAY OFF";
                 StatusColor = "#37474F"; // Slate Blue Gray
-                ActionButtonText = "NO SHIFT";
+                ActionButtonText = "NO SCHEDULE";
                 StatusDetails = "No shift scheduled for today.";
-                IsActionEnabled = false;
+                IsActionEnabled = true;
+                _hasScheduleToday = false;
             }
         }
 
@@ -88,6 +95,13 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             try
             {
+                if (!_hasScheduleToday && ActionButtonText == "NO SCHEDULE")
+                {
+                    System.Windows.MessageBox.Show("You don't have a schedule today.", "No Schedule",
+                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                    return;
+                }
+
                 if (ActionButtonText == "TIME IN")
                 {
                     _attendance.TimeIn(_employeeId);
@@ -123,7 +137,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 {
                     Day = s.Shift.ShiftDate.DayOfWeek.ToString(),
                     Position = s.Shift.Position?.Name ?? "General",
-                    TimeRange = $"{s.Shift.StartTime:hh\\:mm} - {s.Shift.EndTime:hh\\:mm}"
+                    TimeRange = $"{DateTime.Today.Add(s.Shift.StartTime):hh:mm tt} - {DateTime.Today.Add(s.Shift.EndTime):hh:mm tt}"
                 });
             }
 

@@ -34,7 +34,8 @@
                                  Command="{Binding ShowDashboardCommand}"/>
                     <RadioButton Style="{StaticResource MaterialDesignTabRadioButton}" 
                                  Content="SHIFT PLANNING" Foreground="#94A3B8" Height="50" Margin="0,2"
-                                 Command="{Binding ShowShiftsCommand}"/>
+                                 Command="{Binding ShowShiftsCommand}"
+                                 Visibility="{Binding IsSchedulingAllowed, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                     <RadioButton Style="{StaticResource MaterialDesignTabRadioButton}" 
                                  Content="WEEKLY SCHEDULE" Foreground="#94A3B8" Height="50" Margin="0,2"
                                  Command="{Binding ShowWeeklyCalendarCommand}"/>

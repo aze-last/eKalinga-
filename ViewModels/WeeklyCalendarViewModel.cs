@@ -14,6 +14,7 @@ namespace AttendanceShiftingManagement.ViewModels
     public class WeeklyCalendarViewModel : ObservableObject
     {
         private readonly AppDbContext _context;
+        private readonly int? _employeeId;
         private DateTime _currentWeekStart;
         private string _weekRangeDisplay = string.Empty;
 
@@ -59,9 +60,10 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand NextWeekCommand { get; }
         public ICommand TodayCommand { get; }
 
-        public WeeklyCalendarViewModel()
+        public WeeklyCalendarViewModel(int? employeeId = null)
         {
             _context = new AppDbContext();
+            _employeeId = employeeId;
             EmployeeWeeklySchedules = new ObservableCollection<EmployeeWeeklySchedule>();
 
             PreviousWeekCommand = new RelayCommand(_ => CurrentWeekStart = CurrentWeekStart.AddDays(-7));
@@ -112,6 +114,10 @@ namespace AttendanceShiftingManagement.ViewModels
                     .Where(e => e.Status == EmployeeStatus.Active)
                     .OrderBy(e => e.FullName)
                     .ToList();
+                if (_employeeId.HasValue)
+                {
+                    employees = employees.Where(e => e.Id == _employeeId.Value).ToList();
+                }
 
                 // Get all shift assignments for this week
                 // Optimization: fetch date range
@@ -121,6 +127,10 @@ namespace AttendanceShiftingManagement.ViewModels
                     .Include(sa => sa.Employee)
                     .Where(sa => sa.Shift.ShiftDate >= CurrentWeekStart && sa.Shift.ShiftDate < weekEnd)
                     .ToList();
+                if (_employeeId.HasValue)
+                {
+                    assignments = assignments.Where(a => a.EmployeeId == _employeeId.Value).ToList();
+                }
 
                 foreach (var employee in employees)
                 {
@@ -150,7 +160,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
                             cell = new DayCell
                             {
-                                TimeDisplay = $"{firstShift.StartTime:hh\\:mm}-{firstShift.EndTime:hh\\:mm}",
+                                TimeDisplay = $"{DateTime.Today.Add(firstShift.StartTime):hh:mm tt}-{DateTime.Today.Add(firstShift.EndTime):hh:mm tt}",
                                 PositionName = firstShift.Position?.Name ?? "General",
                                 CellColor = bgBrush,
                                 ForegroundColor = fgBrush

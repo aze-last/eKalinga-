@@ -7,6 +7,7 @@
     <Grid Margin="24">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
@@ -31,9 +32,45 @@
             </Button>
         </DockPanel>
 
+        <!-- Filters + Counts -->
+        <StackPanel Grid.Row="1" Margin="0,0,0,16">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="Filter by Position"
+                           VerticalAlignment="Center"
+                           FontWeight="SemiBold"/>
+                <ComboBox ItemsSource="{Binding PositionFilters}"
+                          DisplayMemberPath="Name"
+                          SelectedValuePath="Name"
+                          SelectedValue="{Binding SelectedPositionName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                          Width="220"
+                          Margin="12,0,0,0"/>
+            </StackPanel>
+
+            <ItemsControl ItemsSource="{Binding PositionCounts}" Margin="0,12,0,0">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Background="#F3F3F3"
+                                CornerRadius="12"
+                                Padding="10,6"
+                                Margin="0,0,8,8">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding Count}" Margin="8,0,0,0"/>
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+
         <!-- Employees DataGrid -->
-        <materialDesign:Card Grid.Row="1" Padding="16">
-            <DataGrid ItemsSource="{Binding Employees}" 
+        <materialDesign:Card Grid.Row="2" Padding="16">
+            <DataGrid ItemsSource="{Binding EmployeesView}" 
                       SelectedItem="{Binding SelectedEmployee}"
                       AutoGenerateColumns="False" 
                       CanUserAddRows="False"
