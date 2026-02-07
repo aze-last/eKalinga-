@@ -11,6 +11,7 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
@@ -70,7 +71,57 @@
             
         </UniformGrid>
 
-        <materialDesign:Card Grid.Row="1" UniformCornerRadius="12" Padding="0" Background="White">
+        <materialDesign:Card Grid.Row="1" UniformCornerRadius="12" Padding="16" Background="White" Margin="0,0,0,16">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="2*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Announcements Composer -->
+                <StackPanel Grid.Column="0" Margin="0,0,16,0">
+                    <DockPanel Margin="0,0,0,8">
+                        <TextBlock Text="Announcements" FontWeight="Bold" FontSize="16" Foreground="{StaticResource BrandMidnightBrush}"/>
+                        <materialDesign:PackIcon Kind="Bullhorn" Foreground="{StaticResource BrandRedBrush}" Margin="8,0,0,0"/>
+                    </DockPanel>
+                    <Border Background="#FFF8E1" BorderBrush="{StaticResource BrandYellowBrush}" BorderThickness="1" CornerRadius="10" Padding="12">
+                        <StackPanel>
+                            <TextBox Text="{Binding AnnouncementText, UpdateSourceTrigger=PropertyChanged}"
+                                     materialDesign:HintAssist.Hint="Write an announcement for all crew..."
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     Height="40"/>
+                            <Button Content="SEND ANNOUNCEMENT"
+                                    Command="{Binding SendAnnouncementCommand}"
+                                    Style="{StaticResource MaterialDesignRaisedButton}"
+                                    Background="{StaticResource BrandRedBrush}" Foreground="White"
+                                    Height="40" Margin="0,10,0,0"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- Manager Notifications -->
+                <StackPanel Grid.Column="1">
+                    <TextBlock Text="Your Notifications" FontWeight="Bold" FontSize="16" Foreground="{StaticResource BrandMidnightBrush}" Margin="0,0,0,8"/>
+                    <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="10" Padding="10">
+                        <ItemsControl ItemsSource="{Binding ManagerNotifications}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Padding="0,8">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="12"/>
+                                            <TextBlock Text="{Binding Message}" FontSize="11" Opacity="0.8" TextWrapping="Wrap"/>
+                                            <TextBlock Text="{Binding CreatedAt, StringFormat='MMM dd, hh:mm tt'}" FontSize="10" Opacity="0.6"/>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Border>
+                </StackPanel>
+            </Grid>
+        </materialDesign:Card>
+
+        <materialDesign:Card Grid.Row="2" UniformCornerRadius="12" Padding="0" Background="White">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>

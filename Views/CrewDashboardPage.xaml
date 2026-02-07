@@ -4,6 +4,10 @@
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
              Background="Transparent">
     
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+    </UserControl.Resources>
+
     <Grid Margin="24">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -91,14 +95,45 @@
 
                 <materialDesign:Card UniformCornerRadius="15" Padding="20">
                     <StackPanel>
-                        <TextBlock Text="Announcements" FontWeight="Bold" FontSize="16" Margin="0,0,0,15"/>
-                        <ItemsControl ItemsSource="{Binding Notifications}">
+                        <DockPanel Margin="0,0,0,12">
+                            <TextBlock Text="Announcements" FontWeight="Bold" FontSize="16"/>
+                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                <ComboBox Width="140"
+                                          ItemsSource="{Binding NotificationTypes}"
+                                          SelectedItem="{Binding SelectedNotificationType}"
+                                          Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                          Margin="0,0,8,0"/>
+                                <Button Content="Mark All Read"
+                                        Command="{Binding MarkAllReadCommand}"
+                                        Style="{StaticResource MaterialDesignOutlinedButton}"
+                                        Foreground="#DA291C"
+                                        BorderBrush="#DA291C"/>
+                            </StackPanel>
+                        </DockPanel>
+
+                        <ItemsControl ItemsSource="{Binding NotificationsView}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Border BorderBrush="#EEEEEE" BorderThickness="0,0,0,1" Padding="0,10">
                                         <DockPanel>
                                             <materialDesign:PackIcon Kind="Information" Foreground="#DA291C" Margin="0,0,10,0"/>
-                                            <TextBlock Text="{Binding}" TextWrapping="Wrap" FontSize="13"/>
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Title}" FontSize="13" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding Message}" TextWrapping="Wrap" FontSize="12" Opacity="0.8"/>
+                                                <TextBlock Text="{Binding CreatedAt, StringFormat='MMM dd, yyyy hh:mm tt'}" FontSize="10" Opacity="0.6"/>
+                                            </StackPanel>
+                                            <StackPanel DockPanel.Dock="Right" HorizontalAlignment="Right">
+                                                <TextBlock Text="NEW"
+                                                           Foreground="#DA291C"
+                                                           FontWeight="Bold"
+                                                           FontSize="10"
+                                                           Visibility="{Binding IsRead, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}"
+                                                           HorizontalAlignment="Right"/>
+                                                <Button Content="Mark Read"
+                                                        Command="{Binding DataContext.MarkReadCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding}"
+                                                        Style="{StaticResource MaterialDesignFlatButton}"/>
+                                            </StackPanel>
                                         </DockPanel>
                                     </Border>
                                 </DataTemplate>

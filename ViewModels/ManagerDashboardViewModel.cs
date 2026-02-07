@@ -63,14 +63,29 @@ namespace AttendanceShiftingManagement.ViewModels
             set => SetProperty(ref _statusColor, value);
         }
 
+        private readonly AppDbContext _context;
         private readonly AttendanceService _attendanceService;
         private readonly User _currentUser;
         private readonly int _employeeId;
+        private readonly NotificationService _notificationService;
+
+        private string _announcementText = string.Empty;
+        public string AnnouncementText
+        {
+            get => _announcementText;
+            set => SetProperty(ref _announcementText, value);
+        }
+
+        public ObservableCollection<Notification> ManagerNotifications { get; } = new();
+
+        public System.Windows.Input.ICommand SendAnnouncementCommand { get; }
 
         public ManagerDashboardViewModel(AppDbContext ctx, User user)
         {
+            _context = ctx;
             _currentUser = user;
             _attendanceService = new AttendanceService(ctx);
+            _notificationService = new NotificationService(ctx);
 
             // Fix: Fetch Employee ID linked to this User
             var employee = ctx.Employees.FirstOrDefault(e => e.UserId == user.Id);
@@ -78,6 +93,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
             TimeInCommand = new RelayCommand(_ => ExecuteTimeIn(), _ => !IsTimedIn);
             TimeOutCommand = new RelayCommand(_ => ExecuteTimeOut(), _ => IsTimedIn);
+            SendAnnouncementCommand = new RelayCommand(_ => ExecuteSendAnnouncement());
 
             CheckCurrentStatus();
 
@@ -112,6 +128,8 @@ namespace AttendanceShiftingManagement.ViewModels
             TodayAttendance = new ObservableCollection<AttendanceDto>(attendanceList);
             TodayAttendanceView = CollectionViewSource.GetDefaultView(TodayAttendance);
             ApplyAttendanceFilter();
+
+            LoadManagerNotifications();
         }
 
         private void ApplyAttendanceFilter()
@@ -205,6 +223,46 @@ namespace AttendanceShiftingManagement.ViewModels
             catch (Exception ex)
             {
                 System.Windows.MessageBox.Show($"Time Out Failed: {ex.Message}", "Error");
+            }
+        }
+
+        private void ExecuteSendAnnouncement()
+        {
+            var message = AnnouncementText?.Trim();
+            if (string.IsNullOrWhiteSpace(message))
+            {
+                System.Windows.MessageBox.Show("Please enter an announcement.", "Empty Message");
+                return;
+            }
+
+            var crewUserIds = _context.Users
+                .Where(u => u.Role == UserRole.Crew)
+                .Select(u => u.Id)
+                .ToList();
+
+            if (crewUserIds.Count == 0)
+            {
+                System.Windows.MessageBox.Show("No crew users found.", "Info");
+                return;
+            }
+
+            _notificationService.CreateForUsers(crewUserIds, NotificationType.General, "Announcement", message);
+            AnnouncementText = string.Empty;
+            System.Windows.MessageBox.Show("Announcement sent.", "Success");
+        }
+
+        private void LoadManagerNotifications()
+        {
+            ManagerNotifications.Clear();
+            var items = _context.Notifications
+                .Where(n => n.UserId == _currentUser.Id)
+                .OrderByDescending(n => n.CreatedAt)
+                .Take(5)
+                .ToList();
+
+            foreach (var n in items)
+            {
+                ManagerNotifications.Add(n);
             }
         }
     }

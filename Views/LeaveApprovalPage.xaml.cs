@@ -2,9 +2,9 @@ using System.Windows.Controls;
 
 namespace AttendanceShiftingManagement.Views
 {
-    public partial class LeaveRequestPage : UserControl
+    public partial class LeaveApprovalPage : UserControl
     {
-        public LeaveRequestPage()
+        public LeaveApprovalPage()
         {
             InitializeComponent();
         }

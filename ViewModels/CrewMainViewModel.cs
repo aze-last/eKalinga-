@@ -26,6 +26,7 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand ShowTimeClockCommand { get; }
         public ICommand ShowHistoryCommand { get; }
         public ICommand ShowPayslipCommand { get; }
+        public ICommand ShowLeaveRequestCommand { get; }
 
         public CrewMainViewModel(User user)
         {
@@ -44,6 +45,7 @@ namespace AttendanceShiftingManagement.ViewModels
             ShowTimeClockCommand = new RelayCommand(_ => ExecuteShowTimeClock());
             ShowHistoryCommand = new RelayCommand(_ => ExecuteShowHistory());
             ShowPayslipCommand = new RelayCommand(_ => ExecuteShowPayslip());
+            ShowLeaveRequestCommand = new RelayCommand(_ => ExecuteShowLeaveRequest());
 
             // Set default view
             ExecuteShowTimeClock();
@@ -81,6 +83,14 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             MessageBox.Show("Payslip view is coming soon.", "Coming Soon",
                 MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        private void ExecuteShowLeaveRequest()
+        {
+            CurrentView = new LeaveRequestPage
+            {
+                DataContext = new LeaveRequestViewModel(_employeeId)
+            };
         }
     }
 }

@@ -3,7 +3,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         Title="Crew Portal | McDonald's" WindowState="Maximized"
-        Background="#F5F5F5" FontFamily="Segoe UI">
+        Background="#F5F5F5" FontFamily="Segoe UI"
+        Icon="/Images/app-icon.ico">
 
     <Grid>
         <Grid.ColumnDefinitions>
@@ -42,6 +43,9 @@
                     <RadioButton Style="{StaticResource MaterialDesignTabRadioButton}"
                                  Content="PAYSLIP" Foreground="White" Height="50" Margin="0,2"
                                  Command="{Binding ShowPayslipCommand}"/>
+                    <RadioButton Style="{StaticResource MaterialDesignTabRadioButton}"
+                                 Content="LEAVE REQUEST" Foreground="White" Height="50" Margin="0,2"
+                                 Command="{Binding ShowLeaveRequestCommand}"/>
                 </StackPanel>
 
                 <Button Grid.Row="2" Style="{StaticResource MaterialDesignFlatButton}"
