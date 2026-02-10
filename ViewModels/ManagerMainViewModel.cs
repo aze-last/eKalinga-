@@ -144,11 +144,13 @@ namespace AttendanceShiftingManagement.ViewModels
             if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
                 return null;
 
+            using var stream = File.OpenRead(path);
             var image = new BitmapImage();
             image.BeginInit();
             image.CacheOption = BitmapCacheOption.OnLoad;
-            image.UriSource = new Uri(path, UriKind.Absolute);
+            image.StreamSource = stream;
             image.EndInit();
+            image.Freeze();
             return image;
         }
 
@@ -156,7 +158,7 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             CurrentView = new WeeklyCalendarPage
             {
-                DataContext = new WeeklyCalendarViewModel(null, _currentUser.Id)
+                DataContext = new WeeklyCalendarViewModel(null, _currentUser.Id, IsSchedulingAllowed)
             };
         }
 
@@ -200,9 +202,11 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private void ExecuteShowProfileSettings()
         {
+            var vm = new ProfileSettingsViewModel(_currentUser);
+            vm.ProfileUpdated += LoadUserSummary;
             CurrentView = new ProfileSettingsPage
             {
-                DataContext = new ProfileSettingsViewModel(_currentUser)
+                DataContext = vm
             };
         }
     }

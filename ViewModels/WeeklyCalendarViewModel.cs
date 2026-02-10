@@ -20,6 +20,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly int? _employeeId;
         private readonly int _managerUserId;
         private readonly NotificationService _notificationService;
+        private readonly bool _canEditSchedule;
         private DateTime _currentWeekStart;
         private string _weekRangeDisplay = string.Empty;
 
@@ -79,16 +80,18 @@ namespace AttendanceShiftingManagement.ViewModels
 
         public event Action<string>? ScrollToEmployeeRequested;
         public bool IsManagerView => !_employeeId.HasValue;
+        public bool CanEditSchedule => _canEditSchedule;
 
         public ICommand PreviousWeekCommand { get; }
         public ICommand NextWeekCommand { get; }
         public ICommand TodayCommand { get; }
 
-        public WeeklyCalendarViewModel(int? employeeId = null, int managerUserId = 0)
+        public WeeklyCalendarViewModel(int? employeeId = null, int managerUserId = 0, bool canEditSchedule = false)
         {
             _context = new AppDbContext();
             _employeeId = employeeId;
             _managerUserId = managerUserId;
+            _canEditSchedule = canEditSchedule;
             _notificationService = new NotificationService(_context);
             EmployeeWeeklySchedules = new ObservableCollection<EmployeeWeeklySchedule>();
             ScheduleWarnings = new ObservableCollection<ScheduleWarning>();
@@ -321,7 +324,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private void ExecuteBeginEdit(object? param)
         {
-            if (!IsManagerView)
+            if (!CanEditSchedule)
             {
                 return;
             }
@@ -339,7 +342,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private void ExecuteAddDay(object? param)
         {
-            if (!IsManagerView)
+            if (!CanEditSchedule)
             {
                 return;
             }
@@ -373,7 +376,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private void ExecuteSaveEdit(object? param)
         {
-            if (!IsManagerView)
+            if (!CanEditSchedule)
             {
                 return;
             }
@@ -504,7 +507,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private void ExecuteDeleteDay(object? param)
         {
-            if (!IsManagerView)
+            if (!CanEditSchedule)
             {
                 return;
             }

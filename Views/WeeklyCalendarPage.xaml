@@ -12,7 +12,7 @@
                 <MultiDataTrigger>
                     <MultiDataTrigger.Conditions>
                         <Condition Binding="{Binding HasShift}" Value="False"/>
-                        <Condition Binding="{Binding DataContext.IsManagerView, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="True"/>
+                        <Condition Binding="{Binding DataContext.CanEditSchedule, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="True"/>
                     </MultiDataTrigger.Conditions>
                     <Setter Property="Visibility" Value="Visible"/>
                 </MultiDataTrigger>
@@ -43,14 +43,14 @@
                                         <MultiDataTrigger>
                                             <MultiDataTrigger.Conditions>
                                                 <Condition Binding="{Binding HasShift}" Value="True"/>
-                                                <Condition Binding="{Binding DataContext.IsManagerView, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="True"/>
+                                                <Condition Binding="{Binding DataContext.CanEditSchedule, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="True"/>
                                             </MultiDataTrigger.Conditions>
                                             <Setter Property="Visibility" Value="Visible"/>
                                         </MultiDataTrigger>
                                         <DataTrigger Binding="{Binding HasShift}" Value="False">
                                             <Setter Property="Visibility" Value="Collapsed"/>
                                         </DataTrigger>
-                                        <DataTrigger Binding="{Binding DataContext.IsManagerView, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="False">
+                                        <DataTrigger Binding="{Binding DataContext.CanEditSchedule, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="False">
                                             <Setter Property="Visibility" Value="Collapsed"/>
                                         </DataTrigger>
                                     </Style.Triggers>

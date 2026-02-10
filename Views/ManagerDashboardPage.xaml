@@ -35,17 +35,19 @@
                     </Grid>
                     
                     <Grid Margin="0,12,0,0">
-                        <Button Content="TIME IN" 
-                                Command="{Binding TimeInCommand}"
+                        <Button Command="{Binding TimeInCommand}"
                                 Visibility="{Binding IsTimedIn, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}"
                                 Style="{StaticResource MaterialDesignRaisedButton}"
-                                Background="{StaticResource BrandRedBrush}" BorderBrush="{StaticResource BrandRedBrush}" Foreground="White"/>
+                                Background="{StaticResource BrandRedBrush}" BorderBrush="{StaticResource BrandRedBrush}">
+                            <TextBlock Text="TIME IN" Foreground="White" FontWeight="SemiBold"/>
+                        </Button>
                         
-                        <Button Content="TIME OUT" 
-                                Command="{Binding TimeOutCommand}"
+                        <Button Command="{Binding TimeOutCommand}"
                                 Visibility="{Binding IsTimedIn, Converter={StaticResource BooleanToVisibilityConverter}}"
                                 Style="{StaticResource MaterialDesignRaisedButton}"
-                                Background="{StaticResource BrandYellowBrush}" BorderBrush="{StaticResource BrandYellowBrush}" Foreground="#27251F"/>
+                                Background="{StaticResource BrandYellowBrush}" BorderBrush="{StaticResource BrandYellowBrush}">
+                            <TextBlock Text="TIME OUT" Foreground="#27251F" FontWeight="SemiBold"/>
+                        </Button>
                     </Grid>
                 </StackPanel>
             </materialDesign:Card>

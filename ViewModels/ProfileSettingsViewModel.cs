@@ -183,6 +183,7 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand SaveCommand { get; }
         public ICommand CancelCommand { get; }
         public ICommand ChangePasswordCommand { get; }
+        public event Action? ProfileUpdated;
 
         public ProfileSettingsViewModel(User user)
         {
@@ -311,6 +312,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
             _context.SaveChanges();
             MessageBox.Show("Profile updated successfully.", "Saved", MessageBoxButton.OK, MessageBoxImage.Information);
+            ProfileUpdated?.Invoke();
         }
 
         private void ChangePassword()
@@ -377,11 +379,13 @@ namespace AttendanceShiftingManagement.ViewModels
             if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
                 return null;
 
+            using var stream = File.OpenRead(path);
             var image = new BitmapImage();
             image.BeginInit();
             image.CacheOption = BitmapCacheOption.OnLoad;
-            image.UriSource = new Uri(path, UriKind.Absolute);
+            image.StreamSource = stream;
             image.EndInit();
+            image.Freeze();
             return image;
         }
 

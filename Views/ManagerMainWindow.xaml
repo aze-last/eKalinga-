@@ -80,12 +80,14 @@
 
             <Border Grid.Row="0" Background="White" Padding="24,0" materialDesign:ElevationAssist.Elevation="Dp2">
                 <DockPanel VerticalAlignment="Center">
-                    <Button Style="{StaticResource MaterialDesignIconButton}" Command="{Binding ToggleMenuCommand}">
-                        <materialDesign:PackIcon Kind="Menu" Foreground="#27251F"/>
-                    </Button>
-
-                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                        <TextBlock Text="{Binding UserDisplayName}" VerticalAlignment="Center" Margin="0,0,10,0" FontWeight="Medium"/>
+                    <StackPanel HorizontalAlignment="Left">
+                        <TextBlock Text="{Binding UserDisplayName}" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="16"/>
+                        <Button Content="Menu"
+                                Command="{Binding ToggleMenuCommand}"
+                                Style="{StaticResource MaterialDesignFlatButton}"
+                                Foreground="#27251F"
+                                FontSize="12"
+                                Padding="0" HorizontalAlignment="Left"/>
                     </StackPanel>
                 </DockPanel>
             </Border>
@@ -98,9 +100,16 @@
                         <MouseBinding Gesture="LeftClick" Command="{Binding CloseMenuCommand}"/>
                     </Border.InputBindings>
                 </Border>
-                <Border Background="White" Width="300" HorizontalAlignment="Right" Padding="20" materialDesign:ElevationAssist.Elevation="Dp8">
+                <Border Background="White"
+                        Width="240"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Top"
+                        Margin="24,90,0,0"
+                        Padding="16"
+                        CornerRadius="12"
+                        materialDesign:ElevationAssist.Elevation="Dp8">
                     <StackPanel>
-                        <TextBlock Text="Menu" FontWeight="Bold" FontSize="16" Margin="0,0,0,12"/>
+                        <TextBlock Text="Menu" FontWeight="Bold" FontSize="14" Margin="0,0,0,10"/>
                         <Button Content="Attendance Logs" Style="{StaticResource MaterialDesignOutlinedButton}" Margin="0,0,0,8"
                                 Command="{Binding ShowAttendanceCommand}"/>
                         <Button Content="Employee List" Style="{StaticResource MaterialDesignOutlinedButton}" Margin="0,0,0,8"

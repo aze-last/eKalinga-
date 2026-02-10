@@ -1,9 +1,14 @@
 using AttendanceShiftingManagement.Data;
 using AttendanceShiftingManagement.Helpers;
 using AttendanceShiftingManagement.Models;
+using AttendanceShiftingManagement.Services;
 using AttendanceShiftingManagement.Views;
 using System.Collections.ObjectModel;
 using System.Windows;
+using Microsoft.EntityFrameworkCore;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.IO;
 
 namespace AttendanceShiftingManagement.ViewModels
 {
@@ -11,6 +16,8 @@ namespace AttendanceShiftingManagement.ViewModels
     {
         private readonly AppDbContext _context;
         private readonly User _currentUser;
+        private ImageSource? _userPhotoImage;
+        private string _userDisplayName = "Admin";
 
         private int _totalEmployees;
         private int _absentCount;
@@ -55,6 +62,18 @@ namespace AttendanceShiftingManagement.ViewModels
             set => SetProperty(ref _currentTime, value);
         }
 
+        public ImageSource? UserPhotoImage
+        {
+            get => _userPhotoImage;
+            set => SetProperty(ref _userPhotoImage, value);
+        }
+
+        public string UserDisplayName
+        {
+            get => _userDisplayName;
+            set => SetProperty(ref _userDisplayName, value);
+        }
+
         private object _currentView;
         public object CurrentView
         {
@@ -64,21 +83,32 @@ namespace AttendanceShiftingManagement.ViewModels
 
         public ObservableCollection<DashboardAlert> Alerts { get; set; } = new();
         public ObservableCollection<RecentActivity> RecentActivities { get; set; } = new();
+        public ObservableCollection<AreaDistribution> AreaDistributions { get; } = new();
+        private string _areaDistributionSummary = string.Empty;
+        public string AreaDistributionSummary
+        {
+            get => _areaDistributionSummary;
+            set => SetProperty(ref _areaDistributionSummary, value);
+        }
 
         public System.Windows.Input.ICommand GeneratePayrollCommand { get; }
         public System.Windows.Input.ICommand AddEmployeeCommand { get; }
         public System.Windows.Input.ICommand ShowDashboardCommand { get; }
         public System.Windows.Input.ICommand ShowUsersCommand { get; }
         public System.Windows.Input.ICommand ShowEmployeesCommand { get; }
+        public System.Windows.Input.ICommand ShowAllEmployeesCommand { get; }
         public System.Windows.Input.ICommand ShowHolidaysCommand { get; }
         public System.Windows.Input.ICommand ShowPayrollCommand { get; }
         public System.Windows.Input.ICommand ShowPositionsCommand { get; }
+        public System.Windows.Input.ICommand ShowProfileSettingsCommand { get; }
+        public System.Windows.Input.ICommand ShowAttendanceStatusCommand { get; }
 
         public AdminDashboardViewModel(User user)
         {
             _currentUser = user;
             _context = new AppDbContext();
             LoadDashboardData();
+            LoadUserSummary();
 
             // Set default view
             _currentView = new DashboardPage();
@@ -90,9 +120,27 @@ namespace AttendanceShiftingManagement.ViewModels
             ShowDashboardCommand = new RelayCommand(_ => CurrentView = new DashboardPage());
             ShowUsersCommand = new RelayCommand(_ => CurrentView = new UsersPage());
             ShowEmployeesCommand = new RelayCommand(_ => CurrentView = new EmployeesPage(_currentUser));
+            ShowAllEmployeesCommand = new RelayCommand(_ => CurrentView = new EmployeesPage(_currentUser));
             ShowHolidaysCommand = new RelayCommand(_ => CurrentView = new HolidaysPage());
             ShowPayrollCommand = new RelayCommand(_ => CurrentView = new PayrollPage());
             ShowPositionsCommand = new RelayCommand(_ => CurrentView = new PositionsPage());
+            ShowProfileSettingsCommand = new RelayCommand(_ =>
+            {
+                var vm = new ProfileSettingsViewModel(_currentUser);
+                vm.ProfileUpdated += LoadUserSummary;
+                CurrentView = new ProfileSettingsPage
+                {
+                    DataContext = vm
+                };
+            });
+            ShowAttendanceStatusCommand = new RelayCommand(param =>
+            {
+                var filter = param?.ToString() ?? "All";
+                CurrentView = new AttendanceLogsPage
+                {
+                    DataContext = new AttendanceLogsViewModel(filter)
+                };
+            });
 
             // Setup timer for clock
             var timer = new System.Windows.Threading.DispatcherTimer();
@@ -112,10 +160,12 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 TotalEmployees = _context.Employees.Count();
 
-                // Mock data for other fields for now as they aren't fully implemented in DB yet
-                AbsentCount = 2;
-                LateCount = 5;
-                OvertimeCount = 12;
+                var statusService = new AttendanceStatusService(_context);
+                var statuses = statusService.GetTodayStatuses(DateTime.Now);
+
+                AbsentCount = statuses.Count(s => s.Status == "Absent");
+                LateCount = statuses.Count(s => s.Status == "Late");
+                OvertimeCount = statuses.Count(s => s.Status == "Overtime");
 
                 Alerts.Clear();
                 Alerts.Add(new DashboardAlert { Message = "3 Employees haven't timed in yet" });
@@ -133,6 +183,8 @@ namespace AttendanceShiftingManagement.ViewModels
                         StatusColor = "#43A047"
                     });
                 }
+
+                LoadAreaDistribution();
             }
             catch (Exception)
             {
@@ -142,6 +194,44 @@ namespace AttendanceShiftingManagement.ViewModels
                 LateCount = 3;
                 OvertimeCount = 8;
             }
+        }
+
+        private void LoadAreaDistribution()
+        {
+            AreaDistributions.Clear();
+            var employees = _context.Employees
+                .Include(e => e.Position)
+                .Where(e => e.Status == EmployeeStatus.Active)
+                .ToList();
+
+            var total = Math.Max(1, employees.Count);
+            var areaCounts = employees
+                .Where(e => e.Position != null)
+                .GroupBy(e => e.Position.Area)
+                .ToDictionary(g => g.Key, g => g.Count());
+
+            var orderedAreas = new[]
+            {
+                (PositionArea.Kitchen, "Kitchen", "#DA291C"),
+                (PositionArea.POS, "POS", "#FFC72C"),
+                (PositionArea.DT, "DT", "#27251F"),
+                (PositionArea.Lobby, "Lobby", "#9CA3AF")
+            };
+
+            foreach (var (area, label, color) in orderedAreas)
+            {
+                areaCounts.TryGetValue(area, out var count);
+                var percent = (double)count / total * 100.0;
+                AreaDistributions.Add(new AreaDistribution
+                {
+                    Label = label,
+                    Percent = percent,
+                    Color = color
+                });
+            }
+
+            AreaDistributionSummary = string.Join(" | ",
+                AreaDistributions.Select(d => $"{d.Label}: {d.Percent:0}%"));
         }
 
         private void ExecuteAddEmployee(object? parameter)
@@ -154,6 +244,33 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 LoadDashboardData();
             }
+        }
+
+        private void LoadUserSummary()
+        {
+            var profile = _context.UserProfiles.FirstOrDefault(p => p.UserId == _currentUser.Id);
+            var employee = _context.Employees.FirstOrDefault(e => e.UserId == _currentUser.Id);
+
+            UserDisplayName = !string.IsNullOrWhiteSpace(profile?.FullName)
+                ? profile.FullName
+                : employee?.FullName ?? _currentUser.Username;
+
+            UserPhotoImage = BuildImage(profile?.PhotoPath);
+        }
+
+        private ImageSource? BuildImage(string? path)
+        {
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+                return null;
+
+            using var stream = File.OpenRead(path);
+            var image = new BitmapImage();
+            image.BeginInit();
+            image.CacheOption = BitmapCacheOption.OnLoad;
+            image.StreamSource = stream;
+            image.EndInit();
+            image.Freeze();
+            return image;
         }
     }
 
@@ -168,5 +285,12 @@ namespace AttendanceShiftingManagement.ViewModels
         public DateTime Time { get; set; }
         public string Status { get; set; } = string.Empty;
         public string StatusColor { get; set; } = string.Empty;
+    }
+
+    public class AreaDistribution
+    {
+        public string Label { get; set; } = string.Empty;
+        public double Percent { get; set; }
+        public string Color { get; set; } = "#64748B";
     }
 }

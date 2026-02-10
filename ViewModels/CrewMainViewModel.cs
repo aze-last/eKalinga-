@@ -40,8 +40,10 @@ namespace AttendanceShiftingManagement.ViewModels
             set => SetProperty(ref _currentView, value);
         }
 
+        public ICommand ShowDashboardCommand { get; }
         public ICommand ShowScheduleCommand { get; }
         public ICommand ShowTimeClockCommand { get; }
+        public ICommand ShowCrewmatesScheduleCommand { get; }
         public ICommand ShowHistoryCommand { get; }
         public ICommand ShowPayslipCommand { get; }
         public ICommand ShowLeaveRequestCommand { get; }
@@ -61,8 +63,10 @@ namespace AttendanceShiftingManagement.ViewModels
             _shiftService = new ShiftService(context);
             _payrollService = new PayrollService(context);
 
+            ShowDashboardCommand = new RelayCommand(_ => ExecuteShowTimeClock());
             ShowScheduleCommand = new RelayCommand(_ => ExecuteShowSchedule());
             ShowTimeClockCommand = new RelayCommand(_ => ExecuteShowTimeClock());
+            ShowCrewmatesScheduleCommand = new RelayCommand(_ => ExecuteShowCrewmatesSchedule());
             ShowHistoryCommand = new RelayCommand(_ => ExecuteShowHistory());
             ShowPayslipCommand = new RelayCommand(_ => ExecuteShowPayslip());
             ShowLeaveRequestCommand = new RelayCommand(_ => ExecuteShowLeaveRequest());
@@ -96,6 +100,14 @@ namespace AttendanceShiftingManagement.ViewModels
             };
         }
 
+        private void ExecuteShowCrewmatesSchedule()
+        {
+            CurrentView = new WeeklyCalendarPage
+            {
+                DataContext = new WeeklyCalendarViewModel(null, 0, false)
+            };
+        }
+
         private void ExecuteShowHistory()
         {
             MessageBox.Show("History view is coming soon.", "Coming Soon",
@@ -118,9 +130,11 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private void ExecuteShowProfileSettings()
         {
+            var vm = new ProfileSettingsViewModel(_currentUser);
+            vm.ProfileUpdated += LoadUserSummary;
             CurrentView = new ProfileSettingsPage
             {
-                DataContext = new ProfileSettingsViewModel(_currentUser)
+                DataContext = vm
             };
         }
 
@@ -142,11 +156,13 @@ namespace AttendanceShiftingManagement.ViewModels
             if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
                 return null;
 
+            using var stream = File.OpenRead(path);
             var image = new BitmapImage();
             image.BeginInit();
             image.CacheOption = BitmapCacheOption.OnLoad;
-            image.UriSource = new Uri(path, UriKind.Absolute);
+            image.StreamSource = stream;
             image.EndInit();
+            image.Freeze();
             return image;
         }
     }

@@ -172,3 +172,5 @@ C:\Users\ASUS\source\repos\AttendanceShiftingManagement\AttendanceShiftingManage
 C:\Users\ASUS\source\repos\AttendanceShiftingManagement\AttendanceShiftingManagement\obj\Debug\net9.0-windows\Views\LeaveApprovalPage.g.cs
 C:\Users\ASUS\source\repos\AttendanceShiftingManagement\AttendanceShiftingManagement\obj\Debug\net9.0-windows\Views\ProfileSettingsPage.baml
 C:\Users\ASUS\source\repos\AttendanceShiftingManagement\AttendanceShiftingManagement\obj\Debug\net9.0-windows\Views\ProfileSettingsPage.g.cs
+C:\Users\ASUS\source\repos\AttendanceShiftingManagement\AttendanceShiftingManagement\obj\Debug\net9.0-windows\Views\AttendanceLogsPage.baml
+C:\Users\ASUS\source\repos\AttendanceShiftingManagement\AttendanceShiftingManagement\obj\Debug\net9.0-windows\Views\AttendanceLogsPage.g.cs
