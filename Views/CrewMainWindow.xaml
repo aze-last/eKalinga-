@@ -47,7 +47,7 @@
                     <RadioButton Style="{StaticResource MaterialDesignTabRadioButton}" IsChecked="True"
                                  Content="DASHBOARD" Foreground="White" Height="50" Margin="0,2"
                                  Tag="{materialDesign:PackIcon Kind=ViewDashboard}"
-                                 Command="{Binding ShowTimeClockCommand}"/>
+                                 Command="{Binding ShowDashboardCommand}"/>
                     <RadioButton Style="{StaticResource MaterialDesignTabRadioButton}"
                                  Content="PROFILE SETTINGS" Foreground="White" Height="50" Margin="0,2"
                                  Command="{Binding ShowProfileSettingsCommand}"/>
@@ -55,8 +55,8 @@
                                  Content="MY SCHEDULE" Foreground="White" Height="50" Margin="0,2"
                                  Command="{Binding ShowScheduleCommand}"/>
                     <RadioButton Style="{StaticResource MaterialDesignTabRadioButton}"
-                                 Content="TIME CLOCK" Foreground="White" Height="50" Margin="0,2"
-                                 Command="{Binding ShowTimeClockCommand}"/>
+                                 Content="CREWMATES SCHEDULE" Foreground="White" Height="50" Margin="0,2"
+                                 Command="{Binding ShowCrewmatesScheduleCommand}"/>
                     <RadioButton Style="{StaticResource MaterialDesignTabRadioButton}"
                                  Content="HISTORY" Foreground="White" Height="50" Margin="0,2"
                                  Command="{Binding ShowHistoryCommand}"/>

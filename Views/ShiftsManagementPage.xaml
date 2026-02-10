@@ -70,7 +70,7 @@
                         <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                                  materialDesign:HintAssist.Hint="Search employee..."
                                  Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                 Height="36"
+                                 Height="60"
                                  Margin="0,0,0,12"/>
 
                         <Grid Margin="0,20,0,0">
@@ -85,6 +85,7 @@
                                     Height="50"
                                     Style="{StaticResource MaterialDesignRaisedButton}"
                                     Background="{StaticResource BrandMidnightBrush}" BorderBrush="{StaticResource BrandMidnightBrush}"
+                                    Foreground="White"
                                     Margin="0,0,10,0"/>
 
                             <Button Grid.Column="1"
