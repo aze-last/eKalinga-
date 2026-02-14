@@ -1,6 +1,4 @@
-﻿using AttendanceShiftingManagement.Data;
 using AttendanceShiftingManagement.Models;
-using BCrypt.Net;
 
 namespace AttendanceShiftingManagement.Data
 {
@@ -30,124 +28,11 @@ namespace AttendanceShiftingManagement.Data
 
             var allPositions = context.Positions.ToList();
 
-            // 2. Users (1 Admin, 4 Managers, 20 Crew)
-            if (!context.Users.Any())
-            {
-                var users = new List<User>();
-
-                // Admin
-                users.Add(new User
-                {
-                    Username = "admin",
-                    Email = "admin@mcdonald.com",
-                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("admin123"),
-                    Role = UserRole.Admin,
-                    IsActive = true
-                });
-
-                // Managers (4)
-                for (int i = 1; i <= 4; i++)
-                {
-                    users.Add(new User
-                    {
-                        Username = $"manager{i}",
-                        Email = $"manager{i}@mcdonald.com",
-                        PasswordHash = BCrypt.Net.BCrypt.HashPassword("manager123"),
-                        Role = UserRole.Manager,
-                        IsActive = true
-                    });
-                }
-
-                // Crew (20)
-                for (int i = 1; i <= 20; i++)
-                {
-                    users.Add(new User
-                    {
-                        Username = $"crew{i}",
-                        Email = $"crew{i}@mcdonald.com",
-                        PasswordHash = BCrypt.Net.BCrypt.HashPassword("crew123"),
-                        Role = UserRole.Crew,
-                        IsActive = true
-                    });
-                }
-
-                context.Users.AddRange(users);
-                context.SaveChanges();
-            }
+            // 2. Users (upsert demo accounts so login credentials are always available)
+            EnsureDefaultUsers(context);
 
             // 3. Employees
-            if (!context.Employees.Any())
-            {
-                var adminUser = context.Users.First(u => u.Role == UserRole.Admin);
-                var managers = context.Users.Where(u => u.Role == UserRole.Manager).OrderBy(u => u.Id).ToList();
-                var crewUsers = context.Users.Where(u => u.Role == UserRole.Crew).OrderBy(u => u.Id).ToList();
-
-                var employees = new List<Employee>();
-
-                // Administrator
-                employees.Add(new Employee
-                {
-                    UserId = adminUser.Id,
-                    FullName = "System Administrator",
-                    PositionId = allPositions[0].Id,
-                    HourlyRate = 100.00m,
-                    DateHired = DateTime.Now.AddYears(-2),
-                    Status = EmployeeStatus.Active
-                });
-
-                // Managers
-                for (int i = 0; i < managers.Count; i++)
-                {
-                    employees.Add(new Employee
-                    {
-                        UserId = managers[i].Id,
-                        FullName = $"Manager {i + 1}",
-                        PositionId = allPositions[0].Id, // Assign to first position or separate Manager position if exists
-                        HourlyRate = 80.00m,
-                        DateHired = DateTime.Now.AddYears(-1),
-                        Status = EmployeeStatus.Active
-                    });
-                }
-
-                // Crew - Distribute 5 per Area (Kitchen, POS, DT, Lobby)
-                var kitchenPos = allPositions.Where(p => p.Area == PositionArea.Kitchen).ToList();
-                var posPos = allPositions.Where(p => p.Area == PositionArea.POS).ToList();
-                var dtPos = allPositions.Where(p => p.Area == PositionArea.DT).ToList();
-                var lobbyPos = allPositions.Where(p => p.Area == PositionArea.Lobby).ToList();
-
-                // Fallback if list is empty, though we seeded it above
-                if (!kitchenPos.Any()) kitchenPos.Add(allPositions[0]);
-                if (!posPos.Any()) posPos.Add(allPositions[0]);
-                if (!dtPos.Any()) dtPos.Add(allPositions[0]);
-                if (!lobbyPos.Any()) lobbyPos.Add(allPositions[0]);
-
-                for (int i = 0; i < crewUsers.Count; i++)
-                {
-                    Position assignedPosition;
-
-                    if (i < 5) // 0-4: Kitchen
-                        assignedPosition = kitchenPos[i % kitchenPos.Count];
-                    else if (i < 10) // 5-9: POS
-                        assignedPosition = posPos[i % posPos.Count];
-                    else if (i < 15) // 10-14: DT
-                        assignedPosition = dtPos[i % dtPos.Count];
-                    else // 15-19: Lobby
-                        assignedPosition = lobbyPos[i % lobbyPos.Count];
-
-                    employees.Add(new Employee
-                    {
-                        UserId = crewUsers[i].Id,
-                        FullName = $"Crew Member {i + 1}",
-                        PositionId = assignedPosition.Id,
-                        HourlyRate = 65.00m,
-                        DateHired = DateTime.Now.AddMonths(-new Random().Next(1, 12)),
-                        Status = EmployeeStatus.Active
-                    });
-                }
-
-                context.Employees.AddRange(employees);
-                context.SaveChanges();
-            }
+            EnsureDefaultEmployees(context, allPositions);
 
             // 4. Holidays
             if (!context.Holidays.Any())
@@ -167,6 +52,224 @@ namespace AttendanceShiftingManagement.Data
             {
                 // Optional: Seed initial shifts if needed, or leave empty for fresh start
             }
+        }
+
+        private static void EnsureDefaultUsers(AppDbContext context)
+        {
+            AddOrUpdateDemoUser(context, "admin", "admin@mcdonald.com", "admin123", UserRole.Admin);
+            AddOrUpdateDemoUser(context, "hr", "hr@mcdonald.com", "hr123", UserRole.HRStaff);
+
+            for (int i = 1; i <= 4; i++)
+            {
+                AddOrUpdateDemoUser(
+                    context,
+                    $"manager{i}",
+                    $"manager{i}@mcdonald.com",
+                    "manager123",
+                    UserRole.Manager);
+            }
+
+            AddOrUpdateDemoUser(context, "crew", "crew@gmail.com", "crew123", UserRole.Crew);
+            for (int i = 1; i <= 19; i++)
+            {
+                AddOrUpdateDemoUser(
+                    context,
+                    $"crew{i}",
+                    $"crew{i}@mcdonald.com",
+                    "crew123",
+                    UserRole.Crew);
+            }
+
+            context.SaveChanges();
+        }
+
+        private static void AddOrUpdateDemoUser(
+            AppDbContext context,
+            string username,
+            string email,
+            string plainPassword,
+            UserRole role)
+        {
+            var existing = context.Users.FirstOrDefault(u => u.Email == email || u.Username == username);
+            if (existing == null)
+            {
+                context.Users.Add(new User
+                {
+                    Username = username,
+                    Email = email,
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(plainPassword),
+                    Role = role,
+                    IsActive = true,
+                    CreatedAt = DateTime.Now,
+                    UpdatedAt = DateTime.Now
+                });
+                return;
+            }
+
+            bool hasChanges = false;
+
+            if (existing.Username != username)
+            {
+                existing.Username = username;
+                hasChanges = true;
+            }
+
+            if (existing.Email != email)
+            {
+                existing.Email = email;
+                hasChanges = true;
+            }
+
+            if (existing.Role != role)
+            {
+                existing.Role = role;
+                hasChanges = true;
+            }
+
+            if (!existing.IsActive)
+            {
+                existing.IsActive = true;
+                hasChanges = true;
+            }
+
+            if (!BCrypt.Net.BCrypt.Verify(plainPassword, existing.PasswordHash))
+            {
+                existing.PasswordHash = BCrypt.Net.BCrypt.HashPassword(plainPassword);
+                hasChanges = true;
+            }
+
+            if (hasChanges)
+            {
+                existing.UpdatedAt = DateTime.Now;
+            }
+        }
+
+        private static void EnsureDefaultEmployees(AppDbContext context, List<Position> allPositions)
+        {
+            if (allPositions.Count == 0)
+            {
+                return;
+            }
+
+            int fallbackPositionId = allPositions[0].Id;
+            var random = new Random();
+
+            var adminUser = context.Users.FirstOrDefault(u => u.Email == "admin@mcdonald.com");
+            if (adminUser != null)
+            {
+                AddOrUpdateEmployee(
+                    context,
+                    adminUser.Id,
+                    "System Administrator",
+                    fallbackPositionId,
+                    100.00m,
+                    DateTime.Now.AddYears(-2));
+            }
+
+            var hrUsers = context.Users
+                .Where(u => u.Role == UserRole.HRStaff)
+                .OrderBy(u => u.Id)
+                .ToList();
+            for (int i = 0; i < hrUsers.Count; i++)
+            {
+                AddOrUpdateEmployee(
+                    context,
+                    hrUsers[i].Id,
+                    $"HR Staff {i + 1}",
+                    fallbackPositionId,
+                    75.00m,
+                    DateTime.Now.AddYears(-1));
+            }
+
+            var managers = context.Users
+                .Where(u => u.Role == UserRole.Manager)
+                .OrderBy(u => u.Id)
+                .ToList();
+            for (int i = 0; i < managers.Count; i++)
+            {
+                AddOrUpdateEmployee(
+                    context,
+                    managers[i].Id,
+                    $"Manager {i + 1}",
+                    fallbackPositionId,
+                    80.00m,
+                    DateTime.Now.AddYears(-1));
+            }
+
+            var kitchenPos = allPositions.Where(p => p.Area == PositionArea.Kitchen).ToList();
+            var posPos = allPositions.Where(p => p.Area == PositionArea.POS).ToList();
+            var dtPos = allPositions.Where(p => p.Area == PositionArea.DT).ToList();
+            var lobbyPos = allPositions.Where(p => p.Area == PositionArea.Lobby).ToList();
+
+            if (!kitchenPos.Any()) kitchenPos.Add(allPositions[0]);
+            if (!posPos.Any()) posPos.Add(allPositions[0]);
+            if (!dtPos.Any()) dtPos.Add(allPositions[0]);
+            if (!lobbyPos.Any()) lobbyPos.Add(allPositions[0]);
+
+            var crewUsers = context.Users
+                .Where(u => u.Role == UserRole.Crew)
+                .OrderBy(u => u.Id)
+                .ToList();
+
+            for (int i = 0; i < crewUsers.Count; i++)
+            {
+                Position assignedPosition;
+                if (i < 5)
+                {
+                    assignedPosition = kitchenPos[i % kitchenPos.Count];
+                }
+                else if (i < 10)
+                {
+                    assignedPosition = posPos[i % posPos.Count];
+                }
+                else if (i < 15)
+                {
+                    assignedPosition = dtPos[i % dtPos.Count];
+                }
+                else
+                {
+                    assignedPosition = lobbyPos[i % lobbyPos.Count];
+                }
+
+                AddOrUpdateEmployee(
+                    context,
+                    crewUsers[i].Id,
+                    crewUsers[i].Username == "crew" ? "Crew Member Demo" : $"Crew Member {i + 1}",
+                    assignedPosition.Id,
+                    65.00m,
+                    DateTime.Now.AddMonths(-random.Next(1, 12)));
+            }
+
+            context.SaveChanges();
+        }
+
+        private static void AddOrUpdateEmployee(
+            AppDbContext context,
+            int userId,
+            string fullName,
+            int positionId,
+            decimal hourlyRate,
+            DateTime dateHired)
+        {
+            var employee = context.Employees.FirstOrDefault(e => e.UserId == userId);
+            if (employee == null)
+            {
+                context.Employees.Add(new Employee
+                {
+                    UserId = userId,
+                    FullName = fullName,
+                    PositionId = positionId,
+                    HourlyRate = hourlyRate,
+                    DateHired = dateHired,
+                    Status = EmployeeStatus.Active
+                });
+                return;
+            }
+
+            employee.FullName = fullName;
+            employee.PositionId = positionId;
+            employee.HourlyRate = hourlyRate;
+            employee.Status = EmployeeStatus.Active;
         }
     }
 }

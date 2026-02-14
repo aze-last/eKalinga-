@@ -22,13 +22,16 @@ namespace AttendanceShiftingManagement.Services
             int managerUserId,
             List<int> employeeIds)
         {
+            var normalizedWeekStart = weekStart.Date;
+
             foreach (var day in days)
             {
-                var date = weekStart.AddDays((int)day);
+                int dayOffset = ((int)day - (int)DayOfWeek.Monday + 7) % 7;
+                var date = normalizedWeekStart.AddDays(dayOffset);
 
                 var shift = new Shift
                 {
-                    ShiftDate = date,
+                    ShiftDate = date.Date,
                     StartTime = start,
                     EndTime = end,
                     PositionId = positionId,
@@ -40,13 +43,15 @@ namespace AttendanceShiftingManagement.Services
 
                 foreach (var empId in employeeIds)
                 {
-                    bool overlap = _context.ShiftAssignments
+                    var sameDayAssignments = _context.ShiftAssignments
                         .Include(sa => sa.Shift)
-                        .Any(sa =>
+                        .Where(sa =>
                             sa.EmployeeId == empId &&
-                            sa.Shift.ShiftDate == date &&
-                            start < sa.Shift.EndTime &&
-                            end > sa.Shift.StartTime);
+                            sa.Shift.ShiftDate.Date == date.Date)
+                        .ToList();
+
+                    bool overlap = sameDayAssignments.Any(sa =>
+                        TimeRangesOverlap(start, end, sa.Shift.StartTime, sa.Shift.EndTime));
 
                     if (overlap)
                         throw new Exception("Overlapping shift detected.");
@@ -64,12 +69,15 @@ namespace AttendanceShiftingManagement.Services
 
         public List<WeeklyScheduleDto> GetWeeklySchedule(DateTime start, DateTime end, int managerId)
         {
+            var from = start.Date;
+            var to = end.Date;
+
             return _context.ShiftAssignments
                 .Include(sa => sa.Employee)
                 .Include(sa => sa.Shift)
                 .ThenInclude(s => s.Position)
-                .Where(sa => sa.Shift.ShiftDate >= start &&
-                             sa.Shift.ShiftDate <= end &&
+                .Where(sa => sa.Shift.ShiftDate.Date >= from &&
+                             sa.Shift.ShiftDate.Date <= to &&
                              sa.Shift.CreatedBy == managerId)
                 .Select(sa => new WeeklyScheduleDto
                 {
@@ -81,12 +89,15 @@ namespace AttendanceShiftingManagement.Services
         }
         public List<ShiftAssignment> GetEmployeeWeeklySchedule(int employeeId, DateTime start, DateTime end)
         {
+            var from = start.Date;
+            var to = end.Date;
+
             return _context.ShiftAssignments
                 .Include(sa => sa.Shift)
                 .ThenInclude(s => s.Position)
                 .Where(sa => sa.EmployeeId == employeeId &&
-                             sa.Shift.ShiftDate >= start &&
-                             sa.Shift.ShiftDate <= end)
+                             sa.Shift.ShiftDate.Date >= from &&
+                             sa.Shift.ShiftDate.Date <= to)
                 .OrderBy(sa => sa.Shift.ShiftDate)
                 .ToList();
         }
@@ -98,6 +109,34 @@ namespace AttendanceShiftingManagement.Services
                 .ThenInclude(s => s.Position)
                 .FirstOrDefault(sa => sa.EmployeeId == employeeId &&
                                     sa.Shift.ShiftDate.Date == date.Date);
+        }
+
+        private static bool TimeRangesOverlap(TimeSpan startA, TimeSpan endA, TimeSpan startB, TimeSpan endB)
+        {
+            var aRanges = ExpandTimeRanges(startA, endA);
+            var bRanges = ExpandTimeRanges(startB, endB);
+            return aRanges.Any(a => bRanges.Any(b => a.Start < b.End && a.End > b.Start));
+        }
+
+        private static List<(double Start, double End)> ExpandTimeRanges(TimeSpan start, TimeSpan end)
+        {
+            double startMinutes = start.TotalMinutes;
+            double endMinutes = end.TotalMinutes;
+
+            if (endMinutes <= startMinutes)
+            {
+                return new List<(double Start, double End)>
+                {
+                    (startMinutes, endMinutes + 1440),
+                    (startMinutes - 1440, endMinutes)
+                };
+            }
+
+            return new List<(double Start, double End)>
+            {
+                (startMinutes, endMinutes),
+                (startMinutes + 1440, endMinutes + 1440)
+            };
         }
     }
 }

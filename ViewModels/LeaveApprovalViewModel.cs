@@ -16,6 +16,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly AppDbContext _context;
         private readonly int _managerUserId;
         private readonly NotificationService _notificationService;
+        private readonly LeaveService _leaveService;
 
         private LeaveRequest? _selectedRequest;
         private string _rejectionReason = string.Empty;
@@ -42,6 +43,7 @@ namespace AttendanceShiftingManagement.ViewModels
             _managerUserId = managerUserId;
             _context = new AppDbContext();
             _notificationService = new NotificationService(_context);
+            _leaveService = new LeaveService(_context);
 
             ApproveCommand = new RelayCommand(_ => ExecuteApprove(), _ => SelectedRequest != null);
             RejectCommand = new RelayCommand(_ => ExecuteReject(), _ => SelectedRequest != null);
@@ -68,16 +70,18 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             if (SelectedRequest == null) return;
 
-            SelectedRequest.Status = LeaveStatus.Approved;
-            SelectedRequest.ApprovedBy = _managerUserId;
-            SelectedRequest.ApprovedAt = DateTime.Now;
-
-            ApplyBalance(SelectedRequest);
-
-            _context.SaveChanges();
-            NotifyEmployee(SelectedRequest, true);
-            LoadPending();
-            MessageBox.Show("Leave request approved.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+            try
+            {
+                _leaveService.ApproveLeaveRequest(SelectedRequest.Id, _managerUserId);
+                NotifyEmployee(SelectedRequest, true);
+                LoadPending();
+                MessageBox.Show("Leave request approved.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Unable to Approve Leave",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
         }
 
         private void ExecuteReject()
@@ -91,16 +95,19 @@ namespace AttendanceShiftingManagement.ViewModels
                 return;
             }
 
-            SelectedRequest.Status = LeaveStatus.Rejected;
-            SelectedRequest.RejectionReason = RejectionReason.Trim();
-            SelectedRequest.ApprovedBy = _managerUserId;
-            SelectedRequest.ApprovedAt = DateTime.Now;
-
-            _context.SaveChanges();
-            NotifyEmployee(SelectedRequest, false);
-            RejectionReason = string.Empty;
-            LoadPending();
-            MessageBox.Show("Leave request rejected.", "Updated", MessageBoxButton.OK, MessageBoxImage.Information);
+            try
+            {
+                _leaveService.RejectLeaveRequest(SelectedRequest.Id, _managerUserId, RejectionReason.Trim());
+                NotifyEmployee(SelectedRequest, false);
+                RejectionReason = string.Empty;
+                LoadPending();
+                MessageBox.Show("Leave request rejected.", "Updated", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Unable to Reject Leave",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
         }
 
         private void NotifyEmployee(LeaveRequest request, bool approved)
@@ -117,29 +124,5 @@ namespace AttendanceShiftingManagement.ViewModels
                     : $"Your {request.Type} leave ({request.StartDate:MMM dd} - {request.EndDate:MMM dd}) was rejected.");
         }
 
-        private void ApplyBalance(LeaveRequest request)
-        {
-            int year = request.StartDate.Year;
-            var balance = _context.LeaveBalances.FirstOrDefault(b => b.EmployeeId == request.EmployeeId && b.Year == year);
-            if (balance == null)
-            {
-                balance = new LeaveBalance
-                {
-                    EmployeeId = request.EmployeeId,
-                    Year = year
-                };
-                _context.LeaveBalances.Add(balance);
-            }
-
-            var days = request.TotalDays;
-            if (request.Type == LeaveType.Vacation)
-            {
-                balance.UsedVacationDays += days;
-            }
-            else if (request.Type == LeaveType.Sick)
-            {
-                balance.UsedSickDays += days;
-            }
-        }
     }
 }

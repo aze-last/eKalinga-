@@ -25,7 +25,10 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _selectedPositionName;
         private string _searchText = string.Empty;
 
-        public Visibility CrudVisibility => _currentUser.Role == UserRole.Admin ? Visibility.Visible : Visibility.Collapsed;
+        public Visibility CrudVisibility =>
+            (_currentUser.Role == UserRole.Admin || _currentUser.Role == UserRole.HRStaff)
+            ? Visibility.Visible
+            : Visibility.Collapsed;
 
         public ObservableCollection<Employee> Employees
         {

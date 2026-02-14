@@ -179,7 +179,10 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private void ExecuteShowAttendance()
         {
-            CurrentView = new PayrollPage();
+            CurrentView = new AttendanceLogsPage
+            {
+                DataContext = new AttendanceLogsViewModel("All")
+            };
         }
 
         private void ExecuteShowEmployees()

@@ -150,7 +150,11 @@
                                      Text="{Binding AttendanceSearchText, UpdateSourceTrigger=PropertyChanged}"
                                      materialDesign:HintAssist.Hint="Search Employee..." 
                                      Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="0,0,10,0"/>
-                            <Button Style="{StaticResource MaterialDesignOutlinedButton}" Content="Export" Height="32" Padding="12,0"/>
+                            <Button Style="{StaticResource MaterialDesignOutlinedButton}"
+                                    Content="Export"
+                                    Height="32"
+                                    Padding="12,0"
+                                    Command="{Binding ExportAttendanceCommand}"/>
                         </StackPanel>
                     </DockPanel>
                 </Border>

@@ -24,18 +24,29 @@ namespace AttendanceShiftingManagement.Services
 
             var assignments = _context.ShiftAssignments
                 .Include(sa => sa.Shift).ThenInclude(s => s.Position)
-                .Include(sa => sa.Employee)
-                .Where(sa => sa.Shift.ShiftDate == today)
+                .Include(sa => sa.Employee).ThenInclude(e => e.Position)
+                .Where(sa => sa.Shift.ShiftDate.Date == today)
                 .ToList();
 
             var attendances = _context.Attendances
                 .Include(a => a.Shift)
-                .Where(a => a.Shift.ShiftDate == today)
+                .Where(a => a.Shift.ShiftDate.Date == today)
                 .ToList();
 
-            var attendanceByShiftId = attendances
-                .GroupBy(a => a.ShiftId)
+            var attendanceByAssignment = attendances
+                .GroupBy(a => new { a.EmployeeId, a.ShiftId })
                 .ToDictionary(g => g.Key, g => g.OrderByDescending(a => a.TimeIn).First());
+
+            var employeeIds = assignments.Select(a => a.EmployeeId).Distinct().ToList();
+            var employeesOnLeave = _context.LeaveRequests
+                .Where(lr =>
+                    employeeIds.Contains(lr.EmployeeId) &&
+                    lr.Status == LeaveStatus.Approved &&
+                    lr.StartDate.Date <= today &&
+                    lr.EndDate.Date >= today)
+                .Select(lr => lr.EmployeeId)
+                .Distinct()
+                .ToHashSet();
 
             var results = new List<AttendanceStatusRow>();
 
@@ -44,12 +55,21 @@ namespace AttendanceShiftingManagement.Services
                 var shift = sa.Shift;
                 var shiftStart = today.Add(shift.StartTime);
                 var shiftEnd = today.Add(shift.EndTime);
+                if (shiftEnd <= shiftStart)
+                {
+                    // Overnight shift crossing midnight.
+                    shiftEnd = shiftEnd.AddDays(1);
+                }
                 var lateThreshold = shiftStart.AddMinutes(LateMinutes);
                 var absentThreshold = shiftStart.AddMinutes(AbsentMinutes);
 
-                attendanceByShiftId.TryGetValue(shift.Id, out var attendance);
+                attendanceByAssignment.TryGetValue(
+                    new { sa.EmployeeId, sa.ShiftId },
+                    out var attendance);
 
-                var status = ResolveStatus(now, attendance, shiftStart, shiftEnd, lateThreshold, absentThreshold);
+                bool onLeave = employeesOnLeave.Contains(sa.EmployeeId);
+
+                var status = ResolveStatus(now, attendance, shiftStart, shiftEnd, lateThreshold, absentThreshold, onLeave);
                 var color = ResolveStatusColor(status);
 
                 results.Add(new AttendanceStatusRow
@@ -67,9 +87,23 @@ namespace AttendanceShiftingManagement.Services
             return results;
         }
 
-        private static string ResolveStatus(DateTime now, Attendance? attendance, DateTime shiftStart, DateTime shiftEnd, DateTime lateThreshold, DateTime absentThreshold)
+        private static string ResolveStatus(
+            DateTime now,
+            Attendance? attendance,
+            DateTime shiftStart,
+            DateTime shiftEnd,
+            DateTime lateThreshold,
+            DateTime absentThreshold,
+            bool onLeave)
         {
-            if (attendance != null && attendance.Status == AttendanceStatus.Open && now > shiftEnd)
+            if (onLeave)
+            {
+                return "On Leave";
+            }
+
+            if (attendance != null &&
+                (attendance.OvertimeHours > 0 ||
+                 (attendance.Status == AttendanceStatus.Open && now > shiftEnd)))
             {
                 return "Overtime";
             }
@@ -100,6 +134,11 @@ namespace AttendanceShiftingManagement.Services
                 return "Late";
             }
 
+            if (attendance.TimeOut.HasValue && attendance.TimeOut.Value < shiftEnd)
+            {
+                return "Early Leave";
+            }
+
             return "On Time";
         }
 
@@ -110,6 +149,8 @@ namespace AttendanceShiftingManagement.Services
                 "Absent" => "#DC2626",
                 "Late" => "#F59E0B",
                 "Overtime" => "#7C3AED",
+                "On Leave" => "#2563EB",
+                "Early Leave" => "#FB7185",
                 "On Time" => "#10B981",
                 _ => "#64748B"
             };

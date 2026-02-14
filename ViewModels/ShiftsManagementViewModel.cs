@@ -210,7 +210,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 .Include(sa => sa.Shift)
                 .ThenInclude(s => s.Position)
                 .Include(sa => sa.Employee)
-                .Where(sa => sa.Shift.ShiftDate == SelectedDay)
+                .Where(sa => sa.Shift.ShiftDate.Date == SelectedDay.Date)
                 .ToList();
 
             var employeesInRoster = _context.Employees

@@ -70,6 +70,7 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 UserRole.Admin,
                 UserRole.Manager,
+                UserRole.HRStaff,
                 UserRole.Crew
             };
 

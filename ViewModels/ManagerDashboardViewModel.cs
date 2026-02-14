@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using System.ComponentModel;
 using System.Windows.Data;
 using System.Windows.Threading;
+using Microsoft.Win32;
 
 namespace AttendanceShiftingManagement.ViewModels
 {
@@ -42,6 +43,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
         public System.Windows.Input.ICommand TimeInCommand { get; }
         public System.Windows.Input.ICommand TimeOutCommand { get; }
+        public System.Windows.Input.ICommand ExportAttendanceCommand { get; }
 
         private bool _isTimedIn;
         public bool IsTimedIn
@@ -69,6 +71,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly User _currentUser;
         private readonly int _employeeId;
         private readonly NotificationService _notificationService;
+        private readonly ReportExportService _reportExportService;
 
         private string _announcementText = string.Empty;
         public string AnnouncementText
@@ -88,6 +91,7 @@ namespace AttendanceShiftingManagement.ViewModels
             _currentUser = user;
             _attendanceService = new AttendanceService(ctx);
             _notificationService = new NotificationService(ctx);
+            _reportExportService = new ReportExportService();
 
             // Fix: Fetch Employee ID linked to this User
             var employee = ctx.Employees.FirstOrDefault(e => e.UserId == user.Id);
@@ -95,6 +99,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
             TimeInCommand = new RelayCommand(_ => ExecuteTimeIn(), _ => !IsTimedIn);
             TimeOutCommand = new RelayCommand(_ => ExecuteTimeOut(), _ => IsTimedIn);
+            ExportAttendanceCommand = new RelayCommand(_ => ExecuteExportAttendance());
             SendAnnouncementCommand = new RelayCommand(_ => ExecuteSendAnnouncement());
 
             CheckCurrentStatus();
@@ -276,6 +281,36 @@ namespace AttendanceShiftingManagement.ViewModels
             _notificationService.CreateForUsers(crewUserIds, NotificationType.General, "Announcement", message);
             AnnouncementText = string.Empty;
             System.Windows.MessageBox.Show("Announcement sent.", "Success");
+        }
+
+        private void ExecuteExportAttendance()
+        {
+            try
+            {
+                if (TodayAttendance.Count == 0)
+                {
+                    System.Windows.MessageBox.Show("No attendance rows to export.", "No Data");
+                    return;
+                }
+
+                var dialog = new SaveFileDialog
+                {
+                    Filter = "CSV Files (*.csv)|*.csv",
+                    FileName = $"asms_attendance_{DateTime.Today:yyyyMMdd}.csv"
+                };
+
+                if (dialog.ShowDialog() != true)
+                {
+                    return;
+                }
+
+                _reportExportService.ExportAttendanceCsv(TodayAttendance, dialog.FileName, DateTime.Today);
+                System.Windows.MessageBox.Show("Attendance CSV exported successfully.", "Export Complete");
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"Export failed: {ex.Message}", "Export Error");
+            }
         }
 
         private void LoadManagerNotifications()

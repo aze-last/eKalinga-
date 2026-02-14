@@ -57,6 +57,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 {
                     UserRole.Manager => new Views.ManagerMainWindow(user),
                     UserRole.Crew => new Views.CrewMainWindow(user),
+                    UserRole.HRStaff => new Views.MainWindow(user),
                     _ => new Views.MainWindow(user)
                 };
 

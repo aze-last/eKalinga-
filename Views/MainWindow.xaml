@@ -9,7 +9,7 @@
         Background="{StaticResource BrandSurfaceBrush}"
         FontFamily="Segoe UI"
         WindowState="Maximized"
-        Title="Attendance Management System - Admin"
+        Title="{Binding PortalTitle}"
         Icon="/Images/app-icon.ico">
 
     <Window.Resources>
@@ -66,6 +66,9 @@
                     </Button>
                     <Button Style="{StaticResource MaterialDesignFlatButton}" 
                             Foreground="White" Height="50" Command="{Binding ShowUsersCommand}" FontSize="18">
+                        <Button.Visibility>
+                            <Binding Path="CanManageUsers" Converter="{StaticResource BooleanToVisibilityConverter}"/>
+                        </Button.Visibility>
                         <StackPanel Orientation="Horizontal" Width="180">
                             <materialDesign:PackIcon Kind="AccountGroup" Margin="0,0,16,0"/>
                             <TextBlock Text="Users"/>
@@ -74,6 +77,9 @@
 
                     <Button Style="{StaticResource MaterialDesignFlatButton}" 
                             Foreground="White" Height="50" Command="{Binding ShowEmployeesCommand}" FontSize="18">
+                        <Button.Visibility>
+                            <Binding Path="CanManageEmployees" Converter="{StaticResource BooleanToVisibilityConverter}"/>
+                        </Button.Visibility>
                         <StackPanel Orientation="Horizontal" Width="180">
                             <materialDesign:PackIcon Kind="BadgeAccount" Margin="0,0,16,0"/>
                             <TextBlock Text="Employees"/>
@@ -98,6 +104,9 @@
 
                     <Button Style="{StaticResource MaterialDesignFlatButton}" 
                             Foreground="White" Height="50" Command="{Binding ShowPayrollCommand}" FontSize="18">
+                        <Button.Visibility>
+                            <Binding Path="CanManagePayroll" Converter="{StaticResource BooleanToVisibilityConverter}"/>
+                        </Button.Visibility>
                         <StackPanel Orientation="Horizontal" Width="180">
                             <Image Source="/Images/money_bag_30dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.png" Width="24" Height="24" Margin="0,0,16,0"/>
                             <TextBlock Text="Payroll"/>
