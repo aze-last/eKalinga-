@@ -10,10 +10,12 @@ namespace AttendanceShiftingManagement.Services
     public class LeaveService
     {
         private readonly AppDbContext _context;
+        private readonly AuditService _auditService;
 
         public LeaveService(AppDbContext context)
         {
             _context = context;
+            _auditService = new AuditService(_context);
         }
 
         /// <summary>
@@ -72,6 +74,18 @@ namespace AttendanceShiftingManagement.Services
             _context.LeaveRequests.Add(leaveRequest);
             _context.SaveChanges();
 
+            var userId = _context.Employees
+                .Where(e => e.Id == employeeId)
+                .Select(e => (int?)e.UserId)
+                .FirstOrDefault();
+
+            _auditService.LogActivity(
+                userId,
+                "LeaveSubmitted",
+                "LeaveRequest",
+                leaveRequest.Id,
+                $"Submitted {type} leave from {startDate:yyyy-MM-dd} to {endDate:yyyy-MM-dd}.");
+
             return leaveRequest;
         }
 
@@ -109,6 +123,13 @@ namespace AttendanceShiftingManagement.Services
             request.ApprovedAt = DateTime.Now;
 
             _context.SaveChanges();
+
+            _auditService.LogActivity(
+                approvedByUserId,
+                "LeaveApproved",
+                "LeaveRequest",
+                request.Id,
+                $"Approved {request.Type} leave for employee {request.EmployeeId} ({request.StartDate:yyyy-MM-dd} to {request.EndDate:yyyy-MM-dd}).");
         }
 
         /// <summary>
@@ -130,6 +151,13 @@ namespace AttendanceShiftingManagement.Services
             request.RejectionReason = rejectionReason;
 
             _context.SaveChanges();
+
+            _auditService.LogActivity(
+                rejectedByUserId,
+                "LeaveRejected",
+                "LeaveRequest",
+                request.Id,
+                $"Rejected {request.Type} leave for employee {request.EmployeeId}. Reason: {rejectionReason}");
         }
 
         /// <summary>
@@ -143,6 +171,9 @@ namespace AttendanceShiftingManagement.Services
             if (request == null)
                 throw new Exception("Leave request not found.");
 
+            if (request.Status == LeaveStatus.Cancelled || request.Status == LeaveStatus.Rejected)
+                throw new Exception("This leave request can no longer be cancelled.");
+
             if (request.Status == LeaveStatus.Approved)
             {
                 // Restore leave balance
@@ -151,16 +182,28 @@ namespace AttendanceShiftingManagement.Services
 
                 if (request.Type == LeaveType.Vacation)
                 {
-                    balance.UsedVacationDays -= totalDays;
+                    balance.UsedVacationDays = Math.Max(0, balance.UsedVacationDays - totalDays);
                 }
                 else if (request.Type == LeaveType.Sick)
                 {
-                    balance.UsedSickDays -= totalDays;
+                    balance.UsedSickDays = Math.Max(0, balance.UsedSickDays - totalDays);
                 }
             }
 
             request.Status = LeaveStatus.Cancelled;
             _context.SaveChanges();
+
+            var userId = _context.Employees
+                .Where(e => e.Id == employeeId)
+                .Select(e => (int?)e.UserId)
+                .FirstOrDefault();
+
+            _auditService.LogActivity(
+                userId,
+                "LeaveCancelled",
+                "LeaveRequest",
+                request.Id,
+                $"Cancelled leave request ({request.Type}) for {request.StartDate:yyyy-MM-dd} to {request.EndDate:yyyy-MM-dd}.");
         }
 
         /// <summary>

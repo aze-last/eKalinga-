@@ -8,10 +8,12 @@ namespace AttendanceShiftingManagement.Services
     public class AuthService
     {
         private readonly AppDbContext _context;
+        private readonly AuditService _auditService;
 
         public AuthService()
         {
             _context = new AppDbContext();
+            _auditService = new AuditService(_context);
         }
 
         public User? Login(string usernameOrEmail, string password)
@@ -23,11 +25,37 @@ namespace AttendanceShiftingManagement.Services
                     (u.Username == usernameOrEmail || u.Email == usernameOrEmail)
                     && u.IsActive);
 
-            if (user == null) return null;
+            if (user == null)
+            {
+                _auditService.LogActivity(
+                    null,
+                    "LoginFailed",
+                    "User",
+                    null,
+                    $"Failed login attempt for '{usernameOrEmail}'.");
+                return null;
+            }
 
             bool isPasswordValid = BCrypt.Net.BCrypt.Verify(password, user.PasswordHash);
 
-            return isPasswordValid ? user : null;
+            if (isPasswordValid)
+            {
+                _auditService.LogActivity(
+                    user.Id,
+                    "LoginSuccess",
+                    "User",
+                    user.Id,
+                    $"User '{user.Username}' logged in.");
+                return user;
+            }
+
+            _auditService.LogActivity(
+                user.Id,
+                "LoginFailed",
+                "User",
+                user.Id,
+                $"Invalid password for user '{user.Username}'.");
+            return null;
         }
 
         public User? GetCurrentUser(int userId)

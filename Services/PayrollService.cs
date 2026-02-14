@@ -7,12 +7,15 @@ namespace AttendanceShiftingManagement.Services
     public class PayrollService
     {
         private readonly AppDbContext _context;
+        private readonly AuditService _auditService;
         private const decimal OVERTIME_MULTIPLIER = 1.25m;
         private const decimal HOLIDAY_MULTIPLIER = 2.0m;
+        private const decimal LATE_GRACE_MINUTES = 5.0m;
 
         public PayrollService(AppDbContext context)
         {
             _context = context;
+            _auditService = new AuditService(_context);
         }
 
         public List<PayrollItem> GeneratePayroll(DateTime startDate, DateTime endDate)
@@ -47,11 +50,17 @@ namespace AttendanceShiftingManagement.Services
                 decimal totalHours = 0;
                 decimal overtimeHours = 0;
                 decimal holidayHours = 0;
+                decimal lateMinutes = 0;
+                decimal earlyLeaveMinutes = 0;
 
                 foreach (var attendance in attendances)
                 {
                     totalHours += attendance.TotalHours;
                     overtimeHours += attendance.OvertimeHours;
+
+                    var (late, early) = CalculateAttendanceTimeAdjustments(attendance);
+                    lateMinutes += late;
+                    earlyLeaveMinutes += early;
 
                     // Check if attendance date is a holiday
                     var attendanceDate = attendance.TimeIn!.Value.Date;
@@ -66,7 +75,15 @@ namespace AttendanceShiftingManagement.Services
                 decimal regularPay = regularHours * employee.HourlyRate;
                 decimal overtimePay = overtimeHours * employee.HourlyRate * OVERTIME_MULTIPLIER;
                 decimal holidayPay = holidayHours * employee.HourlyRate * HOLIDAY_MULTIPLIER;
-                decimal totalPay = regularPay + overtimePay + holidayPay;
+                decimal grossPay = regularPay + overtimePay + holidayPay;
+
+                decimal deductionRatePerMinute = employee.HourlyRate / 60m;
+                decimal deductionAmount = Math.Round(
+                    (lateMinutes + earlyLeaveMinutes) * deductionRatePerMinute,
+                    2,
+                    MidpointRounding.AwayFromZero);
+
+                decimal netPay = Math.Max(0m, grossPay - deductionAmount);
 
                 payrollItems.Add(new PayrollItem
                 {
@@ -78,7 +95,12 @@ namespace AttendanceShiftingManagement.Services
                     RegularPay = regularPay,
                     OvertimePay = overtimePay,
                     HolidayPay = holidayPay,
-                    TotalPay = totalPay
+                    GrossPay = grossPay,
+                    LateMinutes = lateMinutes,
+                    EarlyLeaveMinutes = earlyLeaveMinutes,
+                    DeductionAmount = deductionAmount,
+                    NetPay = netPay,
+                    TotalPay = netPay
                 });
             }
 
@@ -97,7 +119,7 @@ namespace AttendanceShiftingManagement.Services
                     RegularPay = item.RegularPay,
                     OvertimePay = item.OvertimePay,
                     HolidayPay = item.HolidayPay,
-                    TotalPay = item.TotalPay,
+                    TotalPay = item.NetPay,
                     GeneratedAt = DateTime.Now,
                     GeneratedBy = generatedByUserId
                 };
@@ -106,6 +128,13 @@ namespace AttendanceShiftingManagement.Services
             }
 
             _context.SaveChanges();
+
+            _auditService.LogActivity(
+                generatedByUserId,
+                "PayrollSaved",
+                "Payroll",
+                null,
+                $"Saved payroll for {items.Count} employees ({startDate:yyyy-MM-dd} to {endDate:yyyy-MM-dd}), NetTotal={items.Sum(i => i.NetPay):N2}.");
         }
         public PayrollItem GetEmployeeEarningsEstimate(int employeeId, DateTime startDate, DateTime endDate)
         {
@@ -120,6 +149,7 @@ namespace AttendanceShiftingManagement.Services
                 .ToList();
 
             var attendances = _context.Attendances
+                .Include(a => a.Shift)
                 .Where(a => a.EmployeeId == employeeId &&
                            a.Status == AttendanceStatus.Closed &&
                            a.TimeIn.HasValue &&
@@ -130,6 +160,8 @@ namespace AttendanceShiftingManagement.Services
             decimal totalHours = attendances.Sum(a => a.TotalHours);
             decimal overtimeHours = attendances.Sum(a => a.OvertimeHours);
             decimal holidayHours = 0;
+            decimal lateMinutes = 0;
+            decimal earlyLeaveMinutes = 0;
 
             foreach (var attendance in attendances)
             {
@@ -138,12 +170,24 @@ namespace AttendanceShiftingManagement.Services
                 {
                     holidayHours += attendance.TotalHours;
                 }
+
+                var (late, early) = CalculateAttendanceTimeAdjustments(attendance);
+                lateMinutes += late;
+                earlyLeaveMinutes += early;
             }
 
             decimal regularHours = Math.Max(0, totalHours - overtimeHours - holidayHours);
             decimal regularPay = regularHours * employee.HourlyRate;
             decimal overtimePay = overtimeHours * employee.HourlyRate * OVERTIME_MULTIPLIER;
             decimal holidayPay = holidayHours * employee.HourlyRate * HOLIDAY_MULTIPLIER;
+            decimal grossPay = regularPay + overtimePay + holidayPay;
+
+            decimal deductionRatePerMinute = employee.HourlyRate / 60m;
+            decimal deductionAmount = Math.Round(
+                (lateMinutes + earlyLeaveMinutes) * deductionRatePerMinute,
+                2,
+                MidpointRounding.AwayFromZero);
+            decimal netPay = Math.Max(0m, grossPay - deductionAmount);
 
             return new PayrollItem
             {
@@ -155,8 +199,40 @@ namespace AttendanceShiftingManagement.Services
                 RegularPay = regularPay,
                 OvertimePay = overtimePay,
                 HolidayPay = holidayPay,
-                TotalPay = regularPay + overtimePay + holidayPay
+                GrossPay = grossPay,
+                LateMinutes = lateMinutes,
+                EarlyLeaveMinutes = earlyLeaveMinutes,
+                DeductionAmount = deductionAmount,
+                NetPay = netPay,
+                TotalPay = netPay
             };
+        }
+
+        private static (decimal LateMinutes, decimal EarlyLeaveMinutes) CalculateAttendanceTimeAdjustments(Attendance attendance)
+        {
+            if (!attendance.TimeIn.HasValue || !attendance.TimeOut.HasValue)
+            {
+                return (0m, 0m);
+            }
+
+            var shiftDate = attendance.Shift.ShiftDate.Date;
+            var shiftStart = shiftDate.Add(attendance.Shift.StartTime);
+            var shiftEnd = shiftDate.Add(attendance.Shift.EndTime);
+            if (shiftEnd <= shiftStart)
+            {
+                // Overnight shift crossing midnight.
+                shiftEnd = shiftEnd.AddDays(1);
+            }
+
+            decimal lateMinutes = Math.Max(
+                0m,
+                (decimal)(attendance.TimeIn.Value - shiftStart).TotalMinutes - LATE_GRACE_MINUTES);
+
+            decimal earlyLeaveMinutes = Math.Max(
+                0m,
+                (decimal)(shiftEnd - attendance.TimeOut.Value).TotalMinutes);
+
+            return (lateMinutes, earlyLeaveMinutes);
         }
     }
 
@@ -171,6 +247,11 @@ namespace AttendanceShiftingManagement.Services
         public decimal RegularPay { get; set; }
         public decimal OvertimePay { get; set; }
         public decimal HolidayPay { get; set; }
+        public decimal GrossPay { get; set; }
+        public decimal LateMinutes { get; set; }
+        public decimal EarlyLeaveMinutes { get; set; }
+        public decimal DeductionAmount { get; set; }
+        public decimal NetPay { get; set; }
         public decimal TotalPay { get; set; }
     }
 }

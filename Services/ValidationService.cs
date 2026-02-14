@@ -47,7 +47,17 @@ namespace AttendanceShiftingManagement.Services
                 .Where(s => s.ShiftDate.Date == date.Date &&
                             s.ShiftAssignments.Any(sa => sa.EmployeeId == employeeId))
                 .AsEnumerable()
-                .Sum(s => (s.EndTime - s.StartTime).TotalHours);
+                .Sum(s =>
+                {
+                    var duration = s.EndTime - s.StartTime;
+                    if (duration < TimeSpan.Zero)
+                    {
+                        // Overnight shift crossing midnight.
+                        duration += TimeSpan.FromDays(1);
+                    }
+
+                    return duration.TotalHours;
+                });
 
             // Policy: Max 12 hours per day
             return (existingHours + newShiftHours) <= 12;
@@ -67,7 +77,7 @@ namespace AttendanceShiftingManagement.Services
             // Policy: Attempt to keep to 5 days, but hard limit could be 6 or 7.
             // Let's warn if > 5, block if > 6? 
             // For now, let's just return true if acceptable (<= 6 days)
-            return (uniqueWorkDays + 1) <= 6;
+            return (uniqueWorkDays + Math.Max(1, newShiftDays)) <= 6;
         }
     }
 }

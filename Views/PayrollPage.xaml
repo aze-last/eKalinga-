@@ -90,7 +90,8 @@
                         <DataGridTextColumn Header="Regular Pay" Binding="{Binding RegularPay, StringFormat='₱{0:N2}'}" Width="120"/>
                         <DataGridTextColumn Header="OT Pay" Binding="{Binding OvertimePay, StringFormat='₱{0:N2}'}" Width="120"/>
                         <DataGridTextColumn Header="Holiday Pay" Binding="{Binding HolidayPay, StringFormat='₱{0:N2}'}" Width="120"/>
-                        <DataGridTextColumn Header="Total Pay" Binding="{Binding TotalPay, StringFormat='₱{0:N2}'}" Width="120">
+                        <DataGridTextColumn Header="Deduction" Binding="{Binding DeductionAmount, StringFormat='₱{0:N2}'}" Width="120"/>
+                        <DataGridTextColumn Header="Net Pay" Binding="{Binding NetPay, StringFormat='₱{0:N2}'}" Width="120">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="FontWeight" Value="Bold"/>
@@ -103,6 +104,15 @@
 
                 <!-- Save Button -->
                 <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+                    <Button Command="{Binding ExportPayrollCsvCommand}"
+                            Style="{StaticResource MaterialDesignOutlinedButton}"
+                            Margin="0,0,10,0">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="Download" Margin="0,0,8,0"/>
+                            <TextBlock Text="EXPORT CSV"/>
+                        </StackPanel>
+                    </Button>
+
                     <Button Command="{Binding SavePayrollCommand}"
                             Style="{StaticResource MaterialDesignRaisedButton}"
                             Background="{StaticResource BrandMidnightBrush}" Foreground="White">

@@ -47,6 +47,7 @@ namespace AttendanceShiftingManagement.Models
     {
         Admin,
         Manager,
+        HRStaff,
         Crew
     }
 }

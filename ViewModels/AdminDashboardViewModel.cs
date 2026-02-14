@@ -103,6 +103,11 @@ namespace AttendanceShiftingManagement.ViewModels
         public System.Windows.Input.ICommand ShowProfileSettingsCommand { get; }
         public System.Windows.Input.ICommand ShowAttendanceStatusCommand { get; }
 
+        public bool CanManageUsers => _currentUser.Role == UserRole.Admin;
+        public bool CanManagePayroll => _currentUser.Role == UserRole.Admin || _currentUser.Role == UserRole.HRStaff;
+        public bool CanManageEmployees => _currentUser.Role == UserRole.Admin || _currentUser.Role == UserRole.HRStaff;
+        public string PortalTitle => _currentUser.Role == UserRole.HRStaff ? "HR Dashboard" : "Admin Dashboard";
+
         public AdminDashboardViewModel(User user)
         {
             _currentUser = user;
@@ -113,16 +118,16 @@ namespace AttendanceShiftingManagement.ViewModels
             // Set default view
             _currentView = new DashboardPage();
 
-            GeneratePayrollCommand = new RelayCommand(p => MessageBox.Show("Generating Payroll (Feature coming soon!)", "Development", MessageBoxButton.OK, MessageBoxImage.Information));
+            GeneratePayrollCommand = new RelayCommand(_ => ExecuteShowPayroll());
             AddEmployeeCommand = new RelayCommand(ExecuteAddEmployee);
 
             // Navigation Commands
             ShowDashboardCommand = new RelayCommand(_ => CurrentView = new DashboardPage());
-            ShowUsersCommand = new RelayCommand(_ => CurrentView = new UsersPage());
-            ShowEmployeesCommand = new RelayCommand(_ => CurrentView = new EmployeesPage(_currentUser));
-            ShowAllEmployeesCommand = new RelayCommand(_ => CurrentView = new EmployeesPage(_currentUser));
+            ShowUsersCommand = new RelayCommand(_ => ExecuteShowUsers());
+            ShowEmployeesCommand = new RelayCommand(_ => ExecuteShowEmployees());
+            ShowAllEmployeesCommand = new RelayCommand(_ => ExecuteShowEmployees());
             ShowHolidaysCommand = new RelayCommand(_ => CurrentView = new HolidaysPage());
-            ShowPayrollCommand = new RelayCommand(_ => CurrentView = new PayrollPage());
+            ShowPayrollCommand = new RelayCommand(_ => ExecuteShowPayroll());
             ShowPositionsCommand = new RelayCommand(_ => CurrentView = new PositionsPage());
             ShowProfileSettingsCommand = new RelayCommand(_ =>
             {
@@ -236,14 +241,57 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private void ExecuteAddEmployee(object? parameter)
         {
-            var dialog = new UserDialogWindow();
+            if (!CanManageEmployees)
+            {
+                MessageBox.Show("You are not allowed to manage employees.", "Access Denied",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var dialog = new EmployeeDialogWindow();
             dialog.Owner = Application.Current.Windows.OfType<Window>().FirstOrDefault(w => w is MainWindow);
             dialog.ShowDialog();
 
-            if (dialog.DataContext is UserDialogViewModel vm && vm.DialogResult)
+            if (dialog.DataContext is EmployeeDialogViewModel vm && vm.DialogResult)
             {
                 LoadDashboardData();
             }
+        }
+
+        private void ExecuteShowUsers()
+        {
+            if (!CanManageUsers)
+            {
+                MessageBox.Show("Only Admin can manage user accounts.", "Access Denied",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            CurrentView = new UsersPage(_currentUser);
+        }
+
+        private void ExecuteShowEmployees()
+        {
+            if (!CanManageEmployees)
+            {
+                MessageBox.Show("You are not allowed to manage employees.", "Access Denied",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            CurrentView = new EmployeesPage(_currentUser);
+        }
+
+        private void ExecuteShowPayroll()
+        {
+            if (!CanManagePayroll)
+            {
+                MessageBox.Show("You are not allowed to process payroll.", "Access Denied",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            CurrentView = new PayrollPage(_currentUser.Id);
         }
 
         private void LoadUserSummary()

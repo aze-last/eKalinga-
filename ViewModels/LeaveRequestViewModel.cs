@@ -16,6 +16,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly AppDbContext _context;
         private readonly int _employeeId;
         private readonly NotificationService _notificationService;
+        private readonly LeaveService _leaveService;
 
         private LeaveType _selectedLeaveType = LeaveType.Vacation;
         private DateTime _startDate = DateTime.Today;
@@ -58,6 +59,7 @@ namespace AttendanceShiftingManagement.ViewModels
             _employeeId = employeeId;
             _context = new AppDbContext();
             _notificationService = new NotificationService(_context);
+            _leaveService = new LeaveService(_context);
 
             SubmitCommand = new RelayCommand(_ => ExecuteSubmit());
 
@@ -117,45 +119,47 @@ namespace AttendanceShiftingManagement.ViewModels
                 return;
             }
 
-            var request = new LeaveRequest
+            try
             {
-                EmployeeId = _employeeId,
-                Type = SelectedLeaveType,
-                StartDate = StartDate.Date,
-                EndDate = EndDate.Date,
-                Reason = Reason.Trim(),
-                Status = LeaveStatus.Pending,
-                CreatedAt = DateTime.Now
-            };
+                _leaveService.SubmitLeaveRequest(
+                    _employeeId,
+                    SelectedLeaveType,
+                    StartDate.Date,
+                    EndDate.Date,
+                    Reason.Trim());
 
-            _context.LeaveRequests.Add(request);
-            _context.SaveChanges();
-
-            var employee = _context.Employees.FirstOrDefault(e => e.Id == _employeeId);
-            if (employee != null)
-            {
-                var managerIds = _context.Users
-                    .Where(u => u.Role == UserRole.Manager)
-                    .Select(u => u.Id)
-                    .ToList();
-
-                if (managerIds.Count > 0)
+                var employee = _context.Employees.FirstOrDefault(e => e.Id == _employeeId);
+                if (employee != null)
                 {
-                    _notificationService.CreateForUsers(
-                        managerIds,
-                        NotificationType.General,
-                        "New Leave Request",
-                        $"{employee.FullName} requested {SelectedLeaveType} leave ({StartDate:MMM dd} - {EndDate:MMM dd}).");
+                    var managerIds = _context.Users
+                        .Where(u => u.Role == UserRole.Manager)
+                        .Select(u => u.Id)
+                        .ToList();
+
+                    if (managerIds.Count > 0)
+                    {
+                        _notificationService.CreateForUsers(
+                            managerIds,
+                            NotificationType.General,
+                            "New Leave Request",
+                            $"{employee.FullName} requested {SelectedLeaveType} leave ({StartDate:MMM dd} - {EndDate:MMM dd}).");
+                    }
                 }
+
+                Reason = string.Empty;
+                StartDate = DateTime.Today;
+                EndDate = DateTime.Today;
+
+                LoadBalances();
+                LoadRequests();
+
+                MessageBox.Show("Leave request submitted.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
             }
-
-            Reason = string.Empty;
-            StartDate = DateTime.Today;
-            EndDate = DateTime.Today;
-
-            LoadRequests();
-
-            MessageBox.Show("Leave request submitted.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Unable to Submit Leave",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
         }
     }
 }
