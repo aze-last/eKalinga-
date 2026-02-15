@@ -1,4 +1,5 @@
 using AttendanceShiftingManagement.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace AttendanceShiftingManagement.Data
 {
@@ -52,6 +53,10 @@ namespace AttendanceShiftingManagement.Data
             {
                 // Optional: Seed initial shifts if needed, or leave empty for fresh start
             }
+
+            // 6. Phase 2 recruitment + retention samples
+            EnsureRecruitmentCandidates(context);
+            EnsureEmployeeExits(context);
         }
 
         private static void EnsureDefaultUsers(AppDbContext context)
@@ -270,6 +275,133 @@ namespace AttendanceShiftingManagement.Data
             employee.PositionId = positionId;
             employee.HourlyRate = hourlyRate;
             employee.Status = EmployeeStatus.Active;
+        }
+
+        private static void EnsureRecruitmentCandidates(AppDbContext context)
+        {
+            if (context.RecruitmentCandidates.Any())
+            {
+                return;
+            }
+
+            var now = DateTime.Now;
+            var records = new List<RecruitmentCandidate>
+            {
+                new RecruitmentCandidate
+                {
+                    FullName = "Alden Cruz",
+                    Email = "alden.cruz@samplemail.com",
+                    Source = RecruitmentSource.Referral,
+                    Stage = RecruitmentStage.Interview,
+                    AppliedAt = now.AddDays(-18),
+                    InterviewedAt = now.AddDays(-10),
+                    Notes = "Strong kitchen background."
+                },
+                new RecruitmentCandidate
+                {
+                    FullName = "Mia Santos",
+                    Email = "mia.santos@samplemail.com",
+                    Source = RecruitmentSource.JobBoard,
+                    Stage = RecruitmentStage.OfferExtended,
+                    AppliedAt = now.AddDays(-22),
+                    InterviewedAt = now.AddDays(-14),
+                    OfferedAt = now.AddDays(-3),
+                    Notes = "Offer pending response."
+                },
+                new RecruitmentCandidate
+                {
+                    FullName = "Rhea Lim",
+                    Email = "rhea.lim@samplemail.com",
+                    Source = RecruitmentSource.Campus,
+                    Stage = RecruitmentStage.Hired,
+                    AppliedAt = now.AddDays(-40),
+                    InterviewedAt = now.AddDays(-32),
+                    OfferedAt = now.AddDays(-28),
+                    HiredAt = now.AddDays(-24),
+                    Notes = "Onboarding completed."
+                },
+                new RecruitmentCandidate
+                {
+                    FullName = "Jake Dizon",
+                    Email = "jake.dizon@samplemail.com",
+                    Source = RecruitmentSource.WalkIn,
+                    Stage = RecruitmentStage.Applied,
+                    AppliedAt = now.AddDays(-4),
+                    Notes = "Awaiting screening."
+                },
+                new RecruitmentCandidate
+                {
+                    FullName = "Carla Torres",
+                    Email = "carla.torres@samplemail.com",
+                    Source = RecruitmentSource.SocialMedia,
+                    Stage = RecruitmentStage.Rejected,
+                    AppliedAt = now.AddDays(-16),
+                    InterviewedAt = now.AddDays(-9),
+                    Notes = "Did not meet minimum availability."
+                }
+            };
+
+            context.RecruitmentCandidates.AddRange(records);
+            context.SaveChanges();
+        }
+
+        private static void EnsureEmployeeExits(AppDbContext context)
+        {
+            if (context.EmployeeExits.Any())
+            {
+                return;
+            }
+
+            var recordedBy = context.Users
+                .Where(u => u.Role == UserRole.HRStaff || u.Role == UserRole.Admin)
+                .OrderBy(u => u.Id)
+                .Select(u => u.Id)
+                .FirstOrDefault();
+
+            if (recordedBy == 0)
+            {
+                return;
+            }
+
+            var crewToExit = context.Employees
+                .Include(e => e.User)
+                .Where(e => e.User.Role == UserRole.Crew && e.Status == EmployeeStatus.Active)
+                .OrderBy(e => e.Id)
+                .Take(2)
+                .ToList();
+
+            if (crewToExit.Count == 0)
+            {
+                return;
+            }
+
+            var exits = new List<EmployeeExit>();
+            for (int i = 0; i < crewToExit.Count; i++)
+            {
+                var employee = crewToExit[i];
+                var isVoluntary = i == 0;
+                var type = isVoluntary ? EmployeeExitType.Resignation : EmployeeExitType.EndOfContract;
+                var reason = isVoluntary
+                    ? "Accepted offer closer to home branch."
+                    : "Contract period completed.";
+
+                exits.Add(new EmployeeExit
+                {
+                    EmployeeId = employee.Id,
+                    ExitType = type,
+                    IsVoluntary = isVoluntary,
+                    Reason = reason,
+                    LastWorkingDate = DateTime.Today.AddDays(-(14 + i * 7)),
+                    RecordedBy = recordedBy,
+                    Notes = "Seeded Phase 2 retention sample.",
+                    RecordedAt = DateTime.Now.AddDays(-(12 + i * 7))
+                });
+
+                employee.Status = EmployeeStatus.Inactive;
+            }
+
+            context.EmployeeExits.AddRange(exits);
+            context.SaveChanges();
         }
     }
 }

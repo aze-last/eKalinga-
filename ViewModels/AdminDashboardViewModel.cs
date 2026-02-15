@@ -145,6 +145,13 @@ namespace AttendanceShiftingManagement.ViewModels
         public System.Windows.Input.ICommand ShowPayrollCommand { get; }
         public System.Windows.Input.ICommand ShowPositionsCommand { get; }
         public System.Windows.Input.ICommand ShowLeaveApprovalsCommand { get; }
+        public System.Windows.Input.ICommand OpenRecruitmentMetricsCommand { get; }
+        public System.Windows.Input.ICommand OpenRetentionMetricsCommand { get; }
+        public System.Windows.Input.ICommand OpenPerformanceMetricsCommand { get; }
+        public System.Windows.Input.ICommand OpenEngagementMetricsCommand { get; }
+        public System.Windows.Input.ICommand OpenDeiMetricsCommand { get; }
+        public System.Windows.Input.ICommand OpenCompensationMetricsCommand { get; }
+        public System.Windows.Input.ICommand OpenWorkforcePlanningMetricsCommand { get; }
         public System.Windows.Input.ICommand ShowProfileSettingsCommand { get; }
         public System.Windows.Input.ICommand ShowAttendanceStatusCommand { get; }
         public System.Windows.Input.ICommand OpenRoleSwitchCommand { get; }
@@ -167,7 +174,7 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             _currentUser = user;
             _context = new AppDbContext();
-            _currentView = new DashboardPage();
+            _currentView = CreateHomeDashboardView();
 
             LoadDashboardData();
             LoadUserSummary();
@@ -175,7 +182,7 @@ namespace AttendanceShiftingManagement.ViewModels
             GeneratePayrollCommand = new RelayCommand(_ => ExecuteShowPayroll());
             AddEmployeeCommand = new RelayCommand(ExecuteAddEmployee);
 
-            ShowDashboardCommand = new RelayCommand(_ => CurrentView = new DashboardPage());
+            ShowDashboardCommand = new RelayCommand(_ => CurrentView = CreateHomeDashboardView());
             ShowUsersCommand = new RelayCommand(_ => ExecuteShowUsers());
             ShowEmployeesCommand = new RelayCommand(_ => ExecuteShowEmployees());
             ShowAllEmployeesCommand = new RelayCommand(_ => ExecuteShowEmployees());
@@ -183,6 +190,13 @@ namespace AttendanceShiftingManagement.ViewModels
             ShowPayrollCommand = new RelayCommand(_ => ExecuteShowPayroll());
             ShowPositionsCommand = new RelayCommand(_ => CurrentView = new PositionsPage());
             ShowLeaveApprovalsCommand = new RelayCommand(_ => ExecuteShowLeaveApprovals());
+            OpenRecruitmentMetricsCommand = new RelayCommand(_ => ExecuteOpenRecruitmentMetrics());
+            OpenRetentionMetricsCommand = new RelayCommand(_ => ExecuteOpenRetentionMetrics());
+            OpenPerformanceMetricsCommand = new RelayCommand(_ => ExecuteOpenPerformanceMetrics());
+            OpenEngagementMetricsCommand = new RelayCommand(_ => ExecuteOpenEngagementMetrics());
+            OpenDeiMetricsCommand = new RelayCommand(_ => ExecuteOpenDeiMetrics());
+            OpenCompensationMetricsCommand = new RelayCommand(_ => ExecuteOpenCompensationMetrics());
+            OpenWorkforcePlanningMetricsCommand = new RelayCommand(_ => ExecuteOpenWorkforcePlanningMetrics());
             ShowProfileSettingsCommand = new RelayCommand(_ =>
             {
                 var vm = new ProfileSettingsViewModel(_currentUser);
@@ -221,6 +235,13 @@ namespace AttendanceShiftingManagement.ViewModels
                 }
             };
             timer.Start();
+        }
+
+        private object CreateHomeDashboardView()
+        {
+            return _currentUser.Role == UserRole.HRStaff
+                ? new HRDashboardPage()
+                : new DashboardPage();
         }
 
         private void OnDashboardDataChanged(object? sender, DashboardDataChangedEventArgs args)
@@ -508,6 +529,55 @@ namespace AttendanceShiftingManagement.ViewModels
             CurrentView = new LeaveApprovalPage
             {
                 DataContext = new LeaveApprovalViewModel(_currentUser.Id)
+            };
+        }
+
+        private void ExecuteOpenRecruitmentMetrics()
+        {
+            CurrentView = new RecruitmentMetricsPage();
+        }
+
+        private void ExecuteOpenRetentionMetrics()
+        {
+            CurrentView = new RetentionTurnoverPage(_currentUser.Id);
+        }
+
+        private void ExecuteOpenPerformanceMetrics()
+        {
+            CurrentView = new AttendanceLogsPage
+            {
+                DataContext = new AttendanceLogsViewModel("All")
+            };
+        }
+
+        private void ExecuteOpenEngagementMetrics()
+        {
+            ExecuteShowLeaveApprovals();
+        }
+
+        private void ExecuteOpenDeiMetrics()
+        {
+            CurrentView = new HRMetricPlaceholderPage(
+                "Diversity, Equity & Inclusion",
+                "Track representation, fairness, and equitable outcomes across the workforce in a single HR view.",
+                new[]
+                {
+                    "Representation by role, area, and employment status.",
+                    "Promotion rate comparisons per demographic segment.",
+                    "Pay equity audit checkpoints per position band."
+                });
+        }
+
+        private void ExecuteOpenCompensationMetrics()
+        {
+            ExecuteShowPayroll();
+        }
+
+        private void ExecuteOpenWorkforcePlanningMetrics()
+        {
+            CurrentView = new WeeklyCalendarPage
+            {
+                DataContext = new WeeklyCalendarViewModel(null, _currentUser.Id, false)
             };
         }
 

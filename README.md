@@ -51,3 +51,37 @@ Use either option:
 - Audit events recorded:
   - `ImpersonationStart`
   - `ImpersonationEnd`
+
+
+Phases:
+Yes. Best approach is to phase it based on your current ASMS data first, then add new HR modules.
+
+Phase 1: HR Dashboard MVP (1-2 weeks)
+Scope: use existing attendance, shifts, leave, payroll, employees.
+KPIs: headcount, present/absent/late, overtime hours/cost, pending leave approvals, shift coverage.
+Features: role-based HR view, auto-refresh (30-60s), drill-down to existing pages, alert cards for threshold breaches.
+Output: stable HR dashboard without changing core workflows.
+
+Phase 2: Recruitment + Retention (2 weeks)
+Scope: add recruitment and exit tracking tables/modules.
+KPIs: time-to-hire, cost-per-hire, offer acceptance, turnover rate, voluntary vs involuntary exits, 90-day retention.
+Features: department/manager filters, trend charts, turnover alerts.
+Output: end-to-end hiring and retention visibility.
+
+Phase 3: Performance + Engagement + Wellbeing (2 weeks)
+Scope: add goals, reviews, training, survey records.
+KPIs: goal completion, review scores, training completion/effectiveness, eNPS, absenteeism.
+Features: drill-down by team, risk flags for low engagement and high absenteeism.
+Output: people-performance insights for managers and HR.
+
+Phase 4: DEI + Compensation + Compliance (2 weeks)
+Scope: demographic, pay band, compensation, benefits usage data with strict RBAC.
+KPIs: representation, promotion/hiring by demographic, pay equity gap, overtime cost trends, benefits utilization.
+Features: compliance views, audit logs, privacy controls.
+Output: adviser-ready strategic HR analytics.
+
+Phase 5: Workforce Planning + Advanced (2 weeks)
+Scope: skills inventory, internal mobility, succession readiness, forecasting.
+KPIs: skill gaps, bench strength, internal fill rate, forecasted headcount needs.
+Features: planning scenarios and proactive alerts.
+Output: strategic planning dashboard layer.

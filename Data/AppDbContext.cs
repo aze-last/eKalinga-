@@ -23,6 +23,8 @@ namespace AttendanceShiftingManagement.Data
         public DbSet<ActivityLog> ActivityLogs { get; set; }
         public DbSet<UserProfile> UserProfiles { get; set; }
         public DbSet<UserPreference> UserPreferences { get; set; }
+        public DbSet<RecruitmentCandidate> RecruitmentCandidates { get; set; }
+        public DbSet<EmployeeExit> EmployeeExits { get; set; }
 
         public AppDbContext()
         {
@@ -79,6 +81,18 @@ namespace AttendanceShiftingManagement.Data
                 .Property(n => n.Type)
                 .HasConversion<string>();
 
+            modelBuilder.Entity<RecruitmentCandidate>()
+                .Property(rc => rc.Source)
+                .HasConversion<string>();
+
+            modelBuilder.Entity<RecruitmentCandidate>()
+                .Property(rc => rc.Stage)
+                .HasConversion<string>();
+
+            modelBuilder.Entity<EmployeeExit>()
+                .Property(ee => ee.ExitType)
+                .HasConversion<string>();
+
             modelBuilder.Entity<UserProfile>()
                 .HasIndex(p => p.UserId)
                 .IsUnique();
@@ -96,6 +110,12 @@ namespace AttendanceShiftingManagement.Data
             modelBuilder.Entity<Employee>()
                 .HasIndex(e => e.UserId)
                 .IsUnique();
+
+            modelBuilder.Entity<RecruitmentCandidate>()
+                .HasIndex(rc => rc.Email);
+
+            modelBuilder.Entity<EmployeeExit>()
+                .HasIndex(ee => ee.EmployeeId);
         }
     }
 }

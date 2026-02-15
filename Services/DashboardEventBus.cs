@@ -8,7 +8,9 @@ namespace AttendanceShiftingManagement.Services
         Employee,
         Shift,
         Leave,
-        Payroll
+        Payroll,
+        Recruitment,
+        Turnover
     }
 
     public sealed class DashboardDataChangedEventArgs : EventArgs

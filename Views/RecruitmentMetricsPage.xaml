@@ -1,0 +1,248 @@
+<UserControl x:Class="AttendanceShiftingManagement.Views.RecruitmentMetricsPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             Background="{StaticResource BrandSurfaceBrush}">
+
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <DockPanel Grid.Row="0" Margin="0,0,0,14">
+            <TextBlock Text="Recruitment Metrics"
+                       Style="{StaticResource MaterialDesignHeadline5TextBlock}"
+                       FontWeight="Bold"
+                       Foreground="{StaticResource BrandMidnightBrush}"/>
+            <Button DockPanel.Dock="Right"
+                    Content="REFRESH"
+                    Command="{Binding RefreshCommand}"
+                    Style="{StaticResource MaterialDesignOutlinedButton}"
+                    Foreground="{StaticResource BrandRedBrush}"
+                    BorderBrush="{StaticResource BrandRedBrush}"/>
+        </DockPanel>
+
+        <UniformGrid Grid.Row="1" Columns="5" Margin="0,0,0,14">
+            <materialDesign:Card Margin="6" Padding="14" Background="{StaticResource BrandMidnightBrush}">
+                <StackPanel>
+                    <TextBlock Text="{Binding OpenPipelineCount}" FontSize="24" FontWeight="Bold" Foreground="White"/>
+                    <TextBlock Text="OPEN PIPELINE" FontSize="12" Foreground="#D1D5DB"/>
+                </StackPanel>
+            </materialDesign:Card>
+            <materialDesign:Card Margin="6" Padding="14" Background="{StaticResource BrandRedBrush}">
+                <StackPanel>
+                    <TextBlock Text="{Binding HiresThisMonth}" FontSize="24" FontWeight="Bold" Foreground="White"/>
+                    <TextBlock Text="HIRES THIS MONTH" FontSize="12" Foreground="#FFE9D5"/>
+                </StackPanel>
+            </materialDesign:Card>
+            <materialDesign:Card Margin="6" Padding="14" Background="{StaticResource BrandYellowBrush}">
+                <StackPanel>
+                    <TextBlock Text="{Binding AvgTimeToHireDays}" FontSize="24" FontWeight="Bold" Foreground="#27251F"/>
+                    <TextBlock Text="AVG TIME-TO-HIRE (DAYS)" FontSize="12" Foreground="#27251F"/>
+                </StackPanel>
+            </materialDesign:Card>
+            <materialDesign:Card Margin="6" Padding="14" Background="#14532D">
+                <StackPanel>
+                    <TextBlock Text="{Binding OfferAcceptanceRate}" FontSize="24" FontWeight="Bold" Foreground="White"/>
+                    <TextBlock Text="OFFER ACCEPTANCE" FontSize="12" Foreground="#DCFCE7"/>
+                </StackPanel>
+            </materialDesign:Card>
+            <materialDesign:Card Margin="6" Padding="14" Background="#1F2937">
+                <StackPanel>
+                    <TextBlock Text="{Binding EstimatedCostPerHire}" FontSize="24" FontWeight="Bold" Foreground="White"/>
+                    <TextBlock Text="EST. COST PER HIRE" FontSize="12" Foreground="#D1D5DB"/>
+                </StackPanel>
+            </materialDesign:Card>
+        </UniformGrid>
+
+        <materialDesign:Card Grid.Row="2" Padding="14" Margin="0,0,0,14">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="2*"/>
+                    <ColumnDefinition Width="2*"/>
+                    <ColumnDefinition Width="1.3*"/>
+                    <ColumnDefinition Width="1.3*"/>
+                    <ColumnDefinition Width="1.2*"/>
+                    <ColumnDefinition Width="2.5*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBox Grid.Column="0"
+                         Text="{Binding CandidateFullName, UpdateSourceTrigger=PropertyChanged}"
+                         materialDesign:HintAssist.Hint="Candidate full name"
+                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                         Margin="0,0,8,0"/>
+
+                <TextBox Grid.Column="1"
+                         Text="{Binding CandidateEmail, UpdateSourceTrigger=PropertyChanged}"
+                         materialDesign:HintAssist.Hint="Email"
+                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                         Margin="0,0,8,0"/>
+
+                <ComboBox Grid.Column="2"
+                          ItemsSource="{Binding Sources}"
+                          SelectedItem="{Binding SelectedSource}"
+                          Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                          Margin="0,0,8,0"/>
+
+                <DatePicker Grid.Column="3"
+                            SelectedDate="{Binding AppliedAt}"
+                            Style="{StaticResource MaterialDesignOutlinedDatePicker}"
+                            Margin="0,0,8,0"/>
+
+                <TextBox Grid.Column="4"
+                         Text="{Binding ExpectedSalaryText, UpdateSourceTrigger=PropertyChanged}"
+                         materialDesign:HintAssist.Hint="Expected salary"
+                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                         Margin="0,0,8,0"/>
+
+                <TextBox Grid.Column="5"
+                         Text="{Binding CandidateNotes, UpdateSourceTrigger=PropertyChanged}"
+                         materialDesign:HintAssist.Hint="Notes"
+                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                         Margin="0,0,8,0"/>
+
+                <Button Grid.Column="6"
+                        Content="ADD"
+                        Command="{Binding AddCandidateCommand}"
+                        Style="{StaticResource MaterialDesignRaisedButton}"
+                        Background="{StaticResource BrandRedBrush}"
+                        Foreground="White"
+                        Padding="18,0"/>
+            </Grid>
+        </materialDesign:Card>
+
+        <materialDesign:Card Grid.Row="3" Padding="14" Margin="0,0,0,14">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Text="Recruitment Trend (Last 6 Months)"
+                           Grid.Row="0"
+                           FontWeight="Bold"
+                           Margin="0,0,0,10"
+                           Foreground="{StaticResource BrandMidnightBrush}"/>
+
+                <DataGrid Grid.Row="1"
+                          ItemsSource="{Binding RecruitmentTrends}"
+                          AutoGenerateColumns="False"
+                          CanUserAddRows="False"
+                          IsReadOnly="True"
+                          HeadersVisibility="Column">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Month" Binding="{Binding MonthLabel}" Width="140"/>
+                        <DataGridTextColumn Header="Applied" Binding="{Binding AppliedCount}" Width="90"/>
+                        <DataGridTemplateColumn Header="Applied Trend" Width="190">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Grid Height="16" VerticalAlignment="Center">
+                                        <Border Width="{Binding AppliedBarWidth}"
+                                                Height="8"
+                                                HorizontalAlignment="Left"
+                                                Background="{StaticResource BrandRedBrush}"
+                                                CornerRadius="4"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTextColumn Header="Hired" Binding="{Binding HiredCount}" Width="90"/>
+                        <DataGridTemplateColumn Header="Hire Trend" Width="190">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Grid Height="16" VerticalAlignment="Center">
+                                        <Border Width="{Binding HiredBarWidth}"
+                                                Height="8"
+                                                HorizontalAlignment="Left"
+                                                Background="#14532D"
+                                                CornerRadius="4"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Grid>
+        </materialDesign:Card>
+
+        <materialDesign:Card Grid.Row="4" Padding="14">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="0,0,0,10">
+                    <TextBox Width="280"
+                             Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                             materialDesign:HintAssist.Hint="Search candidate..."
+                             Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
+
+                    <ComboBox Width="180"
+                              Margin="10,0,0,0"
+                              ItemsSource="{Binding SourceFilterOptions}"
+                              SelectedItem="{Binding SelectedSourceFilter}"
+                              DisplayMemberPath="Label"
+                              Style="{StaticResource MaterialDesignOutlinedComboBox}"/>
+
+                    <ComboBox Width="180"
+                              Margin="10,0,0,0"
+                              ItemsSource="{Binding StageFilterOptions}"
+                              SelectedItem="{Binding SelectedStageFilter}"
+                              DisplayMemberPath="Label"
+                              Style="{StaticResource MaterialDesignOutlinedComboBox}"/>
+                </StackPanel>
+
+                <DataGrid Grid.Row="1"
+                          ItemsSource="{Binding CandidatesView}"
+                          AutoGenerateColumns="False"
+                          CanUserAddRows="False"
+                          IsReadOnly="True">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Candidate" Binding="{Binding FullName}" Width="*"/>
+                        <DataGridTextColumn Header="Email" Binding="{Binding Email}" Width="1.2*"/>
+                        <DataGridTextColumn Header="Source" Binding="{Binding Source}" Width="120"/>
+                        <DataGridTextColumn Header="Stage" Binding="{Binding Stage}" Width="120"/>
+                        <DataGridTextColumn Header="Applied" Binding="{Binding AppliedAt, StringFormat='yyyy-MM-dd'}" Width="110"/>
+                        <DataGridTextColumn Header="Offered" Binding="{Binding OfferedAt, StringFormat='yyyy-MM-dd'}" Width="110"/>
+                        <DataGridTextColumn Header="Hired" Binding="{Binding HiredAt, StringFormat='yyyy-MM-dd'}" Width="110"/>
+                        <DataGridTemplateColumn Header="Actions" Width="260">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Button Content="Advance"
+                                                Margin="0,0,6,0"
+                                                Padding="8,0"
+                                                Command="{Binding DataContext.AdvanceStageCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                CommandParameter="{Binding}"
+                                                Style="{StaticResource MaterialDesignOutlinedButton}"/>
+                                        <Button Content="Hire"
+                                                Margin="0,0,6,0"
+                                                Padding="8,0"
+                                                Command="{Binding DataContext.MarkHiredCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                CommandParameter="{Binding}"
+                                                Style="{StaticResource MaterialDesignOutlinedButton}"
+                                                Foreground="#14532D"
+                                                BorderBrush="#14532D"/>
+                                        <Button Content="Reject"
+                                                Padding="8,0"
+                                                Command="{Binding DataContext.RejectCandidateCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                CommandParameter="{Binding}"
+                                                Style="{StaticResource MaterialDesignOutlinedButton}"
+                                                Foreground="{StaticResource BrandRedBrush}"
+                                                BorderBrush="{StaticResource BrandRedBrush}"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Grid>
+        </materialDesign:Card>
+    </Grid>
+</UserControl>
