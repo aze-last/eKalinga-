@@ -65,6 +65,12 @@ namespace AttendanceShiftingManagement.Services
             }
 
             _context.SaveChanges();
+
+            DashboardEventBus.Instance.Publish(
+                DashboardDataDomain.Shift,
+                action: "batch_created",
+                entityId: null,
+                actorUserId: managerUserId);
         }
 
         public List<WeeklyScheduleDto> GetWeeklySchedule(DateTime start, DateTime end, int managerId)

@@ -86,6 +86,12 @@ namespace AttendanceShiftingManagement.Services
                 leaveRequest.Id,
                 $"Submitted {type} leave from {startDate:yyyy-MM-dd} to {endDate:yyyy-MM-dd}.");
 
+            DashboardEventBus.Instance.Publish(
+                DashboardDataDomain.Leave,
+                action: "submitted",
+                entityId: leaveRequest.Id,
+                actorUserId: userId);
+
             return leaveRequest;
         }
 
@@ -130,6 +136,12 @@ namespace AttendanceShiftingManagement.Services
                 "LeaveRequest",
                 request.Id,
                 $"Approved {request.Type} leave for employee {request.EmployeeId} ({request.StartDate:yyyy-MM-dd} to {request.EndDate:yyyy-MM-dd}).");
+
+            DashboardEventBus.Instance.Publish(
+                DashboardDataDomain.Leave,
+                action: "approved",
+                entityId: request.Id,
+                actorUserId: approvedByUserId);
         }
 
         /// <summary>
@@ -158,6 +170,12 @@ namespace AttendanceShiftingManagement.Services
                 "LeaveRequest",
                 request.Id,
                 $"Rejected {request.Type} leave for employee {request.EmployeeId}. Reason: {rejectionReason}");
+
+            DashboardEventBus.Instance.Publish(
+                DashboardDataDomain.Leave,
+                action: "rejected",
+                entityId: request.Id,
+                actorUserId: rejectedByUserId);
         }
 
         /// <summary>
@@ -204,6 +222,12 @@ namespace AttendanceShiftingManagement.Services
                 "LeaveRequest",
                 request.Id,
                 $"Cancelled leave request ({request.Type}) for {request.StartDate:yyyy-MM-dd} to {request.EndDate:yyyy-MM-dd}.");
+
+            DashboardEventBus.Instance.Publish(
+                DashboardDataDomain.Leave,
+                action: "cancelled",
+                entityId: request.Id,
+                actorUserId: userId);
         }
 
         /// <summary>

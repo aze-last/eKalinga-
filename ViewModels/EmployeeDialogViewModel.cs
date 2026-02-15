@@ -1,6 +1,7 @@
 using AttendanceShiftingManagement.Data;
 using AttendanceShiftingManagement.Helpers;
 using AttendanceShiftingManagement.Models;
+using AttendanceShiftingManagement.Services;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.ObjectModel;
 using System.Windows;
@@ -123,6 +124,9 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             try
             {
+                int? affectedEmployeeId = null;
+                Employee? createdEmployee = null;
+
                 if (_existingEmployee != null)
                 {
                     // Fix: Fetch the employee from the CURRENT context to ensure it's tracked
@@ -134,11 +138,12 @@ namespace AttendanceShiftingManagement.ViewModels
                         empToUpdate.HourlyRate = HourlyRate;
                         empToUpdate.DateHired = DateHired;
                         empToUpdate.Status = SelectedStatus;
+                        affectedEmployeeId = empToUpdate.Id;
                     }
                 }
                 else
                 {
-                    var newEmployee = new Employee
+                    createdEmployee = new Employee
                     {
                         FullName = FullName,
                         UserId = SelectedUser!.Id,
@@ -147,10 +152,21 @@ namespace AttendanceShiftingManagement.ViewModels
                         DateHired = DateHired,
                         Status = SelectedStatus
                     };
-                    _context.Employees.Add(newEmployee);
+                    _context.Employees.Add(createdEmployee);
                 }
 
                 _context.SaveChanges();
+                if (createdEmployee != null)
+                {
+                    affectedEmployeeId = createdEmployee.Id;
+                }
+
+                DashboardEventBus.Instance.Publish(
+                    DashboardDataDomain.Employee,
+                    action: _existingEmployee == null ? "created" : "updated",
+                    entityId: affectedEmployeeId,
+                    actorUserId: null);
+
                 DialogResult = true;
 
                 MessageBox.Show("Employee saved successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);

@@ -501,6 +501,12 @@ namespace AttendanceShiftingManagement.ViewModels
                 }
             }
 
+            DashboardEventBus.Instance.Publish(
+                DashboardDataDomain.Shift,
+                action: isNewAssignment ? "created" : "updated",
+                entityId: newShift.Id,
+                actorUserId: _managerUserId != 0 ? _managerUserId : null);
+
             cell.IsEditing = false;
             LoadWeeklySchedule();
         }
@@ -550,6 +556,12 @@ namespace AttendanceShiftingManagement.ViewModels
             }
 
             NotifyEmployeeShiftRemoved(cell.EmployeeId, cell.Date);
+            DashboardEventBus.Instance.Publish(
+                DashboardDataDomain.Shift,
+                action: "deleted",
+                entityId: shiftId,
+                actorUserId: _managerUserId != 0 ? _managerUserId : null);
+
             LoadWeeklySchedule();
         }
 

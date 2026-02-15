@@ -145,6 +145,12 @@ namespace AttendanceShiftingManagement.ViewModels
 
                 _context.Update(SelectedShiftToEdit);
                 _context.SaveChanges();
+                DashboardEventBus.Instance.Publish(
+                    DashboardDataDomain.Shift,
+                    action: "updated",
+                    entityId: SelectedShiftToEdit.Id,
+                    actorUserId: _currentUser.Id);
+
                 IsEditingShift = false;
                 System.Windows.MessageBox.Show("Shift updated successfully.", "Success");
                 NotifyShiftUpdated(SelectedShiftToEdit.Id);
@@ -176,6 +182,11 @@ namespace AttendanceShiftingManagement.ViewModels
 
                     _context.Shifts.Remove(SelectedShiftToEdit);
                     _context.SaveChanges();
+                    DashboardEventBus.Instance.Publish(
+                        DashboardDataDomain.Shift,
+                        action: "deleted",
+                        entityId: SelectedShiftToEdit.Id,
+                        actorUserId: _currentUser.Id);
 
                     IsEditingShift = false;
                     SelectedShiftToEdit = null;
@@ -254,6 +265,12 @@ namespace AttendanceShiftingManagement.ViewModels
                     {
                         _context.Shifts.AddRange(newShifts);
                         _context.SaveChanges();
+                        DashboardEventBus.Instance.Publish(
+                            DashboardDataDomain.Shift,
+                            action: "batch_created",
+                            entityId: null,
+                            actorUserId: _currentUser.Id);
+
                         NotifyNewShifts(newShifts);
                         System.Windows.MessageBox.Show($"Draft schedule generated with {newShifts.Count} shifts!", "Success");
                         LoadRoster();
@@ -303,6 +320,11 @@ namespace AttendanceShiftingManagement.ViewModels
                         _context.ShiftAssignments.RemoveRange(assignmentsToDelete);
                         _context.Shifts.RemoveRange(shiftsToDelete);
                         _context.SaveChanges();
+                        DashboardEventBus.Instance.Publish(
+                            DashboardDataDomain.Shift,
+                            action: "batch_cleared",
+                            entityId: null,
+                            actorUserId: _currentUser.Id);
 
                         System.Windows.MessageBox.Show("Weekly schedule cleared successfully.", "Success");
                         LoadRoster();

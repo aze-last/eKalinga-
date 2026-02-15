@@ -3,12 +3,13 @@ using AttendanceShiftingManagement.Helpers;
 using AttendanceShiftingManagement.Models;
 using AttendanceShiftingManagement.Services;
 using AttendanceShiftingManagement.Views;
-using System.Collections.ObjectModel;
-using System.Windows;
 using Microsoft.EntityFrameworkCore;
+using System.Collections.ObjectModel;
+using System.IO;
+using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using System.IO;
+using System.Windows.Threading;
 
 namespace AttendanceShiftingManagement.ViewModels
 {
@@ -20,9 +21,15 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _userDisplayName = "Admin";
 
         private int _totalEmployees;
+        private int _presentCount;
         private int _absentCount;
         private int _lateCount;
         private int _overtimeCount;
+        private int _pendingLeaveCount;
+        private int _shiftCoveragePercent;
+        private string _attendanceSummary = string.Empty;
+        private string _shiftCoverageSummary = string.Empty;
+        private string _lastMetricsRefresh = "--";
         private string _currentDateTime = DateTime.Now.ToString("dddd, MMMM dd, yyyy");
         private string _currentTime = DateTime.Now.ToString("hh:mm:ss tt");
 
@@ -30,6 +37,12 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             get => _totalEmployees;
             set => SetProperty(ref _totalEmployees, value);
+        }
+
+        public int PresentCount
+        {
+            get => _presentCount;
+            set => SetProperty(ref _presentCount, value);
         }
 
         public int AbsentCount
@@ -48,6 +61,36 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             get => _overtimeCount;
             set => SetProperty(ref _overtimeCount, value);
+        }
+
+        public int PendingLeaveCount
+        {
+            get => _pendingLeaveCount;
+            set => SetProperty(ref _pendingLeaveCount, value);
+        }
+
+        public int ShiftCoveragePercent
+        {
+            get => _shiftCoveragePercent;
+            set => SetProperty(ref _shiftCoveragePercent, value);
+        }
+
+        public string AttendanceSummary
+        {
+            get => _attendanceSummary;
+            set => SetProperty(ref _attendanceSummary, value);
+        }
+
+        public string ShiftCoverageSummary
+        {
+            get => _shiftCoverageSummary;
+            set => SetProperty(ref _shiftCoverageSummary, value);
+        }
+
+        public string LastMetricsRefresh
+        {
+            get => _lastMetricsRefresh;
+            set => SetProperty(ref _lastMetricsRefresh, value);
         }
 
         public string CurrentDateTime
@@ -81,9 +124,10 @@ namespace AttendanceShiftingManagement.ViewModels
             set => SetProperty(ref _currentView, value);
         }
 
-        public ObservableCollection<DashboardAlert> Alerts { get; set; } = new();
-        public ObservableCollection<RecentActivity> RecentActivities { get; set; } = new();
+        public ObservableCollection<DashboardAlert> Alerts { get; } = new();
+        public ObservableCollection<RecentActivity> RecentActivities { get; } = new();
         public ObservableCollection<AreaDistribution> AreaDistributions { get; } = new();
+
         private string _areaDistributionSummary = string.Empty;
         public string AreaDistributionSummary
         {
@@ -100,6 +144,7 @@ namespace AttendanceShiftingManagement.ViewModels
         public System.Windows.Input.ICommand ShowHolidaysCommand { get; }
         public System.Windows.Input.ICommand ShowPayrollCommand { get; }
         public System.Windows.Input.ICommand ShowPositionsCommand { get; }
+        public System.Windows.Input.ICommand ShowLeaveApprovalsCommand { get; }
         public System.Windows.Input.ICommand ShowProfileSettingsCommand { get; }
         public System.Windows.Input.ICommand ShowAttendanceStatusCommand { get; }
         public System.Windows.Input.ICommand OpenRoleSwitchCommand { get; }
@@ -108,6 +153,7 @@ namespace AttendanceShiftingManagement.ViewModels
         public bool CanManageUsers => _currentUser.Role == UserRole.Admin;
         public bool CanManagePayroll => _currentUser.Role == UserRole.Admin || _currentUser.Role == UserRole.HRStaff;
         public bool CanManageEmployees => _currentUser.Role == UserRole.Admin || _currentUser.Role == UserRole.HRStaff;
+        public bool CanManageLeaveApprovals => _currentUser.Role == UserRole.Admin || _currentUser.Role == UserRole.HRStaff;
         public string PortalTitle => _currentUser.Role == UserRole.HRStaff ? "HR Dashboard" : "Admin Dashboard";
         public bool CanUseRoleSwitch => RoleSwitchService.CanUseSwitcher(_currentUser);
         public bool CanReturnToAdmin => RoleSwitchService.CanReturnToAdmin;
@@ -121,16 +167,14 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             _currentUser = user;
             _context = new AppDbContext();
+            _currentView = new DashboardPage();
+
             LoadDashboardData();
             LoadUserSummary();
-
-            // Set default view
-            _currentView = new DashboardPage();
 
             GeneratePayrollCommand = new RelayCommand(_ => ExecuteShowPayroll());
             AddEmployeeCommand = new RelayCommand(ExecuteAddEmployee);
 
-            // Navigation Commands
             ShowDashboardCommand = new RelayCommand(_ => CurrentView = new DashboardPage());
             ShowUsersCommand = new RelayCommand(_ => ExecuteShowUsers());
             ShowEmployeesCommand = new RelayCommand(_ => ExecuteShowEmployees());
@@ -138,6 +182,7 @@ namespace AttendanceShiftingManagement.ViewModels
             ShowHolidaysCommand = new RelayCommand(_ => CurrentView = new HolidaysPage());
             ShowPayrollCommand = new RelayCommand(_ => ExecuteShowPayroll());
             ShowPositionsCommand = new RelayCommand(_ => CurrentView = new PositionsPage());
+            ShowLeaveApprovalsCommand = new RelayCommand(_ => ExecuteShowLeaveApprovals());
             ShowProfileSettingsCommand = new RelayCommand(_ =>
             {
                 var vm = new ProfileSettingsViewModel(_currentUser);
@@ -158,64 +203,210 @@ namespace AttendanceShiftingManagement.ViewModels
             OpenRoleSwitchCommand = new RelayCommand(_ => ExecuteOpenRoleSwitch());
             ReturnToAdminCommand = new RelayCommand(_ => ExecuteReturnToAdmin());
 
-            // Setup timer for clock
-            var timer = new System.Windows.Threading.DispatcherTimer();
-            timer.Interval = TimeSpan.FromSeconds(1);
-            timer.Tick += (s, e) =>
+            WeakEventManager<DashboardEventBus, DashboardDataChangedEventArgs>.AddHandler(
+                DashboardEventBus.Instance,
+                nameof(DashboardEventBus.DashboardDataChanged),
+                OnDashboardDataChanged);
+
+            var timer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(1)
+            };
+            timer.Tick += (_, _) =>
             {
                 CurrentTime = DateTime.Now.ToString("hh:mm:ss tt");
                 if (DateTime.Now.Second == 0)
+                {
                     CurrentDateTime = DateTime.Now.ToString("dddd, MMMM dd, yyyy");
+                }
             };
             timer.Start();
+        }
+
+        private void OnDashboardDataChanged(object? sender, DashboardDataChangedEventArgs args)
+        {
+            if (!IsDashboardRelevant(args.Domain))
+            {
+                return;
+            }
+
+            var dispatcher = Application.Current?.Dispatcher;
+            if (dispatcher == null || dispatcher.CheckAccess())
+            {
+                LoadDashboardData();
+                return;
+            }
+
+            _ = dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(LoadDashboardData));
+        }
+
+        private static bool IsDashboardRelevant(DashboardDataDomain domain)
+        {
+            return domain is DashboardDataDomain.Attendance
+                or DashboardDataDomain.Employee
+                or DashboardDataDomain.Leave
+                or DashboardDataDomain.Payroll
+                or DashboardDataDomain.Shift;
         }
 
         private void LoadDashboardData()
         {
             try
             {
-                TotalEmployees = _context.Employees.Count();
+                _context.ChangeTracker.Clear();
+
+                var now = DateTime.Now;
+                var today = now.Date;
+                var tomorrow = today.AddDays(1);
+
+                TotalEmployees = _context.Employees
+                    .AsNoTracking()
+                    .Count(e => e.Status == EmployeeStatus.Active);
 
                 var statusService = new AttendanceStatusService(_context);
-                var statuses = statusService.GetTodayStatuses(DateTime.Now);
+                var statuses = statusService.GetTodayStatuses(now);
 
                 AbsentCount = statuses.Count(s => s.Status == "Absent");
                 LateCount = statuses.Count(s => s.Status == "Late");
                 OvertimeCount = statuses.Count(s => s.Status == "Overtime");
+                PresentCount = statuses.Count(s => s.Status is "On Time" or "Late" or "Overtime" or "Early Leave");
+                AttendanceSummary = $"{PresentCount} present | {AbsentCount} absent | {LateCount} late";
 
-                Alerts.Clear();
-                Alerts.Add(new DashboardAlert { Message = "3 Employees haven't timed in yet" });
-                Alerts.Add(new DashboardAlert { Message = "Overtime limit reached for Kitchen staff" });
+                PendingLeaveCount = _context.LeaveRequests
+                    .AsNoTracking()
+                    .Count(lr => lr.Status == LeaveStatus.Pending);
 
-                RecentActivities.Clear();
-                var employees = _context.Employees.Take(5).ToList();
-                foreach (var emp in employees)
-                {
-                    RecentActivities.Add(new RecentActivity
-                    {
-                        Name = emp.FullName,
-                        Time = DateTime.Now.AddMinutes(-new Random().Next(10, 60)),
-                        Status = "Present",
-                        StatusColor = "#43A047"
-                    });
-                }
+                var assignedEmployeesToday = _context.ShiftAssignments
+                    .AsNoTracking()
+                    .Where(sa =>
+                        sa.Shift.ShiftDate >= today &&
+                        sa.Shift.ShiftDate < tomorrow &&
+                        sa.Employee.Status == EmployeeStatus.Active)
+                    .Select(sa => sa.EmployeeId)
+                    .Distinct()
+                    .Count();
 
+                ShiftCoveragePercent = TotalEmployees == 0
+                    ? 0
+                    : (int)Math.Round((double)assignedEmployeesToday / TotalEmployees * 100, MidpointRounding.AwayFromZero);
+
+                var unassigned = Math.Max(0, TotalEmployees - assignedEmployeesToday);
+                ShiftCoverageSummary = $"{assignedEmployeesToday}/{TotalEmployees} assigned | {unassigned} unassigned";
+
+                BuildAlerts(unassigned);
+                LoadRecentActivities(today);
                 LoadAreaDistribution();
+
+                LastMetricsRefresh = DateTime.Now.ToString("hh:mm:ss tt");
             }
             catch (Exception)
             {
-                // Fallback for demo
-                TotalEmployees = 15;
-                AbsentCount = 2;
-                LateCount = 3;
-                OvertimeCount = 8;
+                TotalEmployees = 0;
+                PresentCount = 0;
+                AbsentCount = 0;
+                LateCount = 0;
+                OvertimeCount = 0;
+                PendingLeaveCount = 0;
+                ShiftCoveragePercent = 0;
+                AttendanceSummary = "No data";
+                ShiftCoverageSummary = "No data";
+                LastMetricsRefresh = "--";
+
+                Alerts.Clear();
+                Alerts.Add(new DashboardAlert { Message = "Unable to load dashboard metrics. Check database connection." });
+                RecentActivities.Clear();
+                AreaDistributions.Clear();
+                AreaDistributionSummary = string.Empty;
+            }
+        }
+
+        private void BuildAlerts(int unassignedEmployees)
+        {
+            Alerts.Clear();
+
+            if (PendingLeaveCount > 0)
+            {
+                Alerts.Add(new DashboardAlert { Message = $"{PendingLeaveCount} pending leave request(s) waiting for review." });
+            }
+
+            if (AbsentCount > 0)
+            {
+                Alerts.Add(new DashboardAlert { Message = $"{AbsentCount} employee(s) currently marked absent." });
+            }
+
+            if (LateCount > 0)
+            {
+                Alerts.Add(new DashboardAlert { Message = $"{LateCount} employee(s) arrived late today." });
+            }
+
+            if (unassignedEmployees > 0)
+            {
+                Alerts.Add(new DashboardAlert { Message = $"{unassignedEmployees} active employee(s) have no shift assignment today." });
+            }
+
+            if (Alerts.Count == 0)
+            {
+                Alerts.Add(new DashboardAlert { Message = "No critical alerts right now." });
+            }
+        }
+
+        private void LoadRecentActivities(DateTime today)
+        {
+            RecentActivities.Clear();
+
+            var activities = _context.Attendances
+                .AsNoTracking()
+                .Include(a => a.Employee)
+                .Where(a =>
+                    a.TimeIn.HasValue &&
+                    a.TimeIn.Value >= today &&
+                    a.TimeIn.Value < today.AddDays(1))
+                .OrderByDescending(a => a.TimeIn)
+                .Take(5)
+                .ToList();
+
+            foreach (var attendance in activities)
+            {
+                var status = attendance.Status == AttendanceStatus.Open
+                    ? "On Duty"
+                    : attendance.OvertimeHours > 0
+                        ? "Overtime"
+                        : "Closed";
+
+                var statusColor = status switch
+                {
+                    "On Duty" => "#10B981",
+                    "Overtime" => "#7C3AED",
+                    _ => "#64748B"
+                };
+
+                RecentActivities.Add(new RecentActivity
+                {
+                    Name = attendance.Employee?.FullName ?? $"Employee #{attendance.EmployeeId}",
+                    Time = attendance.TimeIn ?? DateTime.Now,
+                    Status = status,
+                    StatusColor = statusColor
+                });
+            }
+
+            if (RecentActivities.Count == 0)
+            {
+                RecentActivities.Add(new RecentActivity
+                {
+                    Name = "No time-ins yet",
+                    Time = DateTime.Now,
+                    Status = "Pending",
+                    StatusColor = "#64748B"
+                });
             }
         }
 
         private void LoadAreaDistribution()
         {
             AreaDistributions.Clear();
+
             var employees = _context.Employees
+                .AsNoTracking()
                 .Include(e => e.Position)
                 .Where(e => e.Status == EmployeeStatus.Active)
                 .ToList();
@@ -305,6 +496,21 @@ namespace AttendanceShiftingManagement.ViewModels
             CurrentView = new PayrollPage(_currentUser.Id);
         }
 
+        private void ExecuteShowLeaveApprovals()
+        {
+            if (!CanManageLeaveApprovals)
+            {
+                MessageBox.Show("You are not allowed to review leave requests.", "Access Denied",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            CurrentView = new LeaveApprovalPage
+            {
+                DataContext = new LeaveApprovalViewModel(_currentUser.Id)
+            };
+        }
+
         private void ExecuteOpenRoleSwitch()
         {
             if (!RoleSwitchService.IsEnabled)
@@ -365,7 +571,9 @@ namespace AttendanceShiftingManagement.ViewModels
         private ImageSource? BuildImage(string? path)
         {
             if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+            {
                 return null;
+            }
 
             using var stream = File.OpenRead(path);
             var image = new BitmapImage();

@@ -69,6 +69,12 @@ namespace AttendanceShiftingManagement.Services
                 "Attendance",
                 attendance.Id,
                 $"Employee {employeeId} clocked in at {attendance.TimeIn:yyyy-MM-dd HH:mm:ss}.");
+
+            DashboardEventBus.Instance.Publish(
+                DashboardDataDomain.Attendance,
+                action: "time_in",
+                entityId: attendance.Id,
+                actorUserId: userId);
         }
 
         public void TimeOut(int employeeId, DateTime? nowOverride = null)
@@ -114,6 +120,12 @@ namespace AttendanceShiftingManagement.Services
                 "Attendance",
                 attendance.Id,
                 $"Employee {employeeId} clocked out at {attendance.TimeOut:yyyy-MM-dd HH:mm:ss}. TotalHours={attendance.TotalHours:N2}, Overtime={attendance.OvertimeHours:N2}.");
+
+            DashboardEventBus.Instance.Publish(
+                DashboardDataDomain.Attendance,
+                action: "time_out",
+                entityId: attendance.Id,
+                actorUserId: userId);
         }
 
         public List<Attendance> GetRecentAttendance(int employeeId, int count)

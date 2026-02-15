@@ -1,6 +1,7 @@
 using AttendanceShiftingManagement.Data;
 using AttendanceShiftingManagement.Helpers;
 using AttendanceShiftingManagement.Models;
+using AttendanceShiftingManagement.Services;
 using AttendanceShiftingManagement.Views;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.ObjectModel;
@@ -247,6 +248,12 @@ namespace AttendanceShiftingManagement.ViewModels
                 {
                     _context.Employees.Remove(employee);
                     _context.SaveChanges();
+                    DashboardEventBus.Instance.Publish(
+                        DashboardDataDomain.Employee,
+                        action: "deleted",
+                        entityId: employee.Id,
+                        actorUserId: _currentUser.Id);
+
                     LoadPositions();
                     BuildPositionFilters();
                     LoadEmployees();

@@ -73,7 +73,7 @@
                 <DockPanel>
                 <StackPanel>
                     <TextBlock Text="{Binding PortalTitle}" Style="{StaticResource MaterialDesignHeadline4TextBlock}" FontWeight="Bold" Foreground="White"/>
-                    <TextBlock Text="McDonald's Branch #1024 - Management Overview" Foreground="#FFE9D5" FontSize="16"/>
+                    <TextBlock Text="McDonald's Branch #1024 - Phase 1 Workforce Snapshot" Foreground="#FFE9D5" FontSize="16"/>
                 </StackPanel>
 
                 <StackPanel DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Center">
@@ -81,6 +81,10 @@
                                HorizontalAlignment="Right" Foreground="White"/>
                     <TextBlock Text="{Binding CurrentTime}" 
                                HorizontalAlignment="Right" FontWeight="Bold" Foreground="White"/>
+                    <TextBlock Text="{Binding LastMetricsRefresh, StringFormat='Last data update: {0}'}"
+                               HorizontalAlignment="Right" Foreground="#FFE9D5" FontSize="12" Margin="0,4,0,0"/>
+                    <TextBlock Text="Realtime mode: event-driven"
+                               HorizontalAlignment="Right" Foreground="#FFE9D5" FontSize="12"/>
                 </StackPanel>
                 </DockPanel>
             </Border>
@@ -92,27 +96,29 @@
                         <StackPanel HorizontalAlignment="Left">
                             <materialDesign:PackIcon Kind="AccountGroup" Width="36" Height="36" Foreground="{StaticResource BrandYellowBrush}"/>
                             <TextBlock Text="{Binding TotalEmployees}" FontSize="26" FontWeight="Bold" Foreground="White" Margin="0,6,0,0"/>
-                            <TextBlock Text="TOTAL EMPLOYEES" FontSize="13" Foreground="White" Margin="0,4,0,0"/>
+                            <TextBlock Text="ACTIVE EMPLOYEES" FontSize="13" Foreground="White" Margin="0,4,0,0"/>
                         </StackPanel>
                     </Button>
                 </materialDesign:Card>
 
                 <materialDesign:Card Margin="8" Background="{StaticResource BrandRedBrush}" Padding="16" materialDesign:ElevationAssist.Elevation="Dp3" MinHeight="130">
-                    <Button Command="{Binding ShowAttendanceStatusCommand}" CommandParameter="Absent" Style="{StaticResource StatCardButton}">
+                    <Button Command="{Binding ShowAttendanceStatusCommand}" CommandParameter="All" Style="{StaticResource StatCardButton}">
                         <StackPanel HorizontalAlignment="Left">
-                            <materialDesign:PackIcon Kind="AccountOff" Width="36" Height="36" Foreground="White"/>
-                            <TextBlock Text="{Binding AbsentCount}" FontSize="26" FontWeight="Bold" Foreground="White" Margin="0,6,0,0"/>
-                            <TextBlock Text="ABSENT TODAY" FontSize="13" Foreground="White" Margin="0,4,0,0"/>
+                            <materialDesign:PackIcon Kind="AccountCheck" Width="36" Height="36" Foreground="White"/>
+                            <TextBlock Text="{Binding PresentCount}" FontSize="26" FontWeight="Bold" Foreground="White" Margin="0,6,0,0"/>
+                            <TextBlock Text="PRESENT TODAY" FontSize="13" Foreground="White" Margin="0,4,0,0"/>
+                            <TextBlock Text="{Binding AttendanceSummary}" FontSize="11" Foreground="#FFE9D5" Margin="0,2,0,0"/>
                         </StackPanel>
                     </Button>
                 </materialDesign:Card>
 
                 <materialDesign:Card Margin="8" Background="{StaticResource BrandYellowBrush}" Padding="16" materialDesign:ElevationAssist.Elevation="Dp3" MinHeight="130">
-                    <Button Command="{Binding ShowAttendanceStatusCommand}" CommandParameter="Late" Style="{StaticResource StatCardButton}">
+                    <Button Command="{Binding ShowLeaveApprovalsCommand}" Style="{StaticResource StatCardButton}">
                         <StackPanel HorizontalAlignment="Left">
-                            <materialDesign:PackIcon Kind="ClockAlert" Width="36" Height="36" Foreground="#27251F"/>
-                            <TextBlock Text="{Binding LateCount}" FontSize="26" FontWeight="Bold" Foreground="#27251F" Margin="0,6,0,0"/>
-                            <TextBlock Text="LATE ARRIVALS" FontSize="13" Foreground="#27251F" Margin="0,4,0,0"/>
+                            <materialDesign:PackIcon Kind="CalendarClock" Width="36" Height="36" Foreground="#27251F"/>
+                            <TextBlock Text="{Binding PendingLeaveCount}" FontSize="26" FontWeight="Bold" Foreground="#27251F" Margin="0,6,0,0"/>
+                            <TextBlock Text="PENDING LEAVE" FontSize="13" Foreground="#27251F" Margin="0,4,0,0"/>
+                            <TextBlock Text="Click to review approvals" FontSize="11" Foreground="#27251F" Margin="0,2,0,0"/>
                         </StackPanel>
                     </Button>
                 </materialDesign:Card>
@@ -120,9 +126,10 @@
                 <materialDesign:Card Margin="8" Background="#27251F" Padding="16" materialDesign:ElevationAssist.Elevation="Dp3" MinHeight="130">
                     <Button Command="{Binding ShowAttendanceStatusCommand}" CommandParameter="Overtime" Style="{StaticResource StatCardButton}">
                         <StackPanel HorizontalAlignment="Left">
-                            <materialDesign:PackIcon Kind="TimerPlus" Width="36" Height="36" Foreground="White"/>
-                            <TextBlock Text="{Binding OvertimeCount}" FontSize="26" FontWeight="Bold" Foreground="White" Margin="0,6,0,0"/>
-                            <TextBlock Text="OVERTIME HOURS" FontSize="13" Foreground="White" Margin="0,4,0,0"/>
+                            <materialDesign:PackIcon Kind="AccountGroupOutline" Width="36" Height="36" Foreground="White"/>
+                            <TextBlock Text="{Binding ShiftCoveragePercent, StringFormat='{}{0}%'}" FontSize="26" FontWeight="Bold" Foreground="White" Margin="0,6,0,0"/>
+                            <TextBlock Text="SHIFT COVERAGE" FontSize="13" Foreground="White" Margin="0,4,0,0"/>
+                            <TextBlock Text="{Binding ShiftCoverageSummary}" FontSize="11" Foreground="#D1D5DB" Margin="0,2,0,0"/>
                         </StackPanel>
                     </Button>
                 </materialDesign:Card>
@@ -221,11 +228,18 @@
                                     <TextBlock Text="GENERATE PAYROLL" FontSize="15" FontWeight="SemiBold" Foreground="White" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
-                            <Button Style="{StaticResource MaterialDesignOutlinedButton}" Command="{Binding AddEmployeeCommand}" Margin="0,0,0,0"
+                            <Button Style="{StaticResource MaterialDesignOutlinedButton}" Command="{Binding AddEmployeeCommand}" Margin="0,0,0,10"
                                     Height="44" Padding="16,0" BorderBrush="{StaticResource BrandYellowBrush}">
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                     <materialDesign:PackIcon Kind="AccountPlus" Width="22" Height="22" Margin="0,0,10,0" Foreground="{StaticResource BrandYellowBrush}" VerticalAlignment="Center"/>
                                     <TextBlock Text="ADD NEW EMPLOYEE" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource BrandYellowBrush}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource MaterialDesignOutlinedButton}" Command="{Binding ShowLeaveApprovalsCommand}"
+                                    Height="44" Padding="16,0" BorderBrush="{StaticResource BrandRedBrush}" Foreground="{StaticResource BrandRedBrush}">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <materialDesign:PackIcon Kind="CalendarClock" Width="22" Height="22" Margin="0,0,10,0" Foreground="{StaticResource BrandRedBrush}" VerticalAlignment="Center"/>
+                                    <TextBlock Text="REVIEW LEAVES" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource BrandRedBrush}" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
                         </StackPanel>
@@ -233,7 +247,7 @@
 
                     <materialDesign:Card Padding="16" Margin="8" materialDesign:ElevationAssist.Elevation="Dp2">
                         <StackPanel>
-                            <TextBlock Text="Recent Time-ins" Style="{StaticResource MaterialDesignHeadline6TextBlock}" Margin="0,0,0,12"/>
+                            <TextBlock Text="Recent Attendance Events" Style="{StaticResource MaterialDesignHeadline6TextBlock}" Margin="0,0,0,12"/>
                             <DataGrid ItemsSource="{Binding RecentActivities}" AutoGenerateColumns="False" IsReadOnly="True" Background="Transparent" 
                                       HeadersVisibility="Column" GridLinesVisibility="None" materialDesign:DataGridAssist.CellPadding="12 8 8 8">
                                 <DataGrid.Columns>

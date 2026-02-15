@@ -135,6 +135,12 @@ namespace AttendanceShiftingManagement.Services
                 "Payroll",
                 null,
                 $"Saved payroll for {items.Count} employees ({startDate:yyyy-MM-dd} to {endDate:yyyy-MM-dd}), NetTotal={items.Sum(i => i.NetPay):N2}.");
+
+            DashboardEventBus.Instance.Publish(
+                DashboardDataDomain.Payroll,
+                action: "saved",
+                entityId: null,
+                actorUserId: generatedByUserId);
         }
         public PayrollItem GetEmployeeEarningsEstimate(int employeeId, DateTime startDate, DateTime endDate)
         {
