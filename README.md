@@ -40,3 +40,14 @@ Use either option:
 - Final docs:
   - `docs/PHASE3-QA-DEPLOYMENT.md`
   - `docs/PHASE3-DEFENSE-CHECKLIST.md`
+
+## Demo Role Switch (New)
+- Purpose: avoid repeated logout/login during adviser demo.
+- Enabled via `AppSettings:EnableDemoRoleSwitch` in `appsettings.json`.
+- Admin can use `Switch Role` from `MainWindow` sidebar.
+- When impersonating, `Return Admin` appears:
+  - in `MainWindow` for HR impersonation,
+  - in `ManagerMainWindow` and `CrewMainWindow` for manager/crew impersonation.
+- Audit events recorded:
+  - `ImpersonationStart`
+  - `ImpersonationEnd`

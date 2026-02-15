@@ -1,4 +1,5 @@
 using AttendanceShiftingManagement.Models;
+using AttendanceShiftingManagement.Services;
 using System.Windows;
 
 namespace AttendanceShiftingManagement.Views
@@ -11,6 +12,7 @@ namespace AttendanceShiftingManagement.Views
             var vm = new AttendanceShiftingManagement.ViewModels.CrewMainViewModel(user);
             vm.ShowSuccessRequest += ShowSuccess;
             this.DataContext = vm;
+            ReturnAdminButton.Visibility = RoleSwitchService.CanReturnToAdmin ? Visibility.Visible : Visibility.Collapsed;
         }
 
         public void ShowSuccess()
@@ -25,9 +27,15 @@ namespace AttendanceShiftingManagement.Views
 
         private void Logout_Click(object sender, RoutedEventArgs e)
         {
+            RoleSwitchService.HandleLogout();
             var loginWindow = new LoginWindow();
             loginWindow.Show();
             this.Close();
+        }
+
+        private void ReturnToAdmin_Click(object sender, RoutedEventArgs e)
+        {
+            RoleSwitchService.ReturnToAdmin(this);
         }
     }
 }

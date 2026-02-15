@@ -80,6 +80,16 @@
 
             <Border Grid.Row="0" Background="White" Padding="24,0" materialDesign:ElevationAssist.Elevation="Dp2">
                 <DockPanel VerticalAlignment="Center">
+                    <Button Content="Return to Admin"
+                            DockPanel.Dock="Right"
+                            x:Name="ReturnAdminButton"
+                            AutomationProperties.Name="Return to Admin"
+                            Visibility="Collapsed"
+                            Style="{StaticResource MaterialDesignOutlinedButton}"
+                            Foreground="{StaticResource BrandRedBrush}"
+                            BorderBrush="{StaticResource BrandRedBrush}"
+                            Padding="10,4"
+                            Click="ReturnToAdmin_Click"/>
                     <StackPanel HorizontalAlignment="Left">
                         <TextBlock Text="{Binding UserDisplayName}" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="16"/>
                         <Button Content="Menu"

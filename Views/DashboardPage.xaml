@@ -72,7 +72,7 @@
             <Border Grid.Row="0" Margin="0,0,0,24" Background="{StaticResource DashboardHeaderBrush}" CornerRadius="12" Padding="16">
                 <DockPanel>
                 <StackPanel>
-                    <TextBlock Text="Admin Dashboard" Style="{StaticResource MaterialDesignHeadline4TextBlock}" FontWeight="Bold" Foreground="White"/>
+                    <TextBlock Text="{Binding PortalTitle}" Style="{StaticResource MaterialDesignHeadline4TextBlock}" FontWeight="Bold" Foreground="White"/>
                     <TextBlock Text="McDonald's Branch #1024 - Management Overview" Foreground="#FFE9D5" FontSize="16"/>
                 </StackPanel>
 

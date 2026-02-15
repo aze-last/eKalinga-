@@ -102,11 +102,20 @@ namespace AttendanceShiftingManagement.ViewModels
         public System.Windows.Input.ICommand ShowPositionsCommand { get; }
         public System.Windows.Input.ICommand ShowProfileSettingsCommand { get; }
         public System.Windows.Input.ICommand ShowAttendanceStatusCommand { get; }
+        public System.Windows.Input.ICommand OpenRoleSwitchCommand { get; }
+        public System.Windows.Input.ICommand ReturnToAdminCommand { get; }
 
         public bool CanManageUsers => _currentUser.Role == UserRole.Admin;
         public bool CanManagePayroll => _currentUser.Role == UserRole.Admin || _currentUser.Role == UserRole.HRStaff;
         public bool CanManageEmployees => _currentUser.Role == UserRole.Admin || _currentUser.Role == UserRole.HRStaff;
         public string PortalTitle => _currentUser.Role == UserRole.HRStaff ? "HR Dashboard" : "Admin Dashboard";
+        public bool CanUseRoleSwitch => RoleSwitchService.CanUseSwitcher(_currentUser);
+        public bool CanReturnToAdmin => RoleSwitchService.CanReturnToAdmin;
+        public bool IsImpersonating => SessionContext.IsImpersonating;
+        public string ImpersonationBannerText =>
+            SessionContext.IsImpersonating && SessionContext.LoginUser != null
+                ? $"Demo Mode: Viewing as {_currentUser.Role} ({_currentUser.Email}). Original Admin: {SessionContext.LoginUser.Email}"
+                : string.Empty;
 
         public AdminDashboardViewModel(User user)
         {
@@ -146,6 +155,8 @@ namespace AttendanceShiftingManagement.ViewModels
                     DataContext = new AttendanceLogsViewModel(filter)
                 };
             });
+            OpenRoleSwitchCommand = new RelayCommand(_ => ExecuteOpenRoleSwitch());
+            ReturnToAdminCommand = new RelayCommand(_ => ExecuteReturnToAdmin());
 
             // Setup timer for clock
             var timer = new System.Windows.Threading.DispatcherTimer();
@@ -292,6 +303,51 @@ namespace AttendanceShiftingManagement.ViewModels
             }
 
             CurrentView = new PayrollPage(_currentUser.Id);
+        }
+
+        private void ExecuteOpenRoleSwitch()
+        {
+            if (!RoleSwitchService.IsEnabled)
+            {
+                MessageBox.Show("Demo role switch is disabled. Set AppSettings:EnableDemoRoleSwitch=true.", "Feature Disabled",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            if (!CanUseRoleSwitch)
+            {
+                MessageBox.Show("Only Admin can switch roles.", "Access Denied",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var owner = Application.Current.Windows
+                .OfType<Window>()
+                .FirstOrDefault(w => w is MainWindow && w.DataContext == this);
+
+            var dialog = new RoleSwitchWindow(_currentUser)
+            {
+                Owner = owner
+            };
+
+            if (dialog.ShowDialog() == true && dialog.SelectedUserId.HasValue)
+            {
+                RoleSwitchService.SwitchToUser(dialog.SelectedUserId.Value, owner, _currentUser);
+            }
+        }
+
+        private void ExecuteReturnToAdmin()
+        {
+            if (!CanReturnToAdmin)
+            {
+                return;
+            }
+
+            var owner = Application.Current.Windows
+                .OfType<Window>()
+                .FirstOrDefault(w => w is MainWindow && w.DataContext == this);
+
+            RoleSwitchService.ReturnToAdmin(owner);
         }
 
         private void LoadUserSummary()

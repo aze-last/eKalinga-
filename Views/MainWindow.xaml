@@ -113,6 +113,34 @@
                         </StackPanel>
                     </Button>
 
+                    <Button x:Name="SwitchRoleButton"
+                            Style="{StaticResource MaterialDesignFlatButton}"
+                            Foreground="White" Height="50" FontSize="18"
+                            Click="SwitchRole_Click">
+                        <AutomationProperties.Name>Switch Role</AutomationProperties.Name>
+                        <Button.Visibility>
+                            <Binding Path="CanUseRoleSwitch" Converter="{StaticResource BooleanToVisibilityConverter}"/>
+                        </Button.Visibility>
+                        <StackPanel Orientation="Horizontal" Width="180">
+                            <materialDesign:PackIcon Kind="AccountSwitch" Margin="0,0,16,0"/>
+                            <TextBlock Text="Switch Role"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button x:Name="ReturnAdminButton"
+                            Style="{StaticResource MaterialDesignFlatButton}"
+                            Foreground="{StaticResource BrandYellowBrush}" Height="50" FontSize="18"
+                            Click="ReturnToAdmin_Click">
+                        <AutomationProperties.Name>Return to Admin</AutomationProperties.Name>
+                        <Button.Visibility>
+                            <Binding Path="CanReturnToAdmin" Converter="{StaticResource BooleanToVisibilityConverter}"/>
+                        </Button.Visibility>
+                        <StackPanel Orientation="Horizontal" Width="180">
+                            <materialDesign:PackIcon Kind="ArrowLeftCircle" Margin="0,0,16,0"/>
+                            <TextBlock Text="Return Admin"/>
+                        </StackPanel>
+                    </Button>
+
                 </StackPanel>
 
                 <!-- Logout -->
@@ -128,7 +156,25 @@
 
         <!-- Main Content -->
         <Grid Grid.Column="1">
-            <ContentControl Content="{Binding CurrentView}" />
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0"
+                    Margin="12,12,12,0"
+                    Padding="12,8"
+                    CornerRadius="8"
+                    Background="#FFF4E5"
+                    BorderBrush="#F59E0B"
+                    BorderThickness="1"
+                    Visibility="{Binding IsImpersonating, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <TextBlock Text="{Binding ImpersonationBannerText}"
+                           Foreground="#92400E"
+                           FontWeight="SemiBold"/>
+            </Border>
+
+            <ContentControl Grid.Row="1" Content="{Binding CurrentView}" />
         </Grid>
     </Grid>
 </Window>

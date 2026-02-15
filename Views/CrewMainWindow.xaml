@@ -79,6 +79,18 @@
         </Border>
 
         <Grid Grid.Column="1">
+            <Button x:Name="ReturnAdminButton"
+                    Content="Return to Admin"
+                    AutomationProperties.Name="Return to Admin"
+                    Visibility="Collapsed"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Top"
+                    Margin="0,16,16,0"
+                    Panel.ZIndex="200"
+                    Style="{StaticResource MaterialDesignOutlinedButton}"
+                    Foreground="#DA291C"
+                    BorderBrush="#DA291C"
+                    Click="ReturnToAdmin_Click"/>
             <ContentControl Content="{Binding CurrentView}" />
             
             <Grid x:Name="DialogOverlay" Visibility="Collapsed">

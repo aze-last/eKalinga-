@@ -53,6 +53,8 @@ namespace AttendanceShiftingManagement.ViewModels
 
             if (user != null)
             {
+                SessionContext.Start(user);
+
                 Window dashboardWindow = user.Role switch
                 {
                     UserRole.Manager => new Views.ManagerMainWindow(user),
