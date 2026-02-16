@@ -86,11 +86,15 @@
                 <ComboBox Grid.Column="2"
                           ItemsSource="{Binding Sources}"
                           SelectedItem="{Binding SelectedSource}"
+                          AutomationProperties.Name="Candidate Source"
+                          materialDesign:HintAssist.Hint="Source"
                           Style="{StaticResource MaterialDesignOutlinedComboBox}"
                           Margin="0,0,8,0"/>
 
                 <DatePicker Grid.Column="3"
                             SelectedDate="{Binding AppliedAt}"
+                            AutomationProperties.Name="Applied Date"
+                            materialDesign:HintAssist.Hint="Applied Date"
                             Style="{StaticResource MaterialDesignOutlinedDatePicker}"
                             Margin="0,0,8,0"/>
 
@@ -188,6 +192,8 @@
                               ItemsSource="{Binding SourceFilterOptions}"
                               SelectedItem="{Binding SelectedSourceFilter}"
                               DisplayMemberPath="Label"
+                              AutomationProperties.Name="Source Filter"
+                              materialDesign:HintAssist.Hint="Filter Source"
                               Style="{StaticResource MaterialDesignOutlinedComboBox}"/>
 
                     <ComboBox Width="180"
@@ -195,6 +201,8 @@
                               ItemsSource="{Binding StageFilterOptions}"
                               SelectedItem="{Binding SelectedStageFilter}"
                               DisplayMemberPath="Label"
+                              AutomationProperties.Name="Stage Filter"
+                              materialDesign:HintAssist.Hint="Filter Stage"
                               Style="{StaticResource MaterialDesignOutlinedComboBox}"/>
                 </StackPanel>
 

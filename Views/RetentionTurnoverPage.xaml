@@ -162,12 +162,16 @@
                           ItemsSource="{Binding ActiveEmployees}"
                           DisplayMemberPath="FullName"
                           SelectedItem="{Binding SelectedEmployee}"
+                          AutomationProperties.Name="Employee Selector"
+                          materialDesign:HintAssist.Hint="Employee"
                           Style="{StaticResource MaterialDesignOutlinedComboBox}"
                           Margin="0,0,8,0"/>
 
                 <ComboBox Grid.Column="1"
                           ItemsSource="{Binding ExitTypes}"
                           SelectedItem="{Binding SelectedExitType}"
+                          AutomationProperties.Name="Exit Type"
+                          materialDesign:HintAssist.Hint="Exit Type"
                           Style="{StaticResource MaterialDesignOutlinedComboBox}"
                           Margin="0,0,8,0"/>
 
@@ -179,6 +183,8 @@
 
                 <DatePicker Grid.Column="3"
                             SelectedDate="{Binding LastWorkingDate}"
+                            AutomationProperties.Name="Last Working Date"
+                            materialDesign:HintAssist.Hint="Last Working Date"
                             Style="{StaticResource MaterialDesignOutlinedDatePicker}"
                             Margin="0,0,8,0"/>
 
@@ -221,12 +227,16 @@
                               ItemsSource="{Binding DepartmentFilterOptions}"
                               SelectedItem="{Binding SelectedDepartmentFilter}"
                               DisplayMemberPath="Label"
+                              AutomationProperties.Name="Department Filter"
+                              materialDesign:HintAssist.Hint="Filter Department"
                               Style="{StaticResource MaterialDesignOutlinedComboBox}"/>
                     <ComboBox Width="170"
                               Margin="10,0,0,0"
                               ItemsSource="{Binding RecorderFilterOptions}"
                               SelectedItem="{Binding SelectedRecorderFilter}"
                               DisplayMemberPath="Label"
+                              AutomationProperties.Name="Recorder Filter"
+                              materialDesign:HintAssist.Hint="Filter Recorder"
                               Style="{StaticResource MaterialDesignOutlinedComboBox}"/>
                     <TextBlock Text="{Binding TurnoverRatePercent, StringFormat='Turnover rate: {0}'}"
                                VerticalAlignment="Center"

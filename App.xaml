@@ -25,6 +25,12 @@
             <SolidColorBrush x:Key="BrandYellowBrush" Color="#FFC72C"/>
             <SolidColorBrush x:Key="BrandRedBrush" Color="#DA291C"/>
             <SolidColorBrush x:Key="BrandSurfaceBrush" Color="#F5F5F5"/>
+            <Style x:Key="MaterialDesignFlatButton"
+                   TargetType="Button"
+                   BasedOn="{StaticResource MaterialDesignOutlinedButton}">
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="BorderThickness" Value="0"/>
+            </Style>
             <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
         </ResourceDictionary>
     </Application.Resources>

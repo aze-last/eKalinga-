@@ -18,11 +18,24 @@ namespace AttendanceShiftingManagement.Services
 
         public User? Login(string usernameOrEmail, string password)
         {
+            if (string.IsNullOrWhiteSpace(usernameOrEmail) || string.IsNullOrWhiteSpace(password))
+            {
+                _auditService.LogActivity(
+                    null,
+                    "LoginFailed",
+                    "User",
+                    null,
+                    "Failed login attempt due to empty username/email or password.");
+                return null;
+            }
+
+            var normalizedInput = usernameOrEmail.Trim();
+
             var user = _context.Users
                 .Include(u => u.Employee)
-                    .ThenInclude(e => e.Position)
+                    .ThenInclude(e => e!.Position)
                 .FirstOrDefault(u =>
-                    (u.Username == usernameOrEmail || u.Email == usernameOrEmail)
+                    (u.Username == normalizedInput || u.Email == normalizedInput)
                     && u.IsActive);
 
             if (user == null)
@@ -32,7 +45,7 @@ namespace AttendanceShiftingManagement.Services
                     "LoginFailed",
                     "User",
                     null,
-                    $"Failed login attempt for '{usernameOrEmail}'.");
+                    $"Failed login attempt for '{normalizedInput}'.");
                 return null;
             }
 
@@ -62,7 +75,7 @@ namespace AttendanceShiftingManagement.Services
         {
             return _context.Users
                 .Include(u => u.Employee)
-                    .ThenInclude(e => e.Position)
+                    .ThenInclude(e => e!.Position)
                 .FirstOrDefault(u => u.Id == userId);
         }
     }
