@@ -544,41 +544,27 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private void ExecuteOpenPerformanceMetrics()
         {
-            CurrentView = new AttendanceLogsPage
-            {
-                DataContext = new AttendanceLogsViewModel("All")
-            };
+            CurrentView = new PerformanceMetricsPage(_currentUser.Id);
         }
 
         private void ExecuteOpenEngagementMetrics()
         {
-            ExecuteShowLeaveApprovals();
+            CurrentView = new EngagementWellbeingPage(_currentUser.Id);
         }
 
         private void ExecuteOpenDeiMetrics()
         {
-            CurrentView = new HRMetricPlaceholderPage(
-                "Diversity, Equity & Inclusion",
-                "Track representation, fairness, and equitable outcomes across the workforce in a single HR view.",
-                new[]
-                {
-                    "Representation by role, area, and employment status.",
-                    "Promotion rate comparisons per demographic segment.",
-                    "Pay equity audit checkpoints per position band."
-                });
+            CurrentView = new DeiMetricsPage();
         }
 
         private void ExecuteOpenCompensationMetrics()
         {
-            ExecuteShowPayroll();
+            CurrentView = new CompensationBenefitsPage();
         }
 
         private void ExecuteOpenWorkforcePlanningMetrics()
         {
-            CurrentView = new WeeklyCalendarPage
-            {
-                DataContext = new WeeklyCalendarViewModel(null, _currentUser.Id, false)
-            };
+            CurrentView = new WorkforcePlanningPage();
         }
 
         private void ExecuteOpenRoleSwitch()

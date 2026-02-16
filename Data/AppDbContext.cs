@@ -25,6 +25,9 @@ namespace AttendanceShiftingManagement.Data
         public DbSet<UserPreference> UserPreferences { get; set; }
         public DbSet<RecruitmentCandidate> RecruitmentCandidates { get; set; }
         public DbSet<EmployeeExit> EmployeeExits { get; set; }
+        public DbSet<PerformanceGoal> PerformanceGoals { get; set; }
+        public DbSet<TrainingRecord> TrainingRecords { get; set; }
+        public DbSet<EngagementSurvey> EngagementSurveys { get; set; }
 
         public AppDbContext()
         {
@@ -93,6 +96,18 @@ namespace AttendanceShiftingManagement.Data
                 .Property(ee => ee.ExitType)
                 .HasConversion<string>();
 
+            modelBuilder.Entity<PerformanceGoal>()
+                .Property(pg => pg.Status)
+                .HasConversion<string>();
+
+            modelBuilder.Entity<TrainingRecord>()
+                .Property(tr => tr.Status)
+                .HasConversion<string>();
+
+            modelBuilder.Entity<EngagementSurvey>()
+                .Property(es => es.BurnoutRisk)
+                .HasConversion<string>();
+
             modelBuilder.Entity<UserProfile>()
                 .HasIndex(p => p.UserId)
                 .IsUnique();
@@ -116,6 +131,18 @@ namespace AttendanceShiftingManagement.Data
 
             modelBuilder.Entity<EmployeeExit>()
                 .HasIndex(ee => ee.EmployeeId);
+
+            modelBuilder.Entity<PerformanceGoal>()
+                .HasIndex(pg => pg.EmployeeId);
+
+            modelBuilder.Entity<TrainingRecord>()
+                .HasIndex(tr => tr.EmployeeId);
+
+            modelBuilder.Entity<EngagementSurvey>()
+                .HasIndex(es => es.EmployeeId);
+
+            modelBuilder.Entity<EngagementSurvey>()
+                .HasIndex(es => es.SurveyDate);
         }
     }
 }

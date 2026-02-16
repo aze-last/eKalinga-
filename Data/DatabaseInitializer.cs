@@ -23,6 +23,7 @@ namespace AttendanceShiftingManagement.Data
             }
 
             EnsurePhase2Tables(context);
+            EnsurePhase3Tables(context);
             DbSeeder.Seed(context);
         }
 
@@ -68,6 +69,66 @@ namespace AttendanceShiftingManagement.Data
                 );
                 """);
 
+        }
+
+        private static void EnsurePhase3Tables(AppDbContext context)
+        {
+            context.Database.ExecuteSqlRaw(
+                """
+                CREATE TABLE IF NOT EXISTS `performance_goals` (
+                    `id` int NOT NULL AUTO_INCREMENT,
+                    `employee_id` int NOT NULL,
+                    `goal_title` varchar(200) NOT NULL,
+                    `completion_percent` decimal(5,2) NOT NULL,
+                    `review_score` decimal(5,2) NULL,
+                    `manager_feedback_score` decimal(5,2) NULL,
+                    `due_date` datetime(6) NOT NULL,
+                    `status` varchar(50) NOT NULL,
+                    `created_at` datetime(6) NOT NULL,
+                    `updated_at` datetime(6) NOT NULL,
+                    PRIMARY KEY (`id`),
+                    INDEX `IX_performance_goals_employee_id` (`employee_id`),
+                    CONSTRAINT `FK_performance_goals_employees_employee_id` FOREIGN KEY (`employee_id`) REFERENCES `employees` (`id`) ON DELETE CASCADE
+                );
+                """);
+
+            context.Database.ExecuteSqlRaw(
+                """
+                CREATE TABLE IF NOT EXISTS `training_records` (
+                    `id` int NOT NULL AUTO_INCREMENT,
+                    `employee_id` int NOT NULL,
+                    `training_name` varchar(200) NOT NULL,
+                    `is_mandatory` tinyint(1) NOT NULL,
+                    `assigned_at` datetime(6) NOT NULL,
+                    `due_date` datetime(6) NULL,
+                    `completed_at` datetime(6) NULL,
+                    `effectiveness_score` decimal(5,2) NULL,
+                    `status` varchar(50) NOT NULL,
+                    `created_at` datetime(6) NOT NULL,
+                    PRIMARY KEY (`id`),
+                    INDEX `IX_training_records_employee_id` (`employee_id`),
+                    CONSTRAINT `FK_training_records_employees_employee_id` FOREIGN KEY (`employee_id`) REFERENCES `employees` (`id`) ON DELETE CASCADE
+                );
+                """);
+
+            context.Database.ExecuteSqlRaw(
+                """
+                CREATE TABLE IF NOT EXISTS `engagement_surveys` (
+                    `id` int NOT NULL AUTO_INCREMENT,
+                    `employee_id` int NOT NULL,
+                    `survey_date` datetime(6) NOT NULL,
+                    `enps_score` int NOT NULL,
+                    `engagement_score` decimal(5,2) NOT NULL,
+                    `wellbeing_score` decimal(5,2) NOT NULL,
+                    `burnout_risk` varchar(50) NOT NULL,
+                    `comments` varchar(500) NULL,
+                    `created_at` datetime(6) NOT NULL,
+                    PRIMARY KEY (`id`),
+                    INDEX `IX_engagement_surveys_employee_id` (`employee_id`),
+                    INDEX `IX_engagement_surveys_survey_date` (`survey_date`),
+                    CONSTRAINT `FK_engagement_surveys_employees_employee_id` FOREIGN KEY (`employee_id`) REFERENCES `employees` (`id`) ON DELETE CASCADE
+                );
+                """);
         }
     }
 }
