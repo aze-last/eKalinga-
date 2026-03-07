@@ -25,6 +25,7 @@ namespace AttendanceShiftingManagement.Data
             EnsurePhase2Tables(context);
             EnsurePhase3Tables(context);
             DbSeeder.Seed(context);
+            EnsureAttendanceEmployeeLinks(context);
         }
 
         private static void EnsurePhase2Tables(AppDbContext context)
@@ -129,6 +130,54 @@ namespace AttendanceShiftingManagement.Data
                     CONSTRAINT `FK_engagement_surveys_employees_employee_id` FOREIGN KEY (`employee_id`) REFERENCES `employees` (`id`) ON DELETE CASCADE
                 );
                 """);
+        }
+
+        private static void EnsureAttendanceEmployeeLinks(AppDbContext context)
+        {
+            var fallbackPositionId = context.Positions
+                .OrderBy(p => p.Id)
+                .Select(p => (int?)p.Id)
+                .FirstOrDefault();
+
+            if (!fallbackPositionId.HasValue)
+            {
+                return;
+            }
+
+            var usersToLink = context.Users
+                .Where(u => u.IsActive && (u.Role == Models.UserRole.Manager || u.Role == Models.UserRole.Crew))
+                .ToList();
+
+            bool hasChanges = false;
+            foreach (var user in usersToLink)
+            {
+                var employee = context.Employees.FirstOrDefault(e => e.UserId == user.Id);
+                if (employee == null)
+                {
+                    context.Employees.Add(new Models.Employee
+                    {
+                        UserId = user.Id,
+                        FullName = string.IsNullOrWhiteSpace(user.Username) ? "Unnamed Employee" : user.Username,
+                        PositionId = fallbackPositionId.Value,
+                        HourlyRate = user.Role == Models.UserRole.Manager ? 80.00m : 65.00m,
+                        DateHired = DateTime.Today,
+                        Status = Models.EmployeeStatus.Active
+                    });
+                    hasChanges = true;
+                    continue;
+                }
+
+                if (employee.Status != Models.EmployeeStatus.Active)
+                {
+                    employee.Status = Models.EmployeeStatus.Active;
+                    hasChanges = true;
+                }
+            }
+
+            if (hasChanges)
+            {
+                context.SaveChanges();
+            }
         }
     }
 }

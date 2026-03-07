@@ -49,6 +49,16 @@
                             <TextBlock Text="TIME OUT" Foreground="#27251F" FontWeight="SemiBold"/>
                         </Button>
                     </Grid>
+
+                    <Button Command="{Binding ScanFingerprintCommand}"
+                            Style="{StaticResource MaterialDesignOutlinedButton}"
+                            Margin="0,10,0,0"
+                            Height="34">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="Fingerprint" Width="18" Height="18" Margin="0,0,8,0"/>
+                            <TextBlock Text="SCAN FINGER TO CLOCK"/>
+                        </StackPanel>
+                    </Button>
                 </StackPanel>
             </materialDesign:Card>
 

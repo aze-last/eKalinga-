@@ -18,6 +18,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly ShiftService _shiftService;
         private readonly PayrollService _payrollService;
         private readonly AppDbContext _context;
+        private readonly FingerprintService _fingerprintService;
         private readonly int _userId;
 
         private string _statusText = "OFF DUTY";
@@ -70,6 +71,7 @@ namespace AttendanceShiftingManagement.ViewModels
         }
 
         public ICommand TimeInOutCommand { get; }
+        public ICommand ScanFingerprintCommand { get; }
         public ICommand OpenScheduleCommand { get; }
         public ICommand MarkReadCommand { get; }
         public ICommand MarkAllReadCommand { get; }
@@ -81,9 +83,11 @@ namespace AttendanceShiftingManagement.ViewModels
             _payrollService = payroll;
             _employeeId = employeeId;
             _context = new AppDbContext();
+            _fingerprintService = new FingerprintService(_context);
             _userId = _context.Employees.FirstOrDefault(e => e.Id == _employeeId)?.UserId ?? 0;
 
             TimeInOutCommand = new RelayCommand(_ => ExecuteTimeToggle());
+            ScanFingerprintCommand = new RelayCommand(_ => ExecuteScanFingerprintToggle());
             OpenScheduleCommand = new RelayCommand(_ => ScheduleRequested?.Invoke());
             MarkReadCommand = new RelayCommand(param => ExecuteMarkRead(param));
             MarkAllReadCommand = new RelayCommand(_ => ExecuteMarkAllRead());
@@ -155,6 +159,56 @@ namespace AttendanceShiftingManagement.ViewModels
             catch (Exception ex)
             {
                 System.Windows.MessageBox.Show(ex.Message, "Attendance Error",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                SyncAttendanceStatus();
+            }
+        }
+
+        private void ExecuteScanFingerprintToggle()
+        {
+            try
+            {
+                if (_userId == 0)
+                {
+                    System.Windows.MessageBox.Show("Error: account is not linked to a valid employee/user profile.", "Fingerprint Error",
+                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                    return;
+                }
+
+                if (!_hasScheduleToday && ActionButtonText == "NO SCHEDULE")
+                {
+                    System.Windows.MessageBox.Show("You don't have a schedule today.", "No Schedule",
+                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                    return;
+                }
+
+                var identifyResult = _fingerprintService.IdentifyUserFromCapture();
+                if (!identifyResult.IsMatched || !identifyResult.MatchedUserId.HasValue)
+                {
+                    System.Windows.MessageBox.Show("Fingerprint not recognized. Please try again.", "No Match",
+                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                    return;
+                }
+
+                if (identifyResult.MatchedUserId.Value != _userId)
+                {
+                    System.Windows.MessageBox.Show("Scanned fingerprint belongs to a different account.", "Access Denied",
+                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                    return;
+                }
+
+                _attendance.ToggleTimeByUserId(_userId);
+
+                LoadRealData();
+                SyncAttendanceStatus();
+                AttendanceRecorded?.Invoke();
+
+                System.Windows.MessageBox.Show("Fingerprint accepted. Attendance updated.", "Success",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"Fingerprint scan failed: {ex.Message}", "Fingerprint Error",
                     System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
                 SyncAttendanceStatus();
             }

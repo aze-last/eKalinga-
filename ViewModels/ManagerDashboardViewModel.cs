@@ -43,6 +43,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
         public System.Windows.Input.ICommand TimeInCommand { get; }
         public System.Windows.Input.ICommand TimeOutCommand { get; }
+        public System.Windows.Input.ICommand ScanFingerprintCommand { get; }
         public System.Windows.Input.ICommand ExportAttendanceCommand { get; }
 
         private bool _isTimedIn;
@@ -68,6 +69,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private readonly AppDbContext _context;
         private readonly AttendanceService _attendanceService;
+        private readonly FingerprintService _fingerprintService;
         private readonly User _currentUser;
         private readonly int _employeeId;
         private readonly NotificationService _notificationService;
@@ -90,6 +92,7 @@ namespace AttendanceShiftingManagement.ViewModels
             _context = ctx;
             _currentUser = user;
             _attendanceService = new AttendanceService(ctx);
+            _fingerprintService = new FingerprintService(ctx);
             _notificationService = new NotificationService(ctx);
             _reportExportService = new ReportExportService();
 
@@ -99,41 +102,15 @@ namespace AttendanceShiftingManagement.ViewModels
 
             TimeInCommand = new RelayCommand(_ => ExecuteTimeIn(), _ => !IsTimedIn);
             TimeOutCommand = new RelayCommand(_ => ExecuteTimeOut(), _ => IsTimedIn);
+            ScanFingerprintCommand = new RelayCommand(_ => ExecuteScanFingerprintToggle());
             ExportAttendanceCommand = new RelayCommand(_ => ExecuteExportAttendance());
             SendAnnouncementCommand = new RelayCommand(_ => ExecuteSendAnnouncement());
 
             CheckCurrentStatus();
-
-            // Calculate Stats
-            TotalCrew = ctx.Employees.Count(e => e.Status == EmployeeStatus.Active);
-            OnDutyCount = ctx.Attendances.Count(a => a.Status == AttendanceStatus.Open);
-
-            // For now, pending shifts as mock or actual if you have a field for it
-            PendingShifts = 0;
-
-            var startOfWeek = DateTime.Today.AddDays(-(int)DateTime.Today.DayOfWeek + (int)DayOfWeek.Monday);
-            var totalHours = ctx.Attendances
-                .Where(a => a.TimeIn >= startOfWeek && a.Status == AttendanceStatus.Closed)
-                .Sum(a => (double)a.TotalHours);
-            TotalWeekHours = totalHours.ToString("N1");
-
-            var attendanceList = ctx.Attendances
-                   .Include(a => a.Employee)
-                   .ThenInclude(e => e.Position)
-                   .Where(a => a.TimeIn.HasValue && a.TimeIn.Value.Date == DateTime.Today)
-                   .OrderByDescending(a => a.TimeIn)
-                   .Select(a => new AttendanceDto
-                   {
-                       Name = a.Employee.FullName,
-                       Position = a.Employee.Position.Name,
-                       TimeIn = a.TimeIn,
-                       TimeOut = a.TimeOut,
-                       Status = a.Status == AttendanceStatus.Open ? "ACTIVE" : "CLOSED",
-                       StatusColor = a.Status == AttendanceStatus.Open ? "#10B981" : "#64748B"
-                   }).ToList();
-
-            TodayAttendance = new ObservableCollection<AttendanceDto>(attendanceList);
+            TodayAttendance = new ObservableCollection<AttendanceDto>();
             TodayAttendanceView = CollectionViewSource.GetDefaultView(TodayAttendance);
+
+            RefreshDashboardData();
             ApplyAttendanceFilter();
 
             LoadManagerNotifications();
@@ -229,6 +206,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 _attendanceService.TimeIn(_employeeId);
                 IsTimedIn = true;
                 UpdateStatusDisplay();
+                RefreshDashboardData();
                 System.Windows.MessageBox.Show("Timed In Successfully!", "Success");
             }
             catch (Exception ex)
@@ -250,11 +228,49 @@ namespace AttendanceShiftingManagement.ViewModels
                 _attendanceService.TimeOut(_employeeId);
                 IsTimedIn = false;
                 UpdateStatusDisplay();
+                RefreshDashboardData();
                 System.Windows.MessageBox.Show("Timed Out Successfully!", "Success");
             }
             catch (Exception ex)
             {
                 System.Windows.MessageBox.Show($"Time Out Failed: {ex.Message}", "Error");
+            }
+        }
+
+        private void ExecuteScanFingerprintToggle()
+        {
+            try
+            {
+                if (_employeeId == 0)
+                {
+                    System.Windows.MessageBox.Show("Error: No Employee record found for this user.", "Error");
+                    return;
+                }
+
+                var identifyResult = _fingerprintService.IdentifyUserFromCapture();
+                if (!identifyResult.IsMatched || !identifyResult.MatchedUserId.HasValue)
+                {
+                    System.Windows.MessageBox.Show("Fingerprint not recognized. Please try again.", "No Match",
+                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                    return;
+                }
+
+                if (identifyResult.MatchedUserId.Value != _currentUser.Id)
+                {
+                    System.Windows.MessageBox.Show("Scanned fingerprint belongs to a different account.", "Access Denied",
+                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                    return;
+                }
+
+                _attendanceService.ToggleTimeByUserId(_currentUser.Id);
+                CheckCurrentStatus();
+                RefreshDashboardData();
+
+                System.Windows.MessageBox.Show("Fingerprint accepted. Attendance updated.", "Success");
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"Fingerprint scan failed: {ex.Message}", "Fingerprint Error");
             }
         }
 
@@ -326,6 +342,43 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 ManagerNotifications.Add(n);
             }
+        }
+
+        private void RefreshDashboardData()
+        {
+            TotalCrew = _context.Employees.Count(e => e.Status == EmployeeStatus.Active);
+            OnDutyCount = _context.Attendances.Count(a => a.Status == AttendanceStatus.Open);
+            PendingShifts = 0;
+
+            var startOfWeek = DateTime.Today.AddDays(-(int)DateTime.Today.DayOfWeek + (int)DayOfWeek.Monday);
+            var totalHours = _context.Attendances
+                .Where(a => a.TimeIn >= startOfWeek && a.Status == AttendanceStatus.Closed)
+                .Sum(a => (double)a.TotalHours);
+            TotalWeekHours = totalHours.ToString("N1");
+
+            var attendanceList = _context.Attendances
+                .Include(a => a.Employee)
+                .ThenInclude(e => e.Position)
+                .Where(a => a.TimeIn.HasValue && a.TimeIn.Value.Date == DateTime.Today)
+                .OrderByDescending(a => a.TimeIn)
+                .Select(a => new AttendanceDto
+                {
+                    Name = a.Employee.FullName,
+                    Position = a.Employee.Position.Name,
+                    TimeIn = a.TimeIn,
+                    TimeOut = a.TimeOut,
+                    Status = a.Status == AttendanceStatus.Open ? "ACTIVE" : "CLOSED",
+                    StatusColor = a.Status == AttendanceStatus.Open ? "#10B981" : "#64748B"
+                })
+                .ToList();
+
+            TodayAttendance.Clear();
+            foreach (var row in attendanceList)
+            {
+                TodayAttendance.Add(row);
+            }
+
+            ApplyAttendanceFilter();
         }
     }
 }

@@ -1,7 +1,8 @@
-﻿using AttendanceShiftingManagement.Data;
+using AttendanceShiftingManagement.Data;
 using AttendanceShiftingManagement.Helpers;
 using AttendanceShiftingManagement.Models;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Windows;
 using System.Windows.Input;
 
@@ -97,6 +98,8 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             try
             {
+                User affectedUser;
+
                 if (_existingUser != null)
                 {
                     // Edit existing user
@@ -111,6 +114,8 @@ namespace AttendanceShiftingManagement.ViewModels
                     }
 
                     _existingUser.UpdatedAt = DateTime.Now;
+                    _context.Users.Update(_existingUser);
+                    affectedUser = _existingUser;
                 }
                 else
                 {
@@ -127,9 +132,11 @@ namespace AttendanceShiftingManagement.ViewModels
                     };
 
                     _context.Users.Add(newUser);
+                    affectedUser = newUser;
                 }
 
                 _context.SaveChanges();
+                EnsureEmployeeLinkForAttendanceRoles(affectedUser);
                 DialogResult = true;
 
                 MessageBox.Show("User saved successfully!", "Success",
@@ -144,6 +151,62 @@ namespace AttendanceShiftingManagement.ViewModels
                 MessageBox.Show($"Error saving user: {ex.Message}", "Error",
                     MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+
+        private void EnsureEmployeeLinkForAttendanceRoles(User user)
+        {
+            if (!RequiresEmployeeProfile(user.Role))
+            {
+                return;
+            }
+
+            var existingEmployee = _context.Employees.FirstOrDefault(e => e.UserId == user.Id);
+            if (existingEmployee != null)
+            {
+                existingEmployee.Status = user.IsActive ? EmployeeStatus.Active : EmployeeStatus.Inactive;
+                _context.SaveChanges();
+                return;
+            }
+
+            var fallbackPositionId = _context.Positions
+                .OrderBy(p => p.Id)
+                .Select(p => (int?)p.Id)
+                .FirstOrDefault();
+
+            if (!fallbackPositionId.HasValue)
+            {
+                throw new InvalidOperationException("Cannot link user to employee: no position records found.");
+            }
+
+            _context.Employees.Add(new Employee
+            {
+                UserId = user.Id,
+                FullName = BuildDisplayNameFromUsername(user.Username),
+                PositionId = fallbackPositionId.Value,
+                HourlyRate = user.Role == UserRole.Manager ? 80.00m : 65.00m,
+                DateHired = DateTime.Today,
+                Status = user.IsActive ? EmployeeStatus.Active : EmployeeStatus.Inactive
+            });
+
+            _context.SaveChanges();
+        }
+
+        private static bool RequiresEmployeeProfile(UserRole role)
+        {
+            return role == UserRole.Manager || role == UserRole.Crew;
+        }
+
+        private static string BuildDisplayNameFromUsername(string username)
+        {
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                return "Unnamed Employee";
+            }
+
+            var cleaned = username.Trim().Replace(".", " ").Replace("_", " ");
+            return string.Join(" ",
+                cleaned.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(part => char.ToUpperInvariant(part[0]) + part[1..].ToLowerInvariant()));
         }
     }
 }

@@ -21,6 +21,7 @@ namespace AttendanceShiftingManagement.Data
         public DbSet<LeaveBalance> LeaveBalances { get; set; }
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<ActivityLog> ActivityLogs { get; set; }
+        public DbSet<FingerprintTemplate> FingerprintTemplates { get; set; }
         public DbSet<UserProfile> UserProfiles { get; set; }
         public DbSet<UserPreference> UserPreferences { get; set; }
         public DbSet<RecruitmentCandidate> RecruitmentCandidates { get; set; }
@@ -125,6 +126,19 @@ namespace AttendanceShiftingManagement.Data
             modelBuilder.Entity<Employee>()
                 .HasIndex(e => e.UserId)
                 .IsUnique();
+
+            modelBuilder.Entity<FingerprintTemplate>()
+                .HasIndex(ft => new { ft.UserId, ft.FingerIndex })
+                .IsUnique();
+
+            modelBuilder.Entity<FingerprintTemplate>()
+                .HasIndex(ft => ft.IsActive);
+
+            modelBuilder.Entity<FingerprintTemplate>()
+                .HasOne(ft => ft.EnrolledByUser)
+                .WithMany()
+                .HasForeignKey(ft => ft.EnrolledByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
 
             modelBuilder.Entity<RecruitmentCandidate>()
                 .HasIndex(rc => rc.Email);

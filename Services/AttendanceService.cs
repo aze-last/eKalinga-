@@ -77,6 +77,12 @@ namespace AttendanceShiftingManagement.Services
                 actorUserId: userId);
         }
 
+        public void TimeInByUserId(int userId, DateTime? nowOverride = null)
+        {
+            var employeeId = ResolveEmployeeIdFromUserId(userId);
+            TimeIn(employeeId, nowOverride);
+        }
+
         public void TimeOut(int employeeId, DateTime? nowOverride = null)
         {
             var now = nowOverride ?? DateTime.Now;
@@ -128,6 +134,26 @@ namespace AttendanceShiftingManagement.Services
                 actorUserId: userId);
         }
 
+        public void TimeOutByUserId(int userId, DateTime? nowOverride = null)
+        {
+            var employeeId = ResolveEmployeeIdFromUserId(userId);
+            TimeOut(employeeId, nowOverride);
+        }
+
+        public void ToggleTimeByUserId(int userId, DateTime? nowOverride = null)
+        {
+            var employeeId = ResolveEmployeeIdFromUserId(userId);
+            var active = GetActiveAttendance(employeeId);
+            if (active == null)
+            {
+                TimeIn(employeeId, nowOverride);
+            }
+            else
+            {
+                TimeOut(employeeId, nowOverride);
+            }
+        }
+
         public List<Attendance> GetRecentAttendance(int employeeId, int count)
         {
             return _context.Attendances
@@ -145,6 +171,21 @@ namespace AttendanceShiftingManagement.Services
                 .FirstOrDefault(a =>
                     a.EmployeeId == employeeId &&
                     a.Status == AttendanceStatus.Open);
+        }
+
+        private int ResolveEmployeeIdFromUserId(int userId)
+        {
+            var employeeId = _context.Employees
+                .Where(e => e.UserId == userId)
+                .Select(e => (int?)e.Id)
+                .FirstOrDefault();
+
+            if (!employeeId.HasValue)
+            {
+                throw new InvalidOperationException("User is not linked to an employee profile. Ask Admin to link account to employee.");
+            }
+
+            return employeeId.Value;
         }
     }
 }

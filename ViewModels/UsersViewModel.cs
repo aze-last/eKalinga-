@@ -34,6 +34,7 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand AddUserCommand { get; }
         public ICommand EditUserCommand { get; }
         public ICommand DeleteUserCommand { get; }
+        public ICommand ManageFingerprintCommand { get; }
 
         public UsersViewModel(User currentUser)
         {
@@ -45,6 +46,7 @@ namespace AttendanceShiftingManagement.ViewModels
             AddUserCommand = new RelayCommand(ExecuteAddUser);
             EditUserCommand = new RelayCommand(ExecuteEditUser);
             DeleteUserCommand = new RelayCommand(ExecuteDeleteUser);
+            ManageFingerprintCommand = new RelayCommand(ExecuteManageFingerprint);
 
             LoadUsers();
         }
@@ -183,6 +185,34 @@ namespace AttendanceShiftingManagement.ViewModels
                         MessageBox.Show($"Error deleting user: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                     }
                 }
+            }
+        }
+
+        private void ExecuteManageFingerprint(object? parameter)
+        {
+            if (!EnsureAdminAccess())
+            {
+                return;
+            }
+
+            if (parameter is not User targetUser)
+            {
+                return;
+            }
+
+            try
+            {
+                var window = new FingerprintManagementWindow(_currentUser, targetUser)
+                {
+                    Owner = Application.Current.Windows.OfType<Window>().FirstOrDefault(w => w is MainWindow)
+                };
+
+                window.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Unable to open fingerprint management: {ex.Message}", "Fingerprint",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
     }
