@@ -76,7 +76,6 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand CreateBatchCommand { get; }
         public ICommand RefreshCommand { get; }
 
-        private readonly AutoSchedulingService _autoSchedulingService;
         private readonly ValidationService _validationService;
 
         public ShiftsManagementViewModel(User user)
@@ -85,7 +84,6 @@ namespace AttendanceShiftingManagement.ViewModels
             _context = new Data.AppDbContext();
             _shiftService = new ShiftService(_context);
             _validationService = new ValidationService(_context);
-            _autoSchedulingService = new AutoSchedulingService(_context, _validationService);
             _notificationService = new NotificationService(_context);
 
             SelectedDay = DateTime.Today;
@@ -247,19 +245,43 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             try
             {
-                var result = System.Windows.MessageBox.Show(
-                    $"Generate SMART DRAFT schedule for the week of {SelectedDay:MMM dd}?\n\nThis will create a randomized, fair schedule for all active employees.",
-                    "Confirm Auto-Schedule",
-                    System.Windows.MessageBoxButton.YesNo,
-                    System.Windows.MessageBoxImage.Question);
+                var currentDay = SelectedDay;
+                int diff = (7 + (currentDay.DayOfWeek - DayOfWeek.Monday)) % 7;
+                var startOfWeek = currentDay.AddDays(-1 * diff).Date;
+                var endOfWeek = startOfWeek.AddDays(7).Date;
+                var selectedEmployeeIds = Employees
+                    .Where(e => e.IsSelected)
+                    .Select(e => e.Employee.Id)
+                    .ToList();
 
-                if (result == System.Windows.MessageBoxResult.Yes)
+                if (_context.Shifts.Any(s => s.ShiftDate >= startOfWeek && s.ShiftDate < endOfWeek))
                 {
-                    var currentDay = SelectedDay;
-                    int diff = (7 + (currentDay.DayOfWeek - DayOfWeek.Monday)) % 7;
-                    var startOfWeek = currentDay.AddDays(-1 * diff).Date;
+                    System.Windows.MessageBox.Show(
+                        "This week already has shifts assigned. Clear the week first before generating a new draft.",
+                        "Weekly Schedule Already Exists",
+                        System.Windows.MessageBoxButton.OK,
+                        System.Windows.MessageBoxImage.Information);
+                    return;
+                }
 
-                    var newShifts = _autoSchedulingService.GenerateWeeklyDraft(startOfWeek, _currentUser.Id);
+                // Launch the new Smart Wizard
+                var wizard = new Views.SmartScheduleWizardWindow(() =>
+                {
+                    using var schedulingContext = new Data.AppDbContext();
+                    var validationService = new ValidationService(schedulingContext);
+                    var autoSchedulingService = new AutoSchedulingService(schedulingContext, validationService);
+                    return autoSchedulingService.GenerateWeeklyDraft(
+                        startOfWeek,
+                        _currentUser.Id,
+                        selectedEmployeeIds.Count > 0 ? selectedEmployeeIds : null);
+                });
+                
+                wizard.Owner = App.Current.MainWindow;
+                var result = wizard.ShowDialog();
+
+                if (result == true && wizard.Result != null)
+                {
+                    var newShifts = wizard.Result.Shifts;
 
                     if (newShifts.Any())
                     {
@@ -272,12 +294,10 @@ namespace AttendanceShiftingManagement.ViewModels
                             actorUserId: _currentUser.Id);
 
                         NotifyNewShifts(newShifts);
-                        System.Windows.MessageBox.Show($"Draft schedule generated with {newShifts.Count} shifts!", "Success");
+                        System.Windows.MessageBox.Show(
+                            $"Smart Draft applied with {newShifts.Count} shifts.\nFairness Score: {wizard.Result.FairnessScore:F1}%",
+                            "Success");
                         LoadRoster();
-                    }
-                    else
-                    {
-                        System.Windows.MessageBox.Show("No shifts could be generated. Check valid employees or existing schedule conflicts.", "Info");
                     }
                 }
             }

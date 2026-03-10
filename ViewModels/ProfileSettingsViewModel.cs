@@ -189,7 +189,7 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             _context = new AppDbContext();
             _userId = user.Id;
-            IsManager = user.Role == UserRole.Manager;
+            IsManager = user.Role == UserRole.Manager || user.Role == UserRole.ShiftManager;
 
             BrowsePhotoCommand = new RelayCommand(_ => BrowsePhoto());
             SaveCommand = new RelayCommand(_ => SaveProfile());

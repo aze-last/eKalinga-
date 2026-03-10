@@ -132,7 +132,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 if (employee != null)
                 {
                     var managerIds = _context.Users
-                        .Where(u => u.Role == UserRole.Manager)
+                        .Where(u => u.Role == UserRole.Manager || u.Role == UserRole.ShiftManager)
                         .Select(u => u.Id)
                         .ToList();
 

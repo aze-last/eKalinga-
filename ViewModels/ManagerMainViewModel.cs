@@ -5,6 +5,7 @@ using System.Windows.Input;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
 using System;
+using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.IO;
@@ -13,6 +14,11 @@ namespace AttendanceShiftingManagement.ViewModels
 {
     public class ManagerMainViewModel : ObservableObject
     {
+        private static readonly Brush ManagerAccentBrush = CreateBrush("#F59E0B");
+        private static readonly Brush ShiftManagerAccentBrush = CreateBrush("#10B981");
+        private static readonly Brush ShiftManagerPanelBrush = CreateBrush("#13352F");
+        private static readonly Brush TransparentBrush = Brushes.Transparent;
+
         private object _currentView = new object();
         private readonly User _currentUser;
         private readonly int _employeeId;
@@ -37,6 +43,28 @@ namespace AttendanceShiftingManagement.ViewModels
             get => _userDisplayName;
             set => SetProperty(ref _userDisplayName, value);
         }
+
+        public bool IsShiftManager => _currentUser.Role == UserRole.ShiftManager;
+
+        public string PortalHeading => IsShiftManager ? "Scheduling Command Center" : "Manager Command Center";
+
+        public string PortalSubtitle => IsShiftManager
+            ? "Coverage, fairness, and weekly roster control"
+            : "Operations, attendance, and team overview";
+
+        public string RoleBadgeText => IsShiftManager ? "SCHEDULING MANAGER" : "MANAGER";
+
+        public Brush RoleAccentBrush => IsShiftManager ? ShiftManagerAccentBrush : ManagerAccentBrush;
+
+        public Brush RoleBadgeBackground => RoleAccentBrush;
+
+        public Brush SchedulerPanelBackground => IsShiftManager ? ShiftManagerPanelBrush : TransparentBrush;
+
+        public Brush SchedulerPanelBorderBrush => IsShiftManager ? ShiftManagerAccentBrush : TransparentBrush;
+
+        public Thickness SchedulerPanelBorderThickness => IsShiftManager ? new Thickness(1) : new Thickness(0);
+
+        public Visibility SchedulerSpotlightVisibility => IsShiftManager ? Visibility.Visible : Visibility.Collapsed;
 
         public object CurrentView
         {
@@ -67,8 +95,7 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             _currentUser = user;
 
-            // Check if user is "Scheduling Manager"
-            // We need a context to find the employee record and position
+            // ShiftManager is role-based. Legacy Manager scheduling access is still supported via position name.
             using (var ctx = new Data.AppDbContext())
             {
                 var emp = ctx.Employees
@@ -78,13 +105,14 @@ namespace AttendanceShiftingManagement.ViewModels
                 if (emp != null && emp.Position != null)
                 {
                     _employeeId = emp.Id;
-                    // Allow if position name contains "Scheduling"
-                    IsSchedulingAllowed = emp.Position.Name.IndexOf("Scheduling", StringComparison.OrdinalIgnoreCase) >= 0;
+                    IsSchedulingAllowed =
+                        user.Role == UserRole.ShiftManager ||
+                        emp.Position.Name.IndexOf("Scheduling", StringComparison.OrdinalIgnoreCase) >= 0;
                 }
                 else
                 {
                     _employeeId = 0;
-                    IsSchedulingAllowed = false;
+                    IsSchedulingAllowed = user.Role == UserRole.ShiftManager;
                 }
             }
 
@@ -102,7 +130,6 @@ namespace AttendanceShiftingManagement.ViewModels
             ToggleMenuCommand = new RelayCommand(_ => IsMenuOpen = !IsMenuOpen);
             CloseMenuCommand = new RelayCommand(_ => IsMenuOpen = false);
 
-            // Initialize with Dashboard
             ExecuteShowDashboard();
         }
 
@@ -118,7 +145,7 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             if (!IsSchedulingAllowed)
             {
-                System.Windows.MessageBox.Show("Only Scheduling Managers can access Shift Planning.", "Access Denied",
+                System.Windows.MessageBox.Show("Shift Planning is available only to Scheduling Managers or managers assigned to scheduling.", "Access Denied",
                     System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
                 return;
             }
@@ -211,6 +238,13 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 DataContext = vm
             };
+        }
+
+        private static Brush CreateBrush(string hex)
+        {
+            var brush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex));
+            brush.Freeze();
+            return brush;
         }
     }
 }

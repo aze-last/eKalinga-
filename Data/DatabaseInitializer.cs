@@ -145,7 +145,7 @@ namespace AttendanceShiftingManagement.Data
             }
 
             var usersToLink = context.Users
-                .Where(u => u.IsActive && (u.Role == Models.UserRole.Manager || u.Role == Models.UserRole.Crew))
+                .Where(u => u.IsActive && (u.Role == Models.UserRole.Manager || u.Role == Models.UserRole.ShiftManager || u.Role == Models.UserRole.Crew))
                 .ToList();
 
             bool hasChanges = false;
@@ -158,8 +158,8 @@ namespace AttendanceShiftingManagement.Data
                     {
                         UserId = user.Id,
                         FullName = string.IsNullOrWhiteSpace(user.Username) ? "Unnamed Employee" : user.Username,
-                        PositionId = fallbackPositionId.Value,
-                        HourlyRate = user.Role == Models.UserRole.Manager ? 80.00m : 65.00m,
+                        PositionId = ResolveDefaultPositionId(context, user.Role, fallbackPositionId.Value),
+                        HourlyRate = user.Role is Models.UserRole.Manager or Models.UserRole.ShiftManager ? 80.00m : 65.00m,
                         DateHired = DateTime.Today,
                         Status = Models.EmployeeStatus.Active
                     });
@@ -178,6 +178,29 @@ namespace AttendanceShiftingManagement.Data
             {
                 context.SaveChanges();
             }
+        }
+
+        private static int ResolveDefaultPositionId(AppDbContext context, Models.UserRole role, int fallbackPositionId)
+        {
+            if (role == Models.UserRole.ShiftManager)
+            {
+                return context.Positions
+                    .Where(p => p.Name == "Shift Manager" || p.Name.IndexOf("Scheduling", StringComparison.OrdinalIgnoreCase) >= 0)
+                    .OrderByDescending(p => p.Name.IndexOf("Shift Manager", StringComparison.OrdinalIgnoreCase) >= 0)
+                    .Select(p => (int?)p.Id)
+                    .FirstOrDefault() ?? fallbackPositionId;
+            }
+
+            if (role == Models.UserRole.Manager)
+            {
+                return context.Positions
+                    .Where(p => p.Name.IndexOf("Manager", StringComparison.OrdinalIgnoreCase) >= 0)
+                    .OrderByDescending(p => p.Name.IndexOf("Shift Manager", StringComparison.OrdinalIgnoreCase) >= 0)
+                    .Select(p => (int?)p.Id)
+                    .FirstOrDefault() ?? fallbackPositionId;
+            }
+
+            return fallbackPositionId;
         }
     }
 }

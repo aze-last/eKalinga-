@@ -71,6 +71,7 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 UserRole.Admin,
                 UserRole.Manager,
+                UserRole.ShiftManager,
                 UserRole.HRStaff,
                 UserRole.Crew
             };
@@ -182,8 +183,8 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 UserId = user.Id,
                 FullName = BuildDisplayNameFromUsername(user.Username),
-                PositionId = fallbackPositionId.Value,
-                HourlyRate = user.Role == UserRole.Manager ? 80.00m : 65.00m,
+                PositionId = ResolveDefaultPositionId(user.Role, fallbackPositionId.Value),
+                HourlyRate = user.Role is UserRole.Manager or UserRole.ShiftManager ? 80.00m : 65.00m,
                 DateHired = DateTime.Today,
                 Status = user.IsActive ? EmployeeStatus.Active : EmployeeStatus.Inactive
             });
@@ -193,7 +194,30 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private static bool RequiresEmployeeProfile(UserRole role)
         {
-            return role == UserRole.Manager || role == UserRole.Crew;
+            return role == UserRole.Manager || role == UserRole.ShiftManager || role == UserRole.Crew;
+        }
+
+        private int ResolveDefaultPositionId(UserRole role, int fallbackPositionId)
+        {
+            if (role == UserRole.ShiftManager)
+            {
+                return _context.Positions
+                    .Where(p => p.Name == "Shift Manager" || p.Name.IndexOf("Scheduling", StringComparison.OrdinalIgnoreCase) >= 0)
+                    .OrderByDescending(p => p.Name.IndexOf("Shift Manager", StringComparison.OrdinalIgnoreCase) >= 0)
+                    .Select(p => (int?)p.Id)
+                    .FirstOrDefault() ?? fallbackPositionId;
+            }
+
+            if (role == UserRole.Manager)
+            {
+                return _context.Positions
+                    .Where(p => p.Name.IndexOf("Manager", StringComparison.OrdinalIgnoreCase) >= 0)
+                    .OrderByDescending(p => p.Name.IndexOf("Shift Manager", StringComparison.OrdinalIgnoreCase) >= 0)
+                    .Select(p => (int?)p.Id)
+                    .FirstOrDefault() ?? fallbackPositionId;
+            }
+
+            return fallbackPositionId;
         }
 
         private static string BuildDisplayNameFromUsername(string username)

@@ -121,7 +121,7 @@ namespace AttendanceShiftingManagement.Services
         {
             Window nextWindow = user.Role switch
             {
-                UserRole.Manager => new ManagerMainWindow(user),
+                UserRole.Manager or UserRole.ShiftManager => new ManagerMainWindow(user),
                 UserRole.Crew => new CrewMainWindow(user),
                 _ => new MainWindow(user)
             };

@@ -31,32 +31,70 @@
                         </Grid.ColumnDefinitions>
                         <Border Width="56" Height="56" CornerRadius="28" Background="#1F2937" VerticalAlignment="Center">
                             <Grid>
-                                <materialDesign:PackIcon Kind="AccountCircle" Foreground="{StaticResource BrandYellowBrush}" Width="36" Height="36" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <materialDesign:PackIcon Kind="AccountCircle" Foreground="{Binding RoleAccentBrush}" Width="36" Height="36" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 <Image Source="{Binding UserPhotoImage}" Stretch="UniformToFill"/>
                             </Grid>
                         </Border>
                         <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="12,0,0,0">
                             <TextBlock Text="{Binding UserDisplayName}" Foreground="White" FontSize="16" FontWeight="Bold" TextTrimming="CharacterEllipsis"/>
+                            <Border Background="{Binding RoleBadgeBackground}" CornerRadius="999" Padding="8,3" HorizontalAlignment="Left" Margin="0,6,0,6">
+                                <TextBlock Text="{Binding RoleBadgeText}" Foreground="White" FontSize="10" FontWeight="Bold"/>
+                            </Border>
                             <Button Content="Profile Settings"
                                     Command="{Binding ShowProfileSettingsCommand}"
                                     Style="{StaticResource MaterialDesignFlatButton}"
-                                    Foreground="{StaticResource BrandYellowBrush}"
+                                    Foreground="{Binding RoleAccentBrush}"
                                     Padding="0" HorizontalAlignment="Left"/>
                         </StackPanel>
                     </Grid>
+
+                    <Border Margin="0,16,0,0"
+                            Padding="12"
+                            CornerRadius="12"
+                            Background="#1A453D"
+                            BorderBrush="{Binding RoleAccentBrush}"
+                            BorderThickness="1"
+                            Visibility="{Binding SchedulerSpotlightVisibility}">
+                        <StackPanel>
+                            <TextBlock Text="Scheduler Priority"
+                                       Foreground="{Binding RoleAccentBrush}"
+                                       FontWeight="Bold"
+                                       FontSize="12"/>
+                            <TextBlock Text="Direct access to shift planning, weekly roster control, and fairness-driven scheduling."
+                                       Foreground="#D1FAE5"
+                                       FontSize="12"
+                                       Margin="0,6,0,0"
+                                       TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
 
                 <StackPanel Grid.Row="1" Margin="12,0">
                     <RadioButton Style="{StaticResource MaterialDesignTabRadioButton}" IsChecked="True"
                                  Content="DASHBOARD" Foreground="White" Height="50" Margin="0,2"
                                  Command="{Binding ShowDashboardCommand}"/>
-                    <RadioButton Style="{StaticResource MaterialDesignTabRadioButton}" 
-                                 Content="SHIFT PLANNING" Foreground="White" Height="50" Margin="0,2"
-                                 Command="{Binding ShowShiftsCommand}"
-                                 Visibility="{Binding IsSchedulingAllowed, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                    <RadioButton Style="{StaticResource MaterialDesignTabRadioButton}" 
-                                 Content="WEEKLY SCHEDULE" Foreground="White" Height="50" Margin="0,2"
-                                 Command="{Binding ShowWeeklyCalendarCommand}"/>
+                    <Border CornerRadius="12"
+                            Padding="4"
+                            Margin="0,4,0,6"
+                            Background="{Binding SchedulerPanelBackground}"
+                            BorderBrush="{Binding SchedulerPanelBorderBrush}"
+                            BorderThickness="{Binding SchedulerPanelBorderThickness}">
+                        <StackPanel>
+                            <TextBlock Text="SCHEDULER TOOLS"
+                                       Foreground="{Binding RoleAccentBrush}"
+                                       FontWeight="Bold"
+                                       FontSize="10"
+                                       Margin="12,4,0,4"
+                                       Visibility="{Binding SchedulerSpotlightVisibility}"/>
+                            <RadioButton Style="{StaticResource MaterialDesignTabRadioButton}" 
+                                         Content="SHIFT PLANNING" Foreground="White" Height="50" Margin="0,2"
+                                         Command="{Binding ShowShiftsCommand}"
+                                         Visibility="{Binding IsSchedulingAllowed, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                            <RadioButton Style="{StaticResource MaterialDesignTabRadioButton}" 
+                                         Content="WEEKLY SCHEDULE" Foreground="White" Height="50" Margin="0,2"
+                                         Command="{Binding ShowWeeklyCalendarCommand}"/>
+                        </StackPanel>
+                    </Border>
                     <RadioButton Style="{StaticResource MaterialDesignTabRadioButton}"
                                  Content="MY SCHEDULE" Foreground="White" Height="50" Margin="0,2"
                                  Command="{Binding ShowMyScheduleCommand}"/>
@@ -91,7 +129,8 @@
                             Padding="10,4"
                             Click="ReturnToAdmin_Click"/>
                     <StackPanel HorizontalAlignment="Left">
-                        <TextBlock Text="{Binding UserDisplayName}" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="16"/>
+                        <TextBlock Text="{Binding PortalHeading}" VerticalAlignment="Center" FontWeight="Bold" FontSize="16" Foreground="#111827"/>
+                        <TextBlock Text="{Binding PortalSubtitle}" VerticalAlignment="Center" FontSize="12" Foreground="#6B7280"/>
                         <Button Content="Menu"
                                 Command="{Binding ToggleMenuCommand}"
                                 Style="{StaticResource MaterialDesignFlatButton}"

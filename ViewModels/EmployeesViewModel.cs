@@ -31,6 +31,16 @@ namespace AttendanceShiftingManagement.ViewModels
             ? Visibility.Visible
             : Visibility.Collapsed;
 
+        public Visibility EmployeeActionsVisibility =>
+            (_currentUser.Role == UserRole.Admin || _currentUser.Role == UserRole.HRStaff || _currentUser.Role == UserRole.Manager || _currentUser.Role == UserRole.ShiftManager)
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
+        public Visibility IdCardVisibility =>
+            (_currentUser.Role == UserRole.Admin || _currentUser.Role == UserRole.HRStaff || _currentUser.Role == UserRole.Manager || _currentUser.Role == UserRole.ShiftManager)
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
         public ObservableCollection<Employee> Employees
         {
             get => _employees;
@@ -94,6 +104,7 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand AddEmployeeCommand { get; }
         public ICommand EditEmployeeCommand { get; }
         public ICommand DeleteEmployeeCommand { get; }
+        public ICommand OpenIdCardCommand { get; }
 
         public EmployeesViewModel(User user)
         {
@@ -109,6 +120,7 @@ namespace AttendanceShiftingManagement.ViewModels
             AddEmployeeCommand = new RelayCommand(ExecuteAddEmployee);
             EditEmployeeCommand = new RelayCommand(ExecuteEditEmployee);
             DeleteEmployeeCommand = new RelayCommand(ExecuteDeleteEmployee);
+            OpenIdCardCommand = new RelayCommand(ExecuteOpenIdCard);
 
             LoadPositions();
             LoadEmployees();
@@ -231,6 +243,16 @@ namespace AttendanceShiftingManagement.ViewModels
                     BuildPositionFilters();
                     LoadEmployees();
                 }
+            }
+        }
+
+        private void ExecuteOpenIdCard(object? parameter)
+        {
+            if (parameter is Employee employee)
+            {
+                var window = new EmployeeIdCardWindow(employee);
+                window.Owner = Application.Current.Windows.OfType<Window>().FirstOrDefault(w => w is MainWindow);
+                window.ShowDialog();
             }
         }
 

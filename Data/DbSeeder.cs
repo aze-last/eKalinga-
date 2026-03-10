@@ -21,9 +21,16 @@ namespace AttendanceShiftingManagement.Data
                     new Position { Name = "DT Order Taker", Area = PositionArea.DT },
                     new Position { Name = "DT Cashier", Area = PositionArea.DT },
                     new Position { Name = "DT Presenter", Area = PositionArea.DT },
-                    new Position { Name = "Lobby", Area = PositionArea.Lobby }
+                    new Position { Name = "Lobby", Area = PositionArea.Lobby },
+                    new Position { Name = "Shift Manager", Area = PositionArea.Lobby }
                 };
                 context.Positions.AddRange(positions);
+                context.SaveChanges();
+            }
+
+            if (!context.Positions.Any(p => p.Name == "Shift Manager"))
+            {
+                context.Positions.Add(new Position { Name = "Shift Manager", Area = PositionArea.Lobby });
                 context.SaveChanges();
             }
 
@@ -74,7 +81,7 @@ namespace AttendanceShiftingManagement.Data
         {
             AddOrUpdateDemoUser(context, "admin", "admin@mcdonald.com", "admin123", UserRole.Admin);
             AddOrUpdateDemoUser(context, "hr", "hr@mcdonald.com", "hr123", UserRole.HRStaff);
-
+            AddOrUpdateDemoUser(context, "shiftmanager", "shiftmanager@mcdonald.com", "shiftmanager123", UserRole.ShiftManager);
             for (int i = 1; i <= 4; i++)
             {
                 AddOrUpdateDemoUser(
@@ -197,6 +204,12 @@ namespace AttendanceShiftingManagement.Data
                     DateTime.Now.AddYears(-1));
             }
 
+            var managerPositionId = allPositions
+                .Where(p => p.Name.IndexOf("Manager", StringComparison.OrdinalIgnoreCase) >= 0)
+                .OrderByDescending(p => p.Name.IndexOf("Shift Manager", StringComparison.OrdinalIgnoreCase) >= 0)
+                .Select(p => (int?)p.Id)
+                .FirstOrDefault() ?? fallbackPositionId;
+
             var managers = context.Users
                 .Where(u => u.Role == UserRole.Manager)
                 .OrderBy(u => u.Id)
@@ -207,7 +220,28 @@ namespace AttendanceShiftingManagement.Data
                     context,
                     managers[i].Id,
                     $"Manager {i + 1}",
-                    fallbackPositionId,
+                    managerPositionId,
+                    80.00m,
+                    DateTime.Now.AddYears(-1));
+            }
+
+            var shiftManagerPositionId = allPositions
+                .Where(p => p.Name == "Shift Manager" || p.Name.IndexOf("Scheduling", StringComparison.OrdinalIgnoreCase) >= 0)
+                .OrderByDescending(p => p.Name.IndexOf("Shift Manager", StringComparison.OrdinalIgnoreCase) >= 0)
+                .Select(p => (int?)p.Id)
+                .FirstOrDefault() ?? managerPositionId;
+
+            var shiftManagers = context.Users
+                .Where(u => u.Role == UserRole.ShiftManager)
+                .OrderBy(u => u.Id)
+                .ToList();
+            for (int i = 0; i < shiftManagers.Count; i++)
+            {
+                AddOrUpdateEmployee(
+                    context,
+                    shiftManagers[i].Id,
+                    i == 0 ? "Scheduling Manager" : $"Scheduling Manager {i + 1}",
+                    shiftManagerPositionId,
                     80.00m,
                     DateTime.Now.AddYears(-1));
             }

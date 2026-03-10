@@ -48,6 +48,8 @@ namespace AttendanceShiftingManagement.Models
         Admin,
         Manager,
         HRStaff,
-        Crew
+        Crew,
+
+        ShiftManager
     }
 }

@@ -57,7 +57,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
                 Window dashboardWindow = user.Role switch
                 {
-                    UserRole.Manager => new Views.ManagerMainWindow(user),
+                    UserRole.Manager or UserRole.ShiftManager => new Views.ManagerMainWindow(user),
                     UserRole.Crew => new Views.CrewMainWindow(user),
                     UserRole.HRStaff => new Views.MainWindow(user),
                     _ => new Views.MainWindow(user)
