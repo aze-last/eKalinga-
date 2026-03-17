@@ -1,8 +1,7 @@
 ﻿using AttendanceShiftingManagement.Models;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using System;
-using System.IO;
+using AttendanceShiftingManagement.Services;
 namespace AttendanceShiftingManagement.Data
 {
 
@@ -29,6 +28,11 @@ namespace AttendanceShiftingManagement.Data
         public DbSet<PerformanceGoal> PerformanceGoals { get; set; }
         public DbSet<TrainingRecord> TrainingRecords { get; set; }
         public DbSet<EngagementSurvey> EngagementSurveys { get; set; }
+        public DbSet<Household> Households { get; set; }
+        public DbSet<HouseholdMember> HouseholdMembers { get; set; }
+        public DbSet<CashForWorkEvent> CashForWorkEvents { get; set; }
+        public DbSet<CashForWorkParticipant> CashForWorkParticipants { get; set; }
+        public DbSet<CashForWorkAttendance> CashForWorkAttendances { get; set; }
 
         public AppDbContext()
         {
@@ -42,12 +46,7 @@ namespace AttendanceShiftingManagement.Data
         {
             if (!optionsBuilder.IsConfigured)
             {
-                var config = new ConfigurationBuilder()
-                    .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
-                    .AddJsonFile("appsettings.json", optional: false)
-                    .Build();
-
-                var connectionString = config.GetConnectionString("DefaultConnection");
+                var connectionString = ConnectionSettingsService.GetEffectiveConnectionString();
                 optionsBuilder.UseMySql(connectionString, new MySqlServerVersion(new Version(8, 0, 36)));
             }
         }
@@ -109,6 +108,22 @@ namespace AttendanceShiftingManagement.Data
                 .Property(es => es.BurnoutRisk)
                 .HasConversion<string>();
 
+            modelBuilder.Entity<Household>()
+                .Property(h => h.Status)
+                .HasConversion<string>();
+
+            modelBuilder.Entity<CashForWorkEvent>()
+                .Property(e => e.Status)
+                .HasConversion<string>();
+
+            modelBuilder.Entity<CashForWorkAttendance>()
+                .Property(a => a.Status)
+                .HasConversion<string>();
+
+            modelBuilder.Entity<CashForWorkAttendance>()
+                .Property(a => a.Source)
+                .HasConversion<string>();
+
             modelBuilder.Entity<UserProfile>()
                 .HasIndex(p => p.UserId)
                 .IsUnique();
@@ -157,6 +172,24 @@ namespace AttendanceShiftingManagement.Data
 
             modelBuilder.Entity<EngagementSurvey>()
                 .HasIndex(es => es.SurveyDate);
+
+            modelBuilder.Entity<Household>()
+                .HasIndex(h => h.HouseholdCode)
+                .IsUnique();
+
+            modelBuilder.Entity<HouseholdMember>()
+                .HasIndex(hm => hm.HouseholdId);
+
+            modelBuilder.Entity<CashForWorkEvent>()
+                .HasIndex(e => new { e.EventDate, e.Status });
+
+            modelBuilder.Entity<CashForWorkParticipant>()
+                .HasIndex(p => new { p.EventId, p.HouseholdMemberId })
+                .IsUnique();
+
+            modelBuilder.Entity<CashForWorkAttendance>()
+                .HasIndex(a => new { a.ParticipantId, a.AttendanceDate })
+                .IsUnique();
         }
     }
 }

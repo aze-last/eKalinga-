@@ -30,6 +30,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _overtimeHoursCount = "0.0h";
         private bool _isActionEnabled = true;
         private bool _hasScheduleToday;
+        private readonly bool _requireFingerprintForAttendance = FeatureFlagService.RequireFingerprintForAttendance;
 
         public string StatusText { get => _statusText; set => SetProperty(ref _statusText, value); }
         public string StatusColor { get => _statusColor; set => SetProperty(ref _statusColor, value); }
@@ -39,6 +40,10 @@ namespace AttendanceShiftingManagement.ViewModels
         public string TotalHoursCount { get => _totalHoursCount; set => SetProperty(ref _totalHoursCount, value); }
         public string OvertimeHoursCount { get => _overtimeHoursCount; set => SetProperty(ref _overtimeHoursCount, value); }
         public bool IsActionEnabled { get => _isActionEnabled; set => SetProperty(ref _isActionEnabled, value); }
+        public bool ShowSeparateScanButton => !_requireFingerprintForAttendance;
+        public string AttendanceActionHint => _requireFingerprintForAttendance
+            ? "Fingerprint required. Tap the main button once to scan."
+            : "Use the main button directly or scan with the button below.";
 
         public event Action? AttendanceRecorded;
         public event Action? ScheduleRequested;
@@ -107,7 +112,7 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 StatusText = "ON DUTY";
                 StatusColor = "#43A047";
-                ActionButtonText = "TIME OUT";
+                ActionButtonText = _requireFingerprintForAttendance ? "SCAN TO TIME OUT" : "TIME OUT";
                 StatusDetails = $"Shift: {DateTime.Today.Add(active.Shift.StartTime):hh:mm tt} - {DateTime.Today.Add(active.Shift.EndTime):hh:mm tt} | {active.Shift.Position?.Name}";
                 IsActionEnabled = true;
                 _hasScheduleToday = true;
@@ -116,7 +121,7 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 StatusText = "OFF DUTY";
                 StatusColor = "#FB8C00"; // Orange/Amber for "About to work"
-                ActionButtonText = "TIME IN";
+                ActionButtonText = _requireFingerprintForAttendance ? "SCAN TO TIME IN" : "TIME IN";
                 StatusDetails = $"Scheduled today: {DateTime.Today.Add(todayShift.Shift.StartTime):hh:mm tt} - {DateTime.Today.Add(todayShift.Shift.EndTime):hh:mm tt} | {todayShift.Shift.Position?.Name}";
                 IsActionEnabled = true;
                 _hasScheduleToday = true;
@@ -143,7 +148,23 @@ namespace AttendanceShiftingManagement.ViewModels
                     return;
                 }
 
-                if (ActionButtonText == "TIME IN")
+                if (_requireFingerprintForAttendance)
+                {
+                    ExecuteFingerprintAttendanceAction(() =>
+                    {
+                        if (_attendance.GetActiveAttendance(_employeeId) == null)
+                        {
+                            _attendance.TimeIn(_employeeId);
+                        }
+                        else
+                        {
+                            _attendance.TimeOut(_employeeId);
+                        }
+                    });
+                    return;
+                }
+
+                if (ActionButtonText.Contains("TIME IN", StringComparison.OrdinalIgnoreCase))
                 {
                     _attendance.TimeIn(_employeeId);
                 }
@@ -182,29 +203,7 @@ namespace AttendanceShiftingManagement.ViewModels
                     return;
                 }
 
-                var identifyResult = _fingerprintService.IdentifyUserFromCapture();
-                if (!identifyResult.IsMatched || !identifyResult.MatchedUserId.HasValue)
-                {
-                    System.Windows.MessageBox.Show("Fingerprint not recognized. Please try again.", "No Match",
-                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
-                    return;
-                }
-
-                if (identifyResult.MatchedUserId.Value != _userId)
-                {
-                    System.Windows.MessageBox.Show("Scanned fingerprint belongs to a different account.", "Access Denied",
-                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
-                    return;
-                }
-
-                _attendance.ToggleTimeByUserId(_userId);
-
-                LoadRealData();
-                SyncAttendanceStatus();
-                AttendanceRecorded?.Invoke();
-
-                System.Windows.MessageBox.Show("Fingerprint accepted. Attendance updated.", "Success",
-                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                ExecuteFingerprintAttendanceAction(() => _attendance.ToggleTimeByUserId(_userId));
             }
             catch (Exception ex)
             {
@@ -212,6 +211,33 @@ namespace AttendanceShiftingManagement.ViewModels
                     System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
                 SyncAttendanceStatus();
             }
+        }
+
+        private void ExecuteFingerprintAttendanceAction(Action attendanceAction)
+        {
+            var identifyResult = _fingerprintService.IdentifyUserFromCapture();
+            if (!identifyResult.IsMatched || !identifyResult.MatchedUserId.HasValue)
+            {
+                System.Windows.MessageBox.Show("Fingerprint not recognized. Please try again.", "No Match",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                return;
+            }
+
+            if (identifyResult.MatchedUserId.Value != _userId)
+            {
+                System.Windows.MessageBox.Show("Scanned fingerprint belongs to a different account.", "Access Denied",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                return;
+            }
+
+            attendanceAction();
+
+            LoadRealData();
+            SyncAttendanceStatus();
+            AttendanceRecorded?.Invoke();
+
+            System.Windows.MessageBox.Show("Fingerprint accepted. Attendance updated.", "Success",
+                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
         }
 
         private void LoadRealData()

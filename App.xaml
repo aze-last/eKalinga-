@@ -2,11 +2,11 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
-             StartupUri="Views/LoginWindow.xaml">
+             >
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <materialDesign:BundledTheme BaseTheme="Light" PrimaryColor="Amber" SecondaryColor="Red" />
+                <materialDesign:BundledTheme BaseTheme="Light" PrimaryColor="Blue" SecondaryColor="Amber" />
                 <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesign2.Defaults.xaml" />
                 <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesignTheme.Light.xaml" />
                 <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesignTheme.Button.xaml" />
@@ -21,16 +21,149 @@
                 <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesignTheme.DataGrid.xaml" />
                 <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesignTheme.ComboBox.xaml" />
             </ResourceDictionary.MergedDictionaries>
-            <SolidColorBrush x:Key="BrandMidnightBrush" Color="#27251F"/>
-            <SolidColorBrush x:Key="BrandYellowBrush" Color="#FFC72C"/>
-            <SolidColorBrush x:Key="BrandRedBrush" Color="#DA291C"/>
-            <SolidColorBrush x:Key="BrandSurfaceBrush" Color="#F5F5F5"/>
+
+            <SolidColorBrush x:Key="BrandMidnightBrush" Color="#0D2B6E"/>
+            <SolidColorBrush x:Key="BrandYellowBrush" Color="#F9C231"/>
+            <SolidColorBrush x:Key="BrandRedBrush" Color="#0D2B6E"/>
+            <SolidColorBrush x:Key="BrandSuccessBrush" Color="#1A7A4A"/>
+            <SolidColorBrush x:Key="BrandSurfaceBrush" Color="#F5F6FA"/>
+            <SolidColorBrush x:Key="BrandCardBrush" Color="#FFFFFF"/>
+            <SolidColorBrush x:Key="BrandBorderBrush" Color="#E2E5EF"/>
+            <SolidColorBrush x:Key="BrandTextSecondaryBrush" Color="#6B7280"/>
+            <SolidColorBrush x:Key="BrandGoldTextBrush" Color="#4A3600"/>
+            <SolidColorBrush x:Key="BrandSidebarTextBrush" Color="#8CFFFFFF"/>
+
+            <Style TargetType="{x:Type materialDesign:Card}">
+                <Setter Property="Background" Value="{StaticResource BrandCardBrush}"/>
+                <Setter Property="BorderBrush" Value="{StaticResource BrandBorderBrush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="UniformCornerRadius" Value="10"/>
+                <Setter Property="Padding" Value="16"/>
+                <Setter Property="materialDesign:ElevationAssist.Elevation" Value="Dp0"/>
+            </Style>
+
+            <Style TargetType="{x:Type DataGrid}">
+                <Setter Property="Background" Value="{StaticResource BrandCardBrush}"/>
+                <Setter Property="BorderBrush" Value="{StaticResource BrandBorderBrush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="GridLinesVisibility" Value="None"/>
+                <Setter Property="HeadersVisibility" Value="Column"/>
+                <Setter Property="RowHeight" Value="40"/>
+                <Setter Property="CanUserResizeRows" Value="False"/>
+            </Style>
+
+            <Style TargetType="{x:Type DataGridColumnHeader}">
+                <Setter Property="Background" Value="{StaticResource BrandCardBrush}"/>
+                <Setter Property="Foreground" Value="#9CA3AF"/>
+                <Setter Property="FontSize" Value="10"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+                <Setter Property="Height" Value="36"/>
+                <Setter Property="BorderBrush" Value="#E5E7EB"/>
+                <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            </Style>
+
+            <Style TargetType="{x:Type DataGridRow}">
+                <Setter Property="Background" Value="{StaticResource BrandCardBrush}"/>
+                <Setter Property="Foreground" Value="#374151"/>
+                <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="Background" Value="#EEF2FF"/>
+                    </Trigger>
+                    <Trigger Property="IsSelected" Value="True">
+                        <Setter Property="Background" Value="#EEF2FF"/>
+                        <Setter Property="Foreground" Value="{StaticResource BrandMidnightBrush}"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+
+            <Style TargetType="{x:Type DataGridCell}">
+                <Setter Property="Foreground" Value="#374151"/>
+                <Setter Property="Padding" Value="12,8"/>
+                <Setter Property="BorderBrush" Value="#F5F6FA"/>
+                <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                <Style.Triggers>
+                    <Trigger Property="IsSelected" Value="True">
+                        <Setter Property="Background" Value="Transparent"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+
             <Style x:Key="MaterialDesignFlatButton"
                    TargetType="Button"
                    BasedOn="{StaticResource MaterialDesignOutlinedButton}">
                 <Setter Property="Background" Value="Transparent"/>
                 <Setter Property="BorderThickness" Value="0"/>
             </Style>
+
+            <Style x:Key="PrimaryActionButton"
+                   TargetType="Button"
+                   BasedOn="{StaticResource MaterialDesignRaisedButton}">
+                <Setter Property="Background" Value="{StaticResource BrandMidnightBrush}"/>
+                <Setter Property="BorderBrush" Value="{StaticResource BrandMidnightBrush}"/>
+                <Setter Property="Foreground" Value="White"/>
+                <Setter Property="Padding" Value="16,8"/>
+                <Setter Property="FontSize" Value="13"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+            </Style>
+
+            <Style x:Key="SecondaryActionButton"
+                   TargetType="Button"
+                   BasedOn="{StaticResource MaterialDesignOutlinedButton}">
+                <Setter Property="Background" Value="{StaticResource BrandCardBrush}"/>
+                <Setter Property="BorderBrush" Value="#D1D5DB"/>
+                <Setter Property="Foreground" Value="#374151"/>
+                <Setter Property="Padding" Value="16,8"/>
+                <Setter Property="FontSize" Value="13"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+            </Style>
+
+            <Style x:Key="GoldActionButton"
+                   TargetType="Button"
+                   BasedOn="{StaticResource MaterialDesignRaisedButton}">
+                <Setter Property="Background" Value="{StaticResource BrandYellowBrush}"/>
+                <Setter Property="BorderBrush" Value="{StaticResource BrandYellowBrush}"/>
+                <Setter Property="Foreground" Value="{StaticResource BrandGoldTextBrush}"/>
+                <Setter Property="Padding" Value="16,8"/>
+                <Setter Property="FontSize" Value="13"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+            </Style>
+
+            <Style x:Key="SidebarNavButton"
+                   TargetType="Button"
+                   BasedOn="{StaticResource MaterialDesignFlatButton}">
+                <Setter Property="Foreground" Value="{StaticResource BrandSidebarTextBrush}"/>
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="BorderBrush" Value="Transparent"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="Height" Value="44"/>
+                <Setter Property="Margin" Value="0,2,0,2"/>
+                <Setter Property="Padding" Value="16,12"/>
+                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Root"
+                                    Background="{TemplateBinding Background}"
+                                    CornerRadius="6"
+                                    Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Root" Property="Background" Value="#26F9C231"/>
+                                    <Setter Property="Foreground" Value="{StaticResource BrandYellowBrush}"/>
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="Root" Property="Background" Value="#26F9C231"/>
+                                    <Setter Property="Foreground" Value="{StaticResource BrandYellowBrush}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
             <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
         </ResourceDictionary>
     </Application.Resources>

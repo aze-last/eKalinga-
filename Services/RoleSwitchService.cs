@@ -17,7 +17,7 @@ namespace AttendanceShiftingManagement.Services
                 return false;
             }
 
-            return SessionContext.IsImpersonating || currentUser.Role == UserRole.Admin;
+            return currentUser.IsActive;
         }
 
         public static bool CanReturnToAdmin => SessionContext.CanReturnToAdmin;
@@ -33,6 +33,35 @@ namespace AttendanceShiftingManagement.Services
                 .ToList();
         }
 
+        public static bool OpenRoleSwitcher(User currentUser, Window owner)
+        {
+            if (!IsEnabled)
+            {
+                MessageBox.Show("Demo role switch is disabled in appsettings.", "Feature Disabled",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return false;
+            }
+
+            if (!CanUseSwitcher(currentUser))
+            {
+                MessageBox.Show("Role switching is unavailable for this account.", "Access Denied",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return false;
+            }
+
+            var dialog = new RoleSwitchWindow(currentUser)
+            {
+                Owner = owner
+            };
+
+            if (dialog.ShowDialog() != true || !dialog.SelectedUserId.HasValue)
+            {
+                return false;
+            }
+
+            return SwitchToUser(dialog.SelectedUserId.Value, owner, currentUser);
+        }
+
         public static bool SwitchToUser(int targetUserId, Window? currentWindow, User currentUser)
         {
             if (!IsEnabled)
@@ -44,7 +73,7 @@ namespace AttendanceShiftingManagement.Services
 
             if (!CanUseSwitcher(currentUser))
             {
-                MessageBox.Show("Only Admin can switch roles.", "Access Denied",
+                MessageBox.Show("Role switching is unavailable for this account.", "Access Denied",
                     MessageBoxButton.OK, MessageBoxImage.Warning);
                 return false;
             }
@@ -58,22 +87,49 @@ namespace AttendanceShiftingManagement.Services
                 return false;
             }
 
-            var activeBeforeSwitch = SessionContext.ActiveUser ?? currentUser;
-            var adminUser = SessionContext.AdminUser ?? currentUser;
-            if (adminUser.Role != UserRole.Admin)
+            if (!ConfirmPrivilegedSwitch(currentUser, targetUser, currentWindow))
             {
-                MessageBox.Show("Only Admin can switch roles.", "Access Denied",
-                    MessageBoxButton.OK, MessageBoxImage.Warning);
                 return false;
             }
 
-            SessionContext.StartImpersonation(adminUser, targetUser);
+            var activeBeforeSwitch = SessionContext.ActiveUser ?? currentUser;
+            var adminUser = SessionContext.AdminUser;
 
-            LogImpersonationEvent(
-                adminUser.Id,
-                "ImpersonationStart",
+            if (adminUser != null && targetUser.Id == adminUser.Id)
+            {
+                SessionContext.EndImpersonation();
+
+                LogAuditEvent(
+                    adminUser.Id,
+                    "ImpersonationEnd",
+                    adminUser.Id,
+                    $"Admin '{adminUser.Username}' returned from '{activeBeforeSwitch.Username}' to Admin session via switcher.");
+
+                NavigateToRoleWindow(adminUser, currentWindow);
+                return true;
+            }
+
+            if (adminUser != null)
+            {
+                SessionContext.StartImpersonation(adminUser, targetUser);
+
+                LogAuditEvent(
+                    adminUser.Id,
+                    "ImpersonationStart",
+                    targetUser.Id,
+                    $"Admin '{adminUser.Username}' switched from '{activeBeforeSwitch.Username}' to '{targetUser.Username}'.");
+
+                NavigateToRoleWindow(targetUser, currentWindow);
+                return true;
+            }
+
+            SessionContext.Start(targetUser);
+
+            LogAuditEvent(
+                currentUser.Id,
+                "DemoRoleSwitch",
                 targetUser.Id,
-                $"Admin '{adminUser.Username}' switched from '{activeBeforeSwitch.Username}' to '{targetUser.Username}'.");
+                $"Demo role switch from '{activeBeforeSwitch.Username}' to '{targetUser.Username}'.");
 
             NavigateToRoleWindow(targetUser, currentWindow);
             return true;
@@ -91,7 +147,7 @@ namespace AttendanceShiftingManagement.Services
 
             SessionContext.EndImpersonation();
 
-            LogImpersonationEvent(
+            LogAuditEvent(
                 adminUser.Id,
                 "ImpersonationEnd",
                 adminUser.Id,
@@ -107,7 +163,7 @@ namespace AttendanceShiftingManagement.Services
                 SessionContext.LoginUser != null &&
                 SessionContext.ActiveUser != null)
             {
-                LogImpersonationEvent(
+                LogAuditEvent(
                     SessionContext.LoginUser.Id,
                     "ImpersonationEnd",
                     SessionContext.LoginUser.Id,
@@ -132,11 +188,39 @@ namespace AttendanceShiftingManagement.Services
             currentWindow?.Close();
         }
 
-        private static void LogImpersonationEvent(int adminUserId, string action, int entityId, string details)
+        private static bool ConfirmPrivilegedSwitch(User currentUser, User targetUser, Window? owner)
+        {
+            if (targetUser.Role != UserRole.Admin || currentUser.Role == UserRole.Admin || SessionContext.AdminUser != null)
+            {
+                return true;
+            }
+
+            var passwordDialog = new RoleSwitchPasswordWindow(targetUser)
+            {
+                Owner = owner
+            };
+
+            if (passwordDialog.ShowDialog() != true)
+            {
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(passwordDialog.EnteredPassword) ||
+                !BCrypt.Net.BCrypt.Verify(passwordDialog.EnteredPassword, targetUser.PasswordHash))
+            {
+                MessageBox.Show("Invalid Admin password. Switch cancelled.", "Switch Cancelled",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return false;
+            }
+
+            return true;
+        }
+
+        private static void LogAuditEvent(int actorUserId, string action, int entityId, string details)
         {
             using var context = new AppDbContext();
             var auditService = new AuditService(context);
-            auditService.LogActivity(adminUserId, action, "User", entityId, details);
+            auditService.LogActivity(actorUserId, action, "User", entityId, details);
         }
     }
 }

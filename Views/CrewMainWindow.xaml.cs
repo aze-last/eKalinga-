@@ -6,12 +6,16 @@ namespace AttendanceShiftingManagement.Views
 {
     public partial class CrewMainWindow : Window
     {
+        private readonly User _currentUser;
+
         public CrewMainWindow(User user)
         {
+            _currentUser = user;
             InitializeComponent();
             var vm = new AttendanceShiftingManagement.ViewModels.CrewMainViewModel(user);
             vm.ShowSuccessRequest += ShowSuccess;
             this.DataContext = vm;
+            SwitchRoleButton.Visibility = RoleSwitchService.CanUseSwitcher(user) ? Visibility.Visible : Visibility.Collapsed;
             ReturnAdminButton.Visibility = RoleSwitchService.CanReturnToAdmin ? Visibility.Visible : Visibility.Collapsed;
         }
 
@@ -36,6 +40,11 @@ namespace AttendanceShiftingManagement.Views
         private void ReturnToAdmin_Click(object sender, RoutedEventArgs e)
         {
             RoleSwitchService.ReturnToAdmin(this);
+        }
+
+        private void SwitchRole_Click(object sender, RoutedEventArgs e)
+        {
+            RoleSwitchService.OpenRoleSwitcher(_currentUser, this);
         }
     }
 }

@@ -1,219 +1,564 @@
-﻿<UserControl x:Class="AttendanceShiftingManagement.Views.ManagerDashboardPage"
+<UserControl x:Class="AttendanceShiftingManagement.Views.ManagerDashboardPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
-             Background="{StaticResource BrandSurfaceBrush}">
+             Background="#F0F4F8">
 
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+
+        <!-- Stat Card base border style -->
+        <Style x:Key="StatCardStyle" TargetType="Border">
+            <Setter Property="CornerRadius" Value="16"/>
+            <Setter Property="Padding" Value="22,18"/>
+            <Setter Property="Margin" Value="0,0,12,0"/>
+        </Style>
+
+        <!-- Pill chip style -->
+        <Style x:Key="StatusChipStyle" TargetType="Border">
+            <Setter Property="CornerRadius" Value="999"/>
+            <Setter Property="Padding" Value="10,4"/>
+        </Style>
+
+        <!-- Action button template -->
+        <Style x:Key="ActionBtnStyle" TargetType="Button">
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="btnBorder" CornerRadius="10"
+                                Background="{TemplateBinding Background}"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="btnBorder" Property="Opacity" Value="0.85"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="btnBorder" Property="Opacity" Value="0.7"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </UserControl.Resources>
 
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="0,4,0,24">
 
-        <UniformGrid Grid.Row="0" Columns="4" Margin="0,0,0,24">
-            
-            <!-- Time In/Out Card -->
-            <materialDesign:Card Margin="0,0,12,0" Padding="20" UniformCornerRadius="12" Background="{StaticResource BrandMidnightBrush}" Foreground="White">
-                <StackPanel>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <materialDesign:PackIcon Kind="ClockOutline" Foreground="{StaticResource BrandYellowBrush}" Width="28" Height="28"/>
-                        <materialDesign:Chip Grid.Column="1"
-                                             Content="{Binding CurrentStatus, FallbackValue=OFF DUTY}"
-                                             Background="{Binding StatusColor, FallbackValue=#FFC72C}"
-                                             Foreground="#27251F"
-                                             FontSize="10"
-                                             Height="24"/>
-                    </Grid>
-                    
-                    <Grid Margin="0,12,0,0">
+            <!-- ════════════════════════════════════════════════
+                 ROW 1: STAT CARDS
+                 ════════════════════════════════════════════════ -->
+            <Grid Margin="0,0,0,20">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Card 1: Time In/Out -->
+                <Border Grid.Column="0" Style="{StaticResource StatCardStyle}">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#1E293B" Offset="0"/>
+                            <GradientStop Color="#0F172A" Offset="1"/>
+                        </LinearGradientBrush>
+                    </Border.Background>
+                    <Border.Effect>
+                        <DropShadowEffect Color="#0F172A" BlurRadius="16" ShadowDepth="4" Opacity="0.18"/>
+                    </Border.Effect>
+                    <StackPanel>
+                        <DockPanel>
+                            <materialDesign:PackIcon Kind="ClockOutline" Foreground="#FFC72C"
+                                                     Width="24" Height="24" VerticalAlignment="Center"/>
+                            <!-- Status pill -->
+                            <Border DockPanel.Dock="Right" Style="{StaticResource StatusChipStyle}"
+                                    Background="{Binding StatusColor, FallbackValue=#22543D}">
+                                <TextBlock Text="{Binding CurrentStatus, FallbackValue=OFF DUTY}"
+                                           Foreground="#4ADE80" FontSize="9" FontWeight="Bold"/>
+                            </Border>
+                        </DockPanel>
+
+                        <TextBlock Text="My Attendance" Foreground="#94A3B8" FontSize="11"
+                                   Margin="0,12,0,12"/>
+                        <TextBlock Text="{Binding AttendanceActionHint}" Foreground="#CBD5E1" FontSize="10"
+                                   TextWrapping="Wrap" Margin="0,0,0,10"/>
+
+                        <!-- TIME IN Button -->
                         <Button Command="{Binding TimeInCommand}"
                                 Visibility="{Binding IsTimedIn, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}"
-                                Style="{StaticResource MaterialDesignRaisedButton}"
-                                Background="{StaticResource BrandRedBrush}" BorderBrush="{StaticResource BrandRedBrush}">
-                            <TextBlock Text="TIME IN" Foreground="White" FontWeight="SemiBold"/>
+                                Style="{StaticResource ActionBtnStyle}"
+                                HorizontalAlignment="Stretch">
+                            <Button.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                    <GradientStop Color="#16A34A" Offset="0"/>
+                                    <GradientStop Color="#15803D" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Button.Background>
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="ClockIn" Foreground="White"
+                                                         Width="16" Height="16" Margin="0,0,8,0"
+                                                         VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding TimeInActionLabel}" Foreground="White" VerticalAlignment="Center"/>
+                            </StackPanel>
                         </Button>
-                        
+
+                        <!-- TIME OUT Button -->
                         <Button Command="{Binding TimeOutCommand}"
                                 Visibility="{Binding IsTimedIn, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                Style="{StaticResource MaterialDesignRaisedButton}"
-                                Background="{StaticResource BrandYellowBrush}" BorderBrush="{StaticResource BrandYellowBrush}">
-                            <TextBlock Text="TIME OUT" Foreground="#27251F" FontWeight="SemiBold"/>
+                                Style="{StaticResource ActionBtnStyle}"
+                                HorizontalAlignment="Stretch">
+                            <Button.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                    <GradientStop Color="#F59E0B" Offset="0"/>
+                                    <GradientStop Color="#D97706" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Button.Background>
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="ClockOut" Foreground="White"
+                                                         Width="16" Height="16" Margin="0,0,8,0"
+                                                         VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding TimeOutActionLabel}" Foreground="White" VerticalAlignment="Center"/>
+                            </StackPanel>
                         </Button>
-                    </Grid>
 
-                    <Button Command="{Binding ScanFingerprintCommand}"
-                            Style="{StaticResource MaterialDesignOutlinedButton}"
-                            Margin="0,10,0,0"
-                            Height="34">
-                        <StackPanel Orientation="Horizontal">
-                            <materialDesign:PackIcon Kind="Fingerprint" Width="18" Height="18" Margin="0,0,8,0"/>
-                            <TextBlock Text="SCAN FINGER TO CLOCK"/>
+                        <!-- Fingerprint button -->
+                        <Button Command="{Binding ScanFingerprintCommand}"
+                                Visibility="{Binding ShowSeparateScanButton, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                Style="{StaticResource ActionBtnStyle}"
+                                Background="#1E3A4A" Margin="0,8,0,0" HorizontalAlignment="Stretch">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="Fingerprint" Foreground="#38BDF8"
+                                                         Width="16" Height="16" Margin="0,0,8,0"
+                                                         VerticalAlignment="Center"/>
+                                <TextBlock Text="Scan Fingerprint" Foreground="#38BDF8"
+                                           FontSize="11" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Border>
+
+                <!-- Card 2: Total Crew -->
+                <Border Grid.Column="1" Style="{StaticResource StatCardStyle}" Margin="6,0,6,0">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#1D3460" Offset="0"/>
+                            <GradientStop Color="#0F172A" Offset="1"/>
+                        </LinearGradientBrush>
+                    </Border.Background>
+                    <Border.Effect>
+                        <DropShadowEffect Color="#1D3460" BlurRadius="16" ShadowDepth="4" Opacity="0.2"/>
+                    </Border.Effect>
+                    <StackPanel>
+                        <Border Width="44" Height="44" CornerRadius="12" HorizontalAlignment="Left">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                    <GradientStop Color="#3B82F6" Offset="0"/>
+                                    <GradientStop Color="#2563EB" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Border.Background>
+                            <materialDesign:PackIcon Kind="AccountGroupOutline" Foreground="White"
+                                                     Width="22" Height="22"
+                                                     HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Text="{Binding TotalCrew, FallbackValue='27'}"
+                                   FontSize="40" FontWeight="Bold" Foreground="White" Margin="0,12,0,0"/>
+                        <TextBlock Text="Total Crew Members" Foreground="#93C5FD" FontSize="12" Margin="0,4,0,0"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                            <materialDesign:PackIcon Kind="TrendingUp" Foreground="#4ADE80" Width="14" Height="14"
+                                                     VerticalAlignment="Center"/>
+                            <TextBlock Text=" Active workforce" Foreground="#64748B" FontSize="11"
+                                       VerticalAlignment="Center"/>
                         </StackPanel>
-                    </Button>
-                </StackPanel>
-            </materialDesign:Card>
+                    </StackPanel>
+                </Border>
 
-            <materialDesign:Card Margin="6,0,6,0" Padding="20" UniformCornerRadius="12" Background="#1F2937" Foreground="White">
-                <StackPanel>
-                    <materialDesign:PackIcon Kind="AccountGroupOutline" Foreground="{StaticResource BrandYellowBrush}" Width="28" Height="28"/>
-                    <TextBlock Text="{Binding TotalCrew, FallbackValue='42'}" FontSize="32" FontWeight="Bold" Margin="0,8,0,0"/>
-                    <TextBlock Text="Total Crew Members" Foreground="#D1D5DB" FontSize="12" FontWeight="Medium"/>
-                </StackPanel>
-            </materialDesign:Card>
+                <!-- Card 3: On Duty -->
+                <Border Grid.Column="2" Style="{StaticResource StatCardStyle}" Margin="6,0,6,0">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#14532D" Offset="0"/>
+                            <GradientStop Color="#0F172A" Offset="1"/>
+                        </LinearGradientBrush>
+                    </Border.Background>
+                    <Border.Effect>
+                        <DropShadowEffect Color="#14532D" BlurRadius="16" ShadowDepth="4" Opacity="0.2"/>
+                    </Border.Effect>
+                    <StackPanel>
+                        <Border Width="44" Height="44" CornerRadius="12" HorizontalAlignment="Left">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                    <GradientStop Color="#22C55E" Offset="0"/>
+                                    <GradientStop Color="#15803D" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Border.Background>
+                            <materialDesign:PackIcon Kind="BriefcaseCheckOutline" Foreground="White"
+                                                     Width="22" Height="22"
+                                                     HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Text="{Binding OnDutyCount, FallbackValue='1'}"
+                                   FontSize="40" FontWeight="Bold" Foreground="White" Margin="0,12,0,0"/>
+                        <TextBlock Text="Currently On Duty" Foreground="#86EFAC" FontSize="12" Margin="0,4,0,0"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                            <Border Width="8" Height="8" CornerRadius="4" Background="#4ADE80" VerticalAlignment="Center">
+                                <Border.Effect>
+                                    <DropShadowEffect Color="#4ADE80" BlurRadius="6" ShadowDepth="0"/>
+                                </Border.Effect>
+                            </Border>
+                            <TextBlock Text=" Live now" Foreground="#64748B" FontSize="11" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
 
-            <materialDesign:Card Margin="6,0,6,0" Padding="20" UniformCornerRadius="12" Background="#111827" Foreground="White">
-                <StackPanel>
-                    <materialDesign:PackIcon Kind="BriefcaseCheckOutline" Foreground="{StaticResource BrandYellowBrush}" Width="28" Height="28"/>
-                    <TextBlock Text="{Binding OnDutyCount, FallbackValue='18'}" FontSize="32" FontWeight="Bold" Margin="0,8,0,0"/>
-                    <TextBlock Text="Currently On Duty" Foreground="#D1D5DB" FontSize="12" FontWeight="Medium"/>
-                </StackPanel>
-            </materialDesign:Card>
+                <!-- Card 4: Labor Hours -->
+                <Border Grid.Column="3" Style="{StaticResource StatCardStyle}" Margin="12,0,0,0">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#7C2D12" Offset="0"/>
+                            <GradientStop Color="#0F172A" Offset="1"/>
+                        </LinearGradientBrush>
+                    </Border.Background>
+                    <Border.Effect>
+                        <DropShadowEffect Color="#DA291C" BlurRadius="16" ShadowDepth="4" Opacity="0.15"/>
+                    </Border.Effect>
+                    <StackPanel>
+                        <Border Width="44" Height="44" CornerRadius="12" HorizontalAlignment="Left">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                    <GradientStop Color="#EF4444" Offset="0"/>
+                                    <GradientStop Color="#DC2626" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Border.Background>
+                            <materialDesign:PackIcon Kind="TimerOutline" Foreground="White"
+                                                     Width="22" Height="22"
+                                                     HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Text="{Binding TotalWeekHours, FallbackValue='0.0'}"
+                                   FontSize="40" FontWeight="Bold" Foreground="White" Margin="0,12,0,0"/>
+                        <TextBlock Text="Total Labor Hours (Week)" Foreground="#FCA5A5" FontSize="12" Margin="0,4,0,0"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                            <materialDesign:PackIcon Kind="CalendarWeekOutline" Foreground="#EF4444"
+                                                     Width="14" Height="14" VerticalAlignment="Center"/>
+                            <TextBlock Text=" Weekly aggregate" Foreground="#64748B" FontSize="11"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </Grid>
 
-            <materialDesign:Card Margin="12,0,0,0" Padding="20" UniformCornerRadius="12" Background="{StaticResource BrandRedBrush}" Foreground="White">
-                <StackPanel>
-                    <materialDesign:PackIcon Kind="TimerOutline" Foreground="{StaticResource BrandYellowBrush}" Width="28" Height="28"/>
-                    <TextBlock Text="{Binding TotalWeekHours, FallbackValue='1,240'}" FontSize="32" FontWeight="Bold" Margin="0,8,0,0"/>
-                    <TextBlock Text="Total Labor Hours (Week)" Foreground="#FDE68A" FontSize="12" FontWeight="Medium"/>
-                </StackPanel>
-            </materialDesign:Card>
-            
-        </UniformGrid>
-
-        <materialDesign:Card Grid.Row="1" UniformCornerRadius="12" Padding="16" Background="White" Margin="0,0,0,16">
-            <Grid>
+            <!-- ════════════════════════════════════════════════
+                 ROW 2: ANNOUNCEMENTS + NOTIFICATIONS
+                 ════════════════════════════════════════════════ -->
+            <Grid Margin="0,0,0,20">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="2*"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- Announcements Composer -->
-                <StackPanel Grid.Column="0" Margin="0,0,16,0">
-                    <DockPanel Margin="0,0,0,8">
-                        <TextBlock Text="Announcements" FontWeight="Bold" FontSize="16" Foreground="{StaticResource BrandMidnightBrush}"/>
-                        <materialDesign:PackIcon Kind="Bullhorn" Foreground="{StaticResource BrandRedBrush}" Margin="8,0,0,0"/>
-                    </DockPanel>
-                    <Border Background="#FFF8E1" BorderBrush="{StaticResource BrandYellowBrush}" BorderThickness="1" CornerRadius="10" Padding="12">
-                        <StackPanel>
-                            <TextBox Text="{Binding AnnouncementText, UpdateSourceTrigger=PropertyChanged}"
-                                     materialDesign:HintAssist.Hint="Write an announcement for all crew..."
-                                     materialDesign:HintAssist.Foreground="#6B7280"
-                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                     Height="60"
-                                     FontFamily="Segoe UI"
-                                     FontSize="14"
-                                     Foreground="#111"
-                                     CaretBrush="#111"
-                                     Background="White"
-                                     BorderBrush="{StaticResource BrandYellowBrush}"/>
-                            <Button Content="SEND ANNOUNCEMENT"
-                                    Command="{Binding SendAnnouncementCommand}"
-                                    Style="{StaticResource MaterialDesignRaisedButton}"
-                                    Background="{StaticResource BrandRedBrush}" Foreground="White"
-                                    Height="40" Margin="0,10,0,0"/>
+                <!-- Announcement Composer -->
+                <Border Grid.Column="0" CornerRadius="16" Margin="0,0,12,0"
+                        Background="White" Padding="24">
+                    <Border.Effect>
+                        <DropShadowEffect Color="#CBD5E1" BlurRadius="12" ShadowDepth="2" Opacity="0.5"/>
+                    </Border.Effect>
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                            <Border Width="36" Height="36" CornerRadius="10" Background="#FFF7ED"
+                                    VerticalAlignment="Center">
+                                <materialDesign:PackIcon Kind="Bullhorn" Foreground="#F59E0B"
+                                                         Width="18" Height="18"
+                                                         HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                                <TextBlock Text="Post Announcement" FontWeight="Bold" FontSize="16"
+                                           Foreground="#0F172A"/>
+                                <TextBlock Text="Broadcast a message to all crew members"
+                                           Foreground="#94A3B8" FontSize="12"/>
+                            </StackPanel>
                         </StackPanel>
-                    </Border>
-                </StackPanel>
 
-                <!-- Manager Notifications -->
-                <StackPanel Grid.Column="1">
-                    <TextBlock Text="Your Notifications" FontWeight="Bold" FontSize="16" Foreground="{StaticResource BrandMidnightBrush}" Margin="0,0,0,8"/>
-                    <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="10" Padding="10">
+                        <Border BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="12"
+                                Background="#F8FAFC" Padding="12">
+                            <TextBox Text="{Binding AnnouncementText, UpdateSourceTrigger=PropertyChanged}"
+                                     materialDesign:HintAssist.Hint="Write a message for all crew members…"
+                                     materialDesign:HintAssist.Foreground="#94A3B8"
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     Height="70" FontSize="13"
+                                     Foreground="#1E293B" CaretBrush="#1E293B"
+                                     Background="Transparent"
+                                     BorderBrush="Transparent"/>
+                        </Border>
+
+                        <Grid Margin="0,12,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="" Foreground="#94A3B8" FontSize="11"
+                                       VerticalAlignment="Center" Margin="4,0,0,0"/>
+                            <Button Grid.Column="1" Command="{Binding SendAnnouncementCommand}"
+                                    Style="{StaticResource ActionBtnStyle}" Padding="20,10">
+                                <Button.Background>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                        <GradientStop Color="#DA291C" Offset="0"/>
+                                        <GradientStop Color="#B91C1C" Offset="1"/>
+                                    </LinearGradientBrush>
+                                </Button.Background>
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon Kind="Send" Foreground="White"
+                                                             Width="15" Height="15" Margin="0,0,8,0"
+                                                             VerticalAlignment="Center"/>
+                                    <TextBlock Text="Send Announcement" Foreground="White"
+                                               FontWeight="SemiBold" FontSize="13"/>
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Notifications Panel -->
+                <Border Grid.Column="1" CornerRadius="16" Background="White" Padding="20">
+                    <Border.Effect>
+                        <DropShadowEffect Color="#CBD5E1" BlurRadius="12" ShadowDepth="2" Opacity="0.5"/>
+                    </Border.Effect>
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                            <Border Width="36" Height="36" CornerRadius="10" Background="#EFF6FF">
+                                <materialDesign:PackIcon Kind="BellOutline" Foreground="#3B82F6"
+                                                         Width="18" Height="18"
+                                                         HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <TextBlock Text="Notifications" FontWeight="Bold" FontSize="16"
+                                       Foreground="#0F172A" Margin="12,0,0,0" VerticalAlignment="Center"/>
+                        </StackPanel>
+
                         <ItemsControl ItemsSource="{Binding ManagerNotifications}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Padding="0,8">
-                                        <StackPanel>
-                                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="12"/>
-                                            <TextBlock Text="{Binding Message}" FontSize="11" Opacity="0.8" TextWrapping="Wrap"/>
-                                            <TextBlock Text="{Binding CreatedAt, StringFormat='MMM dd, hh:mm tt'}" FontSize="10" Opacity="0.6"/>
-                                        </StackPanel>
+                                    <Border BorderBrush="#F1F5F9" BorderThickness="0,0,0,1" Padding="0,10">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="8"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0" Width="6" Height="6" CornerRadius="3"
+                                                    Background="#3B82F6" VerticalAlignment="Top" Margin="0,4,0,0"/>
+                                            <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                                <TextBlock Text="{Binding Title}" FontWeight="SemiBold"
+                                                           FontSize="12" Foreground="#1E293B"/>
+                                                <TextBlock Text="{Binding Message}" FontSize="11"
+                                                           Foreground="#64748B" TextWrapping="Wrap"
+                                                           Margin="0,2,0,0"/>
+                                                <TextBlock Text="{Binding CreatedAt, StringFormat='MMM dd · hh:mm tt'}"
+                                                           FontSize="10" Foreground="#CBD5E1" Margin="0,3,0,0"/>
+                                            </StackPanel>
+                                        </Grid>
                                     </Border>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                    </Border>
-                </StackPanel>
-            </Grid>
-        </materialDesign:Card>
 
-        <materialDesign:Card Grid.Row="2" UniformCornerRadius="12" Padding="0" Background="White">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-
-                <Border Background="#F8FAFC" Padding="20,15" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1">
-                    <DockPanel>
-                        <TextBlock Text="Live Attendance Feed" FontWeight="Bold" VerticalAlignment="Center" FontSize="16"/>
-                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                            <TextBox Width="200"
-                                     Text="{Binding AttendanceSearchText, UpdateSourceTrigger=PropertyChanged}"
-                                     materialDesign:HintAssist.Hint="Search Employee..." 
-                                     Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="0,0,10,0"/>
-                            <Button Style="{StaticResource MaterialDesignOutlinedButton}"
-                                    Content="Export"
-                                    Height="32"
-                                    Padding="12,0"
-                                    Command="{Binding ExportAttendanceCommand}"/>
-                        </StackPanel>
-                    </DockPanel>
+                        <TextBlock Text="No new notifications" Foreground="#CBD5E1"
+                                   FontSize="12" HorizontalAlignment="Center"
+                                   Margin="0,12,0,0"
+                                   Visibility="{Binding HasNotifications, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse, FallbackValue=Visible}"/>
+                    </StackPanel>
                 </Border>
-
-                <DataGrid Grid.Row="1" ItemsSource="{Binding TodayAttendanceView}" 
-                          AutoGenerateColumns="False" 
-                          IsReadOnly="True"
-                          CanUserAddRows="False"
-                          HeadersVisibility="Column"
-                          Background="Transparent"
-                          BorderThickness="0"
-                          HorizontalScrollBarVisibility="Disabled">
-                    <DataGrid.Columns>
-                        <DataGridTemplateColumn Header="Crew Member" Width="*">
-                            <DataGridTemplateColumn.CellTemplate>
-                                <DataTemplate>
-                                    <StackPanel Orientation="Horizontal" Margin="10,5">
-                                        <Border Width="32" Height="32" CornerRadius="16" Background="#E2E8F0">
-                                            <materialDesign:PackIcon Kind="Account" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#64748B"/>
-                                        </Border>
-                                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center" Margin="12,0,0,0" FontWeight="SemiBold"/>
-                                    </StackPanel>
-                                </DataTemplate>
-                            </DataGridTemplateColumn.CellTemplate>
-                        </DataGridTemplateColumn>
-                        
-                        <DataGridTextColumn Header="Position" Binding="{Binding Position}" Width="Auto"/>
-                        <DataGridTextColumn Header="Clock In" Binding="{Binding ClockInTime}" Width="Auto"/>
-                        
-                        <DataGridTemplateColumn Header="Status" Width="Auto">
-                            <DataGridTemplateColumn.CellTemplate>
-                                <DataTemplate>
-                                    <materialDesign:Chip Content="{Binding Status}" 
-                                                         Background="{Binding StatusColor}" 
-                                                         Foreground="White" Height="24"/>
-                                </DataTemplate>
-                            </DataGridTemplateColumn.CellTemplate>
-                        </DataGridTemplateColumn>
-                        
-                        <DataGridTemplateColumn Header="Action" Width="Auto">
-                            <DataGridTemplateColumn.CellTemplate>
-                                <DataTemplate>
-                                    <Button Style="{StaticResource MaterialDesignFlatButton}" Content="Details" Foreground="#3B82F6"/>
-                                </DataTemplate>
-                            </DataGridTemplateColumn.CellTemplate>
-                        </DataGridTemplateColumn>
-                    </DataGrid.Columns>
-                </DataGrid>
             </Grid>
-        </materialDesign:Card>
-    </Grid>
+
+            <!-- ════════════════════════════════════════════════
+                 ROW 3: LIVE ATTENDANCE FEED
+                 ════════════════════════════════════════════════ -->
+            <Border CornerRadius="16" Background="White">
+                <Border.Effect>
+                    <DropShadowEffect Color="#CBD5E1" BlurRadius="12" ShadowDepth="2" Opacity="0.5"/>
+                </Border.Effect>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Table Header -->
+                    <Border Background="#F8FAFC" Padding="24,16" CornerRadius="16,16,0,0"
+                            BorderBrush="#F1F5F9" BorderThickness="0,0,0,1">
+                        <DockPanel>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Border Width="32" Height="32" CornerRadius="8" Background="#FEF3C7">
+                                    <materialDesign:PackIcon Kind="RadioTower" Foreground="#D97706"
+                                                             Width="16" Height="16"
+                                                             HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                                    <TextBlock Text="Live Attendance Feed" FontWeight="Bold"
+                                               FontSize="15" Foreground="#0F172A"/>
+                                    <TextBlock Text="Real-time crew clock-in status"
+                                               Foreground="#94A3B8" FontSize="11"/>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                                <!-- Search -->
+                                <Border CornerRadius="10" BorderBrush="#E2E8F0" BorderThickness="1"
+                                        Background="White" Padding="10,6" Margin="0,0,10,0">
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="Magnify" Foreground="#94A3B8"
+                                                                 Width="15" Height="15" VerticalAlignment="Center"
+                                                                 Margin="0,0,8,0"/>
+                                        <TextBox Text="{Binding AttendanceSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                                 Width="160"
+                                                 materialDesign:HintAssist.Hint="Search employee…"
+                                                 materialDesign:HintAssist.Foreground="#94A3B8"
+                                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                                 BorderBrush="Transparent" Background="Transparent"
+                                                 Foreground="#1E293B" FontSize="12"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Export -->
+                                <Button Command="{Binding ExportAttendanceCommand}"
+                                        Style="{StaticResource ActionBtnStyle}"
+                                        Background="#1E293B" Padding="14,8">
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="Download" Foreground="White"
+                                                                 Width="14" Height="14" VerticalAlignment="Center"
+                                                                 Margin="0,0,6,0"/>
+                                        <TextBlock Text="Export" Foreground="White" FontSize="12"
+                                                   FontWeight="SemiBold"/>
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+
+                    <!-- DataGrid -->
+                    <DataGrid Grid.Row="1"
+                              ItemsSource="{Binding TodayAttendanceView}"
+                              AutoGenerateColumns="False"
+                              IsReadOnly="True"
+                              CanUserAddRows="False"
+                              HeadersVisibility="Column"
+                              Background="Transparent"
+                              BorderThickness="0"
+                              RowBackground="White"
+                              AlternatingRowBackground="#FAFBFC"
+                              HorizontalScrollBarVisibility="Disabled"
+                              GridLinesVisibility="Horizontal"
+                              HorizontalGridLinesBrush="#F1F5F9">
+                        <DataGrid.ColumnHeaderStyle>
+                            <Style TargetType="DataGridColumnHeader">
+                                <Setter Property="Background" Value="Transparent"/>
+                                <Setter Property="Foreground" Value="#64748B"/>
+                                <Setter Property="FontSize" Value="11"/>
+                                <Setter Property="FontWeight" Value="Bold"/>
+                                <Setter Property="Padding" Value="16,12"/>
+                                <Setter Property="BorderThickness" Value="0"/>
+                            </Style>
+                        </DataGrid.ColumnHeaderStyle>
+                        <DataGrid.RowStyle>
+                            <Style TargetType="DataGridRow">
+                                <Setter Property="BorderThickness" Value="0"/>
+                                <Style.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Background" Value="#F8FAFC"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </DataGrid.RowStyle>
+                        <DataGrid.CellStyle>
+                            <Style TargetType="DataGridCell">
+                                <Setter Property="BorderThickness" Value="0"/>
+                                <Setter Property="Padding" Value="0"/>
+                                <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                            </Style>
+                        </DataGrid.CellStyle>
+                        <DataGrid.Columns>
+                            <DataGridTemplateColumn Header="CREW MEMBER" Width="*">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" Margin="16,10">
+                                            <Border Width="34" Height="34" CornerRadius="17"
+                                                    Background="#EFF6FF">
+                                                <materialDesign:PackIcon Kind="AccountOutline"
+                                                                         HorizontalAlignment="Center"
+                                                                         VerticalAlignment="Center"
+                                                                         Foreground="#3B82F6"
+                                                                         Width="18" Height="18"/>
+                                            </Border>
+                                            <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold"
+                                                           FontSize="13" Foreground="#1E293B"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <DataGridTemplateColumn Header="POSITION" Width="Auto">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Position}" Margin="16,0"
+                                                   VerticalAlignment="Center"
+                                                   Foreground="#64748B" FontSize="12"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <DataGridTemplateColumn Header="CLOCK IN" Width="Auto">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" Margin="16,0" VerticalAlignment="Center">
+                                            <materialDesign:PackIcon Kind="ClockOutline" Foreground="#94A3B8"
+                                                                     Width="13" Height="13"
+                                                                     VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                            <TextBlock Text="{Binding ClockInTime}"
+                                                       Foreground="#1E293B" FontSize="12"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <DataGridTemplateColumn Header="STATUS" Width="Auto">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Border Margin="16,6" CornerRadius="999" Padding="10,4"
+                                                Background="{Binding StatusColor}">
+                                            <TextBlock Text="{Binding Status}" Foreground="White"
+                                                       FontSize="11" FontWeight="SemiBold"/>
+                                        </Border>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <DataGridTemplateColumn Header="ACTION" Width="Auto">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Style="{StaticResource ActionBtnStyle}"
+                                                Background="#EFF6FF" Padding="12,6" Margin="10,4">
+                                            <StackPanel Orientation="Horizontal">
+                                                <materialDesign:PackIcon Kind="OpenInNew" Foreground="#3B82F6"
+                                                                         Width="13" Height="13"
+                                                                         VerticalAlignment="Center"
+                                                                         Margin="0,0,5,0"/>
+                                                <TextBlock Text="Details" Foreground="#3B82F6"
+                                                           FontWeight="SemiBold" FontSize="11"/>
+                                            </StackPanel>
+                                        </Button>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </Border>
+
+        </StackPanel>
+    </ScrollViewer>
 </UserControl>

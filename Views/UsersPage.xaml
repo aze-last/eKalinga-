@@ -15,22 +15,21 @@
 
         <!-- Header -->
         <DockPanel Grid.Row="0" Margin="0,0,0,16">
-            <TextBlock Text="User Management"
-                       Style="{StaticResource MaterialDesignHeadline5TextBlock}"
-                       FontWeight="Bold"
+            <TextBlock Text="Barangay Accounts"
+                       FontSize="20"
+                       FontWeight="SemiBold"
                        Foreground="{StaticResource BrandMidnightBrush}"
                        DockPanel.Dock="Left"/>
 
             <Button Command="{Binding AddUserCommand}"
-                    Style="{StaticResource MaterialDesignRaisedButton}"
-                    Background="{StaticResource BrandRedBrush}" Foreground="White"
+                    Style="{StaticResource PrimaryActionButton}"
                     HorizontalAlignment="Right"
                     DockPanel.Dock="Right"
                     Visibility="{Binding CanManageUsers, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <Button.Content>
                     <StackPanel Orientation="Horizontal">
                         <materialDesign:PackIcon Kind="AccountPlus" Margin="0,0,8,0"/>
-                        <TextBlock Text="ADD USER"/>
+                        <TextBlock Text="ADD ACCOUNT"/>
                     </StackPanel>
                 </Button.Content>
             </Button>

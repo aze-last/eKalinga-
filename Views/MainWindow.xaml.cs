@@ -18,29 +18,7 @@ namespace AttendanceShiftingManagement.Views
 
         private void SwitchRole_Click(object sender, RoutedEventArgs e)
         {
-            if (!RoleSwitchService.IsEnabled)
-            {
-                MessageBox.Show("Demo role switch is disabled. Set AppSettings:EnableDemoRoleSwitch=true.",
-                    "Feature Disabled", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-
-            if (!RoleSwitchService.CanUseSwitcher(_currentUser))
-            {
-                MessageBox.Show("Only Admin can switch roles.",
-                    "Access Denied", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            var dialog = new RoleSwitchWindow(_currentUser)
-            {
-                Owner = this
-            };
-
-            if (dialog.ShowDialog() == true && dialog.SelectedUserId.HasValue)
-            {
-                RoleSwitchService.SwitchToUser(dialog.SelectedUserId.Value, this, _currentUser);
-            }
+            RoleSwitchService.OpenRoleSwitcher(_currentUser, this);
         }
 
         private void ReturnToAdmin_Click(object sender, RoutedEventArgs e)

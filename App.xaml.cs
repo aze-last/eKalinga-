@@ -1,4 +1,6 @@
 using AttendanceShiftingManagement.Data;
+using AttendanceShiftingManagement.Services;
+using AttendanceShiftingManagement.Views;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Linq;
@@ -8,6 +10,12 @@ namespace AttendanceShiftingManagement
 {
     public partial class App : Application
     {
+        private bool _databaseInitialized;
+        private string _initializedConnectionString = string.Empty;
+        private bool _resetPending;
+
+        public bool MigrateOnStartup { get; private set; }
+
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
@@ -17,27 +25,33 @@ namespace AttendanceShiftingManagement
                 .AddJsonFile("appsettings.json", optional: false)
                 .Build();
 
-            bool resetDb = configuration.GetValue("Database:ResetOnStartup", false);
-            bool migrateOnStartup = configuration.GetValue("Database:MigrateOnStartup", true);
+            MigrateOnStartup = configuration.GetValue("Database:MigrateOnStartup", true);
+            _resetPending = configuration.GetValue("Database:ResetOnStartup", false);
 
             if (e.Args.Any(arg => arg.Equals("--reset-db", StringComparison.OrdinalIgnoreCase)))
             {
-                resetDb = true;
+                _resetPending = true;
             }
 
-            try
+            var loginWindow = new LoginWindow();
+            MainWindow = loginWindow;
+            ShutdownMode = ShutdownMode.OnMainWindowClose;
+            loginWindow.Show();
+        }
+
+        public void EnsureDatabaseInitialized()
+        {
+            var connectionString = ConnectionSettingsService.GetEffectiveConnectionString();
+            if (_databaseInitialized && string.Equals(_initializedConnectionString, connectionString, StringComparison.Ordinal))
             {
-                DatabaseInitializer.Initialize(resetDb, migrateOnStartup);
+                return;
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show(
-                    $"Database initialization failed.\n\n{ex.Message}",
-                    "ASMS Startup Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
-                Shutdown(-1);
-            }
+
+            DatabaseInitializer.Initialize(_resetPending, MigrateOnStartup);
+
+            _databaseInitialized = true;
+            _initializedConnectionString = connectionString;
+            _resetPending = false;
         }
     }
 }

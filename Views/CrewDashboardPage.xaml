@@ -24,6 +24,7 @@
                 <StackPanel VerticalAlignment="Center">
                     <TextBlock Text="{Binding StatusText, FallbackValue='OFF DUTY'}" FontSize="30" FontWeight="ExtraBold"/>
                     <TextBlock Text="{Binding StatusDetails, FallbackValue='Lobby | Next Shift: 11:00 AM'}" FontSize="15" Opacity="0.9" Margin="0,5,0,0"/>
+                    <TextBlock Text="{Binding AttendanceActionHint}" FontSize="12" Opacity="0.8" Margin="0,8,0,0"/>
                 </StackPanel>
 
                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
@@ -32,6 +33,7 @@
                             Content="{Binding ActionButtonText, FallbackValue='TIME IN'}"
                             Command="{Binding TimeInOutCommand}"/>
                     <Button Height="34" Width="180" Margin="0,8,0,0"
+                            Visibility="{Binding ShowSeparateScanButton, Converter={StaticResource BooleanToVisibilityConverter}}"
                             Style="{StaticResource MaterialDesignOutlinedButton}"
                             Content="SCAN FINGER"
                             Command="{Binding ScanFingerprintCommand}"/>

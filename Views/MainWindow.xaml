@@ -16,14 +16,14 @@
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
     </Window.Resources>
 
-    <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="220"/>
+        <Grid>
+            <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="200"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
         <!-- Sidebar -->
-        <Border Grid.Column="0" Background="{StaticResource BrandMidnightBrush}" materialDesign:ElevationAssist.Elevation="Dp4">
+        <Border Grid.Column="0" Background="{StaticResource BrandMidnightBrush}">
             <Grid Background="{StaticResource BrandMidnightBrush}">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -33,6 +33,14 @@
 
                 <!-- Profile -->
                 <StackPanel Grid.Row="0" Margin="20,32,20,24">
+                    <TextBlock Text="Barangay Ayuda System"
+                               Foreground="White"
+                               FontSize="13"
+                               FontWeight="Medium"/>
+                    <TextBlock Text="{Binding CurrentRoleLabel}"
+                               Margin="0,4,0,18"
+                               Foreground="{StaticResource BrandYellowBrush}"
+                               FontSize="11"/>
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="64"/>
@@ -56,66 +64,73 @@
                 </StackPanel>
 
                 <!-- Nav Buttons -->
-                <StackPanel Grid.Row="1">
-                    <Button Style="{StaticResource MaterialDesignFlatButton}" 
-                            Foreground="White" Height="50" Command="{Binding ShowDashboardCommand}" FontSize="18">
+                <StackPanel Grid.Row="1" Margin="12,0">
+                    <Button Style="{StaticResource SidebarNavButton}"
+                            Command="{Binding ShowDashboardCommand}"
+                            FontSize="13">
                         <StackPanel Orientation="Horizontal" Width="180">
                             <materialDesign:PackIcon Kind="ViewDashboard" Margin="0,0,16,0"/>
-                            <TextBlock Text="Dashboard"/>
-                        </StackPanel>
-                    </Button>
-                    <Button Style="{StaticResource MaterialDesignFlatButton}" 
-                            Foreground="White" Height="50" Command="{Binding ShowUsersCommand}" FontSize="18">
-                        <Button.Visibility>
-                            <Binding Path="CanManageUsers" Converter="{StaticResource BooleanToVisibilityConverter}"/>
-                        </Button.Visibility>
-                        <StackPanel Orientation="Horizontal" Width="180">
-                            <materialDesign:PackIcon Kind="AccountGroup" Margin="0,0,16,0"/>
-                            <TextBlock Text="Users"/>
+                            <TextBlock Text="Ayuda Overview"/>
                         </StackPanel>
                     </Button>
 
-                    <Button Style="{StaticResource MaterialDesignFlatButton}" 
-                            Foreground="White" Height="50" Command="{Binding ShowEmployeesCommand}" FontSize="18">
+                    <Button Style="{StaticResource SidebarNavButton}"
+                            Command="{Binding ShowHouseholdsCommand}"
+                            FontSize="13">
                         <Button.Visibility>
                             <Binding Path="CanManageEmployees" Converter="{StaticResource BooleanToVisibilityConverter}"/>
                         </Button.Visibility>
                         <StackPanel Orientation="Horizontal" Width="180">
-                            <materialDesign:PackIcon Kind="BadgeAccount" Margin="0,0,16,0"/>
-                            <TextBlock Text="Employees"/>
+                            <materialDesign:PackIcon Kind="HomeGroup" Margin="0,0,16,0"/>
+                            <TextBlock Text="Household Registry"/>
                         </StackPanel>
                     </Button>
 
-                    <Button Style="{StaticResource MaterialDesignFlatButton}" 
-                            Foreground="White" Height="50" Command="{Binding ShowPositionsCommand}" FontSize="18">
+                    <Button Style="{StaticResource SidebarNavButton}"
+                            Command="{Binding ShowPositionsCommand}"
+                            FontSize="13">
+                        <Button.Visibility>Collapsed</Button.Visibility>
                         <StackPanel Orientation="Horizontal" Width="180">
                             <materialDesign:PackIcon Kind="Briefcase" Margin="0,0,16,0"/>
                             <TextBlock Text="Positions"/>
                         </StackPanel>
                     </Button>
 
-                    <Button Style="{StaticResource MaterialDesignFlatButton}" 
-                            Foreground="White" Height="50" Command="{Binding ShowHolidaysCommand}" FontSize="18">
+                    <Button Style="{StaticResource SidebarNavButton}"
+                            Command="{Binding ShowHolidaysCommand}"
+                            FontSize="13">
+                        <Button.Visibility>Collapsed</Button.Visibility>
                         <StackPanel Orientation="Horizontal" Width="180">
                             <Image Source="/Images/holiday small.png" Width="24" Height="24" Margin="0,0,16,0"/>
                             <TextBlock Text="Holidays"/>
                         </StackPanel>
                     </Button>
 
-                    <Button Style="{StaticResource MaterialDesignFlatButton}" 
-                            Foreground="White" Height="50" Command="{Binding ShowPayrollCommand}" FontSize="18">
-                        <Button.Visibility>
-                            <Binding Path="CanManagePayroll" Converter="{StaticResource BooleanToVisibilityConverter}"/>
-                        </Button.Visibility>
+                    <Button Style="{StaticResource SidebarNavButton}"
+                            Command="{Binding ShowPayrollCommand}"
+                            FontSize="13">
+                        <Button.Visibility>Collapsed</Button.Visibility>
                         <StackPanel Orientation="Horizontal" Width="180">
                             <Image Source="/Images/money_bag_30dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.png" Width="24" Height="24" Margin="0,0,16,0"/>
                             <TextBlock Text="Payroll"/>
                         </StackPanel>
                     </Button>
 
+                    <Button Style="{StaticResource SidebarNavButton}"
+                            Command="{Binding ShowCashForWorkOcrCommand}"
+                            FontSize="13">
+                        <Button.Visibility>
+                            <Binding Path="CanManageEmployees" Converter="{StaticResource BooleanToVisibilityConverter}"/>
+                        </Button.Visibility>
+                        <StackPanel Orientation="Horizontal" Width="180">
+                            <materialDesign:PackIcon Kind="AccountHardHat" Margin="0,0,16,0"/>
+                            <TextBlock Text="Cash-for-Work"/>
+                        </StackPanel>
+                    </Button>
+
                     <Button x:Name="SwitchRoleButton"
-                            Style="{StaticResource MaterialDesignFlatButton}"
-                            Foreground="White" Height="50" FontSize="18"
+                            Style="{StaticResource SidebarNavButton}"
+                            FontSize="13"
                             Click="SwitchRole_Click">
                         <AutomationProperties.Name>Switch Role</AutomationProperties.Name>
                         <Button.Visibility>
@@ -128,8 +143,9 @@
                     </Button>
 
                     <Button x:Name="ReturnAdminButton"
-                            Style="{StaticResource MaterialDesignFlatButton}"
-                            Foreground="{StaticResource BrandYellowBrush}" Height="50" FontSize="18"
+                            Style="{StaticResource SidebarNavButton}"
+                            Foreground="{StaticResource BrandYellowBrush}"
+                            FontSize="13"
                             Click="ReturnToAdmin_Click">
                         <AutomationProperties.Name>Return to Admin</AutomationProperties.Name>
                         <Button.Visibility>
@@ -137,20 +153,28 @@
                         </Button.Visibility>
                         <StackPanel Orientation="Horizontal" Width="180">
                             <materialDesign:PackIcon Kind="ArrowLeftCircle" Margin="0,0,16,0"/>
-                            <TextBlock Text="Return Admin"/>
+                            <TextBlock Text="Return to Admin"/>
                         </StackPanel>
                     </Button>
 
                 </StackPanel>
 
                 <!-- Logout -->
-                <Button Grid.Row="2" Style="{StaticResource MaterialDesignFlatButton}" 
-                        Foreground="{StaticResource BrandYellowBrush}" Height="50" Margin="0,0,0,16" Click="Logout_Click">
-                    <StackPanel Orientation="Horizontal" Width="180">
-                        <materialDesign:PackIcon Kind="Logout" Margin="0,0,16,0"/>
-                        <TextBlock Text="Logout"/>
-                    </StackPanel>
-                </Button>
+                <Border Grid.Row="2"
+                        Margin="12,0,12,16"
+                        Padding="0,12,0,0"
+                        BorderBrush="#1AFFFFFF"
+                        BorderThickness="0,1,0,0">
+                    <Button Style="{StaticResource SidebarNavButton}"
+                            Foreground="{StaticResource BrandYellowBrush}"
+                            FontSize="13"
+                            Click="Logout_Click">
+                        <StackPanel Orientation="Horizontal" Width="180">
+                            <materialDesign:PackIcon Kind="Logout" Margin="0,0,16,0"/>
+                            <TextBlock Text="Logout"/>
+                        </StackPanel>
+                    </Button>
+                </Border>
             </Grid>
         </Border>
 

@@ -10,6 +10,7 @@ using System.ComponentModel;
 using System.Windows.Data;
 using System.Windows.Threading;
 using Microsoft.Win32;
+using System.Windows;
 
 namespace AttendanceShiftingManagement.ViewModels
 {
@@ -66,6 +67,14 @@ namespace AttendanceShiftingManagement.ViewModels
             get => _statusColor;
             set => SetProperty(ref _statusColor, value);
         }
+
+        public bool RequireFingerprintForAttendance => FeatureFlagService.RequireFingerprintForAttendance;
+        public bool ShowSeparateScanButton => !RequireFingerprintForAttendance;
+        public string TimeInActionLabel => RequireFingerprintForAttendance ? "SCAN TO TIME IN" : "TIME IN";
+        public string TimeOutActionLabel => RequireFingerprintForAttendance ? "SCAN TO TIME OUT" : "TIME OUT";
+        public string AttendanceActionHint => RequireFingerprintForAttendance
+            ? "Fingerprint required. Tap once and scan to complete attendance."
+            : "Use the button directly or scan fingerprint below.";
 
         private readonly AppDbContext _context;
         private readonly AttendanceService _attendanceService;
@@ -203,6 +212,12 @@ namespace AttendanceShiftingManagement.ViewModels
                     return;
                 }
 
+                if (RequireFingerprintForAttendance)
+                {
+                    ExecuteFingerprintAttendanceAction(() => _attendanceService.TimeInByUserId(_currentUser.Id));
+                    return;
+                }
+
                 _attendanceService.TimeIn(_employeeId);
                 IsTimedIn = true;
                 UpdateStatusDisplay();
@@ -222,6 +237,12 @@ namespace AttendanceShiftingManagement.ViewModels
                 if (_employeeId == 0)
                 {
                     System.Windows.MessageBox.Show("Error: No Employee record found for this user.", "Error");
+                    return;
+                }
+
+                if (RequireFingerprintForAttendance)
+                {
+                    ExecuteFingerprintAttendanceAction(() => _attendanceService.TimeOutByUserId(_currentUser.Id));
                     return;
                 }
 
@@ -247,31 +268,36 @@ namespace AttendanceShiftingManagement.ViewModels
                     return;
                 }
 
-                var identifyResult = _fingerprintService.IdentifyUserFromCapture();
-                if (!identifyResult.IsMatched || !identifyResult.MatchedUserId.HasValue)
-                {
-                    System.Windows.MessageBox.Show("Fingerprint not recognized. Please try again.", "No Match",
-                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
-                    return;
-                }
-
-                if (identifyResult.MatchedUserId.Value != _currentUser.Id)
-                {
-                    System.Windows.MessageBox.Show("Scanned fingerprint belongs to a different account.", "Access Denied",
-                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
-                    return;
-                }
-
-                _attendanceService.ToggleTimeByUserId(_currentUser.Id);
-                CheckCurrentStatus();
-                RefreshDashboardData();
-
-                System.Windows.MessageBox.Show("Fingerprint accepted. Attendance updated.", "Success");
+                ExecuteFingerprintAttendanceAction(() => _attendanceService.ToggleTimeByUserId(_currentUser.Id));
             }
             catch (Exception ex)
             {
                 System.Windows.MessageBox.Show($"Fingerprint scan failed: {ex.Message}", "Fingerprint Error");
             }
+        }
+
+        private void ExecuteFingerprintAttendanceAction(Action attendanceAction)
+        {
+            var identifyResult = _fingerprintService.IdentifyUserFromCapture();
+            if (!identifyResult.IsMatched || !identifyResult.MatchedUserId.HasValue)
+            {
+                MessageBox.Show("Fingerprint not recognized. Please try again.", "No Match",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (identifyResult.MatchedUserId.Value != _currentUser.Id)
+            {
+                MessageBox.Show("Scanned fingerprint belongs to a different account.", "Access Denied",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            attendanceAction();
+            CheckCurrentStatus();
+            RefreshDashboardData();
+
+            MessageBox.Show("Fingerprint accepted. Attendance updated.", "Success");
         }
 
         private void ExecuteSendAnnouncement()

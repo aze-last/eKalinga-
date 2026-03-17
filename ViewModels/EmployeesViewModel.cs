@@ -250,8 +250,25 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             if (parameter is Employee employee)
             {
-                var window = new EmployeeIdCardWindow(employee);
-                window.Owner = Application.Current.Windows.OfType<Window>().FirstOrDefault(w => w is MainWindow);
+                var employeeForCard = _context.Employees
+                    .AsNoTracking()
+                    .Include(e => e.Position)
+                    .Include(e => e.User)
+                    .FirstOrDefault(e => e.Id == employee.Id);
+
+                if (employeeForCard == null)
+                {
+                    MessageBox.Show("Employee record could not be loaded for the ID card.", "Employee ID",
+                        MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                var profile = _context.UserProfiles
+                    .AsNoTracking()
+                    .FirstOrDefault(p => p.UserId == employeeForCard.UserId);
+
+                var window = new EmployeeIdCardWindow(employeeForCard, profile?.PhotoPath);
+                window.Owner = Application.Current.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive);
                 window.ShowDialog();
             }
         }

@@ -26,7 +26,10 @@
                     </Border.Background>
                     <Grid>
                         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                            <materialDesign:PackIcon Kind="McDonalds" Width="50" Height="50" Foreground="White" HorizontalAlignment="Center"/>
+                            <Border Width="58" Height="58" CornerRadius="29" Background="#26FFFFFF" HorizontalAlignment="Center">
+                                <TextBlock Text="M" Foreground="White" FontSize="34" FontWeight="Black"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
                             <TextBlock Text="EMPLOYEE ID" Foreground="White" FontWeight="Bold" FontSize="14" HorizontalAlignment="Center" Margin="0,5,0,0"/>
                         </StackPanel>
                         <!-- Top-right decoration -->
@@ -37,10 +40,10 @@
                 <!-- Middle Section (Info) -->
                 <StackPanel Grid.Row="1" Margin="20,-50,20,0">
                     <!-- Photo -->
-                    <Border Width="130" Height="130" CornerRadius="65" BorderBrush="White" BorderThickness="4" Background="#F1F5F9" materialDesign:ElevationAssist.Elevation="Dp4">
+                    <Border Width="130" Height="130" CornerRadius="65" BorderBrush="White" BorderThickness="4" Background="#F1F5F9" ClipToBounds="True" materialDesign:ElevationAssist.Elevation="Dp4">
                         <Grid>
-                            <materialDesign:PackIcon Kind="Account" Width="80" Height="80" Foreground="#CBD5E1" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            <!-- Actual Photo would be an Image control here -->
+                            <Image x:Name="EmpPhotoImage" Stretch="UniformToFill" Visibility="Collapsed"/>
+                            <materialDesign:PackIcon x:Name="EmpPhotoPlaceholder" Kind="Account" Width="80" Height="80" Foreground="#CBD5E1" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Grid>
                     </Border>
 
@@ -70,7 +73,15 @@
                     <DockPanel>
                         <StackPanel VerticalAlignment="Center">
                             <TextBlock Text="SCAN FOR ACCESS" FontSize="9" FontWeight="Bold" Foreground="Gray"/>
-                            <materialDesign:PackIcon Kind="Qrcode" Width="40" Height="40" Foreground="{StaticResource BrandMidnightBrush}"/>
+                            <Border Width="40" Height="40" BorderBrush="{StaticResource BrandMidnightBrush}" BorderThickness="2" Margin="0,4,0,0">
+                                <Grid>
+                                    <Rectangle Width="10" Height="10" Fill="{StaticResource BrandMidnightBrush}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="4"/>
+                                    <Rectangle Width="10" Height="10" Fill="{StaticResource BrandMidnightBrush}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="4"/>
+                                    <Rectangle Width="10" Height="10" Fill="{StaticResource BrandMidnightBrush}" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="4"/>
+                                    <TextBlock Text="QR" Foreground="{StaticResource BrandMidnightBrush}" FontWeight="Bold" FontSize="10"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
                         </StackPanel>
                         
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">

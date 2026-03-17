@@ -8,10 +8,10 @@ namespace AttendanceShiftingManagement.ViewModels
 {
     public class LoginViewModel : ObservableObject
     {
-        private readonly AuthService _authService;
         private string _usernameOrEmail = string.Empty;
         private string _password = string.Empty;
         private string _errorMessage = string.Empty;
+        private string _connectionProfileSummary = string.Empty;
 
         public string UsernameOrEmail
         {
@@ -31,12 +31,18 @@ namespace AttendanceShiftingManagement.ViewModels
             set => SetProperty(ref _errorMessage, value);
         }
 
+        public string ConnectionProfileSummary
+        {
+            get => _connectionProfileSummary;
+            set => SetProperty(ref _connectionProfileSummary, value);
+        }
+
         public ICommand LoginCommand { get; }
 
         public LoginViewModel()
         {
-            _authService = new AuthService();
             LoginCommand = new RelayCommand(ExecuteLogin, CanExecuteLogin);
+            RefreshConnectionProfileSummary();
         }
 
         private bool CanExecuteLogin(object? parameter)
@@ -48,8 +54,23 @@ namespace AttendanceShiftingManagement.ViewModels
         private void ExecuteLogin(object? parameter)
         {
             ErrorMessage = string.Empty;
+            RefreshConnectionProfileSummary();
 
-            var user = _authService.Login(UsernameOrEmail, Password);
+            try
+            {
+                if (Application.Current is App app)
+                {
+                    app.EnsureDatabaseInitialized();
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorMessage = $"Database connection failed: {ex.Message}";
+                return;
+            }
+
+            var authService = new AuthService();
+            var user = authService.Login(UsernameOrEmail, Password);
 
             if (user != null)
             {
@@ -81,6 +102,13 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 ErrorMessage = "Invalid username/email or password";
             }
+        }
+
+        public void RefreshConnectionProfileSummary()
+        {
+            var settings = ConnectionSettingsService.Load();
+            var preset = settings.GetPreset(settings.SelectedPreset);
+            ConnectionProfileSummary = $"{preset.DisplayName} | {preset.Server}:{preset.Port}";
         }
     }
 }

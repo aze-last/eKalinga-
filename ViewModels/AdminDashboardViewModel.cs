@@ -140,10 +140,12 @@ namespace AttendanceShiftingManagement.ViewModels
         public System.Windows.Input.ICommand ShowDashboardCommand { get; }
         public System.Windows.Input.ICommand ShowUsersCommand { get; }
         public System.Windows.Input.ICommand ShowEmployeesCommand { get; }
+        public System.Windows.Input.ICommand ShowHouseholdsCommand { get; }
         public System.Windows.Input.ICommand ShowAllEmployeesCommand { get; }
         public System.Windows.Input.ICommand ShowHolidaysCommand { get; }
         public System.Windows.Input.ICommand ShowPayrollCommand { get; }
         public System.Windows.Input.ICommand ShowPositionsCommand { get; }
+        public System.Windows.Input.ICommand ShowCashForWorkOcrCommand { get; }
         public System.Windows.Input.ICommand ShowLeaveApprovalsCommand { get; }
         public System.Windows.Input.ICommand OpenRecruitmentMetricsCommand { get; }
         public System.Windows.Input.ICommand OpenRetentionMetricsCommand { get; }
@@ -161,7 +163,16 @@ namespace AttendanceShiftingManagement.ViewModels
         public bool CanManagePayroll => _currentUser.Role == UserRole.Admin || _currentUser.Role == UserRole.HRStaff;
         public bool CanManageEmployees => _currentUser.Role == UserRole.Admin || _currentUser.Role == UserRole.HRStaff;
         public bool CanManageLeaveApprovals => _currentUser.Role == UserRole.Admin || _currentUser.Role == UserRole.HRStaff;
-        public string PortalTitle => _currentUser.Role == UserRole.HRStaff ? "HR Dashboard" : "Admin Dashboard";
+        public string PortalTitle => "Barangay Ayuda System";
+        public string CurrentRoleLabel => _currentUser.Role switch
+        {
+            UserRole.Admin => "Administrator",
+            UserRole.HRStaff => "Treasurer / Operations Staff",
+            UserRole.ShiftManager => "Cash-for-Work Lead",
+            UserRole.Manager => "Barangay Staff",
+            UserRole.Crew => "Field Worker",
+            _ => _currentUser.Role.ToString()
+        };
         public bool CanUseRoleSwitch => RoleSwitchService.CanUseSwitcher(_currentUser);
         public bool CanReturnToAdmin => RoleSwitchService.CanReturnToAdmin;
         public bool IsImpersonating => SessionContext.IsImpersonating;
@@ -184,11 +195,13 @@ namespace AttendanceShiftingManagement.ViewModels
 
             ShowDashboardCommand = new RelayCommand(_ => CurrentView = CreateHomeDashboardView());
             ShowUsersCommand = new RelayCommand(_ => ExecuteShowUsers());
-            ShowEmployeesCommand = new RelayCommand(_ => ExecuteShowEmployees());
-            ShowAllEmployeesCommand = new RelayCommand(_ => ExecuteShowEmployees());
+            ShowEmployeesCommand = new RelayCommand(_ => ExecuteShowHouseholds());
+            ShowHouseholdsCommand = new RelayCommand(_ => ExecuteShowHouseholds());
+            ShowAllEmployeesCommand = new RelayCommand(_ => ExecuteShowHouseholds());
             ShowHolidaysCommand = new RelayCommand(_ => CurrentView = new HolidaysPage());
             ShowPayrollCommand = new RelayCommand(_ => ExecuteShowPayroll());
             ShowPositionsCommand = new RelayCommand(_ => CurrentView = new PositionsPage());
+            ShowCashForWorkOcrCommand = new RelayCommand(_ => ExecuteShowCashForWorkOcr());
             ShowLeaveApprovalsCommand = new RelayCommand(_ => ExecuteShowLeaveApprovals());
             OpenRecruitmentMetricsCommand = new RelayCommand(_ => ExecuteOpenRecruitmentMetrics());
             OpenRetentionMetricsCommand = new RelayCommand(_ => ExecuteOpenRetentionMetrics());
@@ -239,9 +252,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private object CreateHomeDashboardView()
         {
-            return _currentUser.Role == UserRole.HRStaff
-                ? new HRDashboardPage()
-                : new DashboardPage();
+            return new DashboardPage();
         }
 
         private void OnDashboardDataChanged(object? sender, DashboardDataChangedEventArgs args)
@@ -276,45 +287,47 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 _context.ChangeTracker.Clear();
 
-                var now = DateTime.Now;
-                var today = now.Date;
+                var today = DateTime.Today;
                 var tomorrow = today.AddDays(1);
 
-                TotalEmployees = _context.Employees
+                TotalEmployees = _context.Households
                     .AsNoTracking()
-                    .Count(e => e.Status == EmployeeStatus.Active);
+                    .Count(h => h.Status == HouseholdStatus.Active);
 
-                var statusService = new AttendanceStatusService(_context);
-                var statuses = statusService.GetTodayStatuses(now);
-
-                AbsentCount = statuses.Count(s => s.Status == "Absent");
-                LateCount = statuses.Count(s => s.Status == "Late");
-                OvertimeCount = statuses.Count(s => s.Status == "Overtime");
-                PresentCount = statuses.Count(s => s.Status is "On Time" or "Late" or "Overtime" or "Early Leave");
-                AttendanceSummary = $"{PresentCount} present | {AbsentCount} absent | {LateCount} late";
-
-                PendingLeaveCount = _context.LeaveRequests
+                var todayParticipants = _context.CashForWorkParticipants
                     .AsNoTracking()
-                    .Count(lr => lr.Status == LeaveStatus.Pending);
+                    .Count(participant =>
+                        participant.Event.EventDate >= today &&
+                        participant.Event.EventDate < tomorrow);
 
-                var assignedEmployeesToday = _context.ShiftAssignments
+                PresentCount = _context.CashForWorkAttendances
                     .AsNoTracking()
-                    .Where(sa =>
-                        sa.Shift.ShiftDate >= today &&
-                        sa.Shift.ShiftDate < tomorrow &&
-                        sa.Employee.Status == EmployeeStatus.Active)
-                    .Select(sa => sa.EmployeeId)
-                    .Distinct()
-                    .Count();
+                    .Count(attendance =>
+                        attendance.AttendanceDate >= today &&
+                        attendance.AttendanceDate < tomorrow &&
+                        attendance.Status == CashForWorkAttendanceStatus.Present);
 
-                ShiftCoveragePercent = TotalEmployees == 0
+                PendingLeaveCount = _context.CashForWorkEvents
+                    .AsNoTracking()
+                    .Count(evt => evt.Status == CashForWorkEventStatus.Open || evt.Status == CashForWorkEventStatus.Draft);
+
+                AbsentCount = Math.Max(0, todayParticipants - PresentCount);
+                LateCount = _context.HouseholdMembers
+                    .AsNoTracking()
+                    .Count(member => member.IsCashForWorkEligible);
+                OvertimeCount = _context.CashForWorkAttendances
+                    .AsNoTracking()
+                    .Count(attendance => attendance.Source == AttendanceCaptureSource.OcrUpload);
+
+                AttendanceSummary = $"{PresentCount} recorded today | {LateCount} eligible members available";
+
+                ShiftCoveragePercent = todayParticipants == 0
                     ? 0
-                    : (int)Math.Round((double)assignedEmployeesToday / TotalEmployees * 100, MidpointRounding.AwayFromZero);
+                    : (int)Math.Round((double)PresentCount / todayParticipants * 100, MidpointRounding.AwayFromZero);
 
-                var unassigned = Math.Max(0, TotalEmployees - assignedEmployeesToday);
-                ShiftCoverageSummary = $"{assignedEmployeesToday}/{TotalEmployees} assigned | {unassigned} unassigned";
+                ShiftCoverageSummary = $"{PresentCount}/{todayParticipants} participant attendance saved";
 
-                BuildAlerts(unassigned);
+                BuildAlerts(todayParticipants);
                 LoadRecentActivities(today);
                 LoadAreaDistribution();
 
@@ -341,28 +354,28 @@ namespace AttendanceShiftingManagement.ViewModels
             }
         }
 
-        private void BuildAlerts(int unassignedEmployees)
+        private void BuildAlerts(int todayParticipants)
         {
             Alerts.Clear();
 
             if (PendingLeaveCount > 0)
             {
-                Alerts.Add(new DashboardAlert { Message = $"{PendingLeaveCount} pending leave request(s) waiting for review." });
+                Alerts.Add(new DashboardAlert { Message = $"{PendingLeaveCount} cash-for-work event(s) are still open for operations or completion." });
             }
 
-            if (AbsentCount > 0)
+            if (todayParticipants > 0 && AbsentCount > 0)
             {
-                Alerts.Add(new DashboardAlert { Message = $"{AbsentCount} employee(s) currently marked absent." });
+                Alerts.Add(new DashboardAlert { Message = $"{AbsentCount} approved participant(s) still have no saved attendance for today." });
+            }
+
+            if (TotalEmployees == 0)
+            {
+                Alerts.Add(new DashboardAlert { Message = "No households are registered yet. Add households before assistance operations." });
             }
 
             if (LateCount > 0)
             {
-                Alerts.Add(new DashboardAlert { Message = $"{LateCount} employee(s) arrived late today." });
-            }
-
-            if (unassignedEmployees > 0)
-            {
-                Alerts.Add(new DashboardAlert { Message = $"{unassignedEmployees} active employee(s) have no shift assignment today." });
+                Alerts.Add(new DashboardAlert { Message = $"{LateCount} household member(s) are marked eligible for cash-for-work." });
             }
 
             if (Alerts.Count == 0)
@@ -375,38 +388,25 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             RecentActivities.Clear();
 
-            var activities = _context.Attendances
+            var activities = _context.CashForWorkAttendances
                 .AsNoTracking()
-                .Include(a => a.Employee)
+                .Include(a => a.Participant)
+                .ThenInclude(p => p.HouseholdMember)
                 .Where(a =>
-                    a.TimeIn.HasValue &&
-                    a.TimeIn.Value >= today &&
-                    a.TimeIn.Value < today.AddDays(1))
-                .OrderByDescending(a => a.TimeIn)
+                    a.RecordedAt >= today &&
+                    a.RecordedAt < today.AddDays(1))
+                .OrderByDescending(a => a.RecordedAt)
                 .Take(5)
                 .ToList();
 
             foreach (var attendance in activities)
             {
-                var status = attendance.Status == AttendanceStatus.Open
-                    ? "On Duty"
-                    : attendance.OvertimeHours > 0
-                        ? "Overtime"
-                        : "Closed";
-
-                var statusColor = status switch
-                {
-                    "On Duty" => "#10B981",
-                    "Overtime" => "#7C3AED",
-                    _ => "#64748B"
-                };
-
                 RecentActivities.Add(new RecentActivity
                 {
-                    Name = attendance.Employee?.FullName ?? $"Employee #{attendance.EmployeeId}",
-                    Time = attendance.TimeIn ?? DateTime.Now,
-                    Status = status,
-                    StatusColor = statusColor
+                    Name = attendance.Participant.HouseholdMember.FullName,
+                    Time = attendance.RecordedAt,
+                    Status = attendance.Source == AttendanceCaptureSource.Manual ? "Manual" : "OCR",
+                    StatusColor = attendance.Source == AttendanceCaptureSource.Manual ? "#0F766E" : "#2563EB"
                 });
             }
 
@@ -414,7 +414,7 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 RecentActivities.Add(new RecentActivity
                 {
-                    Name = "No time-ins yet",
+                    Name = "No attendance saved yet",
                     Time = DateTime.Now,
                     Status = "Pending",
                     StatusColor = "#64748B"
@@ -426,35 +426,36 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             AreaDistributions.Clear();
 
-            var employees = _context.Employees
+            var households = _context.Households
                 .AsNoTracking()
-                .Include(e => e.Position)
-                .Where(e => e.Status == EmployeeStatus.Active)
+                .Where(h => h.Status == HouseholdStatus.Active)
                 .ToList();
 
-            var total = Math.Max(1, employees.Count);
-            var areaCounts = employees
-                .Where(e => e.Position != null)
-                .GroupBy(e => e.Position.Area)
-                .ToDictionary(g => g.Key, g => g.Count());
+            var total = Math.Max(1, households.Count);
+            var purokCounts = households
+                .GroupBy(h => h.Purok)
+                .OrderByDescending(group => group.Count())
+                .Take(4)
+                .Select((group, index) => new
+                {
+                    Label = string.IsNullOrWhiteSpace(group.Key) ? $"Purok {index + 1}" : group.Key,
+                    Count = group.Count(),
+                    Color = index switch
+                    {
+                        0 => "#DA291C",
+                        1 => "#F59E0B",
+                        2 => "#2563EB",
+                        _ => "#0F766E"
+                    }
+                });
 
-            var orderedAreas = new[]
+            foreach (var purok in purokCounts)
             {
-                (PositionArea.Kitchen, "Kitchen", "#DA291C"),
-                (PositionArea.POS, "POS", "#FFC72C"),
-                (PositionArea.DT, "DT", "#27251F"),
-                (PositionArea.Lobby, "Lobby", "#9CA3AF")
-            };
-
-            foreach (var (area, label, color) in orderedAreas)
-            {
-                areaCounts.TryGetValue(area, out var count);
-                var percent = (double)count / total * 100.0;
                 AreaDistributions.Add(new AreaDistribution
                 {
-                    Label = label,
-                    Percent = percent,
-                    Color = color
+                    Label = purok.Label,
+                    Percent = (double)purok.Count / total * 100.0,
+                    Color = purok.Color
                 });
             }
 
@@ -493,16 +494,16 @@ namespace AttendanceShiftingManagement.ViewModels
             CurrentView = new UsersPage(_currentUser);
         }
 
-        private void ExecuteShowEmployees()
+        private void ExecuteShowHouseholds()
         {
             if (!CanManageEmployees)
             {
-                MessageBox.Show("You are not allowed to manage employees.", "Access Denied",
+                MessageBox.Show("You are not allowed to manage household records.", "Access Denied",
                     MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            CurrentView = new EmployeesPage(_currentUser);
+            CurrentView = new HouseholdRegistryPage();
         }
 
         private void ExecuteShowPayroll()
@@ -530,6 +531,18 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 DataContext = new LeaveApprovalViewModel(_currentUser.Id)
             };
+        }
+
+        private void ExecuteShowCashForWorkOcr()
+        {
+            if (!CanManageEmployees)
+            {
+                MessageBox.Show("You are not allowed to manage cash-for-work attendance.", "Access Denied",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            CurrentView = new CashForWorkOcrPage(_currentUser);
         }
 
         private void ExecuteOpenRecruitmentMetrics()

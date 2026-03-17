@@ -34,5 +34,14 @@ namespace AttendanceShiftingManagement.Views
                 ViewModel.Password = passwordBox.Password;
             }
         }
+
+        private void OpenConnectionSettings_Click(object sender, RoutedEventArgs e)
+        {
+            var connectionWindow = new ConnectionSettingsWindow();
+            if (connectionWindow.ShowDialog() == true)
+            {
+                ViewModel.RefreshConnectionProfileSummary();
+            }
+        }
     }
 }
