@@ -151,7 +151,9 @@ namespace AttendanceShiftingManagement.Services
                 UserID = preset.Username,
                 Password = preset.Password,
                 CharacterSet = "utf8mb4",
-                ConnectionTimeout = 5
+                ConnectionTimeout = 5,
+                AllowZeroDateTime = true,
+                ConvertZeroDateTime = true
             };
 
             return builder.ConnectionString;

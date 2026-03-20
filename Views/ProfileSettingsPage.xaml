@@ -191,6 +191,283 @@
                             <CheckBox Content="Auto notify crew on approvals" IsChecked="{Binding AutoNotifyOnApproval}"/>
                         </StackPanel>
                     </TabItem>
+
+                    <TabItem Header="System Tools"
+                             Visibility="{Binding CanManageSystemImport, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <ScrollViewer Margin="0,20,0,0"
+                                      VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled"
+                                      CanContentScroll="False">
+                            <Grid Margin="0,0,8,12">
+                                <StackPanel MaxWidth="980"
+                                            HorizontalAlignment="Stretch">
+                                    <TextBlock Text="CRS Beneficiary Import"
+                                               FontWeight="Bold"
+                                               Foreground="{StaticResource BrandMidnightBrush}"/>
+                                    <TextBlock Text="Connect to the Civil Registry System, test the read-only source connection, then import `val_beneficiaries` into your local `BeneficiaryStaging` table."
+                                               Margin="0,6,0,0"
+                                               Foreground="#64748B"
+                                               TextWrapping="Wrap"/>
+
+                                    <Border Margin="0,16,0,0"
+                                            Padding="18"
+                                            Background="#F8FAFC"
+                                            BorderBrush="{StaticResource BrandBorderBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="12">
+                                        <StackPanel>
+                                            <TextBlock Text="CRS Source Connection"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{StaticResource BrandMidnightBrush}"/>
+
+                                            <Grid Margin="0,8,0,12">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="3*"/>
+                                                    <ColumnDefinition Width="12"/>
+                                                    <ColumnDefinition Width="1*"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <TextBox Grid.Column="0"
+                                                         Text="{Binding ImportSourceServer, UpdateSourceTrigger=PropertyChanged}"
+                                                         materialDesign:HintAssist.Hint="Server / Host"
+                                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
+                                                <TextBox Grid.Column="2"
+                                                         Text="{Binding ImportSourcePortText, UpdateSourceTrigger=PropertyChanged}"
+                                                         materialDesign:HintAssist.Hint="Port"
+                                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
+                                            </Grid>
+
+                                            <TextBox Text="{Binding ImportSourceDatabase, UpdateSourceTrigger=PropertyChanged}"
+                                                     materialDesign:HintAssist.Hint="Database Name"
+                                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                                     Margin="0,0,0,12"/>
+
+                                            <Grid Margin="0,0,0,10">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="12"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <TextBox Grid.Column="0"
+                                                         Text="{Binding ImportSourceUsername, UpdateSourceTrigger=PropertyChanged}"
+                                                         materialDesign:HintAssist.Hint="Username / Email"
+                                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
+                                                <TextBox Grid.Column="2"
+                                                         Text="{Binding ImportSourcePassword, UpdateSourceTrigger=PropertyChanged}"
+                                                         materialDesign:HintAssist.Hint="Password"
+                                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
+                                            </Grid>
+
+                                            <TextBlock Text="Local Target"
+                                                        Margin="0,16,0,0"
+                                                        FontWeight="SemiBold"
+                                                        Foreground="{StaticResource BrandMidnightBrush}"/>
+                                            <TextBlock Text="{Binding LocalImportTargetSummary}"
+                                                       Margin="0,8,0,0"
+                                                       Foreground="#475569"
+                                                       TextWrapping="Wrap"/>
+
+                                            <Border Margin="0,16,0,0"
+                                                    Padding="12"
+                                                    Background="#FEF3C7"
+                                                    CornerRadius="8">
+                                                <TextBlock Text="Import writes new records into your own `BeneficiaryStaging` table as Pending. Duplicate Civil Registry IDs are skipped."
+                                                           Foreground="#92400E"
+                                                           TextWrapping="Wrap"/>
+                                            </Border>
+
+                                            <WrapPanel Margin="0,18,0,0"
+                                                       ItemHeight="40"
+                                                       Orientation="Horizontal">
+                                                <Button Content="TEST CONNECTION"
+                                                        Command="{Binding TestImportConnectionCommand}"
+                                                        Style="{StaticResource MaterialDesignOutlinedButton}"
+                                                        Height="40"
+                                                        Margin="0,0,12,12"
+                                                        Padding="18,0"/>
+                                                <Button Content="SAVE IMPORT CONNECTION"
+                                                        Command="{Binding SaveImportConnectionCommand}"
+                                                        Style="{StaticResource MaterialDesignOutlinedButton}"
+                                                        Height="40"
+                                                        Margin="0,0,12,12"
+                                                        Padding="18,0"/>
+                                                <Button Content="IMPORT BENEFICIARIES"
+                                                        Command="{Binding ImportBeneficiariesCommand}"
+                                                        Style="{StaticResource MaterialDesignRaisedButton}"
+                                                        Background="{StaticResource BrandRedBrush}"
+                                                        Foreground="White"
+                                                        Height="40"
+                                                        Margin="0,0,12,12"
+                                                        Padding="18,0"/>
+                                                <Button Content="REFRESH STAGING"
+                                                        Command="{Binding RefreshStagingPreviewCommand}"
+                                                        Style="{StaticResource MaterialDesignOutlinedButton}"
+                                                        Height="40"
+                                                        Margin="0,0,12,12"
+                                                        Padding="18,0"/>
+                                            </WrapPanel>
+
+                                            <ProgressBar Height="6"
+                                                         Margin="0,2,0,0"
+                                                         IsIndeterminate="True">
+                                                <ProgressBar.Style>
+                                                    <Style TargetType="ProgressBar">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsImportBusy}" Value="True">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </ProgressBar.Style>
+                                            </ProgressBar>
+
+                                            <TextBlock Text="{Binding ImportStatusMessage}"
+                                                       Margin="0,14,0,0"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{Binding ImportStatusBrush}"
+                                                       TextWrapping="Wrap"/>
+
+                                            <Border Margin="0,18,0,0"
+                                                    Padding="16"
+                                                    Background="White"
+                                                    BorderBrush="{StaticResource BrandBorderBrush}"
+                                                    BorderThickness="1"
+                                                    CornerRadius="10">
+                                                <StackPanel>
+                                                    <TextBlock Text="Local Staging Preview"
+                                                               FontWeight="SemiBold"
+                                                               Foreground="{StaticResource BrandMidnightBrush}"/>
+
+                                                    <Grid Margin="0,10,0,0">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+
+                                                        <Button Grid.Column="0"
+                                                                Content="REFRESH PREVIEW"
+                                                                Command="{Binding RefreshStagingPreviewCommand}"
+                                                                Style="{StaticResource MaterialDesignOutlinedButton}"
+                                                                Height="40"
+                                                                Padding="18,0"/>
+                                                    </Grid>
+
+                                                    <TextBlock Text="{Binding TableReviewSummary}"
+                                                               Margin="0,12,0,0"
+                                                               Foreground="{StaticResource BrandMidnightBrush}"
+                                                               FontWeight="SemiBold"
+                                                               TextWrapping="Wrap"/>
+
+                                                    <TextBlock Text="{Binding SelectedTableColumnsSummary}"
+                                                               Margin="0,8,0,0"
+                                                               Foreground="#64748B"
+                                                               TextWrapping="Wrap"/>
+
+                                                    <DataGrid ItemsSource="{Binding TablePreviewView}"
+                                                              AutoGenerateColumns="True"
+                                                              CanUserAddRows="False"
+                                                              CanUserDeleteRows="False"
+                                                              IsReadOnly="True"
+                                                              Margin="0,14,0,0"
+                                                              Height="260"
+                                                              HeadersVisibility="Column"
+                                                              GridLinesVisibility="Horizontal"
+                                                              RowHeaderWidth="0"/>
+                                                </StackPanel>
+                                            </Border>
+
+                                            <Border Margin="0,18,0,0"
+                                                    Padding="16"
+                                                    Background="White"
+                                                    BorderBrush="{StaticResource BrandBorderBrush}"
+                                                    BorderThickness="1"
+                                                    CornerRadius="10">
+                                                <StackPanel>
+                                                    <TextBlock Text="Database Backup"
+                                                               FontWeight="SemiBold"
+                                                               Foreground="{StaticResource BrandMidnightBrush}"/>
+                                                    <TextBlock Text="Create or restore a full snapshot of the currently selected app database preset. This does not connect to the CRS source."
+                                                               Margin="0,8,0,0"
+                                                               Foreground="#64748B"
+                                                               TextWrapping="Wrap"/>
+
+                                                    <TextBlock Text="Current Backup Target"
+                                                               Margin="0,14,0,0"
+                                                               FontWeight="SemiBold"
+                                                               Foreground="{StaticResource BrandMidnightBrush}"/>
+                                                    <TextBlock Text="{Binding BackupTargetSummary}"
+                                                               Margin="0,8,0,0"
+                                                               Foreground="#475569"
+                                                               TextWrapping="Wrap"/>
+
+                                                    <Border Margin="0,16,0,0"
+                                                            Padding="12"
+                                                            Background="#FEF3C7"
+                                                            CornerRadius="8">
+                                                        <TextBlock Text="Backup archives contain database rows only. Fingerprint templates, local configuration files, and image files are excluded."
+                                                                   Foreground="#92400E"
+                                                                   TextWrapping="Wrap"/>
+                                                    </Border>
+
+                                                    <WrapPanel Margin="0,18,0,0"
+                                                               ItemHeight="40"
+                                                               Orientation="Horizontal">
+                                                        <Button Content="CREATE BACKUP"
+                                                                Command="{Binding CreateBackupCommand}"
+                                                                Style="{StaticResource MaterialDesignRaisedButton}"
+                                                                Background="{StaticResource BrandRedBrush}"
+                                                                Foreground="White"
+                                                                Height="40"
+                                                                Margin="0,0,12,12"
+                                                                Padding="18,0"/>
+                                                        <Button Content="RESTORE BACKUP"
+                                                                Command="{Binding RestoreBackupCommand}"
+                                                                Style="{StaticResource MaterialDesignOutlinedButton}"
+                                                                Height="40"
+                                                                Margin="0,0,12,12"
+                                                                Padding="18,0"/>
+                                                    </WrapPanel>
+
+                                                    <ProgressBar Height="6"
+                                                                 Margin="0,2,0,0"
+                                                                 IsIndeterminate="True">
+                                                        <ProgressBar.Style>
+                                                            <Style TargetType="ProgressBar">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsBackupBusy}" Value="True">
+                                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </ProgressBar.Style>
+                                                    </ProgressBar>
+
+                                                    <TextBlock Text="{Binding BackupStatusMessage}"
+                                                               Margin="0,14,0,0"
+                                                               FontWeight="SemiBold"
+                                                               Foreground="{Binding BackupStatusBrush}"
+                                                               TextWrapping="Wrap"/>
+
+                                                    <TextBlock Text="{Binding LastBackupSummary}"
+                                                               Margin="0,12,0,0"
+                                                               Foreground="{StaticResource BrandMidnightBrush}"
+                                                               FontWeight="SemiBold"
+                                                               TextWrapping="Wrap"/>
+
+                                                    <TextBlock Text="{Binding LastBackupFilePath}"
+                                                               Margin="0,8,0,0"
+                                                               Foreground="#64748B"
+                                                               TextWrapping="Wrap"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+                            </Grid>
+                        </ScrollViewer>
+                    </TabItem>
                 </TabControl>
 
                 <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">

@@ -141,6 +141,8 @@ namespace AttendanceShiftingManagement.ViewModels
         public System.Windows.Input.ICommand ShowUsersCommand { get; }
         public System.Windows.Input.ICommand ShowEmployeesCommand { get; }
         public System.Windows.Input.ICommand ShowHouseholdsCommand { get; }
+        public System.Windows.Input.ICommand ShowMasterListCommand { get; }
+        public System.Windows.Input.ICommand ShowBeneficiaryVerificationCommand { get; }
         public System.Windows.Input.ICommand ShowAllEmployeesCommand { get; }
         public System.Windows.Input.ICommand ShowHolidaysCommand { get; }
         public System.Windows.Input.ICommand ShowPayrollCommand { get; }
@@ -197,6 +199,8 @@ namespace AttendanceShiftingManagement.ViewModels
             ShowUsersCommand = new RelayCommand(_ => ExecuteShowUsers());
             ShowEmployeesCommand = new RelayCommand(_ => ExecuteShowHouseholds());
             ShowHouseholdsCommand = new RelayCommand(_ => ExecuteShowHouseholds());
+            ShowMasterListCommand = new RelayCommand(_ => ExecuteShowMasterList());
+            ShowBeneficiaryVerificationCommand = new RelayCommand(_ => ExecuteShowBeneficiaryVerification());
             ShowAllEmployeesCommand = new RelayCommand(_ => ExecuteShowHouseholds());
             ShowHolidaysCommand = new RelayCommand(_ => CurrentView = new HolidaysPage());
             ShowPayrollCommand = new RelayCommand(_ => ExecuteShowPayroll());
@@ -504,6 +508,30 @@ namespace AttendanceShiftingManagement.ViewModels
             }
 
             CurrentView = new HouseholdRegistryPage();
+        }
+
+        private void ExecuteShowMasterList()
+        {
+            if (!CanManageEmployees)
+            {
+                MessageBox.Show("You are not allowed to view the master list.", "Access Denied",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            CurrentView = new MasterListPage();
+        }
+
+        private void ExecuteShowBeneficiaryVerification()
+        {
+            if (!CanManageEmployees)
+            {
+                MessageBox.Show("You are not allowed to review staged beneficiaries.", "Access Denied",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            CurrentView = new BeneficiaryVerificationPage();
         }
 
         private void ExecuteShowPayroll()

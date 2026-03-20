@@ -5,108 +5,164 @@ namespace AttendanceShiftingManagement.Data
 {
     public static class DbSeeder
     {
+        private static readonly string[] LegacyStaffingPositionNames =
+        {
+            "Chicken Expert",
+            "Batch Grill",
+            "POS 1",
+            "POS 2",
+            "POS 3",
+            "GEL",
+            "DT Order Taker",
+            "DT Cashier",
+            "DT Presenter",
+            "Lobby",
+            "Shift Manager"
+        };
+
+        private static readonly string[] LegacyStaffingDemoUsernames = BuildLegacyStaffingDemoUsernames();
+
         public static void Seed(AppDbContext context)
         {
-            // 1. Positions
-            if (!context.Positions.Any())
-            {
-                var positions = new List<Position>
-                {
-                    new Position { Name = "Chicken Expert", Area = PositionArea.Kitchen },
-                    new Position { Name = "Batch Grill", Area = PositionArea.Kitchen },
-                    new Position { Name = "POS 1", Area = PositionArea.POS },
-                    new Position { Name = "POS 2", Area = PositionArea.POS },
-                    new Position { Name = "POS 3", Area = PositionArea.POS },
-                    new Position { Name = "GEL", Area = PositionArea.Kitchen },
-                    new Position { Name = "DT Order Taker", Area = PositionArea.DT },
-                    new Position { Name = "DT Cashier", Area = PositionArea.DT },
-                    new Position { Name = "DT Presenter", Area = PositionArea.DT },
-                    new Position { Name = "Lobby", Area = PositionArea.Lobby },
-                    new Position { Name = "Shift Manager", Area = PositionArea.Lobby }
-                };
-                context.Positions.AddRange(positions);
-                context.SaveChanges();
-            }
-
-            if (!context.Positions.Any(p => p.Name == "Shift Manager"))
-            {
-                context.Positions.Add(new Position { Name = "Shift Manager", Area = PositionArea.Lobby });
-                context.SaveChanges();
-            }
+            RemoveLegacyStaffingDemoData(context);
+            EnsureBarangayPositions(context);
 
             var allPositions = context.Positions.ToList();
 
-            // 2. Users (upsert demo accounts so login credentials are always available)
             EnsureDefaultUsers(context);
-
-            // 3. Employees
             EnsureDefaultEmployees(context, allPositions);
-
-            // 4. Holidays
-            if (!context.Holidays.Any())
-            {
-                var holidays = new List<Holiday>
-                {
-                    new Holiday { HolidayDate = new DateTime(2026, 1, 1), Name = "New Year's Day", IsDoublePay = true },
-                    new Holiday { HolidayDate = new DateTime(2026, 12, 25), Name = "Christmas Day", IsDoublePay = true },
-                    new Holiday { HolidayDate = new DateTime(2026, 12, 30), Name = "Rizal Day", IsDoublePay = true }
-                };
-                context.Holidays.AddRange(holidays);
-                context.SaveChanges();
-            }
-
-            // 5. Create sample shifts and attendance (Basic check)
-            if (!context.Shifts.Any())
-            {
-                // Optional: Seed initial shifts if needed, or leave empty for fresh start
-            }
-
-            // 6. Phase 2 recruitment + retention samples
-            EnsureRecruitmentCandidates(context);
-            EnsureEmployeeExits(context);
-
-            // 7. Phase 3 performance + engagement + wellbeing samples
-            EnsurePerformanceGoals(context);
-            EnsureTrainingRecords(context);
-            EnsureEngagementSurveys(context);
-
-            // 8. Demo ops data for compensation/planning modules
-            EnsureLeaveRequests(context);
-            EnsureShiftScheduleAndAssignments(context, allPositions);
-            EnsureAttendanceSamples(context);
-            EnsurePayrollSamples(context);
-
-            // 9. Barangay ayuda + cash-for-work samples
+            EnsureHolidayCalendar(context);
             EnsureBarangayHouseholds(context);
             EnsureCashForWorkEventSamples(context);
+        }
+
+        private static string[] BuildLegacyStaffingDemoUsernames()
+        {
+            var usernames = new List<string> { "shiftmanager", "crew" };
+            usernames.AddRange(Enumerable.Range(1, 4).Select(i => $"manager{i}"));
+            usernames.AddRange(Enumerable.Range(1, 19).Select(i => $"crew{i}"));
+            return usernames.ToArray();
+        }
+
+        private static void RemoveLegacyStaffingDemoData(AppDbContext context)
+        {
+            var hasLegacySignature =
+                context.Positions.Any(position => LegacyStaffingPositionNames.Contains(position.Name)) ||
+                context.Users.Any(user => LegacyStaffingDemoUsernames.Contains(user.Username));
+
+            if (!hasLegacySignature)
+            {
+                return;
+            }
+
+            context.Attendances.RemoveRange(context.Attendances);
+            context.ShiftAssignments.RemoveRange(context.ShiftAssignments);
+            context.Shifts.RemoveRange(context.Shifts);
+            context.Payrolls.RemoveRange(context.Payrolls);
+            context.LeaveRequests.RemoveRange(context.LeaveRequests);
+            context.RecruitmentCandidates.RemoveRange(context.RecruitmentCandidates);
+            context.EmployeeExits.RemoveRange(context.EmployeeExits);
+            context.PerformanceGoals.RemoveRange(context.PerformanceGoals);
+            context.TrainingRecords.RemoveRange(context.TrainingRecords);
+            context.EngagementSurveys.RemoveRange(context.EngagementSurveys);
+
+            var legacyUserIds = context.Users
+                .Where(user => LegacyStaffingDemoUsernames.Contains(user.Username))
+                .Select(user => user.Id)
+                .ToList();
+
+            if (legacyUserIds.Count > 0)
+            {
+                context.Notifications.RemoveRange(
+                    context.Notifications.Where(notification => legacyUserIds.Contains(notification.UserId)));
+                context.ActivityLogs.RemoveRange(
+                    context.ActivityLogs.Where(log => log.UserId.HasValue && legacyUserIds.Contains(log.UserId.Value)));
+                context.FingerprintTemplates.RemoveRange(
+                    context.FingerprintTemplates.Where(template =>
+                        legacyUserIds.Contains(template.UserId) ||
+                        (template.EnrolledByUserId.HasValue && legacyUserIds.Contains(template.EnrolledByUserId.Value))));
+                context.UserProfiles.RemoveRange(
+                    context.UserProfiles.Where(profile => legacyUserIds.Contains(profile.UserId)));
+                context.UserPreferences.RemoveRange(
+                    context.UserPreferences.Where(preference => legacyUserIds.Contains(preference.UserId)));
+
+                var legacyEmployeeIds = context.Employees
+                    .Where(employee => legacyUserIds.Contains(employee.UserId))
+                    .Select(employee => employee.Id)
+                    .ToList();
+
+                if (legacyEmployeeIds.Count > 0)
+                {
+                    context.Employees.RemoveRange(
+                        context.Employees.Where(employee => legacyEmployeeIds.Contains(employee.Id)));
+                }
+
+                context.Users.RemoveRange(
+                    context.Users.Where(user => legacyUserIds.Contains(user.Id)));
+            }
+
+            context.SaveChanges();
+
+            var removablePositions = context.Positions
+                .Where(position => LegacyStaffingPositionNames.Contains(position.Name))
+                .ToList();
+
+            if (removablePositions.Count > 0)
+            {
+                context.Positions.RemoveRange(removablePositions);
+                context.SaveChanges();
+            }
+        }
+
+        private static void EnsureBarangayPositions(AppDbContext context)
+        {
+            var requiredPositions = new[]
+            {
+                new Position { Name = "Barangay Administrator", Area = PositionArea.Lobby },
+                new Position { Name = "Treasury Operations Officer", Area = PositionArea.Lobby },
+                new Position { Name = "Cash-for-Work Coordinator", Area = PositionArea.Lobby }
+            };
+
+            var existingNames = context.Positions
+                .Select(position => position.Name)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var position in requiredPositions)
+            {
+                if (!existingNames.Contains(position.Name))
+                {
+                    context.Positions.Add(position);
+                }
+            }
+
+            if (context.ChangeTracker.HasChanges())
+            {
+                context.SaveChanges();
+            }
+        }
+
+        private static void EnsureHolidayCalendar(AppDbContext context)
+        {
+            if (context.Holidays.Any())
+            {
+                return;
+            }
+
+            var holidays = new List<Holiday>
+            {
+                new Holiday { HolidayDate = new DateTime(2026, 1, 1), Name = "New Year's Day", IsDoublePay = true },
+                new Holiday { HolidayDate = new DateTime(2026, 12, 25), Name = "Christmas Day", IsDoublePay = true },
+                new Holiday { HolidayDate = new DateTime(2026, 12, 30), Name = "Rizal Day", IsDoublePay = true }
+            };
+
+            context.Holidays.AddRange(holidays);
+            context.SaveChanges();
         }
 
         private static void EnsureDefaultUsers(AppDbContext context)
         {
             AddOrUpdateDemoUser(context, "admin", "admin@barangay.local", "admin123", UserRole.Admin);
             AddOrUpdateDemoUser(context, "hr", "treasurer@barangay.local", "treasurer123", UserRole.HRStaff);
-            AddOrUpdateDemoUser(context, "shiftmanager", "cfwlead@barangay.local", "lead123", UserRole.ShiftManager);
-            for (int i = 1; i <= 4; i++)
-            {
-                AddOrUpdateDemoUser(
-                    context,
-                    $"manager{i}",
-                    $"staff{i}@barangay.local",
-                    "staff123",
-                    UserRole.Manager);
-            }
-
-            AddOrUpdateDemoUser(context, "crew", "worker@barangay.local", "worker123", UserRole.Crew);
-            for (int i = 1; i <= 19; i++)
-            {
-                AddOrUpdateDemoUser(
-                    context,
-                    $"crew{i}",
-                    $"worker{i}@barangay.local",
-                    "worker123",
-                    UserRole.Crew);
-            }
-
             context.SaveChanges();
         }
 
@@ -179,7 +235,14 @@ namespace AttendanceShiftingManagement.Data
             }
 
             int fallbackPositionId = allPositions[0].Id;
-            var random = new Random();
+            int adminPositionId = allPositions
+                .Where(position => position.Name == "Barangay Administrator")
+                .Select(position => (int?)position.Id)
+                .FirstOrDefault() ?? fallbackPositionId;
+            int treasuryPositionId = allPositions
+                .Where(position => position.Name == "Treasury Operations Officer")
+                .Select(position => (int?)position.Id)
+                .FirstOrDefault() ?? fallbackPositionId;
 
             var adminUser = context.Users.FirstOrDefault(u => u.Role == UserRole.Admin);
             if (adminUser != null)
@@ -187,8 +250,8 @@ namespace AttendanceShiftingManagement.Data
                 AddOrUpdateEmployee(
                     context,
                     adminUser.Id,
-                    "System Administrator",
-                    fallbackPositionId,
+                    "Barangay System Administrator",
+                    adminPositionId,
                     100.00m,
                     DateTime.Now.AddYears(-2));
             }
@@ -203,95 +266,9 @@ namespace AttendanceShiftingManagement.Data
                     context,
                     hrUsers[i].Id,
                     i == 0 ? "Treasury Operations Officer" : $"Treasury Staff {i + 1}",
-                    fallbackPositionId,
+                    treasuryPositionId,
                     75.00m,
                     DateTime.Now.AddYears(-1));
-            }
-
-            var managerPositionId = allPositions
-                .Where(p => p.Name.IndexOf("Manager", StringComparison.OrdinalIgnoreCase) >= 0)
-                .OrderByDescending(p => p.Name.IndexOf("Shift Manager", StringComparison.OrdinalIgnoreCase) >= 0)
-                .Select(p => (int?)p.Id)
-                .FirstOrDefault() ?? fallbackPositionId;
-
-            var managers = context.Users
-                .Where(u => u.Role == UserRole.Manager)
-                .OrderBy(u => u.Id)
-                .ToList();
-            for (int i = 0; i < managers.Count; i++)
-            {
-                AddOrUpdateEmployee(
-                    context,
-                    managers[i].Id,
-                    $"Barangay Operations Staff {i + 1}",
-                    managerPositionId,
-                    80.00m,
-                    DateTime.Now.AddYears(-1));
-            }
-
-            var shiftManagerPositionId = allPositions
-                .Where(p => p.Name == "Shift Manager" || p.Name.IndexOf("Scheduling", StringComparison.OrdinalIgnoreCase) >= 0)
-                .OrderByDescending(p => p.Name.IndexOf("Shift Manager", StringComparison.OrdinalIgnoreCase) >= 0)
-                .Select(p => (int?)p.Id)
-                .FirstOrDefault() ?? managerPositionId;
-
-            var shiftManagers = context.Users
-                .Where(u => u.Role == UserRole.ShiftManager)
-                .OrderBy(u => u.Id)
-                .ToList();
-            for (int i = 0; i < shiftManagers.Count; i++)
-            {
-                AddOrUpdateEmployee(
-                    context,
-                    shiftManagers[i].Id,
-                    i == 0 ? "Cash-for-Work Coordinator" : $"Cash-for-Work Coordinator {i + 1}",
-                    shiftManagerPositionId,
-                    80.00m,
-                    DateTime.Now.AddYears(-1));
-            }
-
-            var kitchenPos = allPositions.Where(p => p.Area == PositionArea.Kitchen).ToList();
-            var posPos = allPositions.Where(p => p.Area == PositionArea.POS).ToList();
-            var dtPos = allPositions.Where(p => p.Area == PositionArea.DT).ToList();
-            var lobbyPos = allPositions.Where(p => p.Area == PositionArea.Lobby).ToList();
-
-            if (!kitchenPos.Any()) kitchenPos.Add(allPositions[0]);
-            if (!posPos.Any()) posPos.Add(allPositions[0]);
-            if (!dtPos.Any()) dtPos.Add(allPositions[0]);
-            if (!lobbyPos.Any()) lobbyPos.Add(allPositions[0]);
-
-            var crewUsers = context.Users
-                .Where(u => u.Role == UserRole.Crew)
-                .OrderBy(u => u.Id)
-                .ToList();
-
-            for (int i = 0; i < crewUsers.Count; i++)
-            {
-                Position assignedPosition;
-                if (i < 5)
-                {
-                    assignedPosition = kitchenPos[i % kitchenPos.Count];
-                }
-                else if (i < 10)
-                {
-                    assignedPosition = posPos[i % posPos.Count];
-                }
-                else if (i < 15)
-                {
-                    assignedPosition = dtPos[i % dtPos.Count];
-                }
-                else
-                {
-                    assignedPosition = lobbyPos[i % lobbyPos.Count];
-                }
-
-                AddOrUpdateEmployee(
-                    context,
-                    crewUsers[i].Id,
-                    crewUsers[i].Username == "crew" ? "Field Worker Demo" : $"Field Worker {i + 1}",
-                    assignedPosition.Id,
-                    65.00m,
-                    DateTime.Now.AddMonths(-random.Next(1, 12)));
             }
 
             context.SaveChanges();

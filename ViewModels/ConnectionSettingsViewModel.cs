@@ -8,6 +8,8 @@ namespace AttendanceShiftingManagement.ViewModels
     public sealed class ConnectionSettingsViewModel : ObservableObject
     {
         private readonly ConnectionSettingsModel _settings;
+        private readonly RelayCommand _testConnectionCommand;
+        private readonly RelayCommand _saveCommand;
 
         private string _selectedPresetKey = string.Empty;
         private string _server = string.Empty;
@@ -81,7 +83,14 @@ namespace AttendanceShiftingManagement.ViewModels
         public bool IsBusy
         {
             get => _isBusy;
-            private set => SetProperty(ref _isBusy, value);
+            private set
+            {
+                if (SetProperty(ref _isBusy, value))
+                {
+                    _testConnectionCommand.RaiseCanExecuteChanged();
+                    _saveCommand.RaiseCanExecuteChanged();
+                }
+            }
         }
 
         public bool IsLocalSelected => string.Equals(SelectedPresetKey, "Local", StringComparison.OrdinalIgnoreCase);
@@ -94,8 +103,8 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand SelectLocalPresetCommand { get; }
         public ICommand SelectLanPresetCommand { get; }
         public ICommand SelectRemotePresetCommand { get; }
-        public ICommand TestConnectionCommand { get; }
-        public ICommand SaveCommand { get; }
+        public ICommand TestConnectionCommand => _testConnectionCommand;
+        public ICommand SaveCommand => _saveCommand;
         public ICommand CancelCommand { get; }
 
         public ConnectionSettingsViewModel()
@@ -105,8 +114,8 @@ namespace AttendanceShiftingManagement.ViewModels
             SelectLocalPresetCommand = new RelayCommand(_ => SelectPreset("Local"));
             SelectLanPresetCommand = new RelayCommand(_ => SelectPreset("Lan"));
             SelectRemotePresetCommand = new RelayCommand(_ => SelectPreset("Remote"));
-            TestConnectionCommand = new RelayCommand(async _ => await ExecuteTestConnectionAsync());
-            SaveCommand = new RelayCommand(_ => ExecuteSave());
+            _testConnectionCommand = new RelayCommand(async _ => await ExecuteTestConnectionAsync(), _ => !IsBusy);
+            _saveCommand = new RelayCommand(_ => ExecuteSave(), _ => !IsBusy);
             CancelCommand = new RelayCommand(_ => CloseRequested?.Invoke(false));
 
             LoadPreset(_settings.SelectedPreset);

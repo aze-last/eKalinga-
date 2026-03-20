@@ -18,8 +18,8 @@ namespace AttendanceShiftingManagement.Data
             EnsurePhase2Tables(context);
             EnsurePhase3Tables(context);
             EnsureBarangayTables(context);
+            EnsureBeneficiaryStagingTable(context);
             DbSeeder.Seed(context);
-            EnsureAttendanceEmployeeLinks(context);
         }
 
         private static void EnsureBaseSchema(AppDbContext context, bool migrateOnStartup)
@@ -314,75 +314,37 @@ namespace AttendanceShiftingManagement.Data
                 """);
         }
 
-        private static void EnsureAttendanceEmployeeLinks(AppDbContext context)
+        private static void EnsureBeneficiaryStagingTable(AppDbContext context)
         {
-            var fallbackPositionId = context.Positions
-                .OrderBy(p => p.Id)
-                .Select(p => (int?)p.Id)
-                .FirstOrDefault();
-
-            if (!fallbackPositionId.HasValue)
-            {
-                return;
-            }
-
-            var usersToLink = context.Users
-                .Where(u => u.IsActive && (u.Role == Models.UserRole.Manager || u.Role == Models.UserRole.ShiftManager || u.Role == Models.UserRole.Crew))
-                .ToList();
-
-            bool hasChanges = false;
-            foreach (var user in usersToLink)
-            {
-                var employee = context.Employees.FirstOrDefault(e => e.UserId == user.Id);
-                if (employee == null)
-                {
-                    context.Employees.Add(new Models.Employee
-                    {
-                        UserId = user.Id,
-                        FullName = string.IsNullOrWhiteSpace(user.Username) ? "Unnamed Employee" : user.Username,
-                        PositionId = ResolveDefaultPositionId(context, user.Role, fallbackPositionId.Value),
-                        HourlyRate = user.Role is Models.UserRole.Manager or Models.UserRole.ShiftManager ? 80.00m : 65.00m,
-                        DateHired = DateTime.Today,
-                        Status = Models.EmployeeStatus.Active
-                    });
-                    hasChanges = true;
-                    continue;
-                }
-
-                if (employee.Status != Models.EmployeeStatus.Active)
-                {
-                    employee.Status = Models.EmployeeStatus.Active;
-                    hasChanges = true;
-                }
-            }
-
-            if (hasChanges)
-            {
-                context.SaveChanges();
-            }
-        }
-
-        private static int ResolveDefaultPositionId(AppDbContext context, Models.UserRole role, int fallbackPositionId)
-        {
-            if (role == Models.UserRole.ShiftManager)
-            {
-                return context.Positions
-                    .Where(p => p.Name == "Shift Manager" || p.Name.IndexOf("Scheduling", StringComparison.OrdinalIgnoreCase) >= 0)
-                    .OrderByDescending(p => p.Name.IndexOf("Shift Manager", StringComparison.OrdinalIgnoreCase) >= 0)
-                    .Select(p => (int?)p.Id)
-                    .FirstOrDefault() ?? fallbackPositionId;
-            }
-
-            if (role == Models.UserRole.Manager)
-            {
-                return context.Positions
-                    .Where(p => p.Name.IndexOf("Manager", StringComparison.OrdinalIgnoreCase) >= 0)
-                    .OrderByDescending(p => p.Name.IndexOf("Shift Manager", StringComparison.OrdinalIgnoreCase) >= 0)
-                    .Select(p => (int?)p.Id)
-                    .FirstOrDefault() ?? fallbackPositionId;
-            }
-
-            return fallbackPositionId;
+            context.Database.ExecuteSqlRaw(
+                """
+                CREATE TABLE IF NOT EXISTS `BeneficiaryStaging` (
+                    `StagingID` int NOT NULL AUTO_INCREMENT,
+                    `ResidentsId` bigint NULL,
+                    `BeneficiaryId` varchar(255) NULL,
+                    `CivilRegistryId` varchar(255) NULL,
+                    `LastName` varchar(255) NULL,
+                    `FirstName` varchar(255) NULL,
+                    `MiddleName` varchar(255) NULL,
+                    `FullName` varchar(255) NULL,
+                    `Sex` varchar(50) NULL,
+                    `DateOfBirth` varchar(100) NULL,
+                    `Age` varchar(20) NULL,
+                    `MaritalStatus` varchar(100) NULL,
+                    `Address` varchar(255) NULL,
+                    `IsPwd` tinyint(1) NOT NULL DEFAULT 0,
+                    `PwdIdNo` varchar(255) NULL,
+                    `DisabilityType` varchar(255) NULL,
+                    `CauseOfDisability` varchar(255) NULL,
+                    `IsSenior` tinyint(1) NOT NULL DEFAULT 0,
+                    `SeniorIdNo` varchar(255) NULL,
+                    `VerificationStatus` int NOT NULL DEFAULT 0,
+                    `ImportedAt` datetime(6) NOT NULL,
+                    PRIMARY KEY (`StagingID`),
+                    INDEX `idx_verification_status` (`VerificationStatus`),
+                    INDEX `idx_civil_registry_id` (`CivilRegistryId`)
+                );
+                """);
         }
     }
 }

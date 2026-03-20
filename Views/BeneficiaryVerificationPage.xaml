@@ -1,0 +1,275 @@
+<UserControl x:Class="AttendanceShiftingManagement.Views.BeneficiaryVerificationPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             Background="{StaticResource BrandSurfaceBrush}">
+
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0"
+                Padding="24"
+                CornerRadius="18"
+                Background="{StaticResource BrandMidnightBrush}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel>
+                    <TextBlock Text="Beneficiary Verification"
+                               FontSize="26"
+                               FontWeight="SemiBold"
+                               Foreground="White"/>
+                    <TextBlock Text="Review CRS imports in local staging, then approve them into an existing household or reject them."
+                               Margin="0,8,0,0"
+                               MaxWidth="640"
+                               Foreground="#D6E3FF"
+                               TextWrapping="Wrap"/>
+                </StackPanel>
+
+                <Button Grid.Column="1"
+                        Content="REFRESH"
+                        Command="{Binding RefreshCommand}"
+                        Style="{StaticResource GoldActionButton}"
+                        Height="40"
+                        VerticalAlignment="Top"/>
+            </Grid>
+        </Border>
+
+        <UniformGrid Grid.Row="1" Columns="4" Margin="0,18,0,18">
+            <materialDesign:Card Margin="8" Background="{StaticResource BrandMidnightBrush}" Padding="16" BorderThickness="0">
+                <StackPanel>
+                    <TextBlock Text="{Binding TotalCount, StringFormat=N0}" FontSize="28" FontWeight="Medium" Foreground="White"/>
+                    <TextBlock Text="TOTAL STAGED" Foreground="#A5B4FC" FontSize="9"/>
+                </StackPanel>
+            </materialDesign:Card>
+
+            <materialDesign:Card Margin="8" Background="{StaticResource BrandYellowBrush}" Padding="16" BorderThickness="0">
+                <StackPanel>
+                    <TextBlock Text="{Binding PendingCount, StringFormat=N0}" FontSize="28" FontWeight="Medium" Foreground="{StaticResource BrandGoldTextBrush}"/>
+                    <TextBlock Text="PENDING" Foreground="#7A5A00" FontSize="9"/>
+                </StackPanel>
+            </materialDesign:Card>
+
+            <materialDesign:Card Margin="8" Background="{StaticResource BrandSuccessBrush}" Padding="16" BorderThickness="0">
+                <StackPanel>
+                    <TextBlock Text="{Binding ApprovedCount, StringFormat=N0}" FontSize="28" FontWeight="Medium" Foreground="White"/>
+                    <TextBlock Text="APPROVED" Foreground="#CFECD8" FontSize="9"/>
+                </StackPanel>
+            </materialDesign:Card>
+
+            <materialDesign:Card Margin="8" Background="#991B1B" Padding="16" BorderThickness="0">
+                <StackPanel>
+                    <TextBlock Text="{Binding RejectedCount, StringFormat=N0}" FontSize="28" FontWeight="Medium" Foreground="White"/>
+                    <TextBlock Text="REJECTED" Foreground="#FECACA" FontSize="9"/>
+                </StackPanel>
+            </materialDesign:Card>
+        </UniformGrid>
+
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="3*"/>
+                <ColumnDefinition Width="16"/>
+                <ColumnDefinition Width="2*"/>
+            </Grid.ColumnDefinitions>
+
+            <materialDesign:Card Grid.Column="0" Padding="16" Background="White">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <DockPanel Grid.Row="0" Margin="0,0,0,14">
+                        <TextBlock Text="Staged Beneficiaries"
+                                   FontSize="15"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource BrandMidnightBrush}"/>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <ComboBox Width="160"
+                                      Margin="0,0,12,0"
+                                      ItemsSource="{Binding StatusFilters}"
+                                      SelectedItem="{Binding SelectedStatusFilter}"
+                                      Style="{StaticResource MaterialDesignOutlinedComboBox}"/>
+                            <TextBox Width="280"
+                                     Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     materialDesign:HintAssist.Hint="Search name or civil registry ID..."/>
+                        </StackPanel>
+                    </DockPanel>
+
+                    <TextBlock Grid.Row="1"
+                               Margin="0,0,0,14"
+                               FontWeight="SemiBold"
+                               Foreground="{Binding StatusBrush}"
+                               Text="{Binding StatusMessage}"
+                               TextWrapping="Wrap"/>
+
+                    <DataGrid Grid.Row="2"
+                              ItemsSource="{Binding RecordsView}"
+                              SelectedItem="{Binding SelectedBeneficiary}"
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False"
+                              CanUserDeleteRows="False"
+                              IsReadOnly="True">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Full Name" Binding="{Binding FullName}" Width="*"/>
+                            <DataGridTextColumn Header="Civil Registry ID" Binding="{Binding CivilRegistryId}" Width="150"/>
+                            <DataGridTextColumn Header="Address" Binding="{Binding Address}" Width="220"/>
+                            <DataGridTextColumn Header="Sex" Binding="{Binding Sex}" Width="80"/>
+                            <DataGridTextColumn Header="Age" Binding="{Binding Age}" Width="70"/>
+                            <DataGridTextColumn Header="PWD" Binding="{Binding PwdLabel}" Width="70"/>
+                            <DataGridTextColumn Header="Senior" Binding="{Binding SeniorLabel}" Width="80"/>
+                            <DataGridTemplateColumn Header="Status" Width="110">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Border Background="{Binding StatusBrush}" CornerRadius="12" Padding="8,4" HorizontalAlignment="Center">
+                                            <TextBlock Text="{Binding StatusText}" Foreground="{Binding StatusTextBrush}" FontWeight="SemiBold"/>
+                                        </Border>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="Imported" Binding="{Binding ImportedAt, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}" Width="140"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </materialDesign:Card>
+
+            <materialDesign:Card Grid.Column="2" Padding="16" Background="White">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Text="Verification Details"
+                               FontSize="15"
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource BrandMidnightBrush}"/>
+
+                    <Border Grid.Row="1"
+                            Margin="0,12,0,14"
+                            Padding="16"
+                            CornerRadius="10"
+                            Background="#EEF4FF"
+                            BorderBrush="{StaticResource BrandBorderBrush}"
+                            BorderThickness="1">
+                        <StackPanel>
+                            <TextBlock Text="{Binding SelectedBeneficiary.FullName, TargetNullValue=Select a staged beneficiary}"
+                                       FontSize="18"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrandMidnightBrush}"
+                                       TextWrapping="Wrap"/>
+                            <TextBlock Text="{Binding SelectedBeneficiary.BeneficiaryId, StringFormat='Beneficiary ID: {0}', TargetNullValue=Beneficiary ID: --}"
+                                       Margin="0,6,0,0"
+                                       Foreground="{StaticResource BrandTextSecondaryBrush}"/>
+                            <TextBlock Text="{Binding SelectedBeneficiary.CivilRegistryId, StringFormat='Civil Registry ID: {0}', TargetNullValue=Civil Registry ID: --}"
+                                       Margin="0,4,0,0"
+                                       Foreground="{StaticResource BrandTextSecondaryBrush}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <StackPanel Grid.Row="2">
+                        <TextBlock Text="Approve Into Existing Household"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource BrandMidnightBrush}"/>
+                        <ComboBox Margin="0,8,0,0"
+                                  ItemsSource="{Binding Households}"
+                                  SelectedItem="{Binding SelectedHousehold}"
+                                  DisplayMemberPath="DisplayLabel"
+                                  Style="{StaticResource MaterialDesignOutlinedComboBox}"/>
+                        <TextBlock Text="{Binding SelectedHousehold.AddressLine, TargetNullValue=Select a household for approval.}"
+                                   Margin="0,8,0,0"
+                                   Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                   TextWrapping="Wrap"/>
+                        <WrapPanel Margin="0,14,0,0">
+                            <Button Content="APPROVE"
+                                    Command="{Binding ApproveCommand}"
+                                    Style="{StaticResource MaterialDesignRaisedButton}"
+                                    Background="{StaticResource BrandSuccessBrush}"
+                                    Foreground="White"
+                                    Height="38"
+                                    Margin="0,0,12,12"
+                                    Padding="18,0"/>
+                            <Button Content="REJECT"
+                                    Command="{Binding RejectCommand}"
+                                    Style="{StaticResource MaterialDesignRaisedButton}"
+                                    Background="{StaticResource BrandRedBrush}"
+                                    Foreground="White"
+                                    Height="38"
+                                    Margin="0,0,12,12"
+                                    Padding="18,0"/>
+                        </WrapPanel>
+                    </StackPanel>
+
+                    <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto" Margin="0,14,0,0">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="140"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Address" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
+                                <TextBlock Grid.Column="1" Text="{Binding SelectedBeneficiary.Address, TargetNullValue=--}" TextWrapping="Wrap"/>
+                            </Grid>
+
+                            <Grid Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="140"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Sex / Age" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
+                                <TextBlock Grid.Column="1" Text="{Binding SelectedBeneficiary.SexAgeSummary, TargetNullValue=--}" TextWrapping="Wrap"/>
+                            </Grid>
+
+                            <Grid Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="140"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Date of Birth" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
+                                <TextBlock Grid.Column="1" Text="{Binding SelectedBeneficiary.DateOfBirth, TargetNullValue=--}" TextWrapping="Wrap"/>
+                            </Grid>
+
+                            <Grid Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="140"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Marital Status" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
+                                <TextBlock Grid.Column="1" Text="{Binding SelectedBeneficiary.MaritalStatus, TargetNullValue=--}" TextWrapping="Wrap"/>
+                            </Grid>
+
+                            <Grid Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="140"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="PWD Details" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
+                                <TextBlock Grid.Column="1" Text="{Binding SelectedBeneficiary.PwdDetails, TargetNullValue=No PWD ID}" TextWrapping="Wrap"/>
+                            </Grid>
+
+                            <Grid Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="140"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Senior Details" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
+                                <TextBlock Grid.Column="1" Text="{Binding SelectedBeneficiary.SeniorDetails, TargetNullValue=No Senior ID}" TextWrapping="Wrap"/>
+                            </Grid>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </materialDesign:Card>
+        </Grid>
+    </Grid>
+</UserControl>

@@ -1,11 +1,13 @@
 using AttendanceShiftingManagement.Data;
 using AttendanceShiftingManagement.Helpers;
 using AttendanceShiftingManagement.Models;
+using AttendanceShiftingManagement.Services;
 using BCrypt.Net;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Win32;
 using System;
 using System.Collections.ObjectModel;
+using System.Data;
 using System.IO;
 using System.Linq;
 using System.Windows;
@@ -23,14 +25,25 @@ namespace AttendanceShiftingManagement.ViewModels
         private UserPreference _preferences = new UserPreference();
         private User? _user;
         private Employee? _employee;
+        private readonly RelayCommand _testImportConnectionCommand;
+        private readonly RelayCommand _saveImportConnectionCommand;
+        private readonly RelayCommand _importBeneficiariesCommand;
+        private readonly RelayCommand _refreshStagingPreviewCommand;
+        private readonly RelayCommand _createBackupCommand;
+        private readonly RelayCommand _restoreBackupCommand;
+        private readonly RelayCommand _loadRemoteTablesCommand;
+        private readonly RelayCommand _reviewSelectedTableCommand;
+        private readonly RelayCommand _syncSelectedTableToLocalCommand;
 
         public bool IsManager { get; }
+        public bool CanManageSystemImport { get; }
         public bool CanEditContactInfo => IsManager;
 
         public ObservableCollection<SelectablePosition> Positions { get; } = new();
         public ObservableCollection<string> ShiftBlocks { get; } = new() { "Any", "AM", "PM", "Mid", "Night" };
         public ObservableCollection<string> DefaultViews { get; } = new() { "Dashboard", "Weekly Schedule", "Shift Planning", "Attendance Logs", "Employee List" };
         public ObservableCollection<string> ReportFormats { get; } = new() { "CSV", "PDF" };
+        public ObservableCollection<string> RemoteTables { get; } = new();
 
         private ImageSource? _photoImage;
         public ImageSource? PhotoImage
@@ -179,10 +192,187 @@ namespace AttendanceShiftingManagement.ViewModels
             set => SetProperty(ref _confirmPassword, value);
         }
 
+        private string _importSourceServer = string.Empty;
+        public string ImportSourceServer
+        {
+            get => _importSourceServer;
+            set => SetProperty(ref _importSourceServer, value);
+        }
+
+        private string _importSourcePortText = "3306";
+        public string ImportSourcePortText
+        {
+            get => _importSourcePortText;
+            set => SetProperty(ref _importSourcePortText, value);
+        }
+
+        private string _importSourceDatabase = string.Empty;
+        public string ImportSourceDatabase
+        {
+            get => _importSourceDatabase;
+            set => SetProperty(ref _importSourceDatabase, value);
+        }
+
+        private string _importSourceUsername = string.Empty;
+        public string ImportSourceUsername
+        {
+            get => _importSourceUsername;
+            set => SetProperty(ref _importSourceUsername, value);
+        }
+
+        private string _importSourcePassword = string.Empty;
+        public string ImportSourcePassword
+        {
+            get => _importSourcePassword;
+            set => SetProperty(ref _importSourcePassword, value);
+        }
+
+        private string _localImportTargetSummary = string.Empty;
+        public string LocalImportTargetSummary
+        {
+            get => _localImportTargetSummary;
+            private set => SetProperty(ref _localImportTargetSummary, value);
+        }
+
+        private string _backupTargetSummary = string.Empty;
+        public string BackupTargetSummary
+        {
+            get => _backupTargetSummary;
+            private set => SetProperty(ref _backupTargetSummary, value);
+        }
+
+        private string _selectedRemoteTable = string.Empty;
+        public string SelectedRemoteTable
+        {
+            get => _selectedRemoteTable;
+            set
+            {
+                if (SetProperty(ref _selectedRemoteTable, value))
+                {
+                    _reviewSelectedTableCommand.RaiseCanExecuteChanged();
+                    _syncSelectedTableToLocalCommand.RaiseCanExecuteChanged();
+                }
+            }
+        }
+
+        private string _tableReviewSummary = "Load remote tables to start reviewing.";
+        public string TableReviewSummary
+        {
+            get => _tableReviewSummary;
+            private set => SetProperty(ref _tableReviewSummary, value);
+        }
+
+        private string _selectedTableColumnsSummary = string.Empty;
+        public string SelectedTableColumnsSummary
+        {
+            get => _selectedTableColumnsSummary;
+            private set => SetProperty(ref _selectedTableColumnsSummary, value);
+        }
+
+        private DataView? _tablePreviewView;
+        public DataView? TablePreviewView
+        {
+            get => _tablePreviewView;
+            private set => SetProperty(ref _tablePreviewView, value);
+        }
+
+        private string _importStatusMessage = "Configure the CRS source connection, then import beneficiaries into local staging.";
+        public string ImportStatusMessage
+        {
+            get => _importStatusMessage;
+            private set => SetProperty(ref _importStatusMessage, value);
+        }
+
+        private Brush _importStatusBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#6B7280"));
+        public Brush ImportStatusBrush
+        {
+            get => _importStatusBrush;
+            private set => SetProperty(ref _importStatusBrush, value);
+        }
+
+        private string _backupStatusMessage = "Create a backup of the current app database before running restore.";
+        public string BackupStatusMessage
+        {
+            get => _backupStatusMessage;
+            private set => SetProperty(ref _backupStatusMessage, value);
+        }
+
+        private Brush _backupStatusBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#6B7280"));
+        public Brush BackupStatusBrush
+        {
+            get => _backupStatusBrush;
+            private set => SetProperty(ref _backupStatusBrush, value);
+        }
+
+        private string _lastBackupSummary = "No backup activity yet in this session.";
+        public string LastBackupSummary
+        {
+            get => _lastBackupSummary;
+            private set => SetProperty(ref _lastBackupSummary, value);
+        }
+
+        private string _lastBackupFilePath = string.Empty;
+        public string LastBackupFilePath
+        {
+            get => _lastBackupFilePath;
+            private set => SetProperty(ref _lastBackupFilePath, value);
+        }
+
+        private bool _isImportBusy;
+        public bool IsImportBusy
+        {
+            get => _isImportBusy;
+            private set
+            {
+                if (SetProperty(ref _isImportBusy, value))
+                {
+                    _testImportConnectionCommand.RaiseCanExecuteChanged();
+                    _saveImportConnectionCommand.RaiseCanExecuteChanged();
+                    _importBeneficiariesCommand.RaiseCanExecuteChanged();
+                    _refreshStagingPreviewCommand.RaiseCanExecuteChanged();
+                    _createBackupCommand.RaiseCanExecuteChanged();
+                    _restoreBackupCommand.RaiseCanExecuteChanged();
+                    _loadRemoteTablesCommand.RaiseCanExecuteChanged();
+                    _reviewSelectedTableCommand.RaiseCanExecuteChanged();
+                    _syncSelectedTableToLocalCommand.RaiseCanExecuteChanged();
+                }
+            }
+        }
+
+        private bool _isBackupBusy;
+        public bool IsBackupBusy
+        {
+            get => _isBackupBusy;
+            private set
+            {
+                if (SetProperty(ref _isBackupBusy, value))
+                {
+                    _testImportConnectionCommand.RaiseCanExecuteChanged();
+                    _saveImportConnectionCommand.RaiseCanExecuteChanged();
+                    _importBeneficiariesCommand.RaiseCanExecuteChanged();
+                    _refreshStagingPreviewCommand.RaiseCanExecuteChanged();
+                    _createBackupCommand.RaiseCanExecuteChanged();
+                    _restoreBackupCommand.RaiseCanExecuteChanged();
+                    _loadRemoteTablesCommand.RaiseCanExecuteChanged();
+                    _reviewSelectedTableCommand.RaiseCanExecuteChanged();
+                    _syncSelectedTableToLocalCommand.RaiseCanExecuteChanged();
+                }
+            }
+        }
+
         public ICommand BrowsePhotoCommand { get; }
         public ICommand SaveCommand { get; }
         public ICommand CancelCommand { get; }
         public ICommand ChangePasswordCommand { get; }
+        public ICommand TestImportConnectionCommand => _testImportConnectionCommand;
+        public ICommand SaveImportConnectionCommand => _saveImportConnectionCommand;
+        public ICommand ImportBeneficiariesCommand => _importBeneficiariesCommand;
+        public ICommand RefreshStagingPreviewCommand => _refreshStagingPreviewCommand;
+        public ICommand CreateBackupCommand => _createBackupCommand;
+        public ICommand RestoreBackupCommand => _restoreBackupCommand;
+        public ICommand LoadRemoteTablesCommand => _loadRemoteTablesCommand;
+        public ICommand ReviewSelectedTableCommand => _reviewSelectedTableCommand;
+        public ICommand SyncSelectedTableToLocalCommand => _syncSelectedTableToLocalCommand;
         public event Action? ProfileUpdated;
 
         public ProfileSettingsViewModel(User user)
@@ -190,13 +380,44 @@ namespace AttendanceShiftingManagement.ViewModels
             _context = new AppDbContext();
             _userId = user.Id;
             IsManager = user.Role == UserRole.Manager || user.Role == UserRole.ShiftManager;
+            CanManageSystemImport = user.Role == UserRole.Admin || user.Role == UserRole.HRStaff;
 
             BrowsePhotoCommand = new RelayCommand(_ => BrowsePhoto());
             SaveCommand = new RelayCommand(_ => SaveProfile());
             CancelCommand = new RelayCommand(_ => LoadProfile());
             ChangePasswordCommand = new RelayCommand(_ => ChangePassword());
+            _testImportConnectionCommand = new RelayCommand(
+                async _ => await ExecuteTestImportConnectionAsync(),
+                _ => CanManageSystemImport && !IsImportBusy);
+            _saveImportConnectionCommand = new RelayCommand(
+                _ => ExecuteSaveImportConnection(),
+                _ => CanManageSystemImport && !IsImportBusy && !IsBackupBusy);
+            _importBeneficiariesCommand = new RelayCommand(
+                async _ => await ExecuteImportBeneficiariesAsync(),
+                _ => CanManageSystemImport && !IsImportBusy && !IsBackupBusy);
+            _refreshStagingPreviewCommand = new RelayCommand(
+                _ => LoadStagingPreview(),
+                _ => CanManageSystemImport && !IsImportBusy && !IsBackupBusy);
+            _createBackupCommand = new RelayCommand(
+                async _ => await ExecuteCreateBackupAsync(),
+                _ => CanManageSystemImport && !IsImportBusy && !IsBackupBusy);
+            _restoreBackupCommand = new RelayCommand(
+                async _ => await ExecuteRestoreBackupAsync(),
+                _ => CanManageSystemImport && !IsImportBusy && !IsBackupBusy);
+            _loadRemoteTablesCommand = new RelayCommand(
+                async _ => await LoadRemoteTablesAsync(),
+                _ => CanManageSystemImport && !IsImportBusy && !IsBackupBusy);
+            _reviewSelectedTableCommand = new RelayCommand(
+                async _ => await ReviewSelectedTableAsync(),
+                _ => CanManageSystemImport && !IsImportBusy && !IsBackupBusy && !string.IsNullOrWhiteSpace(SelectedRemoteTable));
+            _syncSelectedTableToLocalCommand = new RelayCommand(
+                async _ => await SyncSelectedTableToLocalAsync(),
+                _ => CanManageSystemImport && !IsImportBusy && !IsBackupBusy && !string.IsNullOrWhiteSpace(SelectedRemoteTable));
 
             LoadProfile();
+            LoadImportConfiguration();
+            LoadBackupConfiguration();
+            LoadStagingPreview();
         }
 
         private void LoadProfile()
@@ -467,6 +688,522 @@ namespace AttendanceShiftingManagement.ViewModels
 
             return string.Join(",", list);
         }
+
+        private void LoadImportConfiguration()
+        {
+            var importPreset = MunicipalityImportConnectionSettingsService.Load();
+            ImportSourceServer = importPreset.Server;
+            ImportSourcePortText = importPreset.Port.ToString();
+            ImportSourceDatabase = importPreset.Database;
+            ImportSourceUsername = importPreset.Username;
+            ImportSourcePassword = importPreset.Password;
+
+            var settings = ConnectionSettingsService.Load();
+            var localPreset = settings.GetPreset("Local");
+            LocalImportTargetSummary = $"{localPreset.DisplayName}: {localPreset.Server}:{localPreset.Port} / {localPreset.Database} -> BeneficiaryStaging";
+            TableReviewSummary = "No staged beneficiaries loaded yet.";
+            SelectedTableColumnsSummary = string.Empty;
+            TablePreviewView = null;
+            SetImportNeutralStatus("Use the CRS connection details, test them, then import beneficiaries into local staging.");
+        }
+
+        private void LoadBackupConfiguration()
+        {
+            var settings = ConnectionSettingsService.Load();
+            var preset = settings.GetPreset(settings.SelectedPreset);
+
+            BackupTargetSummary = $"{preset.DisplayName}: {preset.Server}:{preset.Port} / {preset.Database} (selected preset: {settings.SelectedPreset})";
+            SetBackupNeutralStatus("Create a database backup of the current app preset or restore an existing archive into it.");
+        }
+
+        private async Task ExecuteTestImportConnectionAsync()
+        {
+            if (!CanManageSystemImport || IsImportBusy || IsBackupBusy)
+            {
+                return;
+            }
+
+            if (!TryBuildImportSourcePreset(out var preset, out var validationMessage))
+            {
+                SetImportErrorStatus(validationMessage);
+                return;
+            }
+
+            IsImportBusy = true;
+            SetImportNeutralStatus("Testing CRS source connection...");
+
+            try
+            {
+                var result = await ConnectionSettingsService.TestConnectionAsync(preset);
+                if (result.IsSuccess)
+                {
+                    SetImportSuccessStatus(result.Message);
+                }
+                else
+                {
+                    SetImportErrorStatus(result.Message);
+                }
+            }
+            finally
+            {
+                IsImportBusy = false;
+            }
+        }
+
+        private void ExecuteSaveImportConnection()
+        {
+            if (!CanManageSystemImport || IsImportBusy || IsBackupBusy)
+            {
+                return;
+            }
+
+            if (!TryBuildImportSourcePreset(out var preset, out var validationMessage))
+            {
+                SetImportErrorStatus(validationMessage);
+                return;
+            }
+
+            MunicipalityImportConnectionSettingsService.Save(preset);
+            SetImportSuccessStatus("CRS import connection saved.");
+        }
+
+        private async Task ExecuteImportBeneficiariesAsync()
+        {
+            if (!CanManageSystemImport || IsImportBusy || IsBackupBusy)
+            {
+                return;
+            }
+
+            if (!TryBuildImportSourcePreset(out var preset, out var validationMessage))
+            {
+                SetImportErrorStatus(validationMessage);
+                return;
+            }
+
+            var confirm = MessageBox.Show(
+                "Import beneficiaries from the Civil Registry System into local staging?\n\n" +
+                "New rows will be inserted into BeneficiaryStaging as Pending.\n" +
+                "Existing Civil Registry IDs will be skipped.",
+                "Import CRS Beneficiaries",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+
+            if (confirm != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            IsImportBusy = true;
+            SetImportNeutralStatus("Importing beneficiaries from CRS...");
+
+            try
+            {
+                var result = await CrsBeneficiaryImportService.ImportPendingAsync(preset);
+                if (result.IsSuccess)
+                {
+                    MunicipalityImportConnectionSettingsService.Save(preset);
+                    LoadStagingPreview();
+                    SetImportSuccessStatus(result.Message);
+                }
+                else
+                {
+                    SetImportErrorStatus(result.Message);
+                }
+            }
+            finally
+            {
+                IsImportBusy = false;
+            }
+        }
+
+        private async Task ExecuteCreateBackupAsync()
+        {
+            if (!CanManageSystemImport || IsImportBusy || IsBackupBusy)
+            {
+                return;
+            }
+
+            LoadBackupConfiguration();
+            var settings = ConnectionSettingsService.Load();
+            var preset = settings.GetPreset(settings.SelectedPreset);
+
+            var dialog = new SaveFileDialog
+            {
+                Filter = "ASM Backup Archive (*.asmbak)|*.asmbak",
+                Title = "Create Database Backup",
+                FileName = $"{settings.SelectedPreset.ToLowerInvariant()}-{preset.Database}-{DateTime.Now:yyyyMMdd-HHmmss}.asmbak"
+            };
+
+            if (dialog.ShowDialog() != true)
+            {
+                return;
+            }
+
+            IsBackupBusy = true;
+            SetBackupNeutralStatus($"Creating a backup from `{preset.Database}`...");
+
+            try
+            {
+                var result = await LocalBackupService.CreateBackupAsync(dialog.FileName);
+                if (result.IsSuccess && result.Manifest != null)
+                {
+                    LastBackupFilePath = dialog.FileName;
+                    LastBackupSummary = BuildBackupSummary("Created", result.Manifest);
+                    SetBackupSuccessStatus(result.Message);
+                }
+                else
+                {
+                    SetBackupErrorStatus(result.Message);
+                }
+            }
+            finally
+            {
+                IsBackupBusy = false;
+            }
+        }
+
+        private async Task ExecuteRestoreBackupAsync()
+        {
+            if (!CanManageSystemImport || IsImportBusy || IsBackupBusy)
+            {
+                return;
+            }
+
+            LoadBackupConfiguration();
+
+            var dialog = new OpenFileDialog
+            {
+                Filter = "ASM Backup Archive (*.asmbak)|*.asmbak",
+                Title = "Restore Database Backup",
+                CheckFileExists = true
+            };
+
+            if (dialog.ShowDialog() != true)
+            {
+                return;
+            }
+
+            var manifest = await LocalBackupService.ReadManifestAsync(dialog.FileName);
+            if (manifest == null)
+            {
+                SetBackupErrorStatus("The selected file is not a valid backup archive.");
+                return;
+            }
+
+            var settings = ConnectionSettingsService.Load();
+            var preset = settings.GetPreset(settings.SelectedPreset);
+            var confirm = MessageBox.Show(
+                "Restore this backup into the current app database?\n\n" +
+                $"Target preset: {settings.SelectedPreset}\n" +
+                $"Target database: {preset.Database}\n" +
+                $"Backup database: {manifest.Database}\n" +
+                $"Created: {manifest.CreatedAt:yyyy-MM-dd HH:mm}\n" +
+                $"Tables: {manifest.IncludedTables.Count}\n" +
+                $"Rows: {manifest.TotalRows}\n\n" +
+                "This replaces current application rows in the selected preset.\n" +
+                "Fingerprint templates, local config files, and image files are not restored by this archive.",
+                "Restore Database Backup",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (confirm != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            IsBackupBusy = true;
+            SetBackupNeutralStatus($"Restoring backup into `{preset.Database}`...");
+
+            try
+            {
+                var result = await LocalBackupService.RestoreBackupAsync(dialog.FileName);
+                if (result.IsSuccess && result.Manifest != null)
+                {
+                    _context.ChangeTracker.Clear();
+                    LoadProfile();
+                    LoadStagingPreview();
+                    LastBackupFilePath = dialog.FileName;
+                    LastBackupSummary = BuildBackupSummary("Restored", result.Manifest);
+                    SetBackupSuccessStatus(result.Message);
+                    ProfileUpdated?.Invoke();
+                }
+                else
+                {
+                    SetBackupErrorStatus(result.Message);
+                }
+            }
+            finally
+            {
+                IsBackupBusy = false;
+            }
+        }
+
+        private void LoadStagingPreview()
+        {
+            using var previewContext = new AppDbContext();
+
+            var rows = previewContext.BeneficiaryStaging
+                .AsNoTracking()
+                .OrderByDescending(row => row.ImportedAt)
+                .Take(50)
+                .ToList();
+
+            var totalCount = previewContext.BeneficiaryStaging.Count();
+            var pendingCount = previewContext.BeneficiaryStaging.Count(row => row.VerificationStatus == VerificationStatus.Pending);
+            var approvedCount = previewContext.BeneficiaryStaging.Count(row => row.VerificationStatus == VerificationStatus.Approved);
+            var rejectedCount = previewContext.BeneficiaryStaging.Count(row => row.VerificationStatus == VerificationStatus.Rejected);
+
+            TableReviewSummary = totalCount == 0
+                ? "BeneficiaryStaging is empty."
+                : $"Local staging records: {totalCount} | Pending: {pendingCount} | Approved: {approvedCount} | Rejected: {rejectedCount}";
+            SelectedTableColumnsSummary = totalCount == 0
+                ? "Run the CRS import to populate local staging."
+                : "Showing the 50 most recently imported staging records.";
+
+            var table = new DataTable();
+            table.Columns.Add("Full Name");
+            table.Columns.Add("Civil Registry ID");
+            table.Columns.Add("Address");
+            table.Columns.Add("Sex");
+            table.Columns.Add("Age");
+            table.Columns.Add("PWD");
+            table.Columns.Add("Senior");
+            table.Columns.Add("Status");
+            table.Columns.Add("Imported At");
+
+            foreach (var row in rows)
+            {
+                table.Rows.Add(
+                    row.FullName ?? string.Empty,
+                    row.CivilRegistryId ?? string.Empty,
+                    row.Address ?? string.Empty,
+                    row.Sex ?? string.Empty,
+                    row.Age ?? string.Empty,
+                    row.IsPwd ? "Yes" : "No",
+                    row.IsSenior ? "Yes" : "No",
+                    row.VerificationStatus.ToString(),
+                    row.ImportedAt.ToString("yyyy-MM-dd HH:mm"));
+            }
+
+            TablePreviewView = table.DefaultView;
+        }
+
+        private async Task LoadRemoteTablesAsync()
+        {
+            if (!CanManageSystemImport || IsImportBusy || IsBackupBusy)
+            {
+                return;
+            }
+
+            if (!TryBuildImportSourcePreset(out var preset, out var validationMessage))
+            {
+                SetImportErrorStatus(validationMessage);
+                return;
+            }
+
+            IsImportBusy = true;
+            SetImportNeutralStatus("Loading remote tables...");
+
+            try
+            {
+                var tables = await DatabaseTableReviewService.ListTablesAsync(preset);
+                RemoteTables.Clear();
+                foreach (var table in tables)
+                {
+                    RemoteTables.Add(table);
+                }
+
+                if (!RemoteTables.Contains(SelectedRemoteTable))
+                {
+                    SelectedRemoteTable = RemoteTables.FirstOrDefault() ?? string.Empty;
+                }
+
+                TableReviewSummary = RemoteTables.Count == 0
+                    ? "No tables were found in the selected remote schema."
+                    : $"Loaded {RemoteTables.Count} remote table(s).";
+                SetImportSuccessStatus($"Loaded {RemoteTables.Count} remote table(s).");
+            }
+            catch (Exception ex)
+            {
+                SetImportErrorStatus($"Unable to load remote tables: {ex.Message}");
+            }
+            finally
+            {
+                IsImportBusy = false;
+            }
+        }
+
+        private async Task ReviewSelectedTableAsync()
+        {
+            if (!CanManageSystemImport || IsImportBusy || IsBackupBusy || string.IsNullOrWhiteSpace(SelectedRemoteTable))
+            {
+                return;
+            }
+
+            if (!TryBuildImportSourcePreset(out var sourcePreset, out var validationMessage))
+            {
+                SetImportErrorStatus(validationMessage);
+                return;
+            }
+
+            var localPreset = ConnectionSettingsService.Load().GetPreset("Local");
+            IsImportBusy = true;
+            SetImportNeutralStatus($"Reviewing `{SelectedRemoteTable}`...");
+
+            try
+            {
+                var review = await DatabaseTableReviewService.ReviewTableAsync(sourcePreset, localPreset, SelectedRemoteTable);
+
+                if (!review.ExistsInRemote)
+                {
+                    TableReviewSummary = $"Remote table `{SelectedRemoteTable}` was not found.";
+                    SelectedTableColumnsSummary = string.Empty;
+                    TablePreviewView = null;
+                    SetImportErrorStatus(TableReviewSummary);
+                    return;
+                }
+
+                TableReviewSummary = review.ExistsInLocal
+                    ? $"Remote rows: {review.RemoteRowCount} | Local rows: {review.LocalRowCount} | Local table exists."
+                    : $"Remote rows: {review.RemoteRowCount} | Local table missing. Sync will create a local copy.";
+                SelectedTableColumnsSummary = review.ColumnNames.Count == 0
+                    ? string.Empty
+                    : $"Columns: {string.Join(", ", review.ColumnNames)}";
+                TablePreviewView = review.PreviewRows.DefaultView;
+                SetImportSuccessStatus($"Reviewed remote table `{SelectedRemoteTable}`.");
+            }
+            finally
+            {
+                IsImportBusy = false;
+            }
+        }
+
+        private bool TryBuildImportSourcePreset(out DatabaseConnectionPreset preset, out string validationMessage)
+        {
+            preset = new DatabaseConnectionPreset();
+            validationMessage = string.Empty;
+
+            if (string.IsNullOrWhiteSpace(ImportSourceServer))
+            {
+                validationMessage = "Enter the Hostinger/MySQL server name used in Workbench.";
+                return false;
+            }
+
+            if (!int.TryParse(ImportSourcePortText, out var port) || port <= 0 || port > 65535)
+            {
+                validationMessage = "Enter a valid MySQL port between 1 and 65535.";
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(ImportSourceDatabase))
+            {
+                validationMessage = "Enter the CRS source database name.";
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(ImportSourceUsername))
+            {
+                validationMessage = "Enter the source username or email.";
+                return false;
+            }
+
+            preset = new DatabaseConnectionPreset
+            {
+                DisplayName = "CRS Import Source",
+                Server = ImportSourceServer.Trim(),
+                Port = port,
+                Database = ImportSourceDatabase.Trim(),
+                Username = ImportSourceUsername.Trim(),
+                Password = ImportSourcePassword
+            };
+
+            return true;
+        }
+
+        private async Task SyncSelectedTableToLocalAsync()
+        {
+            if (!CanManageSystemImport || IsImportBusy || IsBackupBusy || string.IsNullOrWhiteSpace(SelectedRemoteTable))
+            {
+                return;
+            }
+
+            if (!TryBuildImportSourcePreset(out var sourcePreset, out var validationMessage))
+            {
+                SetImportErrorStatus(validationMessage);
+                return;
+            }
+
+            var settings = ConnectionSettingsService.Load();
+            var localPreset = settings.GetPreset("Local");
+            var tableName = SelectedRemoteTable;
+
+            IsImportBusy = true;
+            SetImportNeutralStatus($"Syncing `{tableName}` into Local...");
+
+            try
+            {
+                var result = await DatabaseTableReviewService.SyncTableToLocalAsync(sourcePreset, localPreset, tableName);
+                if (result.IsSuccess)
+                {
+                    SetImportSuccessStatus(result.Message);
+                }
+                else
+                {
+                    SetImportErrorStatus(result.Message);
+                }
+            }
+            finally
+            {
+                IsImportBusy = false;
+            }
+
+            await ReviewSelectedTableAsync();
+        }
+
+        private void SetImportNeutralStatus(string message)
+        {
+            ImportStatusMessage = message;
+            ImportStatusBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#6B7280"));
+        }
+
+        private void SetImportSuccessStatus(string message)
+        {
+            ImportStatusMessage = message;
+            ImportStatusBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#1A7A4A"));
+        }
+
+        private void SetImportErrorStatus(string message)
+        {
+            ImportStatusMessage = message;
+            ImportStatusBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#991B1B"));
+        }
+
+        private string BuildBackupSummary(string action, BackupManifest manifest)
+        {
+            var excludedSummary = manifest.ExcludedTables.Count == 0
+                ? "No excluded tables."
+                : $"Excluded: {string.Join(", ", manifest.ExcludedTables)}";
+
+            return $"{action} {manifest.CreatedAt:yyyy-MM-dd HH:mm} | Database: {manifest.Database} | Tables: {manifest.IncludedTables.Count} | Rows: {manifest.TotalRows} | {excludedSummary}";
+        }
+
+        private void SetBackupNeutralStatus(string message)
+        {
+            BackupStatusMessage = message;
+            BackupStatusBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#6B7280"));
+        }
+
+        private void SetBackupSuccessStatus(string message)
+        {
+            BackupStatusMessage = message;
+            BackupStatusBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#1A7A4A"));
+        }
+
+        private void SetBackupErrorStatus(string message)
+        {
+            BackupStatusMessage = message;
+            BackupStatusBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#991B1B"));
+        }
     }
 
     public class SelectablePosition : ObservableObject
@@ -487,4 +1224,5 @@ namespace AttendanceShiftingManagement.ViewModels
             Name = name;
         }
     }
+
 }

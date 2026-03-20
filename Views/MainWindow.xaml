@@ -87,6 +87,30 @@
                     </Button>
 
                     <Button Style="{StaticResource SidebarNavButton}"
+                            Command="{Binding ShowMasterListCommand}"
+                            FontSize="13">
+                        <Button.Visibility>
+                            <Binding Path="CanManageEmployees" Converter="{StaticResource BooleanToVisibilityConverter}"/>
+                        </Button.Visibility>
+                        <StackPanel Orientation="Horizontal" Width="180">
+                            <materialDesign:PackIcon Kind="CardAccountDetailsOutline" Margin="0,0,16,0"/>
+                            <TextBlock Text="Master List"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button Style="{StaticResource SidebarNavButton}"
+                            Command="{Binding ShowBeneficiaryVerificationCommand}"
+                            FontSize="13">
+                        <Button.Visibility>
+                            <Binding Path="CanManageEmployees" Converter="{StaticResource BooleanToVisibilityConverter}"/>
+                        </Button.Visibility>
+                        <StackPanel Orientation="Horizontal" Width="180">
+                            <materialDesign:PackIcon Kind="AccountCheckOutline" Margin="0,0,16,0"/>
+                            <TextBlock Text="Verification"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button Style="{StaticResource SidebarNavButton}"
                             Command="{Binding ShowPositionsCommand}"
                             FontSize="13">
                         <Button.Visibility>Collapsed</Button.Visibility>

@@ -33,6 +33,7 @@ namespace AttendanceShiftingManagement.Data
         public DbSet<CashForWorkEvent> CashForWorkEvents { get; set; }
         public DbSet<CashForWorkParticipant> CashForWorkParticipants { get; set; }
         public DbSet<CashForWorkAttendance> CashForWorkAttendances { get; set; }
+        public DbSet<BeneficiaryStaging> BeneficiaryStaging { get; set; }
 
         public AppDbContext()
         {
@@ -190,6 +191,12 @@ namespace AttendanceShiftingManagement.Data
             modelBuilder.Entity<CashForWorkAttendance>()
                 .HasIndex(a => new { a.ParticipantId, a.AttendanceDate })
                 .IsUnique();
+
+            modelBuilder.Entity<BeneficiaryStaging>()
+                .HasIndex(b => b.VerificationStatus);
+
+            modelBuilder.Entity<BeneficiaryStaging>()
+                .HasIndex(b => b.CivilRegistryId);
         }
     }
 }
