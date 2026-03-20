@@ -1,0 +1,371 @@
+<Window x:Class="AttendanceShiftingManagement.Views.ConnectionSettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="Connection Settings"
+        Width="760"
+        Height="660"
+        MinWidth="760"
+        MinHeight="560"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="CanResize"
+        Background="{StaticResource BrandSurfaceBrush}">
+    <Window.Resources>
+        <Style x:Key="PresetButtonBaseStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource SecondaryActionButton}">
+            <Setter Property="Height" Value="46"/>
+            <Setter Property="Padding" Value="16,10"/>
+            <Setter Property="Margin" Value="0,0,12,0"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+
+        <Style x:Key="LocalPresetButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource PresetButtonBaseStyle}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsLocalSelected}" Value="True">
+                    <Setter Property="Background" Value="#26F9C231"/>
+                    <Setter Property="BorderBrush" Value="{StaticResource BrandYellowBrush}"/>
+                    <Setter Property="Foreground" Value="{StaticResource BrandMidnightBrush}"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="LanPresetButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource PresetButtonBaseStyle}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsLanSelected}" Value="True">
+                    <Setter Property="Background" Value="#26F9C231"/>
+                    <Setter Property="BorderBrush" Value="{StaticResource BrandYellowBrush}"/>
+                    <Setter Property="Foreground" Value="{StaticResource BrandMidnightBrush}"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="RemotePresetButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource PresetButtonBaseStyle}">
+            <Setter Property="Margin" Value="0"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsRemoteSelected}" Value="True">
+                    <Setter Property="Background" Value="#26F9C231"/>
+                    <Setter Property="BorderBrush" Value="{StaticResource BrandYellowBrush}"/>
+                    <Setter Property="Foreground" Value="{StaticResource BrandMidnightBrush}"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
+    <DockPanel Margin="24" LastChildFill="True">
+        <Border DockPanel.Dock="Bottom"
+                Margin="0,18,0,0"
+                Padding="0,18,0,0"
+                BorderBrush="{StaticResource BrandBorderBrush}"
+                BorderThickness="0,1,0,0">
+            <StackPanel>
+                <Border Padding="14,12"
+                        Background="White"
+                        BorderBrush="{StaticResource BrandBorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="10">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Border Width="38"
+                                Height="38"
+                                CornerRadius="19"
+                                Background="#EEF4FF"
+                                VerticalAlignment="Center">
+                            <materialDesign:PackIcon Kind="Connection"
+                                                     Width="20"
+                                                     Height="20"
+                                                     Foreground="{Binding StatusBrush}"
+                                                     HorizontalAlignment="Center"
+                                                     VerticalAlignment="Center"/>
+                        </Border>
+
+                        <StackPanel Grid.Column="1"
+                                    Margin="12,0,0,0"
+                                    VerticalAlignment="Center">
+                            <TextBlock Text="Connection status"
+                                       FontSize="11"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrandMidnightBrush}"/>
+                            <TextBlock Text="{Binding StatusMessage}"
+                                       Margin="0,4,0,0"
+                                       FontSize="12"
+                                       FontWeight="SemiBold"
+                                       Foreground="{Binding StatusBrush}"
+                                       TextWrapping="Wrap"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="2"
+                                    VerticalAlignment="Center"
+                                    Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <TextBlock Text="Testing..."
+                                       FontSize="11"
+                                       HorizontalAlignment="Right"
+                                       Foreground="{StaticResource BrandTextSecondaryBrush}"/>
+                            <ProgressBar Width="120"
+                                         Height="6"
+                                         Margin="0,6,0,0"
+                                         IsIndeterminate="True"
+                                         Foreground="{StaticResource BrandMidnightBrush}"
+                                         Background="#E5E7EB"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <Grid Margin="0,14,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Column="0"
+                               Margin="0,0,16,0"
+                               VerticalAlignment="Center"
+                               FontSize="12"
+                               TextWrapping="Wrap"
+                               Foreground="{StaticResource BrandTextSecondaryBrush}"
+                               Text="Save to apply the preset, then return to the login form."/>
+
+                    <StackPanel Grid.Column="1"
+                                Orientation="Horizontal"
+                                HorizontalAlignment="Right">
+                        <Button Content="CANCEL"
+                                Command="{Binding CancelCommand}"
+                                Style="{StaticResource MaterialDesignFlatButton}"
+                                Margin="0,0,8,0"/>
+                        <Button Content="TEST CONNECTION"
+                                Command="{Binding TestConnectionCommand}"
+                                Style="{StaticResource SecondaryActionButton}"
+                                Margin="0,0,8,0"/>
+                        <Button Content="SAVE AND CONTINUE"
+                                Command="{Binding SaveCommand}"
+                                Style="{StaticResource PrimaryActionButton}"/>
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled"
+                      CanContentScroll="False"
+                      PanningMode="VerticalOnly">
+            <StackPanel Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Text="Connection Settings"
+                               FontSize="24"
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource BrandMidnightBrush}"/>
+                    <TextBlock Text="Choose a preset or edit the fields manually before the login screen opens."
+                               Margin="0,8,0,0"
+                               FontSize="13"
+                               Foreground="{StaticResource BrandTextSecondaryBrush}"/>
+                </StackPanel>
+
+                <StackPanel Margin="0,22,0,18">
+                    <TextBlock Text="QUICK PRESETS"
+                               FontSize="11"
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource BrandTextSecondaryBrush}"/>
+
+                    <Grid Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Button Grid.Column="0"
+                                Command="{Binding SelectLocalPresetCommand}"
+                                Style="{StaticResource LocalPresetButtonStyle}">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <materialDesign:PackIcon Kind="Laptop"
+                                                         Width="18"
+                                                         Height="18"
+                                                         Margin="0,0,8,0"/>
+                                <TextBlock Text="LOCAL" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+
+                        <Button Grid.Column="1"
+                                Command="{Binding SelectLanPresetCommand}"
+                                Style="{StaticResource LanPresetButtonStyle}">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <materialDesign:PackIcon Kind="Web"
+                                                         Width="18"
+                                                         Height="18"
+                                                         Margin="0,0,8,0"/>
+                                <TextBlock Text="NETWORK (LAN)" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+
+                        <Button Grid.Column="2"
+                                Command="{Binding SelectRemotePresetCommand}"
+                                Style="{StaticResource RemotePresetButtonStyle}">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <materialDesign:PackIcon Kind="CloudOutline"
+                                                         Width="18"
+                                                         Height="18"
+                                                         Margin="0,0,8,0"/>
+                                <TextBlock Text="REMOTE (Hostinger)" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+                </StackPanel>
+
+                <Border Background="#EAF2FF"
+                        BorderBrush="{StaticResource BrandBorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="10"
+                        Padding="20">
+                    <StackPanel>
+                        <DockPanel Margin="0,0,0,18">
+                            <Border DockPanel.Dock="Right"
+                                    Margin="16,0,0,0"
+                                    Padding="14,10"
+                                    CornerRadius="14"
+                                    Background="{StaticResource BrandMidnightBrush}"
+                                    HorizontalAlignment="Right">
+                                <StackPanel Orientation="Horizontal">
+                                    <Border Width="30"
+                                            Height="30"
+                                            CornerRadius="15"
+                                            Background="#26F9C231"
+                                            VerticalAlignment="Center">
+                                        <materialDesign:PackIcon Kind="CheckCircle"
+                                                                 Width="18"
+                                                                 Height="18"
+                                                                 Foreground="{StaticResource BrandYellowBrush}"
+                                                                 HorizontalAlignment="Center"
+                                                                 VerticalAlignment="Center"/>
+                                    </Border>
+
+                                    <StackPanel Margin="10,0,0,0"
+                                                VerticalAlignment="Center">
+                                        <TextBlock Text="ACTIVE PRESET"
+                                                   FontSize="10"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="#C9D7FF"/>
+                                        <TextBlock Text="{Binding CurrentPresetDisplayName}"
+                                                   Margin="0,2,0,0"
+                                                   FontSize="12"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{StaticResource BrandYellowBrush}"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <StackPanel>
+                                <TextBlock Text="{Binding CurrentPresetDisplayName}"
+                                           FontSize="16"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource BrandMidnightBrush}"/>
+                                <TextBlock Text="The selected preset is what EF Core and startup initialization will use."
+                                           Margin="0,4,0,0"
+                                           FontSize="12"
+                                           Foreground="{StaticResource BrandTextSecondaryBrush}"/>
+                            </StackPanel>
+                        </DockPanel>
+
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="3*"/>
+                                <ColumnDefinition Width="12"/>
+                                <ColumnDefinition Width="1*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Server"
+                                           Margin="2,0,0,6"
+                                           FontSize="11"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource BrandMidnightBrush}"/>
+                                <TextBox Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         Text="{Binding Server, UpdateSourceTrigger=PropertyChanged}"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="Port"
+                                           Margin="2,0,0,6"
+                                           FontSize="11"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource BrandMidnightBrush}"/>
+                                <TextBox Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         Text="{Binding PortText, UpdateSourceTrigger=PropertyChanged}"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <StackPanel Margin="0,0,0,12">
+                            <TextBlock Text="Database Name"
+                                       Margin="2,0,0,6"
+                                       FontSize="11"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrandMidnightBrush}"/>
+                            <TextBox Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     Text="{Binding Database, UpdateSourceTrigger=PropertyChanged}"/>
+                        </StackPanel>
+
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="12"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Username"
+                                           Margin="2,0,0,6"
+                                           FontSize="11"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource BrandMidnightBrush}"/>
+                                <TextBox Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="Password"
+                                           Margin="2,0,0,6"
+                                           FontSize="11"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource BrandMidnightBrush}"/>
+                                <TextBox Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         Text="{Binding Password, UpdateSourceTrigger=PropertyChanged}"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <Border Padding="14"
+                                Background="White"
+                                BorderBrush="{StaticResource BrandBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="8">
+                            <StackPanel>
+                                <TextBlock Text="Connection usage"
+                                           FontSize="11"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource BrandMidnightBrush}"/>
+                                <TextBlock Text="The selected preset is saved in your Windows user profile, so you can switch between local, LAN, and Hostinger without editing source files."
+                                           Margin="0,6,0,0"
+                                           FontSize="12"
+                                           TextWrapping="Wrap"
+                                           Foreground="{StaticResource BrandTextSecondaryBrush}"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</Window>
