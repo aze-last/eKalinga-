@@ -1,8 +1,5 @@
 ﻿using AttendanceShiftingManagement.Data;
 using AttendanceShiftingManagement.Models;
-using BCrypt.Net;
-using Microsoft.EntityFrameworkCore;
-
 namespace AttendanceShiftingManagement.Services
 {
     public class AuthService
@@ -18,12 +15,9 @@ namespace AttendanceShiftingManagement.Services
 
         public User? Login(string usernameOrEmail, string password)
         {
-            var user = _context.Users
-                .Include(u => u.Employee!)
-                    .ThenInclude(e => e.Position)
-                .FirstOrDefault(u =>
-                    (u.Username == usernameOrEmail || u.Email == usernameOrEmail)
-                    && u.IsActive);
+            var user = _context.Users.FirstOrDefault(u =>
+                (u.Username == usernameOrEmail || u.Email == usernameOrEmail)
+                && u.IsActive);
 
             if (user == null)
             {
@@ -60,10 +54,7 @@ namespace AttendanceShiftingManagement.Services
 
         public User? GetCurrentUser(int userId)
         {
-            return _context.Users
-                .Include(u => u.Employee!)
-                    .ThenInclude(e => e.Position)
-                .FirstOrDefault(u => u.Id == userId);
+            return _context.Users.FirstOrDefault(u => u.Id == userId);
         }
     }
 }

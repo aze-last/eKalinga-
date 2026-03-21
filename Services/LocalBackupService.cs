@@ -12,8 +12,7 @@ namespace AttendanceShiftingManagement.Services
     {
         private static readonly HashSet<string> ExcludedTables = new(StringComparer.OrdinalIgnoreCase)
         {
-            "__EFMigrationsHistory",
-            "fingerprint_templates"
+            "__EFMigrationsHistory"
         };
 
         private static readonly JsonSerializerOptions JsonOptions = new()
@@ -33,7 +32,7 @@ namespace AttendanceShiftingManagement.Services
                     AppVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "unknown",
                     SelectedPreset = settings.SelectedPreset,
                     Database = preset.Database,
-                    Notes = "Database rows only. Fingerprint templates, local config files, and image files are excluded."
+                    Notes = "Ayuda database rows only. Local configuration files and image files are excluded."
                 };
 
                 var directory = Path.GetDirectoryName(filePath);

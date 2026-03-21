@@ -15,9 +15,8 @@ namespace AttendanceShiftingManagement.Data
                 EnsureDatabaseExists(connectionString);
             }
 
-            // `EnsureCreated()` still handles completely fresh databases.
-            // If the selected app database already has legacy tables, EF no-ops here,
-            // so we repair the barangay/current login schema explicitly afterward.
+            // `EnsureCreated()` handles fresh databases. The follow-up repair scripts keep
+            // existing databases aligned with the current Ayuda-only schema.
             context.Database.EnsureCreated();
             ExecuteSchemaRepairs(connectionString);
         }
@@ -101,28 +100,6 @@ namespace AttendanceShiftingManagement.Data
                     `updated_at` datetime(6) NOT NULL,
                     PRIMARY KEY (`id`),
                     UNIQUE KEY `IX_user_profiles_user_id` (`user_id`)
-                ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-                """,
-                """
-                CREATE TABLE IF NOT EXISTS `positions` (
-                    `id` int NOT NULL AUTO_INCREMENT,
-                    `name` varchar(100) NOT NULL,
-                    `area` longtext NOT NULL,
-                    PRIMARY KEY (`id`)
-                ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-                """,
-                """
-                CREATE TABLE IF NOT EXISTS `employees` (
-                    `id` int NOT NULL AUTO_INCREMENT,
-                    `user_id` int NOT NULL,
-                    `full_name` varchar(150) NOT NULL,
-                    `position_id` int NOT NULL,
-                    `hourly_rate` decimal(65,30) NOT NULL,
-                    `date_hired` datetime(6) NOT NULL,
-                    `status` longtext NOT NULL,
-                    PRIMARY KEY (`id`),
-                    UNIQUE KEY `IX_employees_user_id` (`user_id`),
-                    KEY `IX_employees_position_id` (`position_id`)
                 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
                 """,
                 """

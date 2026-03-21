@@ -309,7 +309,7 @@
                                     Padding="14"
                                     CornerRadius="10"
                                     Background="#FFF7D6">
-                                <TextBlock Text="Backup archives contain database rows only. Fingerprint templates, local configuration files, and image files are excluded."
+                                <TextBlock Text="Backup archives contain Ayuda database rows only. Local configuration files and image files are excluded."
                                            Foreground="#9A5A00"
                                            TextWrapping="Wrap" />
                             </Border>

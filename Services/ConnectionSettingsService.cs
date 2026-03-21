@@ -221,19 +221,6 @@ namespace AttendanceShiftingManagement.Services
                 };
             }
 
-            if (!settings.Presets.ContainsKey("Lan"))
-            {
-                settings.Presets["Lan"] = new DatabaseConnectionPreset
-                {
-                    DisplayName = "Network (LAN)",
-                    Server = "192.168.1.2",
-                    Port = 3306,
-                    Database = "attendance_shifting_db",
-                    Username = "lan_client",
-                    Password = "client123"
-                };
-            }
-
             if (!settings.Presets.ContainsKey("Remote"))
             {
                 settings.Presets["Remote"] = new DatabaseConnectionPreset
@@ -286,11 +273,6 @@ namespace AttendanceShiftingManagement.Services
             if (builder.Server is "127.0.0.1" or "localhost")
             {
                 return "Local";
-            }
-
-            if (builder.Server.StartsWith("192.168.", StringComparison.OrdinalIgnoreCase))
-            {
-                return "Lan";
             }
 
             return "Remote";

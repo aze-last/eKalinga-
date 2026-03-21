@@ -38,9 +38,6 @@ namespace AttendanceShiftingManagement.Models
 
         [Column("updated_at")]
         public DateTime UpdatedAt { get; set; } = DateTime.Now;
-
-        // Navigation
-        public Employee? Employee { get; set; }
     }
 
     public enum UserRole

@@ -36,18 +36,6 @@
             </Style.Triggers>
         </Style>
 
-        <Style x:Key="LanPresetButtonStyle"
-               TargetType="Button"
-               BasedOn="{StaticResource PresetButtonBaseStyle}">
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding IsLanSelected}" Value="True">
-                    <Setter Property="Background" Value="#26F9C231"/>
-                    <Setter Property="BorderBrush" Value="{StaticResource BrandYellowBrush}"/>
-                    <Setter Property="Foreground" Value="{StaticResource BrandMidnightBrush}"/>
-                </DataTrigger>
-            </Style.Triggers>
-        </Style>
-
         <Style x:Key="RemotePresetButtonStyle"
                TargetType="Button"
                BasedOn="{StaticResource PresetButtonBaseStyle}">
