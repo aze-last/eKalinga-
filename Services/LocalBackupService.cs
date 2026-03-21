@@ -355,9 +355,9 @@ namespace AttendanceShiftingManagement.Services
                 "double" or "real" => element.GetDouble(),
                 "float" => (float)element.GetDouble(),
                 "date" or "datetime" or "timestamp" => ParseDateTimeValue(element),
-                "time" => TimeSpan.Parse(element.GetString() ?? "00:00:00", CultureInfo.InvariantCulture),
+                "time" => TimeSpan.Parse(ReadElementAsString(element) ?? "00:00:00", CultureInfo.InvariantCulture),
                 "char" or "varchar" or "text" or "tinytext" or "mediumtext" or "longtext" or "enum" or "set"
-                    => element.GetString() ?? string.Empty,
+                    => ReadElementAsString(element) ?? string.Empty,
                 "binary" or "varbinary" or "blob" or "tinyblob" or "mediumblob" or "longblob"
                     => ParseBinaryValue(element),
                 "json" => element.GetRawText(),
@@ -417,10 +417,17 @@ namespace AttendanceShiftingManagement.Services
 
             if (element.ValueKind != JsonValueKind.String)
             {
+                var rawText = ReadElementAsString(element);
+                if (!string.IsNullOrWhiteSpace(rawText) &&
+                    DateTime.TryParse(rawText, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsedDateTime))
+                {
+                    return parsedDateTime;
+                }
+
                 return element.GetDateTime();
             }
 
-            var value = element.GetString();
+            var value = ReadElementAsString(element);
             if (string.IsNullOrWhiteSpace(value))
             {
                 return DBNull.Value;
@@ -451,10 +458,21 @@ namespace AttendanceShiftingManagement.Services
 
         private static byte[] ParseBinaryValue(JsonElement element)
         {
-            var base64Value = element.GetString();
+            var base64Value = ReadElementAsString(element);
             return string.IsNullOrEmpty(base64Value)
                 ? Array.Empty<byte>()
                 : Convert.FromBase64String(base64Value);
+        }
+
+        private static string? ReadElementAsString(JsonElement element)
+        {
+            return element.ValueKind switch
+            {
+                JsonValueKind.Null or JsonValueKind.Undefined => null,
+                JsonValueKind.String => element.GetString(),
+                JsonValueKind.Object or JsonValueKind.Array => element.GetRawText(),
+                _ => element.ToString()
+            };
         }
 
         private static object? NormalizeBackupValue(object value)

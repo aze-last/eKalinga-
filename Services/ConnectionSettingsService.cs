@@ -17,7 +17,7 @@ namespace AttendanceShiftingManagement.Services
 
     public sealed class ConnectionSettingsModel
     {
-        public string SelectedPreset { get; set; } = "Remote";
+        public string SelectedPreset { get; set; } = "Local";
         public Dictionary<string, DatabaseConnectionPreset> Presets { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
         public DatabaseConnectionPreset GetPreset(string presetKey)
@@ -224,17 +224,17 @@ namespace AttendanceShiftingManagement.Services
                 settings.Presets["Remote"] = new DatabaseConnectionPreset
                 {
                     DisplayName = "Remote (Hostinger)",
-                    Server = "194.59.164.58",
+                    Server = string.Empty,
                     Port = 3306,
-                    Database = "u621755393_ams",
-                    Username = "u621755393_ams_user",
-                    Password = "Ams@2026"
+                    Database = string.Empty,
+                    Username = string.Empty,
+                    Password = string.Empty
                 };
             }
 
             if (string.IsNullOrWhiteSpace(settings.SelectedPreset) || !settings.Presets.ContainsKey(settings.SelectedPreset))
             {
-                settings.SelectedPreset = "Remote";
+                settings.SelectedPreset = "Local";
             }
         }
 
@@ -255,7 +255,7 @@ namespace AttendanceShiftingManagement.Services
         {
             if (string.IsNullOrWhiteSpace(connectionString))
             {
-                return "Remote";
+                return "Local";
             }
 
             var builder = new MySqlConnectionStringBuilder(connectionString);

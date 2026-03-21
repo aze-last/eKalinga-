@@ -1,134 +1,227 @@
 <Window x:Class="AttendanceShiftingManagement.Views.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
-        mc:Ignorable="d" 
-        d:DesignHeight="900" d:DesignWidth="1200"
+        mc:Ignorable="d"
+        Title="Barangay Ayuda System"
+        WindowState="Maximized"
         Background="{StaticResource BrandSurfaceBrush}"
         FontFamily="Segoe UI"
-        WindowState="Maximized"
-        Title="{Binding PortalTitle}"
         Icon="/Images/app-icon.ico">
 
     <Window.Resources>
-        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+        <Style x:Key="SidebarButtonBaseStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource MaterialDesignFlatButton}">
+            <Setter Property="Foreground" Value="#B8C7E8" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Padding" Value="14,10" />
+            <Setter Property="Margin" Value="0,0,0,8" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="Normal" />
+            <Setter Property="materialDesign:ButtonAssist.CornerRadius" Value="6" />
+        </Style>
+
+        <Style x:Key="DashboardSidebarButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource SidebarButtonBaseStyle}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsDashboardSelected}" Value="True">
+                    <Setter Property="Foreground" Value="{StaticResource BrandYellowBrush}" />
+                    <Setter Property="Background" Value="#26F9C231" />
+                    <Setter Property="FontWeight" Value="SemiBold" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="CashForWorkSidebarButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource SidebarButtonBaseStyle}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsCashForWorkSelected}" Value="True">
+                    <Setter Property="Foreground" Value="{StaticResource BrandYellowBrush}" />
+                    <Setter Property="Background" Value="#26F9C231" />
+                    <Setter Property="FontWeight" Value="SemiBold" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="MasterListSidebarButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource SidebarButtonBaseStyle}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsMasterListSelected}" Value="True">
+                    <Setter Property="Foreground" Value="{StaticResource BrandYellowBrush}" />
+                    <Setter Property="Background" Value="#26F9C231" />
+                    <Setter Property="FontWeight" Value="SemiBold" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="BeneficiariesSidebarButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource SidebarButtonBaseStyle}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsBeneficiariesSelected}" Value="True">
+                    <Setter Property="Foreground" Value="{StaticResource BrandYellowBrush}" />
+                    <Setter Property="Background" Value="#26F9C231" />
+                    <Setter Property="FontWeight" Value="SemiBold" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="HouseholdRegistrySidebarButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource SidebarButtonBaseStyle}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsHouseholdRegistrySelected}" Value="True">
+                    <Setter Property="Foreground" Value="{StaticResource BrandYellowBrush}" />
+                    <Setter Property="Background" Value="#26F9C231" />
+                    <Setter Property="FontWeight" Value="SemiBold" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
     </Window.Resources>
 
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="220"/>
-            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="220" />
+            <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
-        <!-- Sidebar -->
-        <Border Grid.Column="0" Background="{StaticResource BrandMidnightBrush}" materialDesign:ElevationAssist.Elevation="Dp4">
-            <Grid Background="{StaticResource BrandMidnightBrush}">
+        <Border Grid.Column="0"
+                Background="{StaticResource BrandMidnightBrush}"
+                Padding="16,24,16,16">
+            <Grid>
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <!-- Profile -->
-                <StackPanel Grid.Row="0" Margin="20,32,20,24">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="64"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <Border Width="56" Height="56" CornerRadius="28" Background="#1F2937" VerticalAlignment="Center">
-                            <Grid>
-                                <materialDesign:PackIcon Kind="AccountCircle" Foreground="{StaticResource BrandYellowBrush}" Width="36" Height="36" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                <Image Source="{Binding UserPhotoImage}" Stretch="UniformToFill"/>
-                            </Grid>
-                        </Border>
-                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="12,0,0,0">
-                            <TextBlock Text="{Binding UserDisplayName}" Foreground="White" FontSize="16" FontWeight="Bold" TextWrapping="Wrap"/>
-                            <Button Content="Profile Settings"
-                                    Command="{Binding ShowProfileSettingsCommand}"
-                                    Style="{StaticResource MaterialDesignFlatButton}"
-                                    Foreground="{StaticResource BrandYellowBrush}"
-                                    Padding="0" HorizontalAlignment="Left"/>
-                        </StackPanel>
-                    </Grid>
+                <StackPanel Grid.Row="0">
+                    <TextBlock Text="Barangay Ayuda System"
+                               FontSize="14"
+                               FontWeight="SemiBold"
+                               Foreground="White" />
+                    <TextBlock Text="Administrator portal"
+                               Margin="0,4,0,0"
+                               FontSize="11"
+                               Foreground="{StaticResource BrandYellowBrush}" />
                 </StackPanel>
 
-                <!-- Nav Buttons -->
-                <StackPanel Grid.Row="1">
-                    <Button Style="{StaticResource MaterialDesignFlatButton}" 
-                            Foreground="White" Height="50" Command="{Binding ShowDashboardCommand}" FontSize="18">
-                        <StackPanel Orientation="Horizontal" Width="180">
-                            <materialDesign:PackIcon Kind="ViewDashboard" Margin="0,0,16,0"/>
-                            <TextBlock Text="Dashboard"/>
-                        </StackPanel>
-                    </Button>
-                    <Button Style="{StaticResource MaterialDesignFlatButton}" 
-                            Foreground="White" Height="50" Command="{Binding ShowUsersCommand}" FontSize="18">
-                        <Button.Visibility>
-                            <Binding Path="CanManageUsers" Converter="{StaticResource BooleanToVisibilityConverter}"/>
-                        </Button.Visibility>
-                        <StackPanel Orientation="Horizontal" Width="180">
-                            <materialDesign:PackIcon Kind="AccountGroup" Margin="0,0,16,0"/>
-                            <TextBlock Text="Users"/>
+                <StackPanel Grid.Row="1" Margin="0,24,0,0">
+                    <Button Style="{StaticResource DashboardSidebarButtonStyle}"
+                            Command="{Binding ShowDashboardCommand}">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="HomeGroup" Width="18" Height="18" Margin="0,0,10,0" />
+                            <TextBlock Text="Dashboard" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
 
-                    <Button Style="{StaticResource MaterialDesignFlatButton}" 
-                            Foreground="White" Height="50" Command="{Binding ShowEmployeesCommand}" FontSize="18">
-                        <Button.Visibility>
-                            <Binding Path="CanManageEmployees" Converter="{StaticResource BooleanToVisibilityConverter}"/>
-                        </Button.Visibility>
-                        <StackPanel Orientation="Horizontal" Width="180">
-                            <materialDesign:PackIcon Kind="BadgeAccount" Margin="0,0,16,0"/>
-                            <TextBlock Text="Employees"/>
+                    <Button Style="{StaticResource CashForWorkSidebarButtonStyle}"
+                            Command="{Binding ShowCashForWorkCommand}">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="BriefcaseClockOutline" Width="18" Height="18" Margin="0,0,10,0" />
+                            <TextBlock Text="Cash-for-work" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
 
-                    <Button Style="{StaticResource MaterialDesignFlatButton}" 
-                            Foreground="White" Height="50" Command="{Binding ShowPositionsCommand}" FontSize="18">
-                        <StackPanel Orientation="Horizontal" Width="180">
-                            <materialDesign:PackIcon Kind="Briefcase" Margin="0,0,16,0"/>
-                            <TextBlock Text="Positions"/>
+                    <Button Style="{StaticResource MasterListSidebarButtonStyle}"
+                            Command="{Binding ShowMasterListCommand}">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="TableLarge" Width="18" Height="18" Margin="0,0,10,0" />
+                            <TextBlock Text="Masterlist" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
 
-                    <Button Style="{StaticResource MaterialDesignFlatButton}" 
-                            Foreground="White" Height="50" Command="{Binding ShowHolidaysCommand}" FontSize="18">
-                        <StackPanel Orientation="Horizontal" Width="180">
-                            <Image Source="/Images/holiday small.png" Width="24" Height="24" Margin="0,0,16,0"/>
-                            <TextBlock Text="Holidays"/>
+                    <Button Style="{StaticResource BeneficiariesSidebarButtonStyle}"
+                            Command="{Binding ShowBeneficiariesCommand}">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="AccountCheckOutline" Width="18" Height="18" Margin="0,0,10,0" />
+                            <TextBlock Text="Beneficiaries" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
 
-                    <Button Style="{StaticResource MaterialDesignFlatButton}" 
-                            Foreground="White" Height="50" Command="{Binding ShowPayrollCommand}" FontSize="18">
-                        <Button.Visibility>
-                            <Binding Path="CanManagePayroll" Converter="{StaticResource BooleanToVisibilityConverter}"/>
-                        </Button.Visibility>
-                        <StackPanel Orientation="Horizontal" Width="180">
-                            <Image Source="/Images/money_bag_30dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.png" Width="24" Height="24" Margin="0,0,16,0"/>
-                            <TextBlock Text="Payroll"/>
+                    <Button Style="{StaticResource HouseholdRegistrySidebarButtonStyle}"
+                            Command="{Binding ShowHouseholdRegistryCommand}">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="HomeGroup" Width="18" Height="18" Margin="0,0,10,0" />
+                            <TextBlock Text="Household registry" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
-
                 </StackPanel>
 
-                <!-- Logout -->
-                <Button Grid.Row="2" Style="{StaticResource MaterialDesignFlatButton}" 
-                        Foreground="{StaticResource BrandYellowBrush}" Height="50" Margin="0,0,0,16" Click="Logout_Click">
-                    <StackPanel Orientation="Horizontal" Width="180">
-                        <materialDesign:PackIcon Kind="Logout" Margin="0,0,16,0"/>
-                        <TextBlock Text="Logout"/>
+                <Border Grid.Row="2"
+                        Margin="0,20,0,0"
+                        Padding="12"
+                        CornerRadius="10"
+                        Background="#123980">
+                    <StackPanel>
+                        <TextBlock Text="{Binding UserDisplayName}"
+                                   FontSize="13"
+                                   FontWeight="SemiBold"
+                                   Foreground="White" />
+                        <TextBlock Text="{Binding ConnectionSummary}"
+                                   Margin="0,6,0,0"
+                                   FontSize="11"
+                                   Foreground="#D7E3FF"
+                                   TextWrapping="Wrap" />
                     </StackPanel>
-                </Button>
+                </Border>
             </Grid>
         </Border>
 
-        <!-- Main Content -->
         <Grid Grid.Column="1">
-            <ContentControl Content="{Binding CurrentView}" />
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0"
+                    Background="White"
+                    BorderBrush="{StaticResource BrandBorderBrush}"
+                    BorderThickness="0,0,0,1"
+                    Padding="24,18">
+                <DockPanel>
+                    <StackPanel>
+                        <TextBlock Text="{Binding CurrentSectionTitle}"
+                                   FontSize="20"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource BrandMidnightBrush}" />
+                        <TextBlock Text="{Binding CurrentSectionSubtitle}"
+                                   Margin="0,4,0,0"
+                                   FontSize="13"
+                                   Foreground="{StaticResource BrandTextSecondaryBrush}" />
+                    </StackPanel>
+
+                    <StackPanel DockPanel.Dock="Right"
+                                Orientation="Horizontal"
+                                VerticalAlignment="Center">
+                        <Button Content="SETTINGS"
+                                Height="40"
+                                Margin="0,0,12,0"
+                                Style="{StaticResource SecondaryActionButton}"
+                                Click="Settings_Click" />
+                        <Button Content="LOAD TABLES"
+                                Height="40"
+                                Margin="0,0,12,0"
+                                Style="{StaticResource GoldActionButton}"
+                                Click="LoadTables_Click" />
+                        <Button Content="LOGOUT"
+                                Height="40"
+                                Style="{StaticResource SecondaryActionButton}"
+                                Click="Logout_Click" />
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+
+            <ContentControl Grid.Row="1"
+                            Margin="24"
+                            Content="{Binding CurrentView}" />
         </Grid>
     </Grid>
 </Window>

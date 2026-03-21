@@ -10,11 +10,11 @@ none
 false
 TRACE;DEBUG;NET;NET9_0;NETCOREAPP;WINDOWS;WINDOWS7_0;NET5_0_OR_GREATER;NET6_0_OR_GREATER;NET7_0_OR_GREATER;NET8_0_OR_GREATER;NET9_0_OR_GREATER;NETCOREAPP3_0_OR_GREATER;NETCOREAPP3_1_OR_GREATER;WINDOWS7_0_OR_GREATER
 C:\Users\ASUS\source\repos\AttendanceShiftingManagement\AttendanceShiftingManagement\App.xaml
-22-767113089
+44772332351
 22-1380674967
-881841881219
+168818839735
 225-1488835264
-Views\AttendanceLogsPage.xaml;Views\CrewDashboardPage.xaml;Views\CrewMainWindow.xaml;Views\DashboardPage.xaml;Views\EmployeeDialogWindow.xaml;Views\EmployeesPage.xaml;Views\HolidayDialogWindow.xaml;Views\HolidaysPage.xaml;Views\LeaveApprovalPage.xaml;Views\LeaveRequestPage.xaml;Views\LoginWindow.xaml;Views\MainWindow.xaml;Views\ManagerDashboardPage.xaml;Views\ManagerMainWindow.xaml;Views\PayrollPage.xaml;Views\PositionsPage.xaml;Views\ProfileSettingsPage.xaml;Views\RejectionReasonDialog.xaml;Views\ShiftsManagementPage.xaml;Views\UserDialogWindow.xaml;Views\UsersPage.xaml;Views\WeeklyCalendarPage.xaml;
+Views\AttendanceLogsPage.xaml;Views\BarangayDashboardPage.xaml;Views\BeneficiaryVerificationPage.xaml;Views\CashForWorkOcrPage.xaml;Views\CompensationBenefitsPage.xaml;Views\ConnectionSettingsWindow.xaml;Views\CrewDashboardPage.xaml;Views\CrewMainWindow.xaml;Views\DashboardPage.xaml;Views\DeiMetricsPage.xaml;Views\EmployeeDialogWindow.xaml;Views\EmployeeIdCardWindow.xaml;Views\EmployeesPage.xaml;Views\EngagementWellbeingPage.xaml;Views\FingerprintManagementWindow.xaml;Views\HolidayDialogWindow.xaml;Views\HolidaysPage.xaml;Views\HouseholdRegistryPage.xaml;Views\HRDashboardPage.xaml;Views\HRMetricPlaceholderPage.xaml;Views\LeaveApprovalPage.xaml;Views\LeaveRequestPage.xaml;Views\LoadTablesWindow.xaml;Views\LoginWindow.xaml;Views\MainWindow.xaml;Views\ManagerDashboardPage.xaml;Views\ManagerMainWindow.xaml;Views\MasterListPage.xaml;Views\PayrollPage.xaml;Views\PerformanceMetricsPage.xaml;Views\PositionsPage.xaml;Views\ProfileSettingsPage.xaml;Views\RecruitmentMetricsPage.xaml;Views\RejectionReasonDialog.xaml;Views\RetentionTurnoverPage.xaml;Views\RoleSwitchPasswordWindow.xaml;Views\RoleSwitchWindow.xaml;Views\SettingsWindow.xaml;Views\ShiftsManagementPage.xaml;Views\SmartScheduleWizardWindow.xaml;Views\UserDialogWindow.xaml;Views\UsersPage.xaml;Views\WeeklyCalendarPage.xaml;Views\WorkforcePlanningPage.xaml;
 
 False
 

@@ -1,5 +1,4 @@
-﻿using AttendanceShiftingManagement.ViewModels;
-using AttendanceShiftingManagement.Models;
+using AttendanceShiftingManagement.ViewModels;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -13,18 +12,6 @@ namespace AttendanceShiftingManagement.Views
         {
             InitializeComponent();
             DataContext = new LoginViewModel();
-            this.MouseDown += Window_MouseDown;
-        }
-
-        private void Window_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
-        {
-            if (e.ChangedButton == System.Windows.Input.MouseButton.Left)
-                this.DragMove();
-        }
-
-        private void Close_Click(object sender, RoutedEventArgs e)
-        {
-            this.Close();
         }
 
         private void PasswordBox_PasswordChanged(object sender, RoutedEventArgs e)
@@ -33,6 +20,17 @@ namespace AttendanceShiftingManagement.Views
             {
                 ViewModel.Password = passwordBox.Password;
             }
+        }
+
+        private void OpenConnectionSettings_Click(object sender, RoutedEventArgs e)
+        {
+            var window = new ConnectionSettingsWindow
+            {
+                Owner = this
+            };
+
+            window.ShowDialog();
+            ViewModel.RefreshConnectionSummary();
         }
     }
 }

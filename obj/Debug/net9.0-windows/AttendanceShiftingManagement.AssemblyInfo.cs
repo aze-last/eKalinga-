@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("AttendanceShiftingManagement")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f533b005da4997131400a9cc61c3039b297c7ff8")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+67ff7e52a9aebe9e46ab0e2981cde28be5790651")]
 [assembly: System.Reflection.AssemblyProductAttribute("AttendanceShiftingManagement")]
 [assembly: System.Reflection.AssemblyTitleAttribute("AttendanceShiftingManagement")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

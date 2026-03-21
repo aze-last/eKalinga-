@@ -19,7 +19,7 @@ namespace AttendanceShiftingManagement.Services
         public User? Login(string usernameOrEmail, string password)
         {
             var user = _context.Users
-                .Include(u => u.Employee)
+                .Include(u => u.Employee!)
                     .ThenInclude(e => e.Position)
                 .FirstOrDefault(u =>
                     (u.Username == usernameOrEmail || u.Email == usernameOrEmail)
@@ -61,7 +61,7 @@ namespace AttendanceShiftingManagement.Services
         public User? GetCurrentUser(int userId)
         {
             return _context.Users
-                .Include(u => u.Employee)
+                .Include(u => u.Employee!)
                     .ThenInclude(e => e.Position)
                 .FirstOrDefault(u => u.Id == userId);
         }

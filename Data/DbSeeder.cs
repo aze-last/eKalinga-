@@ -6,270 +6,266 @@ namespace AttendanceShiftingManagement.Data
     {
         public static void Seed(AppDbContext context)
         {
-            // 1. Positions
-            if (!context.Positions.Any())
-            {
-                var positions = new List<Position>
-                {
-                    new Position { Name = "Chicken Expert", Area = PositionArea.Kitchen },
-                    new Position { Name = "Batch Grill", Area = PositionArea.Kitchen },
-                    new Position { Name = "POS 1", Area = PositionArea.POS },
-                    new Position { Name = "POS 2", Area = PositionArea.POS },
-                    new Position { Name = "POS 3", Area = PositionArea.POS },
-                    new Position { Name = "GEL", Area = PositionArea.Kitchen },
-                    new Position { Name = "DT Order Taker", Area = PositionArea.DT },
-                    new Position { Name = "DT Cashier", Area = PositionArea.DT },
-                    new Position { Name = "DT Presenter", Area = PositionArea.DT },
-                    new Position { Name = "Lobby", Area = PositionArea.Lobby }
-                };
-                context.Positions.AddRange(positions);
-                context.SaveChanges();
-            }
-
-            var allPositions = context.Positions.ToList();
-
-            // 2. Users (upsert demo accounts so login credentials are always available)
-            EnsureDefaultUsers(context);
-
-            // 3. Employees
-            EnsureDefaultEmployees(context, allPositions);
-
-            // 4. Holidays
-            if (!context.Holidays.Any())
-            {
-                var holidays = new List<Holiday>
-                {
-                    new Holiday { HolidayDate = new DateTime(2026, 1, 1), Name = "New Year's Day", IsDoublePay = true },
-                    new Holiday { HolidayDate = new DateTime(2026, 12, 25), Name = "Christmas Day", IsDoublePay = true },
-                    new Holiday { HolidayDate = new DateTime(2026, 12, 30), Name = "Rizal Day", IsDoublePay = true }
-                };
-                context.Holidays.AddRange(holidays);
-                context.SaveChanges();
-            }
-
-            // 5. Create sample shifts and attendance (Basic check)
-            if (!context.Shifts.Any())
-            {
-                // Optional: Seed initial shifts if needed, or leave empty for fresh start
-            }
+            var adminUser = EnsureAdminUser(context);
+            EnsureAdminProfile(context, adminUser);
+            EnsureHouseholds(context);
+            EnsureBeneficiaryStaging(context);
+            EnsureCashForWorkData(context, adminUser);
         }
 
-        private static void EnsureDefaultUsers(AppDbContext context)
+        private static User EnsureAdminUser(AppDbContext context)
         {
-            AddOrUpdateDemoUser(context, "admin", "admin@mcdonald.com", "admin123", UserRole.Admin);
-            AddOrUpdateDemoUser(context, "hr", "hr@mcdonald.com", "hr123", UserRole.HRStaff);
+            var existing = context.Users.FirstOrDefault(user =>
+                user.Email == "admin@barangay.local" ||
+                user.Username == "admin");
 
-            for (int i = 1; i <= 4; i++)
-            {
-                AddOrUpdateDemoUser(
-                    context,
-                    $"manager{i}",
-                    $"manager{i}@mcdonald.com",
-                    "manager123",
-                    UserRole.Manager);
-            }
-
-            AddOrUpdateDemoUser(context, "crew", "crew@gmail.com", "crew123", UserRole.Crew);
-            for (int i = 1; i <= 19; i++)
-            {
-                AddOrUpdateDemoUser(
-                    context,
-                    $"crew{i}",
-                    $"crew{i}@mcdonald.com",
-                    "crew123",
-                    UserRole.Crew);
-            }
-
-            context.SaveChanges();
-        }
-
-        private static void AddOrUpdateDemoUser(
-            AppDbContext context,
-            string username,
-            string email,
-            string plainPassword,
-            UserRole role)
-        {
-            var existing = context.Users.FirstOrDefault(u => u.Email == email || u.Username == username);
             if (existing == null)
             {
-                context.Users.Add(new User
+                existing = new User
                 {
-                    Username = username,
-                    Email = email,
-                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(plainPassword),
-                    Role = role,
+                    Username = "admin",
+                    Email = "admin@barangay.local",
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("admin123"),
+                    Role = UserRole.Admin,
                     IsActive = true,
                     CreatedAt = DateTime.Now,
                     UpdatedAt = DateTime.Now
-                });
-                return;
+                };
+
+                context.Users.Add(existing);
+                context.SaveChanges();
+                return existing;
             }
 
-            bool hasChanges = false;
-
-            if (existing.Username != username)
-            {
-                existing.Username = username;
-                hasChanges = true;
-            }
-
-            if (existing.Email != email)
-            {
-                existing.Email = email;
-                hasChanges = true;
-            }
-
-            if (existing.Role != role)
-            {
-                existing.Role = role;
-                hasChanges = true;
-            }
-
-            if (!existing.IsActive)
-            {
-                existing.IsActive = true;
-                hasChanges = true;
-            }
-
-            if (!BCrypt.Net.BCrypt.Verify(plainPassword, existing.PasswordHash))
-            {
-                existing.PasswordHash = BCrypt.Net.BCrypt.HashPassword(plainPassword);
-                hasChanges = true;
-            }
-
-            if (hasChanges)
-            {
-                existing.UpdatedAt = DateTime.Now;
-            }
+            existing.Username = "admin";
+            existing.Email = "admin@barangay.local";
+            existing.PasswordHash = BCrypt.Net.BCrypt.HashPassword("admin123");
+            existing.Role = UserRole.Admin;
+            existing.IsActive = true;
+            existing.UpdatedAt = DateTime.Now;
+            context.SaveChanges();
+            return existing;
         }
 
-        private static void EnsureDefaultEmployees(AppDbContext context, List<Position> allPositions)
+        private static void EnsureAdminProfile(AppDbContext context, User adminUser)
         {
-            if (allPositions.Count == 0)
+            var profile = context.UserProfiles.FirstOrDefault(item => item.UserId == adminUser.Id);
+            if (profile == null)
             {
-                return;
-            }
-
-            int fallbackPositionId = allPositions[0].Id;
-            var random = new Random();
-
-            var adminUser = context.Users.FirstOrDefault(u => u.Email == "admin@mcdonald.com");
-            if (adminUser != null)
-            {
-                AddOrUpdateEmployee(
-                    context,
-                    adminUser.Id,
-                    "System Administrator",
-                    fallbackPositionId,
-                    100.00m,
-                    DateTime.Now.AddYears(-2));
-            }
-
-            var hrUsers = context.Users
-                .Where(u => u.Role == UserRole.HRStaff)
-                .OrderBy(u => u.Id)
-                .ToList();
-            for (int i = 0; i < hrUsers.Count; i++)
-            {
-                AddOrUpdateEmployee(
-                    context,
-                    hrUsers[i].Id,
-                    $"HR Staff {i + 1}",
-                    fallbackPositionId,
-                    75.00m,
-                    DateTime.Now.AddYears(-1));
-            }
-
-            var managers = context.Users
-                .Where(u => u.Role == UserRole.Manager)
-                .OrderBy(u => u.Id)
-                .ToList();
-            for (int i = 0; i < managers.Count; i++)
-            {
-                AddOrUpdateEmployee(
-                    context,
-                    managers[i].Id,
-                    $"Manager {i + 1}",
-                    fallbackPositionId,
-                    80.00m,
-                    DateTime.Now.AddYears(-1));
-            }
-
-            var kitchenPos = allPositions.Where(p => p.Area == PositionArea.Kitchen).ToList();
-            var posPos = allPositions.Where(p => p.Area == PositionArea.POS).ToList();
-            var dtPos = allPositions.Where(p => p.Area == PositionArea.DT).ToList();
-            var lobbyPos = allPositions.Where(p => p.Area == PositionArea.Lobby).ToList();
-
-            if (!kitchenPos.Any()) kitchenPos.Add(allPositions[0]);
-            if (!posPos.Any()) posPos.Add(allPositions[0]);
-            if (!dtPos.Any()) dtPos.Add(allPositions[0]);
-            if (!lobbyPos.Any()) lobbyPos.Add(allPositions[0]);
-
-            var crewUsers = context.Users
-                .Where(u => u.Role == UserRole.Crew)
-                .OrderBy(u => u.Id)
-                .ToList();
-
-            for (int i = 0; i < crewUsers.Count; i++)
-            {
-                Position assignedPosition;
-                if (i < 5)
+                profile = new UserProfile
                 {
-                    assignedPosition = kitchenPos[i % kitchenPos.Count];
-                }
-                else if (i < 10)
-                {
-                    assignedPosition = posPos[i % posPos.Count];
-                }
-                else if (i < 15)
-                {
-                    assignedPosition = dtPos[i % dtPos.Count];
-                }
-                else
-                {
-                    assignedPosition = lobbyPos[i % lobbyPos.Count];
-                }
+                    UserId = adminUser.Id,
+                    FullName = "Barangay Administrator",
+                    Nickname = "Admin",
+                    Address = "Barangay Hall",
+                    Phone = string.Empty,
+                    UpdatedAt = DateTime.Now
+                };
 
-                AddOrUpdateEmployee(
-                    context,
-                    crewUsers[i].Id,
-                    crewUsers[i].Username == "crew" ? "Crew Member Demo" : $"Crew Member {i + 1}",
-                    assignedPosition.Id,
-                    65.00m,
-                    DateTime.Now.AddMonths(-random.Next(1, 12)));
+                context.UserProfiles.Add(profile);
+            }
+            else
+            {
+                profile.FullName = "Barangay Administrator";
+                profile.Nickname = "Admin";
+                profile.Address = "Barangay Hall";
+                profile.UpdatedAt = DateTime.Now;
             }
 
             context.SaveChanges();
         }
 
-        private static void AddOrUpdateEmployee(
-            AppDbContext context,
-            int userId,
-            string fullName,
-            int positionId,
-            decimal hourlyRate,
-            DateTime dateHired)
+        private static void EnsureHouseholds(AppDbContext context)
         {
-            var employee = context.Employees.FirstOrDefault(e => e.UserId == userId);
-            if (employee == null)
+            if (context.Households.Any())
             {
-                context.Employees.Add(new Employee
-                {
-                    UserId = userId,
-                    FullName = fullName,
-                    PositionId = positionId,
-                    HourlyRate = hourlyRate,
-                    DateHired = dateHired,
-                    Status = EmployeeStatus.Active
-                });
                 return;
             }
 
-            employee.FullName = fullName;
-            employee.PositionId = positionId;
-            employee.HourlyRate = hourlyRate;
-            employee.Status = EmployeeStatus.Active;
+            var households = new List<Household>
+            {
+                new()
+                {
+                    HouseholdCode = "HH-0001",
+                    HeadName = "Mario Santos",
+                    AddressLine = "Purok 1, Barangay Centro",
+                    Purok = "Purok 1",
+                    ContactNumber = "09170000001",
+                    Status = HouseholdStatus.Active,
+                    Members =
+                    {
+                        new HouseholdMember
+                        {
+                            FullName = "Mario Santos",
+                            RelationshipToHead = "Head",
+                            Occupation = "Laborer",
+                            IsCashForWorkEligible = true
+                        },
+                        new HouseholdMember
+                        {
+                            FullName = "Liza Santos",
+                            RelationshipToHead = "Spouse",
+                            Occupation = "Vendor",
+                            IsCashForWorkEligible = true
+                        },
+                        new HouseholdMember
+                        {
+                            FullName = "John Santos",
+                            RelationshipToHead = "Son",
+                            Occupation = "Student",
+                            IsCashForWorkEligible = false
+                        }
+                    }
+                },
+                new()
+                {
+                    HouseholdCode = "HH-0002",
+                    HeadName = "Ana Dela Cruz",
+                    AddressLine = "Purok 2, Barangay Centro",
+                    Purok = "Purok 2",
+                    ContactNumber = "09170000002",
+                    Status = HouseholdStatus.Active,
+                    Members =
+                    {
+                        new HouseholdMember
+                        {
+                            FullName = "Ana Dela Cruz",
+                            RelationshipToHead = "Head",
+                            Occupation = "Housekeeper",
+                            IsCashForWorkEligible = true
+                        },
+                        new HouseholdMember
+                        {
+                            FullName = "Miguel Dela Cruz",
+                            RelationshipToHead = "Son",
+                            Occupation = "Tricycle Driver",
+                            IsCashForWorkEligible = true
+                        }
+                    }
+                },
+                new()
+                {
+                    HouseholdCode = "HH-0003",
+                    HeadName = "Roberto Garcia",
+                    AddressLine = "Purok 3, Barangay Centro",
+                    Purok = "Purok 3",
+                    ContactNumber = "09170000003",
+                    Status = HouseholdStatus.Active,
+                    Members =
+                    {
+                        new HouseholdMember
+                        {
+                            FullName = "Roberto Garcia",
+                            RelationshipToHead = "Head",
+                            Occupation = "Farmer",
+                            IsCashForWorkEligible = true
+                        },
+                        new HouseholdMember
+                        {
+                            FullName = "Teresa Garcia",
+                            RelationshipToHead = "Spouse",
+                            Occupation = "Seamstress",
+                            IsCashForWorkEligible = false
+                        }
+                    }
+                }
+            };
+
+            context.Households.AddRange(households);
+            context.SaveChanges();
+        }
+
+        private static void EnsureBeneficiaryStaging(AppDbContext context)
+        {
+            if (context.BeneficiaryStaging.Any())
+            {
+                return;
+            }
+
+            context.BeneficiaryStaging.AddRange(
+                new BeneficiaryStaging
+                {
+                    ResidentsId = 1001,
+                    BeneficiaryId = "BEN-0001",
+                    CivilRegistryId = "CRS-1001",
+                    LastName = "Rivera",
+                    FirstName = "Elena",
+                    FullName = "Elena Rivera",
+                    Sex = "Female",
+                    DateOfBirth = "1978-04-13",
+                    Age = "47",
+                    MaritalStatus = "Married",
+                    Address = "Purok 4, Barangay Centro",
+                    IsPwd = false,
+                    IsSenior = false,
+                    VerificationStatus = VerificationStatus.Pending,
+                    ImportedAt = DateTime.Now
+                },
+                new BeneficiaryStaging
+                {
+                    ResidentsId = 1002,
+                    BeneficiaryId = "BEN-0002",
+                    CivilRegistryId = "CRS-1002",
+                    LastName = "Lopez",
+                    FirstName = "Ramon",
+                    FullName = "Ramon Lopez",
+                    Sex = "Male",
+                    DateOfBirth = "1959-09-20",
+                    Age = "66",
+                    MaritalStatus = "Widowed",
+                    Address = "Purok 5, Barangay Centro",
+                    IsPwd = false,
+                    IsSenior = true,
+                    SeniorIdNo = "SC-00991",
+                    VerificationStatus = VerificationStatus.Pending,
+                    ImportedAt = DateTime.Now
+                });
+
+            context.SaveChanges();
+        }
+
+        private static void EnsureCashForWorkData(AppDbContext context, User adminUser)
+        {
+            if (context.CashForWorkEvents.Any())
+            {
+                return;
+            }
+
+            var eligibleMembers = context.HouseholdMembers
+                .Where(member => member.IsCashForWorkEligible)
+                .OrderBy(member => member.Id)
+                .Take(2)
+                .ToList();
+
+            var cashForWorkEvent = new CashForWorkEvent
+            {
+                Title = "Barangay Clean-Up Drive",
+                Location = "Barangay Hall Grounds",
+                EventDate = DateTime.Today,
+                StartTime = new TimeSpan(7, 0, 0),
+                EndTime = new TimeSpan(12, 0, 0),
+                Notes = "Initial seeded event for cash-for-work operations.",
+                CreatedByUserId = adminUser.Id,
+                Status = CashForWorkEventStatus.Open,
+                CreatedAt = DateTime.Now,
+                UpdatedAt = DateTime.Now
+            };
+
+            context.CashForWorkEvents.Add(cashForWorkEvent);
+            context.SaveChanges();
+
+            foreach (var member in eligibleMembers)
+            {
+                context.CashForWorkParticipants.Add(new CashForWorkParticipant
+                {
+                    EventId = cashForWorkEvent.Id,
+                    HouseholdMemberId = member.Id,
+                    AddedByUserId = adminUser.Id,
+                    AddedAt = DateTime.Now
+                });
+            }
+
+            context.SaveChanges();
         }
     }
 }

@@ -1,5 +1,3 @@
-using Microsoft.EntityFrameworkCore;
-
 namespace AttendanceShiftingManagement.Data
 {
     public static class DatabaseInitializer
@@ -7,20 +5,16 @@ namespace AttendanceShiftingManagement.Data
         public static void Initialize(bool resetDatabase, bool migrateOnStartup)
         {
             using var context = new AppDbContext();
+            _ = migrateOnStartup;
 
             if (resetDatabase)
             {
                 context.Database.EnsureDeleted();
             }
 
-            if (migrateOnStartup)
-            {
-                context.Database.Migrate();
-            }
-            else
-            {
-                context.Database.EnsureCreated();
-            }
+            // The active barangay model has drifted from the legacy attendance migrations.
+            // Use the current model as the source of truth for fresh databases.
+            context.Database.EnsureCreated();
 
             DbSeeder.Seed(context);
         }

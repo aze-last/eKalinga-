@@ -13,7 +13,7 @@ namespace AttendanceShiftingManagement.ViewModels
 {
     public class ManagerMainViewModel : ObservableObject
     {
-        private object _currentView;
+        private object _currentView = new object();
         private readonly User _currentUser;
         private readonly int _employeeId;
         private ImageSource? _userPhotoImage;

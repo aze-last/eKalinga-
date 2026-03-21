@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
+using AttendanceShiftingManagement.Services;
 using System;
 
 namespace AttendanceShiftingManagement.Data
@@ -10,8 +11,15 @@ namespace AttendanceShiftingManagement.Data
 		{
 			var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
 
-			var connectionString =
-				"server=localhost;database=attendance_shifting_db;user=root;password=codenameHylux122818;";
+			var connectionString = ConnectionSettingsService.BuildConnectionString(new DatabaseConnectionPreset
+			{
+				DisplayName = "Local",
+				Server = "127.0.0.1",
+				Port = 3306,
+				Database = "attendance_shifting_db",
+				Username = "root",
+				Password = "codenameHylux122818"
+			});
 
 			optionsBuilder.UseMySql(
 				connectionString,

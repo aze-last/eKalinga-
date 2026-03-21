@@ -1,0 +1,277 @@
+<UserControl x:Class="AttendanceShiftingManagement.Views.BarangayDashboardPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             Background="{StaticResource BrandSurfaceBrush}">
+
+    <UserControl.Resources>
+        <Style x:Key="MetricCardStyle" TargetType="materialDesign:Card">
+            <Setter Property="Margin" Value="8" />
+            <Setter Property="Padding" Value="18" />
+            <Setter Property="Background" Value="White" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="materialDesign:ElevationAssist.Elevation" Value="Dp2" />
+        </Style>
+
+        <Style x:Key="QuickActionButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource SecondaryActionButton}">
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Height" Value="48" />
+            <Setter Property="Margin" Value="0,0,0,10" />
+            <Setter Property="Padding" Value="14,0" />
+        </Style>
+    </UserControl.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <Grid Margin="0,0,0,8">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0"
+                    Background="{StaticResource BrandMidnightBrush}"
+                    CornerRadius="18"
+                    Padding="24"
+                    Margin="0,0,0,24">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="2*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="Barangay Operations Dashboard"
+                                   FontSize="28"
+                                   FontWeight="SemiBold"
+                                   Foreground="White" />
+                        <TextBlock Text="Monitor masterlist sync, beneficiary review, household data, and cash-for-work from one landing page."
+                                   Margin="0,8,0,0"
+                                   FontSize="14"
+                                   Foreground="#D7E3FF"
+                                   TextWrapping="Wrap" />
+
+                        <Border Margin="0,18,0,0"
+                                Padding="14"
+                                CornerRadius="12"
+                                Background="#163981">
+                            <StackPanel>
+                                <TextBlock Text="Active database"
+                                           FontSize="11"
+                                           Foreground="#AFC4F8" />
+                                <StackPanel Orientation="Horizontal"
+                                            Margin="0,8,0,0">
+                                    <materialDesign:PackIcon Kind="Database"
+                                                             Width="18"
+                                                             Height="18"
+                                                             Foreground="{StaticResource BrandYellowBrush}"
+                                                             Margin="0,0,8,0" />
+                                    <TextBlock Text="{Binding ActiveDatabaseLabel}"
+                                               FontSize="13"
+                                               FontWeight="SemiBold"
+                                               Foreground="White"
+                                               TextWrapping="Wrap" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <Border Grid.Column="1"
+                            Margin="24,0,0,0"
+                            Padding="18"
+                            CornerRadius="16"
+                            Background="#143577">
+                        <StackPanel>
+                            <TextBlock Text="{Binding TodayLabel}" FontSize="13" Foreground="#D7E3FF" />
+                            <TextBlock Text="{Binding TimeLabel}" Margin="0,4,0,0" FontSize="22" FontWeight="SemiBold" Foreground="White" />
+                            <TextBlock Text="{Binding LastRefreshLabel}" Margin="0,14,0,0" FontSize="12" Foreground="#D7E3FF" TextWrapping="Wrap" />
+
+                            <Border Margin="0,14,0,0" Padding="12" CornerRadius="12" Background="#0E2A62">
+                                <StackPanel>
+                                    <TextBlock Text="Session status" FontSize="11" Foreground="#AFC4F8" />
+                                    <TextBlock Text="{Binding StatusMessage}" Margin="0,6,0,0" FontSize="13" FontWeight="SemiBold" Foreground="{Binding StatusBrush}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+
+                            <Grid Margin="0,14,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <Border Grid.Column="0" Margin="0,0,6,0" Padding="12" CornerRadius="12" Background="#0E2A62">
+                                    <StackPanel>
+                                        <TextBlock Text="Attendance today" FontSize="11" Foreground="#AFC4F8" />
+                                        <TextBlock Text="{Binding TodayAttendanceCount, StringFormat=N0}" Margin="0,6,0,0" FontSize="20" FontWeight="SemiBold" Foreground="White" />
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Grid.Column="1" Margin="6,0,0,0" Padding="12" CornerRadius="12" Background="#0E2A62">
+                                    <StackPanel>
+                                        <TextBlock Text="Completed this month" FontSize="11" Foreground="#AFC4F8" />
+                                        <TextBlock Text="{Binding CompletedEventsThisMonthCount, StringFormat=N0}" Margin="0,6,0,0" FontSize="20" FontWeight="SemiBold" Foreground="White" />
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+
+                            <Button Command="{Binding RefreshCommand}"
+                                    Style="{StaticResource SecondaryActionButton}"
+                                    Margin="0,16,0,0"
+                                    Content="REFRESH DASHBOARD" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <UniformGrid Grid.Row="1" Columns="3" Margin="-8,0,-8,24">
+                <materialDesign:Card Style="{StaticResource MetricCardStyle}">
+                    <StackPanel>
+                        <TextBlock Text="{Binding MasterListCount, StringFormat=N0}" FontSize="28" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}" />
+                        <TextBlock Text="Masterlist snapshot" Margin="0,4,0,0" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}" />
+                        <TextBlock Text="Local val_beneficiaries records available." Margin="0,6,0,0" FontSize="12" Foreground="{StaticResource BrandTextSecondaryBrush}" TextWrapping="Wrap" />
+                    </StackPanel>
+                </materialDesign:Card>
+
+                <materialDesign:Card Style="{StaticResource MetricCardStyle}">
+                    <StackPanel>
+                        <TextBlock Text="{Binding PendingReviewCount, StringFormat=N0}" FontSize="28" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}" />
+                        <TextBlock Text="Pending review" Margin="0,4,0,0" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}" />
+                        <TextBlock Text="Staged beneficiaries waiting for action." Margin="0,6,0,0" FontSize="12" Foreground="{StaticResource BrandTextSecondaryBrush}" TextWrapping="Wrap" />
+                    </StackPanel>
+                </materialDesign:Card>
+
+                <materialDesign:Card Style="{StaticResource MetricCardStyle}">
+                    <StackPanel>
+                        <TextBlock Text="{Binding ActiveHouseholdCount, StringFormat=N0}" FontSize="28" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}" />
+                        <TextBlock Text="Active households" Margin="0,4,0,0" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}" />
+                        <TextBlock Text="Households currently available in the registry." Margin="0,6,0,0" FontSize="12" Foreground="{StaticResource BrandTextSecondaryBrush}" TextWrapping="Wrap" />
+                    </StackPanel>
+                </materialDesign:Card>
+
+                <materialDesign:Card Style="{StaticResource MetricCardStyle}">
+                    <StackPanel>
+                        <TextBlock Text="{Binding RegisteredMemberCount, StringFormat=N0}" FontSize="28" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}" />
+                        <TextBlock Text="Registered members" Margin="0,4,0,0" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}" />
+                        <TextBlock Text="Total members stored in the active database." Margin="0,6,0,0" FontSize="12" Foreground="{StaticResource BrandTextSecondaryBrush}" TextWrapping="Wrap" />
+                    </StackPanel>
+                </materialDesign:Card>
+
+                <materialDesign:Card Style="{StaticResource MetricCardStyle}">
+                    <StackPanel>
+                        <TextBlock Text="{Binding EligibleWorkerCount, StringFormat=N0}" FontSize="28" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}" />
+                        <TextBlock Text="Eligible workers" Margin="0,4,0,0" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}" />
+                        <TextBlock Text="Members tagged for cash-for-work participation." Margin="0,6,0,0" FontSize="12" Foreground="{StaticResource BrandTextSecondaryBrush}" TextWrapping="Wrap" />
+                    </StackPanel>
+                </materialDesign:Card>
+
+                <materialDesign:Card Style="{StaticResource MetricCardStyle}">
+                    <StackPanel>
+                        <TextBlock Text="{Binding OpenEventCount, StringFormat=N0}" FontSize="28" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}" />
+                        <TextBlock Text="Open cash-for-work events" Margin="0,4,0,0" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}" />
+                        <TextBlock Text="Events still accepting participants or attendance." Margin="0,6,0,0" FontSize="12" Foreground="{StaticResource BrandTextSecondaryBrush}" TextWrapping="Wrap" />
+                    </StackPanel>
+                </materialDesign:Card>
+            </UniformGrid>
+
+            <Grid Grid.Row="2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="1.6*" />
+                    <ColumnDefinition Width="1*" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                    <materialDesign:Card Padding="20" Margin="0,0,0,16" Background="White" BorderThickness="0" materialDesign:ElevationAssist.Elevation="Dp2">
+                        <StackPanel>
+                            <TextBlock Text="Operations snapshot" Style="{StaticResource MaterialDesignHeadline5TextBlock}" />
+                            <ItemsControl ItemsSource="{Binding ModuleCards}" Margin="0,18,0,0">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Margin="0,0,0,12" Padding="14" CornerRadius="14" Background="{StaticResource BrandSurfaceBrush}" BorderBrush="{StaticResource BrandBorderBrush}" BorderThickness="1">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Margin="0,0,14,0">
+                                                    <TextBlock Text="{Binding Title}" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}" />
+                                                    <TextBlock Text="{Binding Summary}" Margin="0,4,0,0" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}" />
+                                                    <TextBlock Text="{Binding Detail}" Margin="0,6,0,0" FontSize="12" Foreground="{StaticResource BrandTextSecondaryBrush}" TextWrapping="Wrap" />
+                                                </StackPanel>
+                                                <materialDesign:Chip Grid.Column="1" Content="{Binding StatusText}" Background="{Binding StatusBackground}" Foreground="{Binding StatusForeground}" Height="28" VerticalAlignment="Top" />
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </materialDesign:Card>
+
+                    <materialDesign:Card Padding="20" Background="White" BorderThickness="0" materialDesign:ElevationAssist.Elevation="Dp2">
+                        <StackPanel>
+                            <TextBlock Text="Upcoming cash-for-work schedule" Style="{StaticResource MaterialDesignHeadline5TextBlock}" />
+                            <ItemsControl ItemsSource="{Binding UpcomingEvents}" Margin="0,18,0,0">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Margin="0,0,0,12" Padding="14" CornerRadius="14" Background="{StaticResource BrandSurfaceBrush}" BorderBrush="{StaticResource BrandBorderBrush}" BorderThickness="1">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Margin="0,0,14,0">
+                                                    <TextBlock Text="{Binding Title}" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}" />
+                                                    <TextBlock Text="{Binding ScheduleLabel}" Margin="0,4,0,0" FontSize="12" Foreground="{StaticResource BrandTextSecondaryBrush}" />
+                                                    <TextBlock Text="{Binding Location}" Margin="0,6,0,0" FontSize="12" Foreground="{StaticResource BrandTextSecondaryBrush}" />
+                                                    <TextBlock Text="{Binding ParticipantsLabel}" Margin="0,6,0,0" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}" />
+                                                </StackPanel>
+                                                <materialDesign:Chip Grid.Column="1" Content="{Binding StatusText}" Background="{Binding StatusBackground}" Foreground="{Binding StatusForeground}" Height="28" VerticalAlignment="Top" />
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </materialDesign:Card>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Margin="12,0,0,0">
+                    <materialDesign:Card Padding="20" Margin="0,0,0,16" Background="White" BorderThickness="0" materialDesign:ElevationAssist.Elevation="Dp2">
+                        <StackPanel>
+                            <TextBlock Text="Quick actions" Style="{StaticResource MaterialDesignHeadline5TextBlock}" />
+                            <StackPanel Margin="0,18,0,0">
+                                <Button Style="{StaticResource QuickActionButtonStyle}" Command="{Binding DataContext.ShowMasterListCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}" Content="OPEN MASTERLIST" />
+                                <Button Style="{StaticResource QuickActionButtonStyle}" Command="{Binding DataContext.ShowBeneficiariesCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}" Content="REVIEW BENEFICIARIES" />
+                                <Button Style="{StaticResource QuickActionButtonStyle}" Command="{Binding DataContext.ShowHouseholdRegistryCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}" Content="BROWSE HOUSEHOLDS" />
+                                <Button Style="{StaticResource QuickActionButtonStyle}" Margin="0" Command="{Binding DataContext.ShowCashForWorkCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}" Content="OPEN CASH-FOR-WORK" />
+                            </StackPanel>
+                        </StackPanel>
+                    </materialDesign:Card>
+
+                    <materialDesign:Card Padding="20" Background="White" BorderThickness="0" materialDesign:ElevationAssist.Elevation="Dp2">
+                        <StackPanel>
+                            <TextBlock Text="Recent imported beneficiaries" Style="{StaticResource MaterialDesignHeadline5TextBlock}" />
+                            <ItemsControl ItemsSource="{Binding RecentImports}" Margin="0,18,0,0">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Margin="0,0,0,12" Padding="14" CornerRadius="14" Background="{StaticResource BrandSurfaceBrush}" BorderBrush="{StaticResource BrandBorderBrush}" BorderThickness="1">
+                                            <StackPanel>
+                                                <DockPanel>
+                                                    <TextBlock Text="{Binding FullName}" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}" />
+                                                    <materialDesign:Chip DockPanel.Dock="Right" Content="{Binding StatusText}" Background="{Binding StatusBackground}" Foreground="{Binding StatusForeground}" Height="28" />
+                                                </DockPanel>
+                                                <TextBlock Text="{Binding Address}" Margin="0,6,0,0" FontSize="12" Foreground="{StaticResource BrandTextSecondaryBrush}" TextWrapping="Wrap" />
+                                                <TextBlock Text="{Binding ImportedAtLabel}" Margin="0,6,0,0" FontSize="11" Foreground="{StaticResource BrandTextSecondaryBrush}" />
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </materialDesign:Card>
+                </StackPanel>
+            </Grid>
+        </Grid>
+    </ScrollViewer>
+</UserControl>

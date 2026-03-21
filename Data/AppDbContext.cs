@@ -1,12 +1,9 @@
-﻿using AttendanceShiftingManagement.Models;
+using AttendanceShiftingManagement.Models;
+using AttendanceShiftingManagement.Services;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using System;
-using System.IO;
+
 namespace AttendanceShiftingManagement.Data
 {
-
-
     public class AppDbContext : DbContext
     {
         public DbSet<User> Users { get; set; }
@@ -23,6 +20,19 @@ namespace AttendanceShiftingManagement.Data
         public DbSet<ActivityLog> ActivityLogs { get; set; }
         public DbSet<UserProfile> UserProfiles { get; set; }
         public DbSet<UserPreference> UserPreferences { get; set; }
+        public DbSet<EmployeeExit> EmployeeExits { get; set; }
+        public DbSet<EngagementSurvey> EngagementSurveys { get; set; }
+        public DbSet<FingerprintTemplate> FingerprintTemplates { get; set; }
+        public DbSet<PerformanceGoal> PerformanceGoals { get; set; }
+        public DbSet<RecruitmentCandidate> RecruitmentCandidates { get; set; }
+        public DbSet<TrainingRecord> TrainingRecords { get; set; }
+
+        public DbSet<Household> Households { get; set; }
+        public DbSet<HouseholdMember> HouseholdMembers { get; set; }
+        public DbSet<BeneficiaryStaging> BeneficiaryStaging { get; set; }
+        public DbSet<CashForWorkEvent> CashForWorkEvents { get; set; }
+        public DbSet<CashForWorkParticipant> CashForWorkParticipants { get; set; }
+        public DbSet<CashForWorkAttendance> CashForWorkAttendances { get; set; }
 
         public AppDbContext()
         {
@@ -36,12 +46,7 @@ namespace AttendanceShiftingManagement.Data
         {
             if (!optionsBuilder.IsConfigured)
             {
-                var config = new ConfigurationBuilder()
-                    .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
-                    .AddJsonFile("appsettings.json", optional: false)
-                    .Build();
-
-                var connectionString = config.GetConnectionString("DefaultConnection");
+                var connectionString = ConnectionSettingsService.GetEffectiveConnectionString();
                 optionsBuilder.UseMySql(connectionString, new MySqlServerVersion(new Version(8, 0, 36)));
             }
         }
@@ -50,7 +55,6 @@ namespace AttendanceShiftingManagement.Data
         {
             base.OnModelCreating(modelBuilder);
 
-            // Configure enum to string conversions
             modelBuilder.Entity<User>()
                 .Property(u => u.Role)
                 .HasConversion<string>();
@@ -79,22 +83,59 @@ namespace AttendanceShiftingManagement.Data
                 .Property(n => n.Type)
                 .HasConversion<string>();
 
+            modelBuilder.Entity<EmployeeExit>()
+                .Property(exit => exit.ExitType)
+                .HasConversion<string>();
+
+            modelBuilder.Entity<PerformanceGoal>()
+                .Property(goal => goal.Status)
+                .HasConversion<string>();
+
+            modelBuilder.Entity<Household>()
+                .Property(household => household.Status)
+                .HasConversion<string>();
+
+            modelBuilder.Entity<CashForWorkEvent>()
+                .Property(cashForWorkEvent => cashForWorkEvent.Status)
+                .HasConversion<string>();
+
+            modelBuilder.Entity<CashForWorkAttendance>()
+                .Property(attendance => attendance.Status)
+                .HasConversion<string>();
+
+            modelBuilder.Entity<CashForWorkAttendance>()
+                .Property(attendance => attendance.Source)
+                .HasConversion<string>();
+
             modelBuilder.Entity<UserProfile>()
-                .HasIndex(p => p.UserId)
+                .HasIndex(profile => profile.UserId)
                 .IsUnique();
 
             modelBuilder.Entity<UserPreference>()
-                .HasIndex(p => p.UserId)
+                .HasIndex(preference => preference.UserId)
                 .IsUnique();
 
-            // Unique constraint for shift assignments
-            modelBuilder.Entity<ShiftAssignment>()
-                .HasIndex(sa => new { sa.ShiftId, sa.EmployeeId })
-                .IsUnique();
-
-            // Unique constraint for user-employee relationship
             modelBuilder.Entity<Employee>()
-                .HasIndex(e => e.UserId)
+                .HasIndex(employee => employee.UserId)
+                .IsUnique();
+
+            modelBuilder.Entity<ShiftAssignment>()
+                .HasIndex(assignment => new { assignment.ShiftId, assignment.EmployeeId })
+                .IsUnique();
+
+            modelBuilder.Entity<FingerprintTemplate>()
+                .HasIndex(template => new { template.UserId, template.FingerIndex })
+                .IsUnique();
+
+            modelBuilder.Entity<Household>()
+                .HasIndex(household => household.HouseholdCode)
+                .IsUnique();
+
+            modelBuilder.Entity<BeneficiaryStaging>()
+                .HasIndex(row => row.CivilRegistryId);
+
+            modelBuilder.Entity<CashForWorkParticipant>()
+                .HasIndex(participant => new { participant.EventId, participant.HouseholdMemberId })
                 .IsUnique();
         }
     }

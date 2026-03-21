@@ -18,14 +18,14 @@ namespace AttendanceShiftingManagement.Services
         public static async Task<MasterListSnapshot> LoadLocalSnapshotAsync(CancellationToken cancellationToken = default)
         {
             var settings = ConnectionSettingsService.Load();
-            var localPreset = settings.GetPreset("Local");
+            var activePreset = settings.GetPreset(settings.SelectedPreset);
 
-            await using var connection = new MySqlConnection(ConnectionSettingsService.BuildConnectionString(localPreset));
+            await using var connection = new MySqlConnection(ConnectionSettingsService.BuildConnectionString(activePreset));
             await connection.OpenAsync(cancellationToken);
 
-            if (!await TableExistsAsync(connection, localPreset.Database, cancellationToken))
+            if (!await TableExistsAsync(connection, activePreset.Database, cancellationToken))
             {
-                throw new InvalidOperationException("Local table `val_beneficiaries` was not found. Sync it first from System Tools.");
+                throw new InvalidOperationException($"Table `val_beneficiaries` was not found in the active database `{activePreset.Database}`. Snapshot it first from Settings or Load Tables.");
             }
 
             var beneficiaries = new List<MasterListBeneficiary>();
@@ -94,8 +94,8 @@ namespace AttendanceShiftingManagement.Services
             return new MasterListSnapshot
             {
                 Beneficiaries = beneficiaries,
-                SourceDatabase = localPreset.Database,
-                SourceServer = localPreset.Server,
+                SourceDatabase = activePreset.Database,
+                SourceServer = activePreset.Server,
                 LastUpdatedAt = beneficiaries.MaxBy(item => item.UpdatedAt)?.UpdatedAt
             };
         }

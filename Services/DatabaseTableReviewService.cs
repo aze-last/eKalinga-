@@ -121,7 +121,7 @@ namespace AttendanceShiftingManagement.Services
                     return new DatabaseTableSyncResult
                     {
                         IsSuccess = false,
-                        Message = "Source and Local target are the same database."
+                        Message = "Source and active target are the same database."
                     };
                 }
 
@@ -173,7 +173,7 @@ namespace AttendanceShiftingManagement.Services
                 {
                     IsSuccess = true,
                     CopiedRowCount = copiedRowCount,
-                    Message = $"Synced {copiedRowCount} row(s) from remote `{tableName}` into the Local database."
+                    Message = $"Synced {copiedRowCount} row(s) from remote `{tableName}` into `{localPreset.Database}`."
                 };
             }
             catch (Exception ex)

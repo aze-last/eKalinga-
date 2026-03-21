@@ -1,6 +1,8 @@
-﻿using AttendanceShiftingManagement.Helpers;
+using AttendanceShiftingManagement.Data;
+using AttendanceShiftingManagement.Helpers;
 using AttendanceShiftingManagement.Models;
 using AttendanceShiftingManagement.Services;
+using Microsoft.Extensions.Configuration;
 using System.Windows;
 using System.Windows.Input;
 
@@ -12,6 +14,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _usernameOrEmail = string.Empty;
         private string _password = string.Empty;
         private string _errorMessage = string.Empty;
+        private string _activeConnectionSummary = string.Empty;
 
         public string UsernameOrEmail
         {
@@ -31,12 +34,26 @@ namespace AttendanceShiftingManagement.ViewModels
             set => SetProperty(ref _errorMessage, value);
         }
 
+        public string ActiveConnectionSummary
+        {
+            get => _activeConnectionSummary;
+            set => SetProperty(ref _activeConnectionSummary, value);
+        }
+
         public ICommand LoginCommand { get; }
 
         public LoginViewModel()
         {
             _authService = new AuthService();
             LoginCommand = new RelayCommand(ExecuteLogin, CanExecuteLogin);
+            RefreshConnectionSummary();
+        }
+
+        public void RefreshConnectionSummary()
+        {
+            var settings = ConnectionSettingsService.Load();
+            var preset = settings.GetPreset(settings.SelectedPreset);
+            ActiveConnectionSummary = $"{preset.DisplayName}: {preset.Server}:{preset.Port} / {preset.Database}";
         }
 
         private bool CanExecuteLogin(object? parameter)
@@ -49,36 +66,58 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             ErrorMessage = string.Empty;
 
-            var user = _authService.Login(UsernameOrEmail, Password);
-
-            if (user != null)
+            try
             {
-                Window dashboardWindow = user.Role switch
-                {
-                    UserRole.Manager => new Views.ManagerMainWindow(user),
-                    UserRole.Crew => new Views.CrewMainWindow(user),
-                    UserRole.HRStaff => new Views.MainWindow(user),
-                    _ => new Views.MainWindow(user)
-                };
+                EnsureDatabaseReady();
+            }
+            catch (Exception ex)
+            {
+                ErrorMessage = $"Database connection failed. Check Connection Settings. {ex.Message}";
+                return;
+            }
 
-                Application.Current.MainWindow = dashboardWindow;
-                dashboardWindow.WindowStartupLocation = WindowStartupLocation.CenterScreen;
-                dashboardWindow.Show();
+            var user = _authService.Login(UsernameOrEmail.Trim(), Password);
 
-                // Close login window
-                foreach (Window window in Application.Current.Windows)
+            if (user == null)
+            {
+                ErrorMessage = "Invalid username/email or password.";
+                return;
+            }
+
+            if (user.Role != UserRole.Admin)
+            {
+                ErrorMessage = "Only barangay admin accounts can access this portal.";
+                return;
+            }
+
+            var dashboardWindow = new Views.MainWindow(user)
+            {
+                WindowStartupLocation = WindowStartupLocation.CenterScreen
+            };
+
+            Application.Current.MainWindow = dashboardWindow;
+            dashboardWindow.Show();
+
+            foreach (Window window in Application.Current.Windows)
+            {
+                if (window is Views.LoginWindow)
                 {
-                    if (window is Views.LoginWindow)
-                    {
-                        window.Close();
-                        break;
-                    }
+                    window.Close();
+                    break;
                 }
             }
-            else
-            {
-                ErrorMessage = "Invalid username/email or password";
-            }
+        }
+
+        private static void EnsureDatabaseReady()
+        {
+            var configuration = new ConfigurationBuilder()
+                .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
+                .AddJsonFile("appsettings.json", optional: false)
+                .Build();
+
+            var resetDb = configuration.GetValue("Database:ResetOnStartup", false);
+            var migrateOnStartup = configuration.GetValue("Database:MigrateOnStartup", false);
+            DatabaseInitializer.Initialize(resetDb, migrateOnStartup);
         }
     }
 }
