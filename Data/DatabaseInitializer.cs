@@ -13,8 +13,9 @@ namespace AttendanceShiftingManagement.Data
             }
 
             // The active barangay model has drifted from the legacy attendance migrations.
-            // Use the current model as the source of truth for fresh databases.
-            context.Database.EnsureCreated();
+            // Fresh databases can still use EnsureCreated(), but partially initialized
+            // databases need explicit repair for the current barangay/login schema.
+            RuntimeSchemaBootstrapper.EnsureRuntimeSchema(context);
 
             DbSeeder.Seed(context);
         }

@@ -40,6 +40,13 @@ namespace AttendanceShiftingManagement.Services
 
     public static class ConnectionSettingsService
     {
+        private const string DefaultAppPresetKey = "Local";
+        private static readonly HashSet<string> AllowedActiveAppPresetKeys = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "Local",
+            "Remote"
+        };
+
         private static readonly JsonSerializerOptions JsonOptions = new()
         {
             PropertyNameCaseInsensitive = true,
@@ -60,6 +67,7 @@ namespace AttendanceShiftingManagement.Services
             if (!File.Exists(runtimePath))
             {
                 EnsureRequiredPresets(settings);
+                NormalizeActiveAppPreset(settings);
                 return settings;
             }
 
@@ -70,6 +78,7 @@ namespace AttendanceShiftingManagement.Services
                 if (runtimeSettings == null)
                 {
                     EnsureRequiredPresets(settings);
+                    NormalizeActiveAppPreset(settings);
                     return settings;
                 }
 
@@ -86,16 +95,19 @@ namespace AttendanceShiftingManagement.Services
             catch
             {
                 EnsureRequiredPresets(settings);
+                NormalizeActiveAppPreset(settings);
                 return settings;
             }
 
             EnsureRequiredPresets(settings);
+            NormalizeActiveAppPreset(settings);
             return settings;
         }
 
         public static void Save(ConnectionSettingsModel settings)
         {
             EnsureRequiredPresets(settings);
+            NormalizeActiveAppPreset(settings);
 
             var runtimePath = GetRuntimeSettingsPath();
             var runtimeDirectory = Path.GetDirectoryName(runtimePath);
@@ -151,7 +163,10 @@ namespace AttendanceShiftingManagement.Services
                 UserID = preset.Username,
                 Password = preset.Password,
                 CharacterSet = "utf8mb4",
-                ConnectionTimeout = 5,
+                ConnectionTimeout = 15,
+                DefaultCommandTimeout = 300,
+                AllowLoadLocalInfile = true,
+                Keepalive = 30,
                 AllowZeroDateTime = true,
                 ConvertZeroDateTime = true
             };
@@ -234,7 +249,16 @@ namespace AttendanceShiftingManagement.Services
 
             if (string.IsNullOrWhiteSpace(settings.SelectedPreset) || !settings.Presets.ContainsKey(settings.SelectedPreset))
             {
-                settings.SelectedPreset = "Local";
+                settings.SelectedPreset = DefaultAppPresetKey;
+            }
+        }
+
+        private static void NormalizeActiveAppPreset(ConnectionSettingsModel settings)
+        {
+            if (string.IsNullOrWhiteSpace(settings.SelectedPreset)
+                || !AllowedActiveAppPresetKeys.Contains(settings.SelectedPreset))
+            {
+                settings.SelectedPreset = DefaultAppPresetKey;
             }
         }
 

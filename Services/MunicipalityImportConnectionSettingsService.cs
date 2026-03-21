@@ -74,15 +74,14 @@ namespace AttendanceShiftingManagement.Services
                 return configuredPreset;
             }
 
-            var fallback = ConnectionSettingsService.Load().GetPreset("Remote");
             return new DatabaseConnectionPreset
             {
                 DisplayName = "Municipality Import Source",
-                Server = fallback.Server,
-                Port = fallback.Port,
-                Database = fallback.Database,
-                Username = fallback.Username,
-                Password = fallback.Password
+                Server = string.Empty,
+                Port = 3306,
+                Database = string.Empty,
+                Username = string.Empty,
+                Password = string.Empty
             };
         }
 

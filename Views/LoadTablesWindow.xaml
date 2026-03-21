@@ -23,7 +23,7 @@
                            FontSize="24"
                            FontWeight="SemiBold"
                            Foreground="{StaticResource BrandMidnightBrush}" />
-                <TextBlock Text="Connect to the municipality source, inspect available tables, and sync the selected table into the active app database."
+                <TextBlock Text="Connect to a source database, inspect available tables, and load a snapshot into the active app database. If the target table does not exist yet, it will be created automatically from the source schema."
                            Margin="0,8,0,0"
                            FontSize="13"
                            Foreground="{StaticResource BrandTextSecondaryBrush}"
@@ -40,7 +40,7 @@
                                              Width="18"
                                              Height="18"
                                              Margin="0,0,8,0" />
-                    <TextBlock Text="Sync Selected Table" VerticalAlignment="Center" />
+                    <TextBlock Text="LOAD SELECTED TABLE" VerticalAlignment="Center" />
                 </StackPanel>
             </Button>
         </DockPanel>
@@ -187,7 +187,7 @@
                                 CornerRadius="10"
                                 Background="{StaticResource BrandSurfaceBrush}">
                             <StackPanel>
-                                <TextBlock Text="LOCAL ROWS"
+                                <TextBlock Text="TARGET ROWS"
                                            FontSize="10"
                                            FontWeight="SemiBold"
                                            Foreground="{StaticResource BrandTextSecondaryBrush}" />
@@ -201,13 +201,9 @@
                     </Grid>
 
                     <TextBlock Margin="0,16,0,0"
+                               Text="{Binding ExistenceSummary}"
                                Foreground="{StaticResource BrandTextSecondaryBrush}"
-                               TextWrapping="Wrap">
-                        <Run Text="Remote exists: " />
-                        <Run Text="{Binding ExistsInRemote}" />
-                        <Run Text=" | Local exists: " />
-                        <Run Text="{Binding ExistsInLocal}" />
-                    </TextBlock>
+                               TextWrapping="Wrap" />
 
                     <Border Margin="0,18,0,0"
                             Padding="14"
@@ -244,18 +240,26 @@
                     BorderThickness="1"
                     CornerRadius="14"
                     Padding="16">
-                <StackPanel>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
                     <TextBlock Text="Available Tables"
                                FontSize="15"
                                FontWeight="SemiBold"
                                Foreground="{StaticResource BrandMidnightBrush}" />
 
-                    <ListBox Margin="0,14,0,0"
+                    <ListBox Grid.Row="1"
+                             Margin="0,14,0,0"
                              ItemsSource="{Binding Tables}"
                              SelectedItem="{Binding SelectedTable}"
                              BorderThickness="0"
-                             Background="Transparent" />
-                </StackPanel>
+                             Background="Transparent"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             ScrollViewer.CanContentScroll="True" />
+                </Grid>
             </Border>
 
             <Border Grid.Column="2"
@@ -264,19 +268,27 @@
                     BorderThickness="1"
                     CornerRadius="14"
                     Padding="16">
-                <StackPanel>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
                     <TextBlock Text="Table Preview"
                                FontSize="15"
                                FontWeight="SemiBold"
                                Foreground="{StaticResource BrandMidnightBrush}" />
 
-                    <DataGrid Margin="0,14,0,0"
+                    <DataGrid Grid.Row="1"
+                              Margin="0,14,0,0"
                               ItemsSource="{Binding PreviewRowsView}"
                               AutoGenerateColumns="True"
                               CanUserAddRows="False"
                               IsReadOnly="True"
-                              MinHeight="360" />
-                </StackPanel>
+                              ScrollViewer.VerticalScrollBarVisibility="Auto"
+                              ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                              EnableRowVirtualization="True" />
+                </Grid>
             </Border>
         </Grid>
     </Grid>

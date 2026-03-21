@@ -142,38 +142,60 @@ namespace AttendanceShiftingManagement.Services
 
                 var createTableSql = await GetCreateTableSqlAsync(sourceConnection, tableName, cancellationToken);
                 var insertableColumns = await GetInsertableColumnsAsync(sourceConnection, tableName, cancellationToken);
+                if (insertableColumns.Count == 0)
+                {
+                    return new DatabaseTableSyncResult
+                    {
+                        IsSuccess = false,
+                        Message = $"Source table `{tableName}` has no importable columns."
+                    };
+                }
 
                 await using var targetConnection = new MySqlConnection(ConnectionSettingsService.BuildConnectionString(localPreset));
                 await targetConnection.OpenAsync(cancellationToken);
-                await using var transaction = await targetConnection.BeginTransactionAsync(cancellationToken);
+                var targetTableExists = await TableExistsAsync(targetConnection, localPreset.Database, tableName, cancellationToken);
 
                 await ExecuteNonQueryAsync(
                     targetConnection,
-                    transaction,
+                    null,
                     $"DROP TABLE IF EXISTS `{EscapeIdentifier(tableName)}`;",
                     cancellationToken);
 
                 await ExecuteNonQueryAsync(
                     targetConnection,
-                    transaction,
+                    null,
                     createTableSql,
                     cancellationToken);
 
-                var copiedRowCount = await CopyRowsAsync(
+                var targetTableCreated = await TableExistsAsync(targetConnection, localPreset.Database, tableName, cancellationToken);
+                if (!targetTableCreated)
+                {
+                    return new DatabaseTableSyncResult
+                    {
+                        IsSuccess = false,
+                        Message = $"Target table `{tableName}` could not be created in `{localPreset.Database}`."
+                    };
+                }
+
+                var sourceRows = await LoadSourceRowsAsync(
                     sourceConnection,
-                    targetConnection,
-                    transaction,
                     tableName,
                     insertableColumns,
                     cancellationToken);
 
-                await transaction.CommitAsync(cancellationToken);
+                var copiedRowCount = await CopyRowsAsync(
+                    targetConnection,
+                    tableName,
+                    insertableColumns,
+                    sourceRows,
+                    cancellationToken);
 
+                var localTableAction = targetTableExists ? "replaced" : "created";
                 return new DatabaseTableSyncResult
                 {
                     IsSuccess = true,
                     CopiedRowCount = copiedRowCount,
-                    Message = $"Synced {copiedRowCount} row(s) from remote `{tableName}` into `{localPreset.Database}`."
+                    Message = $"Loaded snapshot of `{tableName}` into target `{localPreset.Database}`. The table was {localTableAction} and {copiedRowCount} row(s) were copied from the source database."
                 };
             }
             catch (Exception ex)
@@ -186,45 +208,132 @@ namespace AttendanceShiftingManagement.Services
             }
         }
 
-        private static async Task<int> CopyRowsAsync(
+        private static async Task<DataTable> LoadSourceRowsAsync(
             MySqlConnection sourceConnection,
-            MySqlConnection targetConnection,
-            MySqlTransaction transaction,
             string tableName,
             IReadOnlyList<string> columnNames,
             CancellationToken cancellationToken)
         {
             var quotedColumns = string.Join(", ", columnNames.Select(column => $"`{EscapeIdentifier(column)}`"));
             var selectSql = $"SELECT {quotedColumns} FROM `{EscapeIdentifier(tableName)}`;";
-            var insertSql = BuildInsertSql(tableName, columnNames);
 
-            await using var selectCommand = new MySqlCommand(selectSql, sourceConnection);
-            await using var reader = await selectCommand.ExecuteReaderAsync(cancellationToken);
-            await using var insertCommand = new MySqlCommand(insertSql, targetConnection, transaction);
-
-            var copiedRows = 0;
-            while (await reader.ReadAsync(cancellationToken))
+            await using var selectCommand = new MySqlCommand(selectSql, sourceConnection)
             {
-                insertCommand.Parameters.Clear();
+                CommandTimeout = 300
+            };
+            await using var reader = await selectCommand.ExecuteReaderAsync(cancellationToken);
+
+            var sourceRows = new DataTable();
+            sourceRows.Load(reader);
+            return sourceRows;
+        }
+
+        private static async Task<int> CopyRowsAsync(
+            MySqlConnection targetConnection,
+            string tableName,
+            IReadOnlyList<string> columnNames,
+            DataTable sourceRows,
+            CancellationToken cancellationToken)
+        {
+            if (sourceRows.Rows.Count == 0)
+            {
+                return 0;
+            }
+
+            try
+            {
+                var bulkCopy = new MySqlBulkCopy(targetConnection)
+                {
+                    DestinationTableName = $"`{EscapeIdentifier(tableName)}`",
+                    BulkCopyTimeout = 300
+                };
 
                 for (var index = 0; index < columnNames.Count; index++)
                 {
-                    var parameter = insertCommand.Parameters.AddWithValue($"@p{index}", reader.IsDBNull(index) ? DBNull.Value : reader.GetValue(index));
-                    parameter.IsNullable = true;
+                    bulkCopy.ColumnMappings.Add(new MySqlBulkCopyColumnMapping
+                    {
+                        SourceOrdinal = index,
+                        DestinationColumn = columnNames[index]
+                    });
                 }
 
-                await insertCommand.ExecuteNonQueryAsync(cancellationToken);
-                copiedRows++;
+                var result = await bulkCopy.WriteToServerAsync(sourceRows, cancellationToken);
+                return (int)result.RowsInserted;
+            }
+            catch (Exception ex) when (ShouldFallbackToBatchedInsert(ex))
+            {
+                return await CopyRowsInBatchesAsync(
+                    targetConnection,
+                    tableName,
+                    columnNames,
+                    sourceRows,
+                    cancellationToken);
+            }
+        }
+
+        private static async Task<int> CopyRowsInBatchesAsync(
+            MySqlConnection targetConnection,
+            string tableName,
+            IReadOnlyList<string> columnNames,
+            DataTable sourceRows,
+            CancellationToken cancellationToken)
+        {
+            const int batchSize = 250;
+            var copiedRows = 0;
+
+            for (var batchStart = 0; batchStart < sourceRows.Rows.Count; batchStart += batchSize)
+            {
+                var currentBatchSize = Math.Min(batchSize, sourceRows.Rows.Count - batchStart);
+                var sql = BuildBatchInsertSql(tableName, columnNames, currentBatchSize);
+
+                await using var command = new MySqlCommand(sql, targetConnection)
+                {
+                    CommandTimeout = 300
+                };
+
+                for (var rowOffset = 0; rowOffset < currentBatchSize; rowOffset++)
+                {
+                    var row = sourceRows.Rows[batchStart + rowOffset];
+                    for (var columnIndex = 0; columnIndex < columnNames.Count; columnIndex++)
+                    {
+                        command.Parameters.AddWithValue(
+                            GetBatchParameterName(rowOffset, columnIndex),
+                            row.IsNull(columnIndex) ? DBNull.Value : row[columnIndex]);
+                    }
+                }
+
+                copiedRows += await command.ExecuteNonQueryAsync(cancellationToken);
             }
 
             return copiedRows;
         }
 
-        private static string BuildInsertSql(string tableName, IReadOnlyList<string> columnNames)
+        private static string BuildBatchInsertSql(string tableName, IReadOnlyList<string> columnNames, int batchSize)
         {
             var quotedColumns = string.Join(", ", columnNames.Select(column => $"`{EscapeIdentifier(column)}`"));
-            var parameterNames = string.Join(", ", Enumerable.Range(0, columnNames.Count).Select(index => $"@p{index}"));
-            return $"INSERT INTO `{EscapeIdentifier(tableName)}` ({quotedColumns}) VALUES ({parameterNames});";
+            var rowValueSets = Enumerable.Range(0, batchSize)
+                .Select(rowOffset =>
+                    $"({string.Join(", ", Enumerable.Range(0, columnNames.Count).Select(columnIndex => GetBatchParameterName(rowOffset, columnIndex)))})");
+
+            return $"INSERT INTO `{EscapeIdentifier(tableName)}` ({quotedColumns}) VALUES {string.Join(", ", rowValueSets)};";
+        }
+
+        private static string GetBatchParameterName(int rowOffset, int columnIndex)
+        {
+            return $"@p_{rowOffset}_{columnIndex}";
+        }
+
+        private static bool ShouldFallbackToBatchedInsert(Exception exception)
+        {
+            if (exception is not MySqlException mysqlException)
+            {
+                return false;
+            }
+
+            var message = mysqlException.Message;
+            return message.Contains("local data", StringComparison.OrdinalIgnoreCase)
+                || message.Contains("LOCAL INFILE", StringComparison.OrdinalIgnoreCase)
+                || message.Contains("not allowed", StringComparison.OrdinalIgnoreCase);
         }
 
         private static async Task<DataTable> LoadPreviewRowsAsync(
@@ -366,11 +475,13 @@ namespace AttendanceShiftingManagement.Services
 
         private static async Task ExecuteNonQueryAsync(
             MySqlConnection connection,
-            MySqlTransaction transaction,
+            MySqlTransaction? transaction,
             string sql,
             CancellationToken cancellationToken)
         {
-            await using var command = new MySqlCommand(sql, connection, transaction);
+            await using var command = transaction == null
+                ? new MySqlCommand(sql, connection)
+                : new MySqlCommand(sql, connection, transaction);
             await command.ExecuteNonQueryAsync(cancellationToken);
         }
 

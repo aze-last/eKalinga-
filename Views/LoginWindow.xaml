@@ -116,7 +116,7 @@
                 </StackPanel>
 
                 <TextBlock Grid.Row="2"
-                           Text="Connection settings are available before sign-in so you can choose the active database first."
+                           Text="App database settings are available before sign-in so you can choose whether the app targets Local or Hostinger. External source databases are loaded later from Settings and Advanced Load Tables."
                            Foreground="#C9D7FF"
                            FontSize="12"
                            TextWrapping="Wrap" />
@@ -155,7 +155,7 @@
                                                      Width="18"
                                                      Height="18"
                                                      Margin="0,0,8,0" />
-                            <TextBlock Text="Connection Settings"
+                            <TextBlock Text="App Database"
                                        VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
@@ -205,7 +205,7 @@
                 </StackPanel>
 
                 <TextBlock Grid.Row="2"
-                           Text="Use Connection Settings if you need to switch between Local, LAN, or Remote before logging in."
+                           Text="Use App Database if you need to switch between Local and Hostinger before logging in. External source databases are handled in Settings and Advanced Load Tables."
                            Foreground="{StaticResource BrandTextSecondaryBrush}"
                            FontSize="12"
                            TextWrapping="Wrap" />

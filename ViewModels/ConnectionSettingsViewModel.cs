@@ -31,7 +31,6 @@ namespace AttendanceShiftingManagement.ViewModels
                 if (SetProperty(ref _selectedPresetKey, value))
                 {
                     OnPropertyChanged(nameof(IsLocalSelected));
-                    OnPropertyChanged(nameof(IsLanSelected));
                     OnPropertyChanged(nameof(IsRemoteSelected));
                     OnPropertyChanged(nameof(CurrentPresetDisplayName));
                 }
@@ -94,14 +93,12 @@ namespace AttendanceShiftingManagement.ViewModels
         }
 
         public bool IsLocalSelected => string.Equals(SelectedPresetKey, "Local", StringComparison.OrdinalIgnoreCase);
-        public bool IsLanSelected => string.Equals(SelectedPresetKey, "Lan", StringComparison.OrdinalIgnoreCase);
         public bool IsRemoteSelected => string.Equals(SelectedPresetKey, "Remote", StringComparison.OrdinalIgnoreCase);
         public string CurrentPresetDisplayName => string.IsNullOrWhiteSpace(SelectedPresetKey)
             ? string.Empty
             : _settings.GetPreset(SelectedPresetKey).DisplayName;
 
         public ICommand SelectLocalPresetCommand { get; }
-        public ICommand SelectLanPresetCommand { get; }
         public ICommand SelectRemotePresetCommand { get; }
         public ICommand TestConnectionCommand => _testConnectionCommand;
         public ICommand SaveCommand => _saveCommand;
@@ -112,14 +109,13 @@ namespace AttendanceShiftingManagement.ViewModels
             _settings = ConnectionSettingsService.Load();
 
             SelectLocalPresetCommand = new RelayCommand(_ => SelectPreset("Local"));
-            SelectLanPresetCommand = new RelayCommand(_ => SelectPreset("Lan"));
             SelectRemotePresetCommand = new RelayCommand(_ => SelectPreset("Remote"));
             _testConnectionCommand = new RelayCommand(async _ => await ExecuteTestConnectionAsync(), _ => !IsBusy);
             _saveCommand = new RelayCommand(_ => ExecuteSave(), _ => !IsBusy);
             CancelCommand = new RelayCommand(_ => CloseRequested?.Invoke(false));
 
             LoadPreset(_settings.SelectedPreset);
-            SetNeutralStatus($"Preset applied: {CurrentPresetDisplayName}. Save and continue to use this database.");
+            SetNeutralStatus($"{CurrentPresetDisplayName} app database loaded. Use Settings > Advanced Load Tables for external source databases.");
         }
 
         private void SelectPreset(string presetKey)
@@ -132,7 +128,7 @@ namespace AttendanceShiftingManagement.ViewModels
             TryUpdateSelectedPreset(showValidationErrors: false);
             _settings.SelectedPreset = presetKey;
             LoadPreset(presetKey);
-            SetNeutralStatus($"Preset applied: {CurrentPresetDisplayName}. Save and continue to use this database.");
+            SetNeutralStatus($"{CurrentPresetDisplayName} app database loaded. Use Settings > Advanced Load Tables for external source databases.");
         }
 
         private async Task ExecuteTestConnectionAsync()
@@ -276,7 +272,6 @@ namespace AttendanceShiftingManagement.ViewModels
             return presetKey switch
             {
                 "Local" => "Local",
-                "Lan" => "Network (LAN)",
                 _ => "Remote (Hostinger)"
             };
         }

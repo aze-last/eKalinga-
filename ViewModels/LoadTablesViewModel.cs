@@ -20,7 +20,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _username = string.Empty;
         private string _password = string.Empty;
         private string _targetSummary = string.Empty;
-        private string _statusMessage = "Enter the municipality source connection, then load available tables.";
+        private string _statusMessage = "Enter the source database connection, then load available tables into the active app database.";
         private Brush _statusBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#6B7280"));
         private bool _isBusy;
         private string _selectedTable = string.Empty;
@@ -114,6 +114,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 if (SetProperty(ref _selectedTable, value))
                 {
                     _syncSelectedTableCommand.RaiseCanExecuteChanged();
+                    OnPropertyChanged(nameof(ExistenceSummary));
                     if (!string.IsNullOrWhiteSpace(value))
                     {
                         _ = LoadSelectedTablePreviewAsync();
@@ -125,13 +126,25 @@ namespace AttendanceShiftingManagement.ViewModels
         public bool ExistsInRemote
         {
             get => _existsInRemote;
-            private set => SetProperty(ref _existsInRemote, value);
+            private set
+            {
+                if (SetProperty(ref _existsInRemote, value))
+                {
+                    OnPropertyChanged(nameof(ExistenceSummary));
+                }
+            }
         }
 
         public bool ExistsInLocal
         {
             get => _existsInLocal;
-            private set => SetProperty(ref _existsInLocal, value);
+            private set
+            {
+                if (SetProperty(ref _existsInLocal, value))
+                {
+                    OnPropertyChanged(nameof(ExistenceSummary));
+                }
+            }
         }
 
         public int RemoteRowCount
@@ -150,6 +163,29 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             get => _previewRowsView;
             private set => SetProperty(ref _previewRowsView, value);
+        }
+
+        public string ExistenceSummary
+        {
+            get
+            {
+                if (string.IsNullOrWhiteSpace(SelectedTable))
+                {
+                    return "Select a source table to inspect whether it already exists in the local app database.";
+                }
+
+                if (!ExistsInRemote)
+                {
+                    return $"'{SelectedTable}' was not found in the source database.";
+                }
+
+                if (ExistsInLocal)
+                {
+                    return $"'{SelectedTable}' already exists in the active app database. Loading it again will replace the current copy with a fresh snapshot from the source database.";
+                }
+
+                return $"'{SelectedTable}' does not exist yet in the active app database. LOAD SELECTED TABLE will create the target table from the source schema and copy the available rows.";
+            }
         }
 
         public ICommand TestConnectionCommand => _testConnectionCommand;
@@ -224,7 +260,7 @@ namespace AttendanceShiftingManagement.ViewModels
             }
 
             IsBusy = true;
-            SetNeutralStatus("Loading remote tables...");
+            SetNeutralStatus("Loading source tables...");
 
             try
             {
@@ -242,7 +278,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 }
 
                 SelectedTable = Tables[0];
-                SetSuccessStatus($"Loaded {Tables.Count} table(s) from the municipality source.");
+                SetSuccessStatus($"Loaded {Tables.Count} table(s) from the source database.");
             }
             catch (Exception ex)
             {
@@ -254,9 +290,9 @@ namespace AttendanceShiftingManagement.ViewModels
             }
         }
 
-        private async Task LoadSelectedTablePreviewAsync()
+        private async Task LoadSelectedTablePreviewAsync(bool manageBusyState = true)
         {
-            if (IsBusy || string.IsNullOrWhiteSpace(SelectedTable))
+            if (string.IsNullOrWhiteSpace(SelectedTable))
             {
                 return;
             }
@@ -267,7 +303,10 @@ namespace AttendanceShiftingManagement.ViewModels
             }
 
             var targetPreset = GetTargetPreset();
-            IsBusy = true;
+            if (manageBusyState)
+            {
+                IsBusy = true;
+            }
 
             try
             {
@@ -284,7 +323,10 @@ namespace AttendanceShiftingManagement.ViewModels
             }
             finally
             {
-                IsBusy = false;
+                if (manageBusyState)
+                {
+                    IsBusy = false;
+                }
             }
         }
 
@@ -303,7 +345,7 @@ namespace AttendanceShiftingManagement.ViewModels
             }
 
             IsBusy = true;
-            SetNeutralStatus($"Syncing `{SelectedTable}` into the active database...");
+            SetNeutralStatus($"Loading a snapshot of '{SelectedTable}' into the active app database...");
 
             try
             {
@@ -312,7 +354,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 if (result.IsSuccess)
                 {
                     SetSuccessStatus(result.Message);
-                    await LoadSelectedTablePreviewAsync();
+                    await LoadSelectedTablePreviewAsync(manageBusyState: false);
                 }
                 else
                 {
