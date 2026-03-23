@@ -7,10 +7,12 @@ namespace AttendanceShiftingManagement.Services
     public sealed class CashForWorkService
     {
         private readonly AppDbContext _context;
+        private readonly AuditService? _auditService;
 
-        public CashForWorkService(AppDbContext context)
+        public CashForWorkService(AppDbContext context, AuditService? auditService = null)
         {
             _context = context;
+            _auditService = auditService;
         }
 
         public List<CashForWorkEvent> GetEvents()
@@ -56,6 +58,52 @@ namespace AttendanceShiftingManagement.Services
                 .ToList();
         }
 
+        public CashForWorkReleaseReadySummary GetReleaseReadySummary(int eventId)
+        {
+            var cashForWorkEvent = _context.CashForWorkEvents
+                .AsNoTracking()
+                .FirstOrDefault(e => e.Id == eventId)
+                ?? throw new InvalidOperationException("Cash-for-work event was not found.");
+
+            var approvedParticipants = GetParticipants(eventId);
+            var presentAttendance = GetAttendanceRecords(eventId)
+                .Where(attendance =>
+                    attendance.AttendanceDate.Date == cashForWorkEvent.EventDate.Date &&
+                    attendance.Status == CashForWorkAttendanceStatus.Present)
+                .GroupBy(attendance => attendance.ParticipantId)
+                .Select(group => group
+                    .OrderByDescending(attendance => attendance.RecordedAt)
+                    .First())
+                .OrderBy(attendance => attendance.Participant.HouseholdMember.FullName)
+                .ToList();
+
+            var releaseReadyParticipants = presentAttendance
+                .Select(attendance => new CashForWorkReleaseReadyParticipant(
+                    attendance.ParticipantId,
+                    attendance.Participant.HouseholdMember.FullName,
+                    attendance.Participant.HouseholdMember.Household.HouseholdCode,
+                    attendance.Participant.HouseholdMember.Household.Purok,
+                    attendance.Source,
+                    attendance.RecordedAt))
+                .ToList();
+
+            var releaseReadyParticipantCount = releaseReadyParticipants.Count;
+
+            return new CashForWorkReleaseReadySummary(
+                cashForWorkEvent.Id,
+                cashForWorkEvent.Title,
+                cashForWorkEvent.EventDate,
+                cashForWorkEvent.Location,
+                cashForWorkEvent.Status,
+                approvedParticipants.Count,
+                releaseReadyParticipantCount,
+                Math.Max(0, approvedParticipants.Count - releaseReadyParticipantCount),
+                releaseReadyParticipantCount,
+                releaseReadyParticipants.Count(participant => participant.Source == AttendanceCaptureSource.Manual),
+                releaseReadyParticipants.Count(participant => participant.Source == AttendanceCaptureSource.OcrUpload),
+                releaseReadyParticipants);
+        }
+
         public CashForWorkEvent CreateEvent(string title, string location, DateTime eventDate, TimeSpan startTime, TimeSpan endTime, string? notes, int createdByUserId)
         {
             var cashForWorkEvent = new CashForWorkEvent
@@ -74,6 +122,12 @@ namespace AttendanceShiftingManagement.Services
 
             _context.CashForWorkEvents.Add(cashForWorkEvent);
             _context.SaveChanges();
+            _auditService?.LogActivity(
+                createdByUserId,
+                "CashForWorkEventCreated",
+                "CashForWorkEvent",
+                cashForWorkEvent.Id,
+                $"Created event '{cashForWorkEvent.Title}' on {cashForWorkEvent.EventDate:yyyy-MM-dd} at '{cashForWorkEvent.Location}'.");
 
             return cashForWorkEvent;
         }
@@ -98,6 +152,20 @@ namespace AttendanceShiftingManagement.Services
             });
 
             _context.SaveChanges();
+
+            var participantName = _context.HouseholdMembers
+                .AsNoTracking()
+                .Where(member => member.Id == householdMemberId)
+                .Select(member => member.FullName)
+                .FirstOrDefault() ?? $"member #{householdMemberId}";
+
+            var eventTitle = GetEventTitle(eventId);
+            _auditService?.LogActivity(
+                addedByUserId,
+                "CashForWorkParticipantAdded",
+                "CashForWorkEvent",
+                eventId,
+                $"Added participant '{participantName}' to event '{eventTitle}'.");
         }
 
         public async Task<IReadOnlyList<CashForWorkAttendanceReviewItem>> ReviewAttendanceFromImageAsync(
@@ -151,25 +219,14 @@ namespace AttendanceShiftingManagement.Services
             var selectedItems = selections
                 .Where(item => item.IsSelected && item.SuggestedParticipantId.HasValue)
                 .ToList();
+            var validParticipantIds = GetValidParticipantIds(eventId);
+            var recordedParticipantIds = GetRecordedParticipantIds(eventId, cashForWorkEvent.EventDate.Date);
 
             foreach (var item in selectedItems)
             {
                 var participantId = item.SuggestedParticipantId!.Value;
 
-                var isParticipantValid = _context.CashForWorkParticipants.Any(participant =>
-                    participant.Id == participantId &&
-                    participant.EventId == eventId);
-
-                if (!isParticipantValid)
-                {
-                    continue;
-                }
-
-                var attendanceExists = _context.CashForWorkAttendances.Any(attendance =>
-                    attendance.ParticipantId == participantId &&
-                    attendance.AttendanceDate == cashForWorkEvent.EventDate.Date);
-
-                if (attendanceExists)
+                if (!validParticipantIds.Contains(participantId) || !recordedParticipantIds.Add(participantId))
                 {
                     continue;
                 }
@@ -186,7 +243,15 @@ namespace AttendanceShiftingManagement.Services
                 });
             }
 
-            return _context.SaveChanges();
+            var savedCount = _context.SaveChanges();
+            _auditService?.LogActivity(
+                recordedByUserId,
+                "CashForWorkOcrAttendanceSaved",
+                "CashForWorkEvent",
+                eventId,
+                $"Saved {savedCount} OCR attendance record(s) for event '{GetEventTitle(eventId)}'.");
+
+            return savedCount;
         }
 
         public int SaveManualAttendance(int eventId, int recordedByUserId, IEnumerable<int> participantIds)
@@ -199,23 +264,12 @@ namespace AttendanceShiftingManagement.Services
             var selectedParticipantIds = participantIds
                 .Distinct()
                 .ToList();
+            var validParticipantIds = GetValidParticipantIds(eventId);
+            var recordedParticipantIds = GetRecordedParticipantIds(eventId, cashForWorkEvent.EventDate.Date);
 
             foreach (var participantId in selectedParticipantIds)
             {
-                var isParticipantValid = _context.CashForWorkParticipants.Any(participant =>
-                    participant.Id == participantId &&
-                    participant.EventId == eventId);
-
-                if (!isParticipantValid)
-                {
-                    continue;
-                }
-
-                var attendanceExists = _context.CashForWorkAttendances.Any(attendance =>
-                    attendance.ParticipantId == participantId &&
-                    attendance.AttendanceDate == cashForWorkEvent.EventDate.Date);
-
-                if (attendanceExists)
+                if (!validParticipantIds.Contains(participantId) || !recordedParticipantIds.Add(participantId))
                 {
                     continue;
                 }
@@ -231,9 +285,68 @@ namespace AttendanceShiftingManagement.Services
                 });
             }
 
-            return _context.SaveChanges();
+            var savedCount = _context.SaveChanges();
+            _auditService?.LogActivity(
+                recordedByUserId,
+                "CashForWorkManualAttendanceSaved",
+                "CashForWorkEvent",
+                eventId,
+                $"Saved {savedCount} manual attendance record(s) for event '{GetEventTitle(eventId)}'.");
+
+            return savedCount;
+        }
+
+        private string GetEventTitle(int eventId)
+        {
+            return _context.CashForWorkEvents
+                .AsNoTracking()
+                .Where(cashForWorkEvent => cashForWorkEvent.Id == eventId)
+                .Select(cashForWorkEvent => cashForWorkEvent.Title)
+                .FirstOrDefault() ?? $"event #{eventId}";
+        }
+
+        private HashSet<int> GetValidParticipantIds(int eventId)
+        {
+            return _context.CashForWorkParticipants
+                .AsNoTracking()
+                .Where(participant => participant.EventId == eventId)
+                .Select(participant => participant.Id)
+                .ToHashSet();
+        }
+
+        private HashSet<int> GetRecordedParticipantIds(int eventId, DateTime attendanceDate)
+        {
+            return _context.CashForWorkAttendances
+                .AsNoTracking()
+                .Where(attendance =>
+                    attendance.Participant.EventId == eventId &&
+                    attendance.AttendanceDate.Date == attendanceDate.Date)
+                .Select(attendance => attendance.ParticipantId)
+                .ToHashSet();
         }
     }
+
+    public sealed record CashForWorkReleaseReadySummary(
+        int EventId,
+        string EventTitle,
+        DateTime EventDate,
+        string Location,
+        CashForWorkEventStatus EventStatus,
+        int ApprovedParticipantCount,
+        int PresentParticipantCount,
+        int PendingParticipantCount,
+        int ReleaseReadyParticipantCount,
+        int ManualAttendanceCount,
+        int OcrAttendanceCount,
+        IReadOnlyList<CashForWorkReleaseReadyParticipant> ReleaseReadyParticipants);
+
+    public sealed record CashForWorkReleaseReadyParticipant(
+        int ParticipantId,
+        string FullName,
+        string HouseholdCode,
+        string Purok,
+        AttendanceCaptureSource Source,
+        DateTime RecordedAt);
 
     public sealed class CashForWorkAttendanceReviewItem
     {

@@ -61,9 +61,13 @@ namespace AttendanceShiftingManagement.Services
 
         public static ConnectionSettingsModel Load()
         {
+            return Load(GetRuntimeSettingsPath());
+        }
+
+        internal static ConnectionSettingsModel Load(string runtimePath)
+        {
             var settings = LoadDefaultsFromAppSettings();
 
-            var runtimePath = GetRuntimeSettingsPath();
             if (!File.Exists(runtimePath))
             {
                 EnsureRequiredPresets(settings);
@@ -89,7 +93,7 @@ namespace AttendanceShiftingManagement.Services
 
                 foreach (var preset in runtimeSettings.Presets)
                 {
-                    settings.Presets[preset.Key] = ClonePreset(preset.Value);
+                    settings.Presets[preset.Key] = ClonePresetForUse(preset.Value);
                 }
             }
             catch
@@ -106,10 +110,14 @@ namespace AttendanceShiftingManagement.Services
 
         public static void Save(ConnectionSettingsModel settings)
         {
+            Save(settings, GetRuntimeSettingsPath());
+        }
+
+        internal static void Save(ConnectionSettingsModel settings, string runtimePath)
+        {
             EnsureRequiredPresets(settings);
             NormalizeActiveAppPreset(settings);
 
-            var runtimePath = GetRuntimeSettingsPath();
             var runtimeDirectory = Path.GetDirectoryName(runtimePath);
             if (!string.IsNullOrWhiteSpace(runtimeDirectory))
             {
@@ -121,7 +129,7 @@ namespace AttendanceShiftingManagement.Services
                 SelectedPreset = settings.SelectedPreset,
                 Presets = settings.Presets.ToDictionary(
                     pair => pair.Key,
-                    pair => ClonePreset(pair.Value),
+                    pair => ClonePresetForStorage(pair.Value),
                     StringComparer.OrdinalIgnoreCase)
             };
 
@@ -199,7 +207,7 @@ namespace AttendanceShiftingManagement.Services
                     preset.DisplayName = presetSection.Key;
                 }
 
-                settings.Presets[presetSection.Key] = preset;
+                settings.Presets[presetSection.Key] = ClonePresetForUse(preset);
             }
 
             EnsureRequiredPresets(settings);
@@ -217,7 +225,7 @@ namespace AttendanceShiftingManagement.Services
                     Port = 3306,
                     Database = "attendance_shifting_db",
                     Username = "root",
-                    Password = "codenameHylux122818"
+                    Password = string.Empty
                 };
             }
 
@@ -249,7 +257,7 @@ namespace AttendanceShiftingManagement.Services
             }
         }
 
-        private static DatabaseConnectionPreset ClonePreset(DatabaseConnectionPreset preset)
+        private static DatabaseConnectionPreset ClonePresetForUse(DatabaseConnectionPreset preset)
         {
             return new DatabaseConnectionPreset
             {
@@ -258,7 +266,20 @@ namespace AttendanceShiftingManagement.Services
                 Port = preset.Port,
                 Database = preset.Database,
                 Username = preset.Username,
-                Password = preset.Password
+                Password = ConnectionSecretProtector.Unprotect(preset.Password)
+            };
+        }
+
+        private static DatabaseConnectionPreset ClonePresetForStorage(DatabaseConnectionPreset preset)
+        {
+            return new DatabaseConnectionPreset
+            {
+                DisplayName = preset.DisplayName,
+                Server = preset.Server,
+                Port = preset.Port,
+                Database = preset.Database,
+                Username = preset.Username,
+                Password = ConnectionSecretProtector.Protect(preset.Password)
             };
         }
 

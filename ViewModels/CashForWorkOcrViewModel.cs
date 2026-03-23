@@ -15,6 +15,7 @@ namespace AttendanceShiftingManagement.ViewModels
     {
         private readonly User _currentUser;
         private readonly AppDbContext _context;
+        private readonly AuditService _auditService;
         private readonly OcrRuntimeOptions _ocrOptions;
         private readonly CashForWorkService _cashForWorkService;
 
@@ -32,14 +33,24 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _ocrStatusText = "Checking OCR service...";
         private Brush _ocrStatusBrush = Brushes.DarkGoldenrod;
         private string _attendanceSummary = "No event selected.";
+        private string _releaseSummaryEventLabel = "No event selected.";
+        private string _releaseSummaryStatusText = "Select an event to build a release-ready summary.";
+        private string _releaseSummaryDetail = "Attendance totals will appear here once an event is selected.";
+        private Brush _releaseSummaryStatusBrush = Brushes.DimGray;
+        private int _approvedParticipantCount;
+        private int _presentParticipantCount;
+        private int _pendingParticipantCount;
+        private int _manualAttendanceCount;
+        private int _ocrAttendanceCount;
         private bool _isBusy;
 
         public CashForWorkOcrViewModel(User currentUser)
         {
             _currentUser = currentUser;
             _context = new AppDbContext();
+            _auditService = new AuditService(_context);
             _ocrOptions = OcrRuntimeOptions.Load();
-            _cashForWorkService = new CashForWorkService(_context);
+            _cashForWorkService = new CashForWorkService(_context, _auditService);
 
             BrowseImageCommand = new RelayCommand(_ => ExecuteBrowseImage());
             RefreshOcrStatusCommand = new RelayCommand(async _ => await ExecuteRefreshOcrStatusAsync());
@@ -181,6 +192,60 @@ namespace AttendanceShiftingManagement.ViewModels
             set => SetProperty(ref _attendanceSummary, value);
         }
 
+        public string ReleaseSummaryEventLabel
+        {
+            get => _releaseSummaryEventLabel;
+            set => SetProperty(ref _releaseSummaryEventLabel, value);
+        }
+
+        public string ReleaseSummaryStatusText
+        {
+            get => _releaseSummaryStatusText;
+            set => SetProperty(ref _releaseSummaryStatusText, value);
+        }
+
+        public string ReleaseSummaryDetail
+        {
+            get => _releaseSummaryDetail;
+            set => SetProperty(ref _releaseSummaryDetail, value);
+        }
+
+        public Brush ReleaseSummaryStatusBrush
+        {
+            get => _releaseSummaryStatusBrush;
+            set => SetProperty(ref _releaseSummaryStatusBrush, value);
+        }
+
+        public int ApprovedParticipantCount
+        {
+            get => _approvedParticipantCount;
+            set => SetProperty(ref _approvedParticipantCount, value);
+        }
+
+        public int PresentParticipantCount
+        {
+            get => _presentParticipantCount;
+            set => SetProperty(ref _presentParticipantCount, value);
+        }
+
+        public int PendingParticipantCount
+        {
+            get => _pendingParticipantCount;
+            set => SetProperty(ref _pendingParticipantCount, value);
+        }
+
+        public int ManualAttendanceCount
+        {
+            get => _manualAttendanceCount;
+            set => SetProperty(ref _manualAttendanceCount, value);
+        }
+
+        public int OcrAttendanceCount
+        {
+            get => _ocrAttendanceCount;
+            set => SetProperty(ref _ocrAttendanceCount, value);
+        }
+
         private void LoadOcrProfiles()
         {
             OcrProfiles.Clear();
@@ -245,6 +310,7 @@ namespace AttendanceShiftingManagement.ViewModels
             SavedAttendanceRows.Clear();
             if (SelectedEvent == null)
             {
+                ResetReleaseSummary();
                 return;
             }
 
@@ -272,6 +338,7 @@ namespace AttendanceShiftingManagement.ViewModels
             }
 
             UpdateAttendanceSummary();
+            LoadReleaseSummary();
         }
 
         private void UpdateAttendanceSummary()
@@ -284,6 +351,56 @@ namespace AttendanceShiftingManagement.ViewModels
 
             AttendanceSummary =
                 $"{SavedAttendanceRows.Count} attendance record(s) saved out of {Participants.Count} approved participant(s).";
+        }
+
+        private void LoadReleaseSummary()
+        {
+            if (SelectedEvent == null)
+            {
+                ResetReleaseSummary();
+                return;
+            }
+
+            var summary = _cashForWorkService.GetReleaseReadySummary(SelectedEvent.Id);
+            ReleaseSummaryEventLabel = $"{summary.EventTitle} | {summary.EventDate:MMM dd, yyyy} | {summary.Location}";
+            ApprovedParticipantCount = summary.ApprovedParticipantCount;
+            PresentParticipantCount = summary.PresentParticipantCount;
+            PendingParticipantCount = summary.PendingParticipantCount;
+            ManualAttendanceCount = summary.ManualAttendanceCount;
+            OcrAttendanceCount = summary.OcrAttendanceCount;
+
+            if (summary.ReleaseReadyParticipantCount == 0)
+            {
+                ReleaseSummaryStatusText = "No release-ready attendance yet";
+                ReleaseSummaryDetail = "Save manual attendance first, then optionally use OCR review-assist for additional matches.";
+                ReleaseSummaryStatusBrush = Brushes.DarkGoldenrod;
+                return;
+            }
+
+            if (summary.PendingParticipantCount == 0)
+            {
+                ReleaseSummaryStatusText = "Release-ready";
+                ReleaseSummaryDetail = $"{summary.ReleaseReadyParticipantCount} participant(s) are included in the release-ready cash-for-work summary.";
+                ReleaseSummaryStatusBrush = Brushes.ForestGreen;
+                return;
+            }
+
+            ReleaseSummaryStatusText = "Attendance still incomplete";
+            ReleaseSummaryDetail = $"{summary.PendingParticipantCount} approved participant(s) still have no attendance record for this event date.";
+            ReleaseSummaryStatusBrush = Brushes.DarkGoldenrod;
+        }
+
+        private void ResetReleaseSummary()
+        {
+            ReleaseSummaryEventLabel = "No event selected.";
+            ReleaseSummaryStatusText = "Select an event to build a release-ready summary.";
+            ReleaseSummaryDetail = "Attendance totals will appear here once an event is selected.";
+            ReleaseSummaryStatusBrush = Brushes.DimGray;
+            ApprovedParticipantCount = 0;
+            PresentParticipantCount = 0;
+            PendingParticipantCount = 0;
+            ManualAttendanceCount = 0;
+            OcrAttendanceCount = 0;
         }
 
         private async Task ExecuteRefreshOcrStatusAsync()

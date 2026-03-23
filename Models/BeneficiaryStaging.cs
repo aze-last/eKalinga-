@@ -34,6 +34,11 @@ namespace AttendanceShiftingManagement.Models
         public string? SeniorIdNo { get; set; }
 
         public VerificationStatus VerificationStatus { get; set; } = VerificationStatus.Pending;
+        public int? LinkedHouseholdId { get; set; }
+        public int? LinkedHouseholdMemberId { get; set; }
+        public int? ReviewedByUserId { get; set; }
+        public string? ReviewNotes { get; set; }
+        public DateTime? ReviewedAt { get; set; }
         public DateTime ImportedAt { get; set; } = DateTime.Now;
     }
 
@@ -41,6 +46,9 @@ namespace AttendanceShiftingManagement.Models
     {
         Pending = 0,
         Approved = 1,
-        Rejected = 2
+        Rejected = 2,
+        Verified = 3,
+        Duplicate = 4,
+        Inactive = 5
     }
 }

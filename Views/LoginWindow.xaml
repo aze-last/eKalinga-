@@ -98,16 +98,16 @@
                             CornerRadius="14"
                             Background="#163A87">
                         <StackPanel>
-                            <TextBlock Text="Default admin credentials"
+                            <TextBlock Text="Security note"
                                        FontSize="11"
                                        FontWeight="SemiBold"
                                        Foreground="#C9D7FF" />
-                            <TextBlock Text="admin@barangay.local"
+                            <TextBlock Text="No default admin password is shipped with this build."
                                        Margin="0,8,0,0"
-                                       FontSize="18"
+                                       FontSize="16"
                                        FontWeight="SemiBold"
                                        Foreground="White" />
-                            <TextBlock Text="admin123"
+                            <TextBlock Text="If the selected database has no admin yet, the right panel switches to first-run setup."
                                        Margin="0,4,0,0"
                                        FontSize="14"
                                        Foreground="{StaticResource BrandYellowBrush}" />
@@ -136,11 +136,11 @@
 
                 <DockPanel>
                     <StackPanel>
-                        <TextBlock Text="Admin Login"
+                        <TextBlock Text="{Binding FormTitle}"
                                    FontSize="28"
                                    FontWeight="SemiBold"
                                    Foreground="{StaticResource BrandMidnightBrush}" />
-                        <TextBlock Text="Sign in to manage barangay operations."
+                        <TextBlock Text="{Binding FormSubtitle}"
                                    Margin="0,6,0,0"
                                    Foreground="{StaticResource BrandTextSecondaryBrush}" />
                     </StackPanel>
@@ -161,51 +161,109 @@
                     </Button>
                 </DockPanel>
 
-                <StackPanel Grid.Row="1"
-                            VerticalAlignment="Center">
-                    <Border Padding="14"
-                            Background="{StaticResource BrandSurfaceBrush}"
-                            BorderBrush="{StaticResource BrandBorderBrush}"
-                            BorderThickness="1"
-                            CornerRadius="10">
-                        <StackPanel>
-                            <TextBlock Text="Active database"
-                                       FontSize="11"
-                                       FontWeight="SemiBold"
-                                       Foreground="{StaticResource BrandMidnightBrush}" />
-                            <TextBlock Text="{Binding ActiveConnectionSummary}"
-                                       Margin="0,6,0,0"
-                                       FontSize="12"
-                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
-                                       TextWrapping="Wrap" />
-                        </StackPanel>
-                    </Border>
+                <Grid Grid.Row="1"
+                      VerticalAlignment="Center">
+                    <StackPanel Visibility="{Binding IsLoginMode, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Border Padding="14"
+                                Background="{StaticResource BrandSurfaceBrush}"
+                                BorderBrush="{StaticResource BrandBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="10">
+                            <StackPanel>
+                                <TextBlock Text="Active database"
+                                           FontSize="11"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource BrandMidnightBrush}" />
+                                <TextBlock Text="{Binding ActiveConnectionSummary}"
+                                           Margin="0,6,0,0"
+                                           FontSize="12"
+                                           Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
 
-                    <TextBox Margin="0,22,0,12"
-                             Text="{Binding UsernameOrEmail, UpdateSourceTrigger=PropertyChanged}"
-                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                             materialDesign:HintAssist.Hint="Username or email" />
+                        <TextBox Margin="0,22,0,12"
+                                 Text="{Binding UsernameOrEmail, UpdateSourceTrigger=PropertyChanged}"
+                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                 materialDesign:HintAssist.Hint="Username or email" />
 
-                    <PasswordBox x:Name="PasswordBox"
-                                 Margin="0,0,0,12"
-                                 Style="{StaticResource MaterialDesignOutlinedPasswordBox}"
-                                 materialDesign:HintAssist.Hint="Password"
-                                 PasswordChanged="PasswordBox_PasswordChanged" />
+                        <PasswordBox x:Name="PasswordBox"
+                                     Margin="0,0,0,12"
+                                     Style="{StaticResource MaterialDesignOutlinedPasswordBox}"
+                                     materialDesign:HintAssist.Hint="Password"
+                                     PasswordChanged="PasswordBox_PasswordChanged" />
 
-                    <TextBlock Text="{Binding ErrorMessage}"
-                               Margin="0,4,0,0"
-                               Foreground="{StaticResource BrandRedBrush}"
-                               TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding StatusMessage}"
+                                   Margin="0,4,0,0"
+                                   Foreground="{Binding StatusBrush}"
+                                   TextWrapping="Wrap" />
 
-                    <Button Content="SIGN IN"
-                            Margin="0,22,0,0"
-                            Height="46"
-                            Style="{StaticResource PrimaryActionButton}"
-                            Command="{Binding LoginCommand}" />
-                </StackPanel>
+                        <Button Content="SIGN IN"
+                                Margin="0,22,0,0"
+                                Height="46"
+                                Style="{StaticResource PrimaryActionButton}"
+                                Command="{Binding LoginCommand}" />
+                    </StackPanel>
+
+                    <StackPanel Visibility="{Binding IsBootstrapMode, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Border Padding="14"
+                                Background="{StaticResource BrandSurfaceBrush}"
+                                BorderBrush="{StaticResource BrandBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="10">
+                            <StackPanel>
+                                <TextBlock Text="Active database"
+                                           FontSize="11"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource BrandMidnightBrush}" />
+                                <TextBlock Text="{Binding ActiveConnectionSummary}"
+                                           Margin="0,6,0,0"
+                                           FontSize="12"
+                                           Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+
+                        <TextBox Margin="0,22,0,12"
+                                 Text="{Binding BootstrapFullName, UpdateSourceTrigger=PropertyChanged}"
+                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                 materialDesign:HintAssist.Hint="Admin full name" />
+
+                        <TextBox Margin="0,0,0,12"
+                                 Text="{Binding BootstrapUsername, UpdateSourceTrigger=PropertyChanged}"
+                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                 materialDesign:HintAssist.Hint="Admin username" />
+
+                        <TextBox Margin="0,0,0,12"
+                                 Text="{Binding BootstrapEmail, UpdateSourceTrigger=PropertyChanged}"
+                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                 materialDesign:HintAssist.Hint="Admin email" />
+
+                        <PasswordBox Margin="0,0,0,12"
+                                     Style="{StaticResource MaterialDesignOutlinedPasswordBox}"
+                                     materialDesign:HintAssist.Hint="Admin password"
+                                     PasswordChanged="BootstrapPasswordBox_PasswordChanged" />
+
+                        <PasswordBox Margin="0,0,0,12"
+                                     Style="{StaticResource MaterialDesignOutlinedPasswordBox}"
+                                     materialDesign:HintAssist.Hint="Confirm admin password"
+                                     PasswordChanged="BootstrapConfirmPasswordBox_PasswordChanged" />
+
+                        <TextBlock Text="{Binding StatusMessage}"
+                                   Margin="0,4,0,0"
+                                   Foreground="{Binding StatusBrush}"
+                                   TextWrapping="Wrap" />
+
+                        <Button Content="CREATE INITIAL ADMIN"
+                                Margin="0,22,0,0"
+                                Height="46"
+                                Style="{StaticResource PrimaryActionButton}"
+                                Command="{Binding CreateInitialAdminCommand}" />
+                    </StackPanel>
+                </Grid>
 
                 <TextBlock Grid.Row="2"
-                           Text="Use App Database if you need to switch between Local and Hostinger before logging in. External source databases are handled in Settings and Advanced Load Tables."
+                           Text="Use App Database if you need to switch between Local and Hostinger before logging in. Connection passwords saved from this window are stored in your Windows user profile instead of shipping in source."
                            Foreground="{StaticResource BrandTextSecondaryBrush}"
                            FontSize="12"
                            TextWrapping="Wrap" />

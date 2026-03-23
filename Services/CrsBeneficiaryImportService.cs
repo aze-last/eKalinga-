@@ -81,14 +81,64 @@ namespace AttendanceShiftingManagement.Services
                         .Select(row => row.CivilRegistryId!)
                         .ToListAsync(cancellationToken),
                     StringComparer.OrdinalIgnoreCase);
+                var existingBeneficiaryIds = new HashSet<string>(
+                    await context.BeneficiaryStaging
+                        .AsNoTracking()
+                        .Where(row => row.BeneficiaryId != null && row.BeneficiaryId != string.Empty)
+                        .Select(row => row.BeneficiaryId!)
+                        .ToListAsync(cancellationToken),
+                    StringComparer.OrdinalIgnoreCase);
+                var existingResidentsIds = new HashSet<long>(
+                    await context.BeneficiaryStaging
+                        .AsNoTracking()
+                        .Where(row => row.ResidentsId.HasValue)
+                        .Select(row => row.ResidentsId!.Value)
+                        .ToListAsync(cancellationToken));
+                var existingFingerprints = new HashSet<string>(
+                    (await context.BeneficiaryStaging
+                        .AsNoTracking()
+                        .Select(row => new
+                        {
+                            row.FullName,
+                            row.FirstName,
+                            row.MiddleName,
+                            row.LastName,
+                            row.DateOfBirth
+                        })
+                        .ToListAsync(cancellationToken))
+                    .Select(row => BeneficiaryImportDeduplication.BuildFingerprint(
+                        ResolveDisplayName(row.FullName, row.FirstName, row.MiddleName, row.LastName),
+                        row.DateOfBirth))
+                    .Where(fingerprint => !string.IsNullOrWhiteSpace(fingerprint)),
+                    StringComparer.OrdinalIgnoreCase);
 
                 var importedCount = 0;
                 var skippedCount = 0;
 
                 while (await reader.ReadAsync(cancellationToken))
                 {
+                    var residentsId = GetNullableInt64(reader, "residents_id");
+                    var beneficiaryId = GetNullableString(reader, "beneficiary_id")?.Trim();
                     var civilRegistryId = GetNullableString(reader, "civilregistry_id")?.Trim();
-                    if (string.IsNullOrWhiteSpace(civilRegistryId) || existingCivilRegistryIds.Contains(civilRegistryId))
+                    var firstName = GetNullableString(reader, "first_name");
+                    var middleName = GetNullableString(reader, "middle_name");
+                    var lastName = GetNullableString(reader, "last_name");
+                    var fullName = GetNullableString(reader, "full_name");
+                    var dateOfBirth = GetNullableString(reader, "date_of_birth");
+
+                    var dedupDecision = BeneficiaryImportDeduplication.Evaluate(
+                        residentsId,
+                        beneficiaryId,
+                        civilRegistryId,
+                        ResolveDisplayName(fullName, firstName, middleName, lastName),
+                        dateOfBirth,
+                        new BeneficiaryImportDeduplicationSnapshot(
+                            existingCivilRegistryIds,
+                            existingBeneficiaryIds,
+                            existingResidentsIds,
+                            existingFingerprints));
+
+                    if (dedupDecision.ShouldSkip)
                     {
                         skippedCount++;
                         continue;
@@ -96,15 +146,15 @@ namespace AttendanceShiftingManagement.Services
 
                     context.BeneficiaryStaging.Add(new BeneficiaryStaging
                     {
-                        ResidentsId = GetNullableInt64(reader, "residents_id"),
-                        BeneficiaryId = GetNullableString(reader, "beneficiary_id"),
+                        ResidentsId = residentsId,
+                        BeneficiaryId = beneficiaryId,
                         CivilRegistryId = civilRegistryId,
-                        LastName = GetNullableString(reader, "last_name"),
-                        FirstName = GetNullableString(reader, "first_name"),
-                        MiddleName = GetNullableString(reader, "middle_name"),
-                        FullName = GetNullableString(reader, "full_name"),
+                        LastName = lastName,
+                        FirstName = firstName,
+                        MiddleName = middleName,
+                        FullName = fullName,
                         Sex = GetNullableString(reader, "sex"),
-                        DateOfBirth = GetNullableString(reader, "date_of_birth"),
+                        DateOfBirth = dateOfBirth,
                         Age = GetNullableString(reader, "age"),
                         MaritalStatus = GetNullableString(reader, "marital_status"),
                         Address = GetNullableString(reader, "address"),
@@ -118,7 +168,29 @@ namespace AttendanceShiftingManagement.Services
                         ImportedAt = DateTime.Now
                     });
 
-                    existingCivilRegistryIds.Add(civilRegistryId);
+                    if (!string.IsNullOrWhiteSpace(civilRegistryId))
+                    {
+                        existingCivilRegistryIds.Add(civilRegistryId);
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(beneficiaryId))
+                    {
+                        existingBeneficiaryIds.Add(beneficiaryId);
+                    }
+
+                    if (residentsId.HasValue)
+                    {
+                        existingResidentsIds.Add(residentsId.Value);
+                    }
+
+                    var fingerprint = BeneficiaryImportDeduplication.BuildFingerprint(
+                        ResolveDisplayName(fullName, firstName, middleName, lastName),
+                        dateOfBirth);
+                    if (!string.IsNullOrWhiteSpace(fingerprint))
+                    {
+                        existingFingerprints.Add(fingerprint);
+                    }
+
                     importedCount++;
                 }
 
@@ -132,7 +204,7 @@ namespace AttendanceShiftingManagement.Services
                     IsSuccess = true,
                     ImportedCount = importedCount,
                     SkippedCount = skippedCount,
-                    Message = $"Imported {importedCount} beneficiary row(s); skipped {skippedCount} duplicate or invalid row(s)."
+                    Message = $"Imported {importedCount} beneficiary row(s); skipped {skippedCount} duplicate or existing identity row(s)."
                 };
             }
             catch (Exception ex)
@@ -236,6 +308,18 @@ namespace AttendanceShiftingManagement.Services
                 string stringValue => stringValue.Equals("true", StringComparison.OrdinalIgnoreCase) || stringValue == "1",
                 _ => Convert.ToBoolean(value, CultureInfo.InvariantCulture)
             };
+        }
+
+        private static string ResolveDisplayName(string? fullName, string? firstName, string? middleName, string? lastName)
+        {
+            if (!string.IsNullOrWhiteSpace(fullName))
+            {
+                return fullName.Trim();
+            }
+
+            return string.Join(" ", new[] { firstName, middleName, lastName }
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Select(value => value!.Trim()));
         }
     }
 }

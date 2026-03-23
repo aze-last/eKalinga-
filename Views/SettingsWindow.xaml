@@ -338,6 +338,46 @@
                     </Border>
                 </Grid>
             </TabItem>
+
+            <TabItem Header="Feature Rules">
+                <Grid Margin="0,20,0,0">
+                    <Border Background="White"
+                            BorderBrush="{StaticResource BrandBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="14"
+                            Padding="20">
+                        <StackPanel>
+                            <TextBlock Text="Large Assistance Warning Threshold"
+                                       FontSize="15"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrandMidnightBrush}" />
+                            <TextBlock Text="This amount is used as the warning-only limit when a beneficiary has already received significant ayuda. Records are not auto-declined when the threshold is reached."
+                                       Margin="0,8,0,0"
+                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                       TextWrapping="Wrap" />
+
+                            <TextBox Margin="0,18,0,0"
+                                     Width="280"
+                                     HorizontalAlignment="Left"
+                                     Text="{Binding LargeAssistanceWarningThresholdText, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     materialDesign:HintAssist.Hint="Warning threshold amount" />
+
+                            <Button Margin="0,18,0,0"
+                                    Width="220"
+                                    HorizontalAlignment="Left"
+                                    Content="SAVE FEATURE RULES"
+                                    Style="{StaticResource GoldActionButton}"
+                                    Command="{Binding SaveFeatureRulesCommand}" />
+
+                            <TextBlock Margin="0,14,0,0"
+                                       Text="{Binding FeatureRulesStatusMessage}"
+                                       Foreground="{Binding FeatureRulesStatusBrush}"
+                                       TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </TabItem>
         </TabControl>
     </Grid>
 </Window>

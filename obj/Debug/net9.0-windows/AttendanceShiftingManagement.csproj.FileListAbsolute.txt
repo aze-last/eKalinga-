@@ -1,4 +1,3 @@
-C:\Users\ASUS\source\repos\AttendanceShiftingManagement\AttendanceShiftingManagement\bin\Debug\net9.0-windows\AttendanceShiftingManagement.exe
 C:\Users\ASUS\source\repos\AttendanceShiftingManagement\AttendanceShiftingManagement\bin\Debug\net9.0-windows\AttendanceShiftingManagement.deps.json
 C:\Users\ASUS\source\repos\AttendanceShiftingManagement\AttendanceShiftingManagement\bin\Debug\net9.0-windows\AttendanceShiftingManagement.runtimeconfig.json
 C:\Users\ASUS\source\repos\AttendanceShiftingManagement\AttendanceShiftingManagement\bin\Debug\net9.0-windows\AttendanceShiftingManagement.dll
@@ -1387,3 +1386,8 @@ C:\Users\ASUS\source\repos\AttendanceShiftingManagement\AttendanceShiftingManage
 C:\Users\ASUS\source\repos\AttendanceShiftingManagement\AttendanceShiftingManagement\artifacts\verify-paddle-fix2\zh-Hans\Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll
 C:\Users\ASUS\source\repos\AttendanceShiftingManagement\AttendanceShiftingManagement\artifacts\verify-paddle-fix2\zh-Hant\Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll
 C:\Users\ASUS\source\repos\AttendanceShiftingManagement\AttendanceShiftingManagement\bin\Debug\net9.0-windows\ocr\__pycache__\paddle_ocr_engine.cpython-313.pyc
+C:\Users\ASUS\source\repos\AttendanceShiftingManagement\AttendanceShiftingManagement\bin\Debug\net9.0-windows\AttendanceShiftingManagement.exe
+C:\Users\ASUS\source\repos\AttendanceShiftingManagement\AttendanceShiftingManagement\obj\Debug\net9.0-windows\Views\AssistanceCaseManagementPage.baml
+C:\Users\ASUS\source\repos\AttendanceShiftingManagement\AttendanceShiftingManagement\obj\Debug\net9.0-windows\Views\AssistanceCaseManagementPage.g.cs
+C:\Users\ASUS\source\repos\AttendanceShiftingManagement\AttendanceShiftingManagement\obj\Debug\net9.0-windows\Views\GrievanceCorrectionsPage.baml
+C:\Users\ASUS\source\repos\AttendanceShiftingManagement\AttendanceShiftingManagement\obj\Debug\net9.0-windows\Views\GrievanceCorrectionsPage.g.cs

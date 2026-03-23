@@ -40,4 +40,11 @@
     <Resource Include="Images\**" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Remove="AttendanceShiftingManagement.Tests\**\*.cs" />
+    <EmbeddedResource Remove="AttendanceShiftingManagement.Tests\**\*" />
+    <None Remove="AttendanceShiftingManagement.Tests\**\*" />
+    <Page Remove="AttendanceShiftingManagement.Tests\**\*" />
+  </ItemGroup>
+
 </Project>

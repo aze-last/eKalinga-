@@ -20,7 +20,7 @@
                 <DockPanel LastChildFill="False">
                     <StackPanel>
                         <TextBlock Text="Cash-for-Work Operations" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
-                        <TextBlock Text="Create work events, assign approved participants, save manual attendance, and use local OCR to review attendance photos."
+                        <TextBlock Text="Create work events, assign approved participants, save manual attendance as the default record path, and optionally use local OCR to review attendance photos."
                                    Margin="0,6,0,0"
                                    Foreground="{StaticResource BrandTextSecondaryBrush}"
                                    TextWrapping="Wrap"/>
@@ -169,7 +169,11 @@
                 <StackPanel Grid.Column="2">
                     <materialDesign:Card Padding="18" Margin="0,0,0,16" Background="White">
                         <StackPanel>
-                            <TextBlock Text="OCR Upload" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
+                            <TextBlock Text="OCR Review Assist" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
+                            <TextBlock Text="Optional assistant workflow. Manual attendance remains the reliable default source record."
+                                       Margin="0,6,0,0"
+                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                       TextWrapping="Wrap"/>
 
                             <Grid Margin="0,14,0,0">
                                 <Grid.ColumnDefinitions>
@@ -193,7 +197,7 @@
                                         Command="{Binding BrowseImageCommand}"/>
 
                                 <Button Grid.Column="4"
-                                        Content="Process OCR"
+                                        Content="Review with OCR"
                                         Height="42"
                                         Style="{StaticResource GoldActionButton}"
                                         Command="{Binding ProcessImageCommand}"/>
@@ -215,9 +219,9 @@
                     <materialDesign:Card Padding="18" Background="White">
                         <StackPanel>
                             <DockPanel>
-                                <TextBlock Text="OCR Review" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
+                                <TextBlock Text="OCR Suggested Matches" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
                                 <Button DockPanel.Dock="Right"
-                                        Content="Save Selected Attendance"
+                                        Content="Save Reviewed Attendance"
                                         Height="36"
                                         Padding="16,0"
                                         Style="{StaticResource GoldActionButton}"
@@ -243,7 +247,67 @@
 
                     <materialDesign:Card Padding="18" Margin="0,16,0,0" Background="White">
                         <StackPanel>
-                            <TextBlock Text="Saved Attendance" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
+                            <TextBlock Text="Release-ready Summary" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
+                            <TextBlock Text="{Binding ReleaseSummaryEventLabel}"
+                                       Margin="0,6,0,0"
+                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                       TextWrapping="Wrap"/>
+
+                            <Border Margin="0,12,0,0"
+                                    Padding="12"
+                                    CornerRadius="8"
+                                    Background="{StaticResource BrandSurfaceBrush}"
+                                    BorderBrush="{StaticResource BrandBorderBrush}"
+                                    BorderThickness="1">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding ReleaseSummaryStatusText}"
+                                               FontWeight="SemiBold"
+                                               Foreground="{Binding ReleaseSummaryStatusBrush}"/>
+                                    <TextBlock Text="{Binding ReleaseSummaryDetail}"
+                                               Margin="0,6,0,0"
+                                               Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                               TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Border>
+
+                            <UniformGrid Margin="0,14,0,0" Columns="5">
+                                <Border Margin="0,0,8,0" Padding="10" CornerRadius="8" Background="#EEF4FF">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding ApprovedParticipantCount, StringFormat=N0}" FontSize="22" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
+                                        <TextBlock Text="APPROVED" FontSize="10" Foreground="{StaticResource BrandTextSecondaryBrush}"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Margin="0,0,8,0" Padding="10" CornerRadius="8" Background="#ECFDF5">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding PresentParticipantCount, StringFormat=N0}" FontSize="22" FontWeight="SemiBold" Foreground="{StaticResource BrandSuccessBrush}"/>
+                                        <TextBlock Text="PRESENT" FontSize="10" Foreground="{StaticResource BrandTextSecondaryBrush}"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Margin="0,0,8,0" Padding="10" CornerRadius="8" Background="#FEF3C7">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding PendingParticipantCount, StringFormat=N0}" FontSize="22" FontWeight="SemiBold" Foreground="#92400E"/>
+                                        <TextBlock Text="PENDING" FontSize="10" Foreground="{StaticResource BrandTextSecondaryBrush}"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Margin="0,0,8,0" Padding="10" CornerRadius="8" Background="#F3F4F6">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding ManualAttendanceCount, StringFormat=N0}" FontSize="22" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
+                                        <TextBlock Text="MANUAL" FontSize="10" Foreground="{StaticResource BrandTextSecondaryBrush}"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Padding="10" CornerRadius="8" Background="#FFF7ED">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding OcrAttendanceCount, StringFormat=N0}" FontSize="22" FontWeight="SemiBold" Foreground="#C2410C"/>
+                                        <TextBlock Text="OCR" FontSize="10" Foreground="{StaticResource BrandTextSecondaryBrush}"/>
+                                    </StackPanel>
+                                </Border>
+                            </UniformGrid>
+                        </StackPanel>
+                    </materialDesign:Card>
+
+                    <materialDesign:Card Padding="18" Margin="0,16,0,0" Background="White">
+                        <StackPanel>
+                            <TextBlock Text="Release-ready Attendance Records" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
                             <DataGrid Margin="0,14,0,0"
                                       ItemsSource="{Binding SavedAttendanceRows}"
                                       AutoGenerateColumns="False"

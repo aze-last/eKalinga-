@@ -36,6 +36,23 @@ namespace AttendanceShiftingManagement.Services
             _context.SaveChanges();
         }
 
+        public async Task LogActivityAsync(int? userId, string action, string entity, int? entityId, string details, string ipAddress = "127.0.0.1")
+        {
+            var log = new ActivityLog
+            {
+                UserId = userId,
+                Action = action,
+                Entity = entity,
+                EntityId = entityId,
+                Details = details,
+                IpAddress = ipAddress,
+                Timestamp = DateTime.Now
+            };
+
+            _context.ActivityLogs.Add(log);
+            await _context.SaveChangesAsync();
+        }
+
         /// <summary>
         /// Get activity logs with filtering
         /// </summary>

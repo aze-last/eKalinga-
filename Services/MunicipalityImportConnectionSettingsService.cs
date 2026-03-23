@@ -14,7 +14,11 @@ namespace AttendanceShiftingManagement.Services
 
         public static DatabaseConnectionPreset Load()
         {
-            var runtimePath = GetRuntimeSettingsPath();
+            return Load(GetRuntimeSettingsPath());
+        }
+
+        internal static DatabaseConnectionPreset Load(string runtimePath)
+        {
             if (!File.Exists(runtimePath))
             {
                 return LoadDefault();
@@ -29,6 +33,7 @@ namespace AttendanceShiftingManagement.Services
                     return LoadDefault();
                 }
 
+                preset.Password = ConnectionSecretProtector.Unprotect(preset.Password);
                 EnsureDisplayName(preset);
                 return preset;
             }
@@ -40,7 +45,11 @@ namespace AttendanceShiftingManagement.Services
 
         public static void Save(DatabaseConnectionPreset preset)
         {
-            var runtimePath = GetRuntimeSettingsPath();
+            Save(preset, GetRuntimeSettingsPath());
+        }
+
+        internal static void Save(DatabaseConnectionPreset preset, string runtimePath)
+        {
             var runtimeDirectory = Path.GetDirectoryName(runtimePath);
             if (!string.IsNullOrWhiteSpace(runtimeDirectory))
             {
@@ -54,7 +63,7 @@ namespace AttendanceShiftingManagement.Services
                 Port = preset.Port,
                 Database = preset.Database,
                 Username = preset.Username,
-                Password = preset.Password
+                Password = ConnectionSecretProtector.Protect(preset.Password)
             };
 
             File.WriteAllText(runtimePath, JsonSerializer.Serialize(payload, JsonOptions));
@@ -70,6 +79,7 @@ namespace AttendanceShiftingManagement.Services
             var configuredPreset = configuration.GetSection("MunicipalityImportConnection").Get<DatabaseConnectionPreset>();
             if (configuredPreset != null && !string.IsNullOrWhiteSpace(configuredPreset.Server))
             {
+                configuredPreset.Password = ConnectionSecretProtector.Unprotect(configuredPreset.Password);
                 EnsureDisplayName(configuredPreset);
                 return configuredPreset;
             }

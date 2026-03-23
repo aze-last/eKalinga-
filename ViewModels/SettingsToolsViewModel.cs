@@ -26,6 +26,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly RelayCommand _openAdvancedLoadTablesCommand;
         private readonly RelayCommand _createBackupCommand;
         private readonly RelayCommand _importBackupCommand;
+        private readonly RelayCommand _saveFeatureRulesCommand;
 
         private string _server = string.Empty;
         private string _portText = "3306";
@@ -42,6 +43,9 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _backupStatusMessage = "Create or import a full database backup for the currently selected app preset.";
         private Brush _backupStatusBrush = CreateBrush("#6B7280");
         private string _lastBackupActivity = "No backup activity yet in this session.";
+        private string _largeAssistanceWarningThresholdText = string.Empty;
+        private string _featureRulesStatusMessage = "Set the warning-only threshold used when a beneficiary has already received significant assistance.";
+        private Brush _featureRulesStatusBrush = CreateBrush("#6B7280");
         private int _masterListRowCount;
         private int _stagingRowCount;
         private bool _isBusy;
@@ -62,8 +66,10 @@ namespace AttendanceShiftingManagement.ViewModels
             _openAdvancedLoadTablesCommand = new RelayCommand(_ => AdvancedLoadTablesRequested?.Invoke(), _ => !IsBusy);
             _createBackupCommand = new RelayCommand(async _ => await ExecuteCreateBackupAsync(), _ => !IsBusy);
             _importBackupCommand = new RelayCommand(async _ => await ExecuteImportBackupAsync(), _ => !IsBusy);
+            _saveFeatureRulesCommand = new RelayCommand(_ => ExecuteSaveFeatureRules(), _ => !IsBusy);
 
             LoadImportConnection();
+            LoadFeatureRules();
             RefreshTargetSummaries();
             _ = RefreshPreviewAsync();
         }
@@ -174,6 +180,24 @@ namespace AttendanceShiftingManagement.ViewModels
             private set => SetProperty(ref _lastBackupActivity, value);
         }
 
+        public string LargeAssistanceWarningThresholdText
+        {
+            get => _largeAssistanceWarningThresholdText;
+            set => SetProperty(ref _largeAssistanceWarningThresholdText, value);
+        }
+
+        public string FeatureRulesStatusMessage
+        {
+            get => _featureRulesStatusMessage;
+            private set => SetProperty(ref _featureRulesStatusMessage, value);
+        }
+
+        public Brush FeatureRulesStatusBrush
+        {
+            get => _featureRulesStatusBrush;
+            private set => SetProperty(ref _featureRulesStatusBrush, value);
+        }
+
         public int MasterListRowCount
         {
             get => _masterListRowCount;
@@ -201,6 +225,7 @@ namespace AttendanceShiftingManagement.ViewModels
                     _openAdvancedLoadTablesCommand.RaiseCanExecuteChanged();
                     _createBackupCommand.RaiseCanExecuteChanged();
                     _importBackupCommand.RaiseCanExecuteChanged();
+                    _saveFeatureRulesCommand.RaiseCanExecuteChanged();
                 }
             }
         }
@@ -213,6 +238,7 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand OpenAdvancedLoadTablesCommand => _openAdvancedLoadTablesCommand;
         public ICommand CreateBackupCommand => _createBackupCommand;
         public ICommand ImportBackupCommand => _importBackupCommand;
+        public ICommand SaveFeatureRulesCommand => _saveFeatureRulesCommand;
 
         private void LoadImportConnection()
         {
@@ -222,6 +248,12 @@ namespace AttendanceShiftingManagement.ViewModels
             Database = preset.Database;
             Username = preset.Username;
             Password = preset.Password;
+        }
+
+        private void LoadFeatureRules()
+        {
+            var settings = FeatureSettingsService.Load();
+            LargeAssistanceWarningThresholdText = settings.LargeAssistanceWarningThreshold.ToString("0.##", CultureInfo.InvariantCulture);
         }
 
         private void RefreshTargetSummaries()
@@ -434,6 +466,23 @@ namespace AttendanceShiftingManagement.ViewModels
                 });
         }
 
+        private void ExecuteSaveFeatureRules()
+        {
+            if (!TryParseWarningThreshold(out var threshold))
+            {
+                SetFeatureRulesError("Enter a valid warning threshold amount greater than or equal to zero.");
+                return;
+            }
+
+            FeatureSettingsService.Save(new FeatureSettingsModel
+            {
+                LargeAssistanceWarningThreshold = threshold
+            });
+
+            LargeAssistanceWarningThresholdText = threshold.ToString("0.##", CultureInfo.InvariantCulture);
+            SetFeatureRulesSuccess("Saved the large-assistance warning threshold.");
+        }
+
         private static Brush CreateBrush(string colorCode)
         {
             return new SolidColorBrush((Color)ColorConverter.ConvertFromString(colorCode));
@@ -473,6 +522,18 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             BackupStatusMessage = message;
             BackupStatusBrush = CreateBrush("#991B1B");
+        }
+
+        private void SetFeatureRulesSuccess(string message)
+        {
+            FeatureRulesStatusMessage = message;
+            FeatureRulesStatusBrush = CreateBrush("#1A7A4A");
+        }
+
+        private void SetFeatureRulesError(string message)
+        {
+            FeatureRulesStatusMessage = message;
+            FeatureRulesStatusBrush = CreateBrush("#991B1B");
         }
 
         private async Task ExecuteBusyAsync(Func<Task> action)
@@ -604,6 +665,14 @@ namespace AttendanceShiftingManagement.ViewModels
             }
 
             return preview;
+        }
+
+        private bool TryParseWarningThreshold(out decimal threshold)
+        {
+            threshold = 0m;
+
+            return decimal.TryParse(LargeAssistanceWarningThresholdText, NumberStyles.Number, CultureInfo.InvariantCulture, out threshold)
+                || decimal.TryParse(LargeAssistanceWarningThresholdText, NumberStyles.Number, CultureInfo.CurrentCulture, out threshold);
         }
     }
 }

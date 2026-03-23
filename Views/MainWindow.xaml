@@ -73,11 +73,35 @@
             </Style.Triggers>
         </Style>
 
+        <Style x:Key="AssistanceCasesSidebarButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource SidebarButtonBaseStyle}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsAssistanceCasesSelected}" Value="True">
+                    <Setter Property="Foreground" Value="{StaticResource BrandYellowBrush}" />
+                    <Setter Property="Background" Value="#26F9C231" />
+                    <Setter Property="FontWeight" Value="SemiBold" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
         <Style x:Key="HouseholdRegistrySidebarButtonStyle"
                TargetType="Button"
                BasedOn="{StaticResource SidebarButtonBaseStyle}">
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsHouseholdRegistrySelected}" Value="True">
+                    <Setter Property="Foreground" Value="{StaticResource BrandYellowBrush}" />
+                    <Setter Property="Background" Value="#26F9C231" />
+                    <Setter Property="FontWeight" Value="SemiBold" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="GrievancesSidebarButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource SidebarButtonBaseStyle}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsGrievancesSelected}" Value="True">
                     <Setter Property="Foreground" Value="{StaticResource BrandYellowBrush}" />
                     <Setter Property="Background" Value="#26F9C231" />
                     <Setter Property="FontWeight" Value="SemiBold" />
@@ -143,6 +167,22 @@
                         <StackPanel Orientation="Horizontal">
                             <materialDesign:PackIcon Kind="AccountCheckOutline" Width="18" Height="18" Margin="0,0,10,0" />
                             <TextBlock Text="Beneficiaries" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+
+                    <Button Style="{StaticResource AssistanceCasesSidebarButtonStyle}"
+                            Command="{Binding ShowAssistanceCasesCommand}">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="ClipboardPulseOutline" Width="18" Height="18" Margin="0,0,10,0" />
+                            <TextBlock Text="Assistance cases" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+
+                    <Button Style="{StaticResource GrievancesSidebarButtonStyle}"
+                            Command="{Binding ShowGrievancesCommand}">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="AlertCircleOutline" Width="18" Height="18" Margin="0,0,10,0" />
+                            <TextBlock Text="Grievance / Corrections" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
 

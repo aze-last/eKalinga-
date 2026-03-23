@@ -6,45 +6,18 @@ namespace AttendanceShiftingManagement.Data
     {
         public static void Seed(AppDbContext context)
         {
-            var adminUser = EnsureAdminUser(context);
-            EnsureAdminProfile(context, adminUser);
             EnsureHouseholds(context);
             EnsureBeneficiaryStaging(context);
-            EnsureCashForWorkData(context, adminUser);
-        }
+            var adminUser = context.Users
+                .Where(user => user.Role == UserRole.Admin && user.IsActive)
+                .OrderBy(user => user.Id)
+                .FirstOrDefault();
 
-        private static User EnsureAdminUser(AppDbContext context)
-        {
-            var existing = context.Users.FirstOrDefault(user =>
-                user.Email == "admin@barangay.local" ||
-                user.Username == "admin");
-
-            if (existing == null)
+            if (adminUser != null)
             {
-                existing = new User
-                {
-                    Username = "admin",
-                    Email = "admin@barangay.local",
-                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("admin123"),
-                    Role = UserRole.Admin,
-                    IsActive = true,
-                    CreatedAt = DateTime.Now,
-                    UpdatedAt = DateTime.Now
-                };
-
-                context.Users.Add(existing);
-                context.SaveChanges();
-                return existing;
+                EnsureAdminProfile(context, adminUser);
+                EnsureCashForWorkData(context, adminUser);
             }
-
-            existing.Username = "admin";
-            existing.Email = "admin@barangay.local";
-            existing.PasswordHash = BCrypt.Net.BCrypt.HashPassword("admin123");
-            existing.Role = UserRole.Admin;
-            existing.IsActive = true;
-            existing.UpdatedAt = DateTime.Now;
-            context.SaveChanges();
-            return existing;
         }
 
         private static void EnsureAdminProfile(AppDbContext context, User adminUser)
@@ -63,16 +36,8 @@ namespace AttendanceShiftingManagement.Data
                 };
 
                 context.UserProfiles.Add(profile);
+                context.SaveChanges();
             }
-            else
-            {
-                profile.FullName = "Barangay Administrator";
-                profile.Nickname = "Admin";
-                profile.Address = "Barangay Hall";
-                profile.UpdatedAt = DateTime.Now;
-            }
-
-            context.SaveChanges();
         }
 
         private static void EnsureHouseholds(AppDbContext context)
