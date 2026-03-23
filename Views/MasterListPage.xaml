@@ -145,8 +145,8 @@
                             <DataGridTextColumn Header="Beneficiary ID" Binding="{Binding BeneficiaryId}" Width="170"/>
                             <DataGridTextColumn Header="Full Name" Binding="{Binding DisplayName}" Width="*"/>
                             <DataGridTextColumn Header="Civil Registry" Binding="{Binding CivilRegistryId}" Width="150"/>
-                            <DataGridTextColumn Header="Sex" Binding="{Binding Sex}" Width="90"/>
-                            <DataGridTextColumn Header="Age" Binding="{Binding Age}" Width="80"/>
+                            <DataGridTextColumn Header="Sex" Binding="{Binding Sex}" Width="Auto"/>
+                            <DataGridTextColumn Header="Age" Binding="{Binding Age}" Width="Auto"/>
                             <DataGridTextColumn Header="Flags" Binding="{Binding FlagsSummary}" Width="140"/>
                             <DataGridTextColumn Header="Address" Binding="{Binding Address}" Width="220"/>
                         </DataGrid.Columns>
