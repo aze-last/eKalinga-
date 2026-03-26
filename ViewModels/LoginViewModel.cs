@@ -25,6 +25,11 @@ namespace AttendanceShiftingManagement.ViewModels
         private Brush _statusBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#6B7280"));
         private string _activeConnectionSummary = string.Empty;
         private bool _isBootstrapMode;
+        private string _brandTitle = "Bagong Pilipinas";
+        private string _brandSubtitle = "Barangay Ayuda System";
+        private string _brandAddress = string.Empty;
+        private string _brandInstallSerial = string.Empty;
+        private ImageSource? _brandLogoImage;
 
         public string UsernameOrEmail
         {
@@ -128,6 +133,60 @@ namespace AttendanceShiftingManagement.ViewModels
             set => SetProperty(ref _activeConnectionSummary, value);
         }
 
+        public string BrandTitle
+        {
+            get => _brandTitle;
+            private set => SetProperty(ref _brandTitle, value);
+        }
+
+        public string BrandSubtitle
+        {
+            get => _brandSubtitle;
+            private set => SetProperty(ref _brandSubtitle, value);
+        }
+
+        public string BrandAddress
+        {
+            get => _brandAddress;
+            private set
+            {
+                if (SetProperty(ref _brandAddress, value))
+                {
+                    OnPropertyChanged(nameof(HasBrandAddress));
+                }
+            }
+        }
+
+        public bool HasBrandAddress => !string.IsNullOrWhiteSpace(BrandAddress);
+
+        public string BrandInstallSerial
+        {
+            get => _brandInstallSerial;
+            private set
+            {
+                if (SetProperty(ref _brandInstallSerial, value))
+                {
+                    OnPropertyChanged(nameof(BrandInstallSerialLabel));
+                }
+            }
+        }
+
+        public string BrandInstallSerialLabel => $"Install Serial: {BrandInstallSerial}";
+
+        public ImageSource? BrandLogoImage
+        {
+            get => _brandLogoImage;
+            private set
+            {
+                if (SetProperty(ref _brandLogoImage, value))
+                {
+                    OnPropertyChanged(nameof(HasCustomBrandLogo));
+                }
+            }
+        }
+
+        public bool HasCustomBrandLogo => BrandLogoImage != null;
+
         public bool IsBootstrapMode
         {
             get => _isBootstrapMode;
@@ -158,8 +217,21 @@ namespace AttendanceShiftingManagement.ViewModels
             _authService = new AuthService();
             _loginCommand = new RelayCommand(ExecuteLogin, CanExecuteLogin);
             _createInitialAdminCommand = new RelayCommand(ExecuteCreateInitialAdmin, CanCreateInitialAdmin);
+            RefreshBranding();
             RefreshConnectionSummary();
             RefreshStartupState();
+        }
+
+        public void RefreshBranding()
+        {
+            var settings = SystemProfileSettingsService.Load();
+            var branding = SystemProfileSettingsService.BuildLoginBranding(settings);
+
+            BrandTitle = branding.Title;
+            BrandSubtitle = branding.Subtitle;
+            BrandAddress = branding.Address;
+            BrandInstallSerial = branding.InstallSerial;
+            BrandLogoImage = LocalImageLoader.Load(branding.LogoPath);
         }
 
         public void RefreshConnectionSummary()

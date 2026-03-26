@@ -10,6 +10,12 @@ namespace AttendanceShiftingManagement.Services
 {
     public static class LocalBackupService
     {
+        private sealed class BackupArtifact
+        {
+            public required string FilePath { get; init; }
+            public required BackupManifest Manifest { get; init; }
+        }
+
         private static readonly HashSet<string> ExcludedTables = new(StringComparer.OrdinalIgnoreCase)
         {
             "__EFMigrationsHistory"
@@ -21,19 +27,37 @@ namespace AttendanceShiftingManagement.Services
             PropertyNameCaseInsensitive = true
         };
 
-        public static async Task<BackupOperationResult> CreateBackupAsync(string filePath, CancellationToken cancellationToken = default)
+        public static Task<BackupOperationResult> CreateBackupAsync(string filePath, CancellationToken cancellationToken = default)
+        {
+            return CreateBackupAsync(filePath, BackupTypes.Full, cancellationToken);
+        }
+
+        public static async Task<BackupOperationResult> CreateBackupAsync(
+            string filePath,
+            string backupType,
+            CancellationToken cancellationToken = default)
         {
             try
             {
+                var normalizedType = BackupChainService.NormalizeBackupType(backupType);
                 var settings = ConnectionSettingsService.Load();
                 var preset = settings.GetPreset(settings.SelectedPreset);
-                var manifest = new BackupManifest
+                var knownManifests = BackupCatalogService.GetManifestsForPreset(settings.SelectedPreset);
+                var manifest = BackupChainService.BuildNextManifest(
+                    settings.SelectedPreset,
+                    preset.DisplayName,
+                    preset.Database,
+                    normalizedType,
+                    knownManifests);
+
+                manifest.AppVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "unknown";
+                manifest.Notes = "Ayuda database rows only. Local configuration files and image files are excluded.";
+
+                Dictionary<string, BackupTableSnapshot>? baselineSnapshots = null;
+                if (!string.Equals(normalizedType, BackupTypes.Full, StringComparison.OrdinalIgnoreCase))
                 {
-                    AppVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "unknown",
-                    SelectedPreset = settings.SelectedPreset,
-                    Database = preset.Database,
-                    Notes = "Ayuda database rows only. Local configuration files and image files are excluded."
-                };
+                    baselineSnapshots = await LoadBaselineSnapshotsAsync(settings.SelectedPreset, normalizedType, cancellationToken);
+                }
 
                 var directory = Path.GetDirectoryName(filePath);
                 if (!string.IsNullOrWhiteSpace(directory))
@@ -55,14 +79,30 @@ namespace AttendanceShiftingManagement.Services
 
                 foreach (var tableName in tableNames.Where(table => !ExcludedTables.Contains(table)))
                 {
-                    var snapshot = await ReadTableSnapshotAsync(connection, tableName, cancellationToken);
+                    var currentSnapshot = await ReadTableSnapshotAsync(connection, tableName, cancellationToken);
+                    BackupTableSnapshot snapshotToStore;
+
+                    if (string.Equals(normalizedType, BackupTypes.Full, StringComparison.OrdinalIgnoreCase))
+                    {
+                        snapshotToStore = currentSnapshot;
+                    }
+                    else
+                    {
+                        baselineSnapshots!.TryGetValue(tableName, out var baselineSnapshot);
+                        snapshotToStore = BackupChainService.BuildDeltaSnapshot(currentSnapshot, baselineSnapshot);
+                        if (!snapshotToStore.HasChanges)
+                        {
+                            continue;
+                        }
+                    }
+
                     manifest.IncludedTables.Add(tableName);
-                    manifest.RowCounts[tableName] = snapshot.Rows.Count;
-                    manifest.TotalRows += snapshot.Rows.Count;
+                    manifest.RowCounts[tableName] = snapshotToStore.Rows.Count;
+                    manifest.TotalRows += snapshotToStore.Rows.Count;
 
                     var entry = archive.CreateEntry($"tables/{tableName}.json", CompressionLevel.Optimal);
                     await using var entryStream = entry.Open();
-                    await JsonSerializer.SerializeAsync(entryStream, snapshot, JsonOptions, cancellationToken);
+                    await JsonSerializer.SerializeAsync(entryStream, snapshotToStore, JsonOptions, cancellationToken);
                 }
 
                 var manifestEntry = archive.CreateEntry("manifest.json", CompressionLevel.Optimal);
@@ -71,12 +111,14 @@ namespace AttendanceShiftingManagement.Services
                     await JsonSerializer.SerializeAsync(manifestStream, manifest, JsonOptions, cancellationToken);
                 }
 
+                BackupCatalogService.Register(filePath, manifest);
+
                 return new BackupOperationResult
                 {
                     IsSuccess = true,
                     FilePath = filePath,
                     Manifest = manifest,
-                    Message = $"Backup created successfully with {manifest.TotalRows} row(s) across {manifest.IncludedTables.Count} table(s)."
+                    Message = BuildCreateSuccessMessage(manifest)
                 };
             }
             catch (Exception ex)
@@ -106,15 +148,16 @@ namespace AttendanceShiftingManagement.Services
             }
 
             await using var manifestStream = manifestEntry.Open();
-            return await JsonSerializer.DeserializeAsync<BackupManifest>(manifestStream, JsonOptions, cancellationToken);
+            var manifest = await JsonSerializer.DeserializeAsync<BackupManifest>(manifestStream, JsonOptions, cancellationToken);
+            return manifest == null ? null : NormalizeManifest(manifest, filePath);
         }
 
         public static async Task<BackupOperationResult> RestoreBackupAsync(string filePath, CancellationToken cancellationToken = default)
         {
             try
             {
-                var manifest = await ReadManifestAsync(filePath, cancellationToken);
-                if (manifest == null)
+                var targetManifest = await ReadManifestAsync(filePath, cancellationToken);
+                if (targetManifest == null)
                 {
                     return new BackupOperationResult
                     {
@@ -123,6 +166,31 @@ namespace AttendanceShiftingManagement.Services
                         Message = "Restore failed: manifest.json was not found in the backup archive."
                     };
                 }
+
+                var knownArtifacts = await LoadKnownArtifactsAsync(filePath, targetManifest.SelectedPreset, cancellationToken);
+                var orderedPlan = BackupChainService.BuildRestorePlan(
+                    targetManifest,
+                    knownArtifacts.Select(artifact => artifact.Manifest).ToList());
+
+                var artifactsById = knownArtifacts
+                    .Where(artifact => !string.IsNullOrWhiteSpace(artifact.Manifest.BackupId))
+                    .GroupBy(artifact => artifact.Manifest.BackupId, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(
+                        group => group.Key,
+                        group => group.OrderByDescending(artifact => artifact.Manifest.CreatedAt).First(),
+                        StringComparer.OrdinalIgnoreCase);
+
+                var orderedFiles = orderedPlan
+                    .Select(manifest =>
+                    {
+                        if (!artifactsById.TryGetValue(manifest.BackupId, out var artifact))
+                        {
+                            throw new InvalidOperationException($"Backup chain is missing archive file for `{manifest.BackupId}`.");
+                        }
+
+                        return artifact.FilePath;
+                    })
+                    .ToList();
 
                 var settings = ConnectionSettingsService.Load();
                 var preset = settings.GetPreset(settings.SelectedPreset);
@@ -136,9 +204,6 @@ namespace AttendanceShiftingManagement.Services
                     .Where(table => !ExcludedTables.Contains(table))
                     .ToList();
 
-                await using var fileStream = File.OpenRead(filePath);
-                using var archive = new ZipArchive(fileStream, ZipArchiveMode.Read, leaveOpen: false);
-
                 await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
                 try
                 {
@@ -149,30 +214,19 @@ namespace AttendanceShiftingManagement.Services
                         await ExecuteNonQueryAsync(connection, transaction, $"DELETE FROM {EscapeIdentifier(tableName)};", cancellationToken);
                     }
 
-                    foreach (var tableName in manifest.IncludedTables)
+                    foreach (var restoreFile in orderedFiles)
                     {
-                        if (!restorableTables.Contains(tableName, StringComparer.OrdinalIgnoreCase))
+                        var snapshots = await ReadTableSnapshotsAsync(restoreFile, cancellationToken);
+                        foreach (var snapshot in snapshots)
                         {
-                            warnings.Add($"Skipped `{tableName}` because it does not exist in the current database.");
-                            continue;
-                        }
+                            if (!restorableTables.Contains(snapshot.TableName, StringComparer.OrdinalIgnoreCase))
+                            {
+                                warnings.Add($"Skipped `{snapshot.TableName}` because it does not exist in the current database.");
+                                continue;
+                            }
 
-                        var entry = archive.GetEntry($"tables/{tableName}.json");
-                        if (entry == null)
-                        {
-                            warnings.Add($"Skipped `{tableName}` because its snapshot entry was missing from the archive.");
-                            continue;
+                            await ApplySnapshotAsync(connection, transaction, snapshot, cancellationToken);
                         }
-
-                        await using var entryStream = entry.Open();
-                        var snapshot = await JsonSerializer.DeserializeAsync<BackupTableSnapshot>(entryStream, JsonOptions, cancellationToken);
-                        if (snapshot == null)
-                        {
-                            warnings.Add($"Skipped `{tableName}` because its snapshot could not be read.");
-                            continue;
-                        }
-
-                        await InsertSnapshotAsync(connection, transaction, snapshot, cancellationToken);
                     }
 
                     await ExecuteNonQueryAsync(connection, transaction, "SET FOREIGN_KEY_CHECKS = 1;", cancellationToken);
@@ -192,9 +246,9 @@ namespace AttendanceShiftingManagement.Services
                 {
                     IsSuccess = true,
                     FilePath = filePath,
-                    Manifest = manifest,
+                    Manifest = targetManifest,
                     Warnings = warnings,
-                    Message = $"Restore completed for {manifest.TotalRows} row(s) into `{preset.Database}`.{warningSuffix}"
+                    Message = $"Restore completed using {orderedPlan.Count} backup archive(s) into `{preset.Database}`.{warningSuffix}"
                 };
             }
             catch (Exception ex)
@@ -206,6 +260,168 @@ namespace AttendanceShiftingManagement.Services
                     Message = $"Restore failed: {ex.Message}"
                 };
             }
+        }
+
+        private static async Task<Dictionary<string, BackupTableSnapshot>> LoadBaselineSnapshotsAsync(
+            string presetKey,
+            string backupType,
+            CancellationToken cancellationToken)
+        {
+            var entries = BackupCatalogService.GetExistingEntriesForPreset(presetKey);
+            var manifests = entries
+                .Select(ToManifest)
+                .ToList();
+
+            var latestFull = manifests
+                .Where(manifest => string.Equals(manifest.BackupType, BackupTypes.Full, StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(manifest => manifest.CreatedAt)
+                .FirstOrDefault();
+
+            if (latestFull == null)
+            {
+                throw new InvalidOperationException("Create a full backup first for this preset before incremental or differential backups are allowed.");
+            }
+
+            List<string> orderedFiles;
+            if (string.Equals(backupType, BackupTypes.Differential, StringComparison.OrdinalIgnoreCase))
+            {
+                orderedFiles = new List<string> { RequireCatalogFile(entries, latestFull.BackupId) };
+            }
+            else
+            {
+                var latestIncremental = manifests
+                    .Where(manifest =>
+                        string.Equals(manifest.BackupType, BackupTypes.Incremental, StringComparison.OrdinalIgnoreCase)
+                        && string.Equals(manifest.BaseFullBackupId, latestFull.BackupId, StringComparison.OrdinalIgnoreCase))
+                    .OrderByDescending(manifest => manifest.CreatedAt)
+                    .FirstOrDefault();
+
+                if (latestIncremental == null)
+                {
+                    orderedFiles = new List<string> { RequireCatalogFile(entries, latestFull.BackupId) };
+                }
+                else
+                {
+                    orderedFiles = BackupChainService.BuildRestorePlan(latestIncremental, manifests)
+                        .Select(planManifest => RequireCatalogFile(entries, planManifest.BackupId))
+                        .ToList();
+                }
+            }
+
+            return await LoadEffectiveSnapshotsAsync(orderedFiles, cancellationToken);
+        }
+
+        private static async Task<Dictionary<string, BackupTableSnapshot>> LoadEffectiveSnapshotsAsync(
+            IReadOnlyCollection<string> orderedFiles,
+            CancellationToken cancellationToken)
+        {
+            var state = new Dictionary<string, BackupTableSnapshot>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var file in orderedFiles)
+            {
+                var snapshots = await ReadTableSnapshotsAsync(file, cancellationToken);
+                state = BackupChainService.ComposeSnapshots(state.Values.Concat(snapshots));
+            }
+
+            return state;
+        }
+
+        private static async Task<IReadOnlyList<BackupArtifact>> LoadKnownArtifactsAsync(
+            string targetFilePath,
+            string presetKey,
+            CancellationToken cancellationToken)
+        {
+            var candidatePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                targetFilePath
+            };
+
+            var targetDirectory = Path.GetDirectoryName(targetFilePath);
+            if (!string.IsNullOrWhiteSpace(targetDirectory) && Directory.Exists(targetDirectory))
+            {
+                foreach (var file in Directory.EnumerateFiles(targetDirectory, "*.zip", SearchOption.TopDirectoryOnly))
+                {
+                    candidatePaths.Add(file);
+                }
+            }
+
+            foreach (var entry in BackupCatalogService.GetExistingEntriesForPreset(presetKey))
+            {
+                candidatePaths.Add(entry.FilePath);
+            }
+
+            var artifacts = new List<BackupArtifact>();
+            foreach (var candidate in candidatePaths)
+            {
+                var manifest = await ReadManifestAsync(candidate, cancellationToken);
+                if (manifest == null)
+                {
+                    continue;
+                }
+
+                artifacts.Add(new BackupArtifact
+                {
+                    FilePath = candidate,
+                    Manifest = manifest
+                });
+            }
+
+            return artifacts;
+        }
+
+        private static async Task<List<BackupTableSnapshot>> ReadTableSnapshotsAsync(string filePath, CancellationToken cancellationToken)
+        {
+            var snapshots = new List<BackupTableSnapshot>();
+
+            await using var fileStream = File.OpenRead(filePath);
+            using var archive = new ZipArchive(fileStream, ZipArchiveMode.Read, leaveOpen: false);
+
+            foreach (var entry in archive.Entries.Where(entry =>
+                         entry.FullName.StartsWith("tables/", StringComparison.OrdinalIgnoreCase)
+                         && entry.FullName.EndsWith(".json", StringComparison.OrdinalIgnoreCase)))
+            {
+                await using var entryStream = entry.Open();
+                var snapshot = await JsonSerializer.DeserializeAsync<BackupTableSnapshot>(entryStream, JsonOptions, cancellationToken);
+                if (snapshot == null)
+                {
+                    continue;
+                }
+
+                snapshots.Add(NormalizeSnapshot(snapshot));
+            }
+
+            return snapshots;
+        }
+
+        private static BackupManifest ToManifest(BackupCatalogEntry entry)
+        {
+            return new BackupManifest
+            {
+                BackupId = entry.BackupId,
+                BackupType = entry.BackupType,
+                ChainId = entry.ChainId,
+                BaseFullBackupId = entry.BaseFullBackupId,
+                PreviousBackupId = entry.PreviousBackupId,
+                SelectedPreset = entry.SelectedPreset,
+                PresetDisplayName = entry.PresetDisplayName,
+                Database = entry.Database,
+                CreatedAt = entry.CreatedAt
+            };
+        }
+
+        private static string RequireCatalogFile(IReadOnlyCollection<BackupCatalogEntry> entries, string backupId)
+        {
+            var entry = entries
+                .Where(candidate => string.Equals(candidate.BackupId, backupId, StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(candidate => candidate.CreatedAt)
+                .FirstOrDefault();
+
+            if (entry == null || !File.Exists(entry.FilePath))
+            {
+                throw new InvalidOperationException($"Backup chain is missing archive file for `{backupId}`.");
+            }
+
+            return entry.FilePath;
         }
 
         private static async Task<List<string>> ListBackupTablesAsync(MySqlConnection connection, CancellationToken cancellationToken)
@@ -234,7 +450,10 @@ namespace AttendanceShiftingManagement.Services
             var snapshot = new BackupTableSnapshot
             {
                 TableName = tableName,
-                Columns = await GetColumnMetadataAsync(connection, tableName, cancellationToken)
+                SnapshotMode = BackupSnapshotModes.ReplaceTable,
+                Columns = await GetColumnMetadataAsync(connection, tableName, cancellationToken),
+                PrimaryKeyColumns = await GetPrimaryKeyColumnsAsync(connection, tableName, cancellationToken),
+                HasChanges = true
             };
 
             await using var command = new MySqlCommand($"SELECT * FROM {EscapeIdentifier(tableName)};", connection);
@@ -289,13 +508,54 @@ namespace AttendanceShiftingManagement.Services
             return columns;
         }
 
+        private static async Task<List<string>> GetPrimaryKeyColumnsAsync(MySqlConnection connection, string tableName, CancellationToken cancellationToken)
+        {
+            const string sql = """
+                SELECT COLUMN_NAME
+                FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+                WHERE TABLE_SCHEMA = DATABASE()
+                  AND TABLE_NAME = @tableName
+                  AND CONSTRAINT_NAME = 'PRIMARY'
+                ORDER BY ORDINAL_POSITION;
+                """;
+
+            var primaryKeys = new List<string>();
+            await using var command = new MySqlCommand(sql, connection);
+            command.Parameters.AddWithValue("@tableName", tableName);
+
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                primaryKeys.Add(reader.GetString(0));
+            }
+
+            return primaryKeys;
+        }
+
+        private static async Task ApplySnapshotAsync(
+            MySqlConnection connection,
+            MySqlTransaction transaction,
+            BackupTableSnapshot snapshot,
+            CancellationToken cancellationToken)
+        {
+            if (string.Equals(snapshot.SnapshotMode, BackupSnapshotModes.UpsertRows, StringComparison.OrdinalIgnoreCase)
+                && snapshot.PrimaryKeyColumns.Count > 0)
+            {
+                await UpsertSnapshotAsync(connection, transaction, snapshot, cancellationToken);
+                return;
+            }
+
+            await ExecuteNonQueryAsync(connection, transaction, $"DELETE FROM {EscapeIdentifier(snapshot.TableName)};", cancellationToken);
+            await InsertSnapshotAsync(connection, transaction, snapshot, cancellationToken);
+        }
+
         private static async Task InsertSnapshotAsync(
             MySqlConnection connection,
             MySqlTransaction transaction,
             BackupTableSnapshot snapshot,
             CancellationToken cancellationToken)
         {
-            if (snapshot.Rows.Count == 0 || snapshot.Columns.Count == 0)
+            if (snapshot.Columns.Count == 0 || snapshot.Rows.Count == 0)
             {
                 return;
             }
@@ -303,6 +563,43 @@ namespace AttendanceShiftingManagement.Services
             var columnList = string.Join(", ", snapshot.Columns.Select(column => EscapeIdentifier(column.Name)));
             var parameterList = string.Join(", ", snapshot.Columns.Select((_, index) => $"@p{index}"));
             var sql = $"INSERT INTO {EscapeIdentifier(snapshot.TableName)} ({columnList}) VALUES ({parameterList});";
+
+            foreach (var row in snapshot.Rows)
+            {
+                await using var command = new MySqlCommand(sql, connection, transaction);
+                for (var index = 0; index < snapshot.Columns.Count; index++)
+                {
+                    var column = snapshot.Columns[index];
+                    row.TryGetValue(column.Name, out var rawValue);
+                    command.Parameters.AddWithValue($"@p{index}", ConvertToDatabaseValue(rawValue, column));
+                }
+
+                await command.ExecuteNonQueryAsync(cancellationToken);
+            }
+        }
+
+        private static async Task UpsertSnapshotAsync(
+            MySqlConnection connection,
+            MySqlTransaction transaction,
+            BackupTableSnapshot snapshot,
+            CancellationToken cancellationToken)
+        {
+            if (snapshot.Columns.Count == 0 || snapshot.Rows.Count == 0)
+            {
+                return;
+            }
+
+            var columnList = string.Join(", ", snapshot.Columns.Select(column => EscapeIdentifier(column.Name)));
+            var parameterList = string.Join(", ", snapshot.Columns.Select((_, index) => $"@p{index}"));
+            var updateAssignments = string.Join(
+                ", ",
+                snapshot.Columns.Select(column =>
+                {
+                    var escapedName = EscapeIdentifier(column.Name);
+                    return $"{escapedName} = VALUES({escapedName})";
+                }));
+
+            var sql = $"INSERT INTO {EscapeIdentifier(snapshot.TableName)} ({columnList}) VALUES ({parameterList}) ON DUPLICATE KEY UPDATE {updateAssignments};";
 
             foreach (var row in snapshot.Rows)
             {
@@ -417,8 +714,8 @@ namespace AttendanceShiftingManagement.Services
             if (element.ValueKind != JsonValueKind.String)
             {
                 var rawText = ReadElementAsString(element);
-                if (!string.IsNullOrWhiteSpace(rawText) &&
-                    DateTime.TryParse(rawText, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsedDateTime))
+                if (!string.IsNullOrWhiteSpace(rawText)
+                    && DateTime.TryParse(rawText, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsedDateTime))
                 {
                     return parsedDateTime;
                 }
@@ -437,8 +734,8 @@ namespace AttendanceShiftingManagement.Services
 
         private static object ParseProviderDateTimeObject(JsonElement element)
         {
-            if (TryGetProperty(element, "IsValidDateTime", out var isValidElement) &&
-                isValidElement.ValueKind == JsonValueKind.False)
+            if (TryGetProperty(element, "IsValidDateTime", out var isValidElement)
+                && isValidElement.ValueKind == JsonValueKind.False)
             {
                 return DBNull.Value;
             }
@@ -589,6 +886,47 @@ namespace AttendanceShiftingManagement.Services
         private static string EscapeIdentifier(string identifier)
         {
             return $"`{identifier.Replace("`", "``", StringComparison.Ordinal)}`";
+        }
+
+        private static BackupManifest NormalizeManifest(BackupManifest manifest, string filePath)
+        {
+            manifest.BackupType = BackupChainService.NormalizeBackupType(manifest.BackupType);
+            manifest.BackupId = BackupChainService.NormalizeManifestBackupId(manifest.BackupId, Path.GetFullPath(filePath));
+            manifest.PresetDisplayName = string.IsNullOrWhiteSpace(manifest.PresetDisplayName)
+                ? manifest.SelectedPreset
+                : manifest.PresetDisplayName;
+
+            if (string.IsNullOrWhiteSpace(manifest.BaseFullBackupId)
+                && string.Equals(manifest.BackupType, BackupTypes.Full, StringComparison.OrdinalIgnoreCase))
+            {
+                manifest.BaseFullBackupId = manifest.BackupId;
+            }
+
+            if (string.IsNullOrWhiteSpace(manifest.ChainId))
+            {
+                manifest.ChainId = string.IsNullOrWhiteSpace(manifest.BaseFullBackupId)
+                    ? manifest.BackupId
+                    : manifest.BaseFullBackupId;
+            }
+
+            return manifest;
+        }
+
+        private static BackupTableSnapshot NormalizeSnapshot(BackupTableSnapshot snapshot)
+        {
+            snapshot.SnapshotMode = string.IsNullOrWhiteSpace(snapshot.SnapshotMode)
+                ? BackupSnapshotModes.ReplaceTable
+                : snapshot.SnapshotMode;
+            snapshot.PrimaryKeyColumns ??= new List<string>();
+            snapshot.Rows ??= new List<Dictionary<string, object?>>();
+            snapshot.Columns ??= new List<BackupColumnMetadata>();
+            return snapshot;
+        }
+
+        private static string BuildCreateSuccessMessage(BackupManifest manifest)
+        {
+            var typeLabel = manifest.BackupType.ToLowerInvariant();
+            return $"{manifest.BackupType} backup created successfully with {manifest.TotalRows} row(s) across {manifest.IncludedTables.Count} table(s). The current preset now has an updated {typeLabel} backup record.";
         }
     }
 }

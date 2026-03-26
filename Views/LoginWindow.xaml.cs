@@ -40,7 +40,7 @@ namespace AttendanceShiftingManagement.Views
 
         private void OpenConnectionSettings_Click(object sender, RoutedEventArgs e)
         {
-            var window = new ConnectionSettingsWindow
+            var window = new ConnectionSettingsWindow(selectionOnly: true)
             {
                 Owner = this
             };

@@ -42,6 +42,8 @@ namespace AttendanceShiftingManagement.ViewModels
             private set => SetProperty(ref _currentView, value);
         }
 
+        public User CurrentUser => _currentUser;
+
         public string CurrentSectionTitle
         {
             get => _currentSectionTitle;
@@ -98,6 +100,11 @@ namespace AttendanceShiftingManagement.ViewModels
         public void ReloadCurrentView()
         {
             CurrentView = BuildView(_currentSection);
+        }
+
+        public void RefreshUserSummary()
+        {
+            LoadUserSummary();
         }
 
         private void SwitchSection(string section)

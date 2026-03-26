@@ -21,7 +21,7 @@
                        FontSize="24"
                        FontWeight="SemiBold"
                        Foreground="{StaticResource BrandMidnightBrush}" />
-            <TextBlock Text="Manage remote beneficiary snapshots, staging imports, and database backups from one admin screen."
+            <TextBlock Text="Manage system profile, signed-in account settings, security, remote beneficiary snapshots, and database backups from one admin screen."
                        Margin="0,8,0,0"
                        FontSize="13"
                        Foreground="{StaticResource BrandTextSecondaryBrush}"
@@ -31,6 +31,286 @@
         <TabControl Grid.Row="1"
                     Margin="0,20,0,0"
                     Background="Transparent">
+            <TabItem Header="System Profile">
+                <Grid Margin="0,20,0,0">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled">
+                        <Border Background="White"
+                                BorderBrush="{StaticResource BrandBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="14"
+                                Padding="20">
+                            <StackPanel>
+                            <TextBlock Text="System Profile"
+                                       FontSize="15"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrandMidnightBrush}" />
+                            <TextBlock Text="Set the app-wide identity and login branding details shown to operators and used for internal records."
+                                       Margin="0,8,0,0"
+                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                       TextWrapping="Wrap" />
+
+                            <TextBox Margin="0,18,0,0"
+                                     Text="{Binding SystemInstallSerial, Mode=OneWay}"
+                                     IsReadOnly="True"
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     materialDesign:HintAssist.Hint="Install Serial Number" />
+
+                            <TextBox Margin="0,12,0,0"
+                                     Text="{Binding SystemName, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     materialDesign:HintAssist.Hint="System Name" />
+
+                            <TextBox Margin="0,12,0,0"
+                                     Text="{Binding SystemOwner, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     materialDesign:HintAssist.Hint="Owner / Office Name" />
+
+                            <TextBox Margin="0,12,0,0"
+                                     MinHeight="72"
+                                     AcceptsReturn="True"
+                                     TextWrapping="Wrap"
+                                     VerticalContentAlignment="Top"
+                                     Text="{Binding SystemCompanyAddress, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     materialDesign:HintAssist.Hint="Office / Company Address" />
+
+                            <Grid Margin="0,12,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="12" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <TextBox Grid.Column="0"
+                                         Text="{Binding SystemEmail, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="Official Email" />
+                                <TextBox Grid.Column="2"
+                                         Text="{Binding SystemContactNumber, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="Contact Number" />
+                            </Grid>
+
+                            <Border Margin="0,18,0,0"
+                                    Padding="16"
+                                    Background="{StaticResource BrandSurfaceBrush}"
+                                    BorderBrush="{StaticResource BrandBorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="12">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="16" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <Border Grid.Column="0"
+                                            Width="108"
+                                            Height="108"
+                                            CornerRadius="16"
+                                            Background="#EAF2FF">
+                                        <Grid>
+                                            <Border Width="60"
+                                                    Height="60"
+                                                    CornerRadius="12"
+                                                    Background="#1F4BA5"
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding HasSystemLogo}" Value="True">
+                                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <materialDesign:PackIcon Kind="TownHall"
+                                                                         Width="30"
+                                                                         Height="30"
+                                                                         Foreground="{StaticResource BrandYellowBrush}"
+                                                                         HorizontalAlignment="Center"
+                                                                         VerticalAlignment="Center" />
+                                            </Border>
+
+                                            <Image Source="{Binding SystemLogoImage}"
+                                                   Stretch="Uniform"
+                                                   Margin="10">
+                                                <Image.Style>
+                                                    <Style TargetType="Image">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding HasSystemLogo}" Value="True">
+                                                                <Setter Property="Visibility" Value="Visible" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Image.Style>
+                                            </Image>
+                                        </Grid>
+                                    </Border>
+
+                                    <StackPanel Grid.Column="2"
+                                                VerticalAlignment="Center">
+                                        <TextBlock Text="Login logo"
+                                                   FontSize="12"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{StaticResource BrandMidnightBrush}" />
+                                        <TextBlock Text="{Binding SystemLogoFileLabel}"
+                                                   Margin="0,6,0,0"
+                                                   Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                                   TextWrapping="Wrap" />
+                                        <TextBlock Text="This logo appears on the left side of the login screen. If no custom logo is saved, the default icon stays in place."
+                                                   Margin="0,8,0,0"
+                                                   Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                                   TextWrapping="Wrap" />
+
+                                        <StackPanel Margin="0,14,0,0"
+                                                    Orientation="Horizontal">
+                                            <Button Content="UPLOAD LOGO"
+                                                    Style="{StaticResource SecondaryActionButton}"
+                                                    Command="{Binding BrowseSystemLogoCommand}" />
+                                            <Button Content="REMOVE LOGO"
+                                                    Margin="10,0,0,0"
+                                                    Style="{StaticResource MaterialDesignOutlinedButton}"
+                                                    Command="{Binding RemoveSystemLogoCommand}" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <Button Margin="0,18,0,0"
+                                    Width="220"
+                                    HorizontalAlignment="Left"
+                                    Content="SAVE SYSTEM PROFILE"
+                                    Style="{StaticResource GoldActionButton}"
+                                    Command="{Binding SaveSystemProfileCommand}" />
+
+                                <TextBlock Margin="0,14,0,0"
+                                           Text="{Binding SystemProfileStatusMessage}"
+                                           Foreground="{Binding SystemProfileStatusBrush}"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+                    </ScrollViewer>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="My Account"
+                     IsEnabled="{Binding HasCurrentUser}">
+                <Grid Margin="0,20,0,0">
+                    <Border Background="White"
+                            BorderBrush="{StaticResource BrandBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="14"
+                            Padding="20">
+                        <StackPanel>
+                            <TextBlock Text="My Account"
+                                       FontSize="15"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrandMidnightBrush}" />
+                            <TextBlock Text="Update the signed-in account name, username, email, and contact number."
+                                       Margin="0,8,0,0"
+                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                       TextWrapping="Wrap" />
+
+                            <TextBox Margin="0,18,0,0"
+                                     Text="{Binding AccountFullName, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     materialDesign:HintAssist.Hint="Full Name" />
+
+                            <Grid Margin="0,12,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="12" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <TextBox Grid.Column="0"
+                                         Text="{Binding AccountUsername, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="Username" />
+                                <TextBox Grid.Column="2"
+                                         Text="{Binding AccountContactNumber, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="Contact Number" />
+                            </Grid>
+
+                            <TextBox Margin="0,12,0,0"
+                                     Text="{Binding AccountEmail, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     materialDesign:HintAssist.Hint="Email Address" />
+
+                            <Button Margin="0,18,0,0"
+                                    Width="220"
+                                    HorizontalAlignment="Left"
+                                    Content="SAVE MY ACCOUNT"
+                                    Style="{StaticResource PrimaryActionButton}"
+                                    Command="{Binding SaveAccountCommand}" />
+
+                            <TextBlock Margin="0,14,0,0"
+                                       Text="{Binding AccountStatusMessage}"
+                                       Foreground="{Binding AccountStatusBrush}"
+                                       TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="Security"
+                     IsEnabled="{Binding HasCurrentUser}">
+                <Grid Margin="0,20,0,0">
+                    <Border Background="White"
+                            BorderBrush="{StaticResource BrandBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="14"
+                            Padding="20">
+                        <StackPanel>
+                            <TextBlock Text="Security"
+                                       FontSize="15"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrandMidnightBrush}" />
+                            <TextBlock Text="Change the signed-in user's password. The current password is required before a new one can be saved."
+                                       Margin="0,8,0,0"
+                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                       TextWrapping="Wrap" />
+
+                            <PasswordBox x:Name="CurrentPasswordBox"
+                                         Margin="0,18,0,0"
+                                         Style="{StaticResource MaterialDesignOutlinedPasswordBox}"
+                                         materialDesign:HintAssist.Hint="Current Password"
+                                         PasswordChanged="CurrentPasswordBox_PasswordChanged" />
+
+                            <PasswordBox x:Name="NewPasswordBox"
+                                         Margin="0,12,0,0"
+                                         Style="{StaticResource MaterialDesignOutlinedPasswordBox}"
+                                         materialDesign:HintAssist.Hint="New Password"
+                                         PasswordChanged="NewPasswordBox_PasswordChanged" />
+
+                            <PasswordBox x:Name="ConfirmPasswordBox"
+                                         Margin="0,12,0,0"
+                                         Style="{StaticResource MaterialDesignOutlinedPasswordBox}"
+                                         materialDesign:HintAssist.Hint="Confirm New Password"
+                                         PasswordChanged="ConfirmPasswordBox_PasswordChanged" />
+
+                            <Button Margin="0,18,0,0"
+                                    Width="220"
+                                    HorizontalAlignment="Left"
+                                    Content="CHANGE PASSWORD"
+                                    Style="{StaticResource GoldActionButton}"
+                                    Click="ChangePassword_Click" />
+
+                            <TextBlock Margin="0,14,0,0"
+                                       Text="{Binding SecurityStatusMessage}"
+                                       Foreground="{Binding SecurityStatusBrush}"
+                                       TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </TabItem>
+
             <TabItem Header="Remote Snapshot">
                 <Grid Margin="0,20,0,0">
                     <Grid.RowDefinitions>
@@ -291,13 +571,13 @@
                                        FontSize="15"
                                        FontWeight="SemiBold"
                                        Foreground="{StaticResource BrandMidnightBrush}" />
-                            <TextBlock Text="Create or import a full snapshot of the currently selected app database preset. This does not connect to the municipality source."
+                            <TextBlock Text="Create full, incremental, and differential backups for the currently selected app preset. Restore uses the selected restore point and resolves the required backup chain automatically."
                                        Margin="0,8,0,0"
                                        Foreground="{StaticResource BrandTextSecondaryBrush}"
                                        TextWrapping="Wrap" />
 
                             <TextBlock Margin="0,18,0,0"
-                                       Text="Current Backup Target"
+                                       Text="Active Backup Preset"
                                        FontWeight="SemiBold"
                                        Foreground="{StaticResource BrandMidnightBrush}" />
                             <TextBlock Margin="0,8,0,0"
@@ -305,24 +585,96 @@
                                        Foreground="{StaticResource BrandTextSecondaryBrush}"
                                        TextWrapping="Wrap" />
 
+                            <Grid Margin="0,18,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="12" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="12" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <Border Grid.Column="0"
+                                        Padding="14"
+                                        CornerRadius="10"
+                                        Background="{StaticResource BrandSurfaceBrush}"
+                                        BorderBrush="{StaticResource BrandBorderBrush}"
+                                        BorderThickness="1">
+                                    <StackPanel>
+                                        <TextBlock Text="Last Full Backup"
+                                                   FontSize="11"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{StaticResource BrandMidnightBrush}" />
+                                        <TextBlock Margin="0,8,0,0"
+                                                   Text="{Binding LastFullBackupDisplay}"
+                                                   Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                                   TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Grid.Column="2"
+                                        Padding="14"
+                                        CornerRadius="10"
+                                        Background="{StaticResource BrandSurfaceBrush}"
+                                        BorderBrush="{StaticResource BrandBorderBrush}"
+                                        BorderThickness="1">
+                                    <StackPanel>
+                                        <TextBlock Text="Last Incremental Backup"
+                                                   FontSize="11"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{StaticResource BrandMidnightBrush}" />
+                                        <TextBlock Margin="0,8,0,0"
+                                                   Text="{Binding LastIncrementalBackupDisplay}"
+                                                   Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                                   TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Grid.Column="4"
+                                        Padding="14"
+                                        CornerRadius="10"
+                                        Background="{StaticResource BrandSurfaceBrush}"
+                                        BorderBrush="{StaticResource BrandBorderBrush}"
+                                        BorderThickness="1">
+                                    <StackPanel>
+                                        <TextBlock Text="Last Differential Backup"
+                                                   FontSize="11"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{StaticResource BrandMidnightBrush}" />
+                                        <TextBlock Margin="0,8,0,0"
+                                                   Text="{Binding LastDifferentialBackupDisplay}"
+                                                   Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                                   TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+
                             <Border Margin="0,16,0,0"
                                     Padding="14"
                                     CornerRadius="10"
                                     Background="#FFF7D6">
-                                <TextBlock Text="Backup archives contain Ayuda database rows only. Local configuration files and image files are excluded."
+                                <TextBlock Text="{Binding BackupGuidanceMessage}"
                                            Foreground="#9A5A00"
                                            TextWrapping="Wrap" />
                             </Border>
 
                             <WrapPanel Margin="0,18,0,0">
-                                <Button Content="CREATE BACKUP"
+                                <Button Content="CREATE FULL BACKUP"
                                         Margin="0,0,12,12"
                                         Style="{StaticResource GoldActionButton}"
                                         Command="{Binding CreateBackupCommand}" />
-                                <Button Content="IMPORT BACKUP"
+                                <Button Content="CREATE INCREMENTAL BACKUP"
+                                        Margin="0,0,12,12"
+                                        Style="{StaticResource SecondaryActionButton}"
+                                        Command="{Binding CreateIncrementalBackupCommand}" />
+                                <Button Content="CREATE DIFFERENTIAL BACKUP"
+                                        Margin="0,0,12,12"
+                                        Style="{StaticResource SecondaryActionButton}"
+                                        Command="{Binding CreateDifferentialBackupCommand}" />
+                                <Button Content="RESTORE BACKUP"
                                         Margin="0,0,12,12"
                                         Style="{StaticResource PrimaryActionButton}"
-                                        Command="{Binding ImportBackupCommand}" />
+                                        Command="{Binding RestoreBackupCommand}" />
                             </WrapPanel>
 
                             <TextBlock Margin="0,14,0,0"
@@ -334,6 +686,52 @@
                                        Text="{Binding LastBackupActivity}"
                                        Foreground="{StaticResource BrandTextSecondaryBrush}"
                                        TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="App Database">
+                <Grid Margin="0,20,0,0">
+                    <Border Background="White"
+                            BorderBrush="{StaticResource BrandBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="14"
+                            Padding="20">
+                        <StackPanel>
+                            <TextBlock Text="App Database Presets"
+                                       FontSize="15"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrandMidnightBrush}" />
+                            <TextBlock Text="Choose which preset the app uses for login, startup initialization, dashboard reads, and local snapshots. Local and Hostinger are fixed app presets. Only Network (LAN) credentials can be edited from the database settings window."
+                                       Margin="0,8,0,0"
+                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                       TextWrapping="Wrap" />
+
+                            <TextBlock Margin="0,18,0,0"
+                                       Text="Current App Database"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrandMidnightBrush}" />
+                            <TextBlock Margin="0,8,0,0"
+                                       Text="{Binding ActiveTargetSummary}"
+                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                       TextWrapping="Wrap" />
+
+                            <Border Margin="0,16,0,0"
+                                    Padding="14"
+                                    CornerRadius="10"
+                                    Background="#FFF7D6">
+                                <TextBlock Text="Before login, users can only switch presets. Database credential editing is restricted to this Settings area so Network (LAN) can be maintained without exposing Local or Hostinger configuration."
+                                           Foreground="#9A5A00"
+                                           TextWrapping="Wrap" />
+                            </Border>
+
+                            <Button Margin="0,18,0,0"
+                                    Width="250"
+                                    HorizontalAlignment="Left"
+                                    Content="OPEN APP DATABASE SETTINGS"
+                                    Style="{StaticResource PrimaryActionButton}"
+                                    Click="OpenAppDatabaseSettings_Click" />
                         </StackPanel>
                     </Border>
                 </Grid>

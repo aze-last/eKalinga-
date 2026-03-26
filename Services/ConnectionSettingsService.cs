@@ -40,11 +40,20 @@ namespace AttendanceShiftingManagement.Services
 
     public static class ConnectionSettingsService
     {
+        private const string LocalPresetKey = "Local";
+        private const string LanPresetKey = "Lan";
+        private const string RemotePresetKey = "Remote";
         private const string DefaultAppPresetKey = "Local";
         private static readonly HashSet<string> AllowedActiveAppPresetKeys = new(StringComparer.OrdinalIgnoreCase)
         {
-            "Local",
-            "Remote"
+            LocalPresetKey,
+            LanPresetKey,
+            RemotePresetKey
+        };
+
+        private static readonly HashSet<string> RuntimeEditablePresetKeys = new(StringComparer.OrdinalIgnoreCase)
+        {
+            LanPresetKey
         };
 
         private static readonly JsonSerializerOptions JsonOptions = new()
@@ -93,6 +102,11 @@ namespace AttendanceShiftingManagement.Services
 
                 foreach (var preset in runtimeSettings.Presets)
                 {
+                    if (!RuntimeEditablePresetKeys.Contains(preset.Key))
+                    {
+                        continue;
+                    }
+
                     settings.Presets[preset.Key] = ClonePresetForUse(preset.Value);
                 }
             }
@@ -127,10 +141,12 @@ namespace AttendanceShiftingManagement.Services
             var payload = new ConnectionSettingsModel
             {
                 SelectedPreset = settings.SelectedPreset,
-                Presets = settings.Presets.ToDictionary(
-                    pair => pair.Key,
-                    pair => ClonePresetForStorage(pair.Value),
-                    StringComparer.OrdinalIgnoreCase)
+                Presets = settings.Presets
+                    .Where(pair => RuntimeEditablePresetKeys.Contains(pair.Key))
+                    .ToDictionary(
+                        pair => pair.Key,
+                        pair => ClonePresetForStorage(pair.Value),
+                        StringComparer.OrdinalIgnoreCase)
             };
 
             File.WriteAllText(runtimePath, JsonSerializer.Serialize(payload, JsonOptions));
@@ -216,9 +232,9 @@ namespace AttendanceShiftingManagement.Services
 
         private static void EnsureRequiredPresets(ConnectionSettingsModel settings)
         {
-            if (!settings.Presets.ContainsKey("Local"))
+            if (!settings.Presets.ContainsKey(LocalPresetKey))
             {
-                settings.Presets["Local"] = new DatabaseConnectionPreset
+                settings.Presets[LocalPresetKey] = new DatabaseConnectionPreset
                 {
                     DisplayName = "Local",
                     Server = "127.0.0.1",
@@ -229,9 +245,22 @@ namespace AttendanceShiftingManagement.Services
                 };
             }
 
-            if (!settings.Presets.ContainsKey("Remote"))
+            if (!settings.Presets.ContainsKey(LanPresetKey))
             {
-                settings.Presets["Remote"] = new DatabaseConnectionPreset
+                settings.Presets[LanPresetKey] = new DatabaseConnectionPreset
+                {
+                    DisplayName = "Network (LAN)",
+                    Server = string.Empty,
+                    Port = 3306,
+                    Database = "attendance_shifting_db",
+                    Username = "root",
+                    Password = string.Empty
+                };
+            }
+
+            if (!settings.Presets.ContainsKey(RemotePresetKey))
+            {
+                settings.Presets[RemotePresetKey] = new DatabaseConnectionPreset
                 {
                     DisplayName = "Remote (Hostinger)",
                     Server = string.Empty,

@@ -5,11 +5,11 @@ namespace AttendanceShiftingManagement.Views
 {
     public partial class ConnectionSettingsWindow : Window
     {
-        public ConnectionSettingsWindow()
+        public ConnectionSettingsWindow(bool selectionOnly = true)
         {
             InitializeComponent();
 
-            var viewModel = new ConnectionSettingsViewModel();
+            var viewModel = new ConnectionSettingsViewModel(selectionOnly);
             viewModel.CloseRequested += OnCloseRequested;
             DataContext = viewModel;
         }

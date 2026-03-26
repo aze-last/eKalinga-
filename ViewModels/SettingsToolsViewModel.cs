@@ -1,11 +1,14 @@
 using AttendanceShiftingManagement.Helpers;
 using AttendanceShiftingManagement.Models;
 using AttendanceShiftingManagement.Services;
+using AttendanceShiftingManagement.Data;
 using Microsoft.Win32;
 using MySqlConnector;
 using System.Collections.ObjectModel;
 using System.Data;
 using System.Globalization;
+using System.IO;
+using System.Net.Mail;
 using System.Windows.Input;
 using System.Windows.Media;
 
@@ -25,9 +28,40 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly RelayCommand _refreshPreviewCommand;
         private readonly RelayCommand _openAdvancedLoadTablesCommand;
         private readonly RelayCommand _createBackupCommand;
-        private readonly RelayCommand _importBackupCommand;
+        private readonly RelayCommand _createIncrementalBackupCommand;
+        private readonly RelayCommand _createDifferentialBackupCommand;
+        private readonly RelayCommand _restoreBackupCommand;
         private readonly RelayCommand _saveFeatureRulesCommand;
+        private readonly RelayCommand _saveSystemProfileCommand;
+        private readonly RelayCommand _browseSystemLogoCommand;
+        private readonly RelayCommand _removeSystemLogoCommand;
+        private readonly RelayCommand _saveAccountCommand;
+        private readonly RelayCommand _changePasswordCommand;
+        private readonly User? _currentUser;
+        private readonly Func<AppDbContext> _dbContextFactory;
 
+        private string _systemName = string.Empty;
+        private string _systemOwner = string.Empty;
+        private string _systemCompanyAddress = string.Empty;
+        private string _systemEmail = string.Empty;
+        private string _systemContactNumber = string.Empty;
+        private string _systemLogoPath = string.Empty;
+        private string _savedSystemLogoPath = string.Empty;
+        private string _systemInstallSerial = string.Empty;
+        private ImageSource? _systemLogoImage;
+        private string _systemProfileStatusMessage = "Set the app-wide system identity shown to administrators and operators.";
+        private Brush _systemProfileStatusBrush = CreateBrush("#6B7280");
+        private string _accountFullName = string.Empty;
+        private string _accountUsername = string.Empty;
+        private string _accountEmail = string.Empty;
+        private string _accountContactNumber = string.Empty;
+        private string _accountStatusMessage = "Update the currently signed-in account details used by this app.";
+        private Brush _accountStatusBrush = CreateBrush("#6B7280");
+        private string _currentPassword = string.Empty;
+        private string _newPassword = string.Empty;
+        private string _confirmPassword = string.Empty;
+        private string _securityStatusMessage = "Change the current account password here. The current password is required.";
+        private Brush _securityStatusBrush = CreateBrush("#6B7280");
         private string _server = string.Empty;
         private string _portText = "3306";
         private string _database = string.Empty;
@@ -40,34 +74,53 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _previewSummary = "Loading local preview...";
         private string _snapshotStatusMessage = "Configure the municipality source, then snapshot `val_beneficiaries` or import pending rows into staging.";
         private Brush _snapshotStatusBrush = CreateBrush("#6B7280");
-        private string _backupStatusMessage = "Create or import a full database backup for the currently selected app preset.";
+        private string _backupPresetName = string.Empty;
+        private string _backupStatusMessage = "Create a full backup first for the active preset, then use incremental or differential backups as needed.";
         private Brush _backupStatusBrush = CreateBrush("#6B7280");
         private string _lastBackupActivity = "No backup activity yet in this session.";
+        private string _lastFullBackupDisplay = "No full backup recorded for this preset yet.";
+        private string _lastIncrementalBackupDisplay = "No incremental backup recorded for this preset yet.";
+        private string _lastDifferentialBackupDisplay = "No differential backup recorded for this preset yet.";
+        private string _backupGuidanceMessage = "Incremental and differential backups require an existing full backup for the active preset.";
+        private bool _canCreateDeltaBackups;
         private string _largeAssistanceWarningThresholdText = string.Empty;
         private string _featureRulesStatusMessage = "Set the warning-only threshold used when a beneficiary has already received significant assistance.";
         private Brush _featureRulesStatusBrush = CreateBrush("#6B7280");
         private int _masterListRowCount;
         private int _stagingRowCount;
         private bool _isBusy;
+        private bool _lastPasswordChangeSucceeded;
 
-        public SettingsToolsViewModel()
+        public SettingsToolsViewModel(User? currentUser = null, Func<AppDbContext>? dbContextFactory = null)
         {
+            _currentUser = currentUser;
+            _dbContextFactory = dbContextFactory ?? (() => new AppDbContext());
+
             PreviewOptions = new ObservableCollection<string>
             {
                 MasterListPreviewLabel,
                 StagingPreviewLabel
             };
 
+            _saveSystemProfileCommand = new RelayCommand(_ => ExecuteSaveSystemProfile(), _ => !IsBusy);
+            _browseSystemLogoCommand = new RelayCommand(_ => ExecuteBrowseSystemLogo(), _ => !IsBusy);
+            _removeSystemLogoCommand = new RelayCommand(_ => ExecuteRemoveSystemLogo(), _ => !IsBusy && CanRemoveSystemLogo);
+            _saveAccountCommand = new RelayCommand(_ => ExecuteSaveAccount(), _ => !IsBusy && HasCurrentUser);
+            _changePasswordCommand = new RelayCommand(_ => ExecuteChangePassword(), _ => !IsBusy && HasCurrentUser);
             _testConnectionCommand = new RelayCommand(async _ => await ExecuteTestConnectionAsync(), _ => !IsBusy);
             _saveImportConnectionCommand = new RelayCommand(_ => ExecuteSaveImportConnection(), _ => !IsBusy);
             _snapshotMasterListCommand = new RelayCommand(async _ => await ExecuteSnapshotMasterListAsync(), _ => !IsBusy);
             _importToStagingCommand = new RelayCommand(async _ => await ExecuteImportToStagingAsync(), _ => !IsBusy);
             _refreshPreviewCommand = new RelayCommand(async _ => await RefreshPreviewAsync(), _ => !IsBusy);
             _openAdvancedLoadTablesCommand = new RelayCommand(_ => AdvancedLoadTablesRequested?.Invoke(), _ => !IsBusy);
-            _createBackupCommand = new RelayCommand(async _ => await ExecuteCreateBackupAsync(), _ => !IsBusy);
-            _importBackupCommand = new RelayCommand(async _ => await ExecuteImportBackupAsync(), _ => !IsBusy);
+            _createBackupCommand = new RelayCommand(async _ => await ExecuteCreateBackupAsync(BackupTypes.Full), _ => !IsBusy);
+            _createIncrementalBackupCommand = new RelayCommand(async _ => await ExecuteCreateBackupAsync(BackupTypes.Incremental), _ => !IsBusy && CanCreateDeltaBackups);
+            _createDifferentialBackupCommand = new RelayCommand(async _ => await ExecuteCreateBackupAsync(BackupTypes.Differential), _ => !IsBusy && CanCreateDeltaBackups);
+            _restoreBackupCommand = new RelayCommand(async _ => await ExecuteRestoreBackupAsync(), _ => !IsBusy);
             _saveFeatureRulesCommand = new RelayCommand(_ => ExecuteSaveFeatureRules(), _ => !IsBusy);
 
+            LoadSystemProfile();
+            LoadCurrentUserAccount();
             LoadImportConnection();
             LoadFeatureRules();
             RefreshTargetSummaries();
@@ -77,6 +130,160 @@ namespace AttendanceShiftingManagement.ViewModels
         public event Action? AdvancedLoadTablesRequested;
 
         public ObservableCollection<string> PreviewOptions { get; }
+
+        public bool HasCurrentUser => _currentUser != null;
+
+        public string SystemName
+        {
+            get => _systemName;
+            set => SetProperty(ref _systemName, value);
+        }
+
+        public string SystemOwner
+        {
+            get => _systemOwner;
+            set => SetProperty(ref _systemOwner, value);
+        }
+
+        public string SystemCompanyAddress
+        {
+            get => _systemCompanyAddress;
+            set => SetProperty(ref _systemCompanyAddress, value);
+        }
+
+        public string SystemEmail
+        {
+            get => _systemEmail;
+            set => SetProperty(ref _systemEmail, value);
+        }
+
+        public string SystemContactNumber
+        {
+            get => _systemContactNumber;
+            set => SetProperty(ref _systemContactNumber, value);
+        }
+
+        public string SystemLogoPath
+        {
+            get => _systemLogoPath;
+            private set
+            {
+                if (SetProperty(ref _systemLogoPath, value))
+                {
+                    OnPropertyChanged(nameof(SystemLogoFileLabel));
+                    OnPropertyChanged(nameof(CanRemoveSystemLogo));
+                    _removeSystemLogoCommand?.RaiseCanExecuteChanged();
+                }
+            }
+        }
+
+        public string SystemInstallSerial
+        {
+            get => _systemInstallSerial;
+            private set => SetProperty(ref _systemInstallSerial, value);
+        }
+
+        public ImageSource? SystemLogoImage
+        {
+            get => _systemLogoImage;
+            private set
+            {
+                if (SetProperty(ref _systemLogoImage, value))
+                {
+                    OnPropertyChanged(nameof(HasSystemLogo));
+                }
+            }
+        }
+
+        public bool HasSystemLogo => SystemLogoImage != null;
+        public bool CanRemoveSystemLogo => !string.IsNullOrWhiteSpace(SystemLogoPath);
+        public string SystemLogoFileLabel => string.IsNullOrWhiteSpace(SystemLogoPath)
+            ? "Using the default login logo."
+            : Path.GetFileName(SystemLogoPath);
+
+        public string SystemProfileStatusMessage
+        {
+            get => _systemProfileStatusMessage;
+            private set => SetProperty(ref _systemProfileStatusMessage, value);
+        }
+
+        public Brush SystemProfileStatusBrush
+        {
+            get => _systemProfileStatusBrush;
+            private set => SetProperty(ref _systemProfileStatusBrush, value);
+        }
+
+        public string AccountFullName
+        {
+            get => _accountFullName;
+            set => SetProperty(ref _accountFullName, value);
+        }
+
+        public string AccountUsername
+        {
+            get => _accountUsername;
+            set => SetProperty(ref _accountUsername, value);
+        }
+
+        public string AccountEmail
+        {
+            get => _accountEmail;
+            set => SetProperty(ref _accountEmail, value);
+        }
+
+        public string AccountContactNumber
+        {
+            get => _accountContactNumber;
+            set => SetProperty(ref _accountContactNumber, value);
+        }
+
+        public string AccountStatusMessage
+        {
+            get => _accountStatusMessage;
+            private set => SetProperty(ref _accountStatusMessage, value);
+        }
+
+        public Brush AccountStatusBrush
+        {
+            get => _accountStatusBrush;
+            private set => SetProperty(ref _accountStatusBrush, value);
+        }
+
+        public string CurrentPassword
+        {
+            get => _currentPassword;
+            set => SetProperty(ref _currentPassword, value);
+        }
+
+        public string NewPassword
+        {
+            get => _newPassword;
+            set => SetProperty(ref _newPassword, value);
+        }
+
+        public string ConfirmPassword
+        {
+            get => _confirmPassword;
+            set => SetProperty(ref _confirmPassword, value);
+        }
+
+        public string SecurityStatusMessage
+        {
+            get => _securityStatusMessage;
+            private set => SetProperty(ref _securityStatusMessage, value);
+        }
+
+        public Brush SecurityStatusBrush
+        {
+            get => _securityStatusBrush;
+            private set => SetProperty(ref _securityStatusBrush, value);
+        }
+
+        public bool LastPasswordChangeSucceeded
+        {
+            get => _lastPasswordChangeSucceeded;
+            private set => SetProperty(ref _lastPasswordChangeSucceeded, value);
+        }
 
         public string Server
         {
@@ -180,6 +387,49 @@ namespace AttendanceShiftingManagement.ViewModels
             private set => SetProperty(ref _lastBackupActivity, value);
         }
 
+        public string BackupPresetName
+        {
+            get => _backupPresetName;
+            private set => SetProperty(ref _backupPresetName, value);
+        }
+
+        public string LastFullBackupDisplay
+        {
+            get => _lastFullBackupDisplay;
+            private set => SetProperty(ref _lastFullBackupDisplay, value);
+        }
+
+        public string LastIncrementalBackupDisplay
+        {
+            get => _lastIncrementalBackupDisplay;
+            private set => SetProperty(ref _lastIncrementalBackupDisplay, value);
+        }
+
+        public string LastDifferentialBackupDisplay
+        {
+            get => _lastDifferentialBackupDisplay;
+            private set => SetProperty(ref _lastDifferentialBackupDisplay, value);
+        }
+
+        public string BackupGuidanceMessage
+        {
+            get => _backupGuidanceMessage;
+            private set => SetProperty(ref _backupGuidanceMessage, value);
+        }
+
+        public bool CanCreateDeltaBackups
+        {
+            get => _canCreateDeltaBackups;
+            private set
+            {
+                if (SetProperty(ref _canCreateDeltaBackups, value))
+                {
+                    _createIncrementalBackupCommand?.RaiseCanExecuteChanged();
+                    _createDifferentialBackupCommand?.RaiseCanExecuteChanged();
+                }
+            }
+        }
+
         public string LargeAssistanceWarningThresholdText
         {
             get => _largeAssistanceWarningThresholdText;
@@ -217,6 +467,11 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 if (SetProperty(ref _isBusy, value))
                 {
+                    _saveSystemProfileCommand.RaiseCanExecuteChanged();
+                    _browseSystemLogoCommand.RaiseCanExecuteChanged();
+                    _removeSystemLogoCommand.RaiseCanExecuteChanged();
+                    _saveAccountCommand.RaiseCanExecuteChanged();
+                    _changePasswordCommand.RaiseCanExecuteChanged();
                     _testConnectionCommand.RaiseCanExecuteChanged();
                     _saveImportConnectionCommand.RaiseCanExecuteChanged();
                     _snapshotMasterListCommand.RaiseCanExecuteChanged();
@@ -224,12 +479,19 @@ namespace AttendanceShiftingManagement.ViewModels
                     _refreshPreviewCommand.RaiseCanExecuteChanged();
                     _openAdvancedLoadTablesCommand.RaiseCanExecuteChanged();
                     _createBackupCommand.RaiseCanExecuteChanged();
-                    _importBackupCommand.RaiseCanExecuteChanged();
+                    _createIncrementalBackupCommand.RaiseCanExecuteChanged();
+                    _createDifferentialBackupCommand.RaiseCanExecuteChanged();
+                    _restoreBackupCommand.RaiseCanExecuteChanged();
                     _saveFeatureRulesCommand.RaiseCanExecuteChanged();
                 }
             }
         }
 
+        public ICommand SaveSystemProfileCommand => _saveSystemProfileCommand;
+        public ICommand BrowseSystemLogoCommand => _browseSystemLogoCommand;
+        public ICommand RemoveSystemLogoCommand => _removeSystemLogoCommand;
+        public ICommand SaveAccountCommand => _saveAccountCommand;
+        public ICommand ChangePasswordCommand => _changePasswordCommand;
         public ICommand TestConnectionCommand => _testConnectionCommand;
         public ICommand SaveImportConnectionCommand => _saveImportConnectionCommand;
         public ICommand SnapshotMasterListCommand => _snapshotMasterListCommand;
@@ -237,8 +499,41 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand RefreshPreviewCommand => _refreshPreviewCommand;
         public ICommand OpenAdvancedLoadTablesCommand => _openAdvancedLoadTablesCommand;
         public ICommand CreateBackupCommand => _createBackupCommand;
-        public ICommand ImportBackupCommand => _importBackupCommand;
+        public ICommand CreateIncrementalBackupCommand => _createIncrementalBackupCommand;
+        public ICommand CreateDifferentialBackupCommand => _createDifferentialBackupCommand;
+        public ICommand RestoreBackupCommand => _restoreBackupCommand;
         public ICommand SaveFeatureRulesCommand => _saveFeatureRulesCommand;
+
+        private void LoadSystemProfile()
+        {
+            var settings = SystemProfileSettingsService.Load();
+            SystemName = settings.SystemName;
+            SystemOwner = settings.Owner;
+            SystemCompanyAddress = settings.CompanyAddress;
+            SystemEmail = settings.Email;
+            SystemContactNumber = settings.ContactNumber;
+            SystemLogoPath = settings.LogoPath;
+            _savedSystemLogoPath = settings.LogoPath;
+            SystemInstallSerial = settings.InstallSerial;
+            RefreshSystemLogoPreview();
+        }
+
+        private void LoadCurrentUserAccount()
+        {
+            if (_currentUser == null)
+            {
+                AccountStatusMessage = "Sign in first before editing account details.";
+                SecurityStatusMessage = "Sign in first before changing a password.";
+                return;
+            }
+
+            using var context = _dbContextFactory();
+            var snapshot = UserAccountSettingsService.Load(context, _currentUser.Id);
+            AccountFullName = snapshot.FullName;
+            AccountUsername = snapshot.Username;
+            AccountEmail = snapshot.Email;
+            AccountContactNumber = snapshot.ContactNumber;
+        }
 
         private void LoadImportConnection()
         {
@@ -256,12 +551,176 @@ namespace AttendanceShiftingManagement.ViewModels
             LargeAssistanceWarningThresholdText = settings.LargeAssistanceWarningThreshold.ToString("0.##", CultureInfo.InvariantCulture);
         }
 
+        private void ExecuteSaveSystemProfile()
+        {
+            var systemName = SystemName.Trim();
+            var owner = SystemOwner.Trim();
+            var companyAddress = SystemCompanyAddress.Trim();
+            var email = SystemEmail.Trim();
+            var contactNumber = SystemContactNumber.Trim();
+            var logoPath = SystemLogoPath.Trim();
+
+            if (string.IsNullOrWhiteSpace(systemName))
+            {
+                SetSystemProfileError("Enter a system name.");
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(email) && !IsValidEmail(email))
+            {
+                SetSystemProfileError("Enter a valid system email address.");
+                return;
+            }
+
+            SystemProfileSettingsService.Save(new SystemProfileSettingsModel
+            {
+                SystemName = systemName,
+                Owner = owner,
+                CompanyAddress = companyAddress,
+                Email = email,
+                ContactNumber = contactNumber,
+                LogoPath = logoPath,
+                InstallSerial = SystemInstallSerial
+            });
+
+            if (!string.Equals(_savedSystemLogoPath, logoPath, StringComparison.OrdinalIgnoreCase))
+            {
+                SystemProfileSettingsService.RemoveStoredLogo(_savedSystemLogoPath);
+                _savedSystemLogoPath = logoPath;
+            }
+
+            SystemName = systemName;
+            SystemOwner = owner;
+            SystemCompanyAddress = companyAddress;
+            SystemEmail = email;
+            SystemContactNumber = contactNumber;
+            SetSystemProfileSuccess("System profile saved.");
+        }
+
+        private void ExecuteBrowseSystemLogo()
+        {
+            var dialog = new OpenFileDialog
+            {
+                Filter = "Image Files (*.png;*.jpg;*.jpeg;*.bmp;*.ico)|*.png;*.jpg;*.jpeg;*.bmp;*.ico",
+                CheckFileExists = true
+            };
+
+            if (dialog.ShowDialog() != true)
+            {
+                return;
+            }
+
+            try
+            {
+                var disposableWorkingLogoPath = GetDisposableWorkingLogoPath();
+                SystemLogoPath = SystemProfileSettingsService.CopyLogoToBrandingFolder(dialog.FileName, disposableWorkingLogoPath);
+                RefreshSystemLogoPreview();
+                SetSystemProfileSuccess("Logo selected. Save system profile to apply the updated branding.");
+            }
+            catch (Exception ex)
+            {
+                SetSystemProfileError($"Unable to use the selected logo. {ex.Message}");
+            }
+        }
+
+        private void ExecuteRemoveSystemLogo()
+        {
+            var disposableWorkingLogoPath = GetDisposableWorkingLogoPath();
+            if (!string.IsNullOrWhiteSpace(disposableWorkingLogoPath))
+            {
+                SystemProfileSettingsService.RemoveStoredLogo(disposableWorkingLogoPath);
+            }
+
+            SystemLogoPath = string.Empty;
+            RefreshSystemLogoPreview();
+            SetSystemProfileSuccess("Custom logo removed. Save system profile to restore the default logo.");
+        }
+
+        private void ExecuteSaveAccount()
+        {
+            if (_currentUser == null)
+            {
+                SetAccountError("No signed-in user is available for account updates.");
+                return;
+            }
+
+            using var context = _dbContextFactory();
+            var result = UserAccountSettingsService.SaveAccount(
+                context,
+                _currentUser,
+                new AccountSettingsUpdateRequest(
+                    AccountFullName,
+                    AccountUsername,
+                    AccountEmail,
+                    AccountContactNumber));
+
+            if (!result.IsSuccess)
+            {
+                SetAccountError(result.Message);
+                return;
+            }
+
+            LoadCurrentUserAccount();
+            SetAccountSuccess(result.Message);
+        }
+
+        private void ExecuteChangePassword()
+        {
+            LastPasswordChangeSucceeded = false;
+
+            if (_currentUser == null)
+            {
+                SetSecurityError("No signed-in user is available for password changes.");
+                return;
+            }
+
+            using var context = _dbContextFactory();
+            var result = UserAccountSettingsService.ChangePassword(
+                context,
+                _currentUser,
+                new PasswordChangeRequest(CurrentPassword, NewPassword, ConfirmPassword));
+
+            if (!result.IsSuccess)
+            {
+                SetSecurityError(result.Message);
+                return;
+            }
+
+            CurrentPassword = string.Empty;
+            NewPassword = string.Empty;
+            ConfirmPassword = string.Empty;
+            LastPasswordChangeSucceeded = true;
+            SetSecuritySuccess(result.Message);
+        }
+
         private void RefreshTargetSummaries()
         {
-            var preset = GetTargetPreset();
+            var settings = ConnectionSettingsService.Load();
+            var preset = settings.GetPreset(settings.SelectedPreset);
             var summary = $"{preset.DisplayName}: {preset.Server}:{preset.Port} / {preset.Database}";
             ActiveTargetSummary = summary;
             BackupTargetSummary = summary;
+            BackupPresetName = preset.DisplayName;
+            RefreshBackupStatus(settings.SelectedPreset);
+        }
+
+        private void RefreshBackupStatus(string presetKey)
+        {
+            var status = BackupCatalogService.GetPresetStatus(presetKey);
+            LastFullBackupDisplay = FormatBackupTimestamp(status.LastFullBackupAt, "No full backup recorded for this preset yet.");
+            LastIncrementalBackupDisplay = FormatBackupTimestamp(status.LastIncrementalBackupAt, "No incremental backup recorded for this preset yet.");
+            LastDifferentialBackupDisplay = FormatBackupTimestamp(status.LastDifferentialBackupAt, "No differential backup recorded for this preset yet.");
+            CanCreateDeltaBackups = status.CanCreateDeltaBackups;
+            BackupGuidanceMessage = status.CanCreateDeltaBackups
+                ? $"Full, incremental, and differential backups are available for {BackupPresetName}. Incremental compares against the latest incremental chain for the latest full backup. Differential compares against the latest full backup only."
+                : $"Create a full backup first for {BackupPresetName} before incremental or differential backups are allowed.";
+        }
+
+        private static string FormatBackupTimestamp(DateTime? timestamp, string emptyMessage)
+        {
+            return timestamp.HasValue
+                ? timestamp.Value.ToString("MMMM d, yyyy h:mm tt", CultureInfo.InvariantCulture)
+                : emptyMessage;
         }
 
         private async Task ExecuteTestConnectionAsync()
@@ -398,17 +857,24 @@ namespace AttendanceShiftingManagement.ViewModels
             PreviewSummary = $"Showing {previewRowCount:N0} row(s) from `{previewTableName}` in `{targetPreset.Database}`.";
         }
 
-        private async Task ExecuteCreateBackupAsync()
+        private async Task ExecuteCreateBackupAsync(string backupType)
         {
             RefreshTargetSummaries();
 
             var targetPreset = GetTargetPreset();
+            var normalizedType = BackupChainService.NormalizeBackupType(backupType);
+            if (!string.Equals(normalizedType, BackupTypes.Full, StringComparison.OrdinalIgnoreCase) && !CanCreateDeltaBackups)
+            {
+                SetBackupError("Create a full backup first for the active preset before using incremental or differential backups.");
+                return;
+            }
+
             var dialog = new SaveFileDialog
             {
                 Filter = "Barangay Backup (*.zip)|*.zip",
                 AddExtension = true,
                 DefaultExt = ".zip",
-                FileName = $"{targetPreset.Database}_backup_{DateTime.Now:yyyyMMdd_HHmmss}.zip"
+                FileName = $"{targetPreset.Database}_{normalizedType.ToLowerInvariant()}_backup_{DateTime.Now:yyyyMMdd_HHmmss}.zip"
             };
 
             if (dialog.ShowDialog() != true)
@@ -419,12 +885,13 @@ namespace AttendanceShiftingManagement.ViewModels
             await ExecuteBusyAsync(
                 async () =>
                 {
-                    SetBackupNeutral("Creating database backup...");
-                    var result = await LocalBackupService.CreateBackupAsync(dialog.FileName);
+                    SetBackupNeutral($"Creating {normalizedType.ToLowerInvariant()} backup...");
+                    var result = await LocalBackupService.CreateBackupAsync(dialog.FileName, normalizedType);
                     if (result.IsSuccess)
                     {
                         SetBackupSuccess(result.Message);
-                        LastBackupActivity = $"Last backup: {dialog.FileName}";
+                        LastBackupActivity = $"Last {normalizedType.ToLowerInvariant()} backup: {dialog.FileName}";
+                        RefreshTargetSummaries();
                         return;
                     }
 
@@ -433,7 +900,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 });
         }
 
-        private async Task ExecuteImportBackupAsync()
+        private async Task ExecuteRestoreBackupAsync()
         {
             RefreshTargetSummaries();
 
@@ -451,18 +918,19 @@ namespace AttendanceShiftingManagement.ViewModels
             await ExecuteBusyAsync(
                 async () =>
                 {
-                    SetBackupNeutral("Importing database backup...");
+                    SetBackupNeutral("Restoring database backup chain...");
                     var result = await LocalBackupService.RestoreBackupAsync(dialog.FileName);
                     if (result.IsSuccess)
                     {
                         SetBackupSuccess(result.Message);
-                        LastBackupActivity = $"Last imported backup: {dialog.FileName}";
+                        LastBackupActivity = $"Last restored backup target: {dialog.FileName}";
+                        RefreshTargetSummaries();
                         await RefreshPreviewCoreAsync();
                         return;
                     }
 
                     SetBackupError(result.Message);
-                    LastBackupActivity = "Backup import failed in this session.";
+                    LastBackupActivity = "Backup restore failed in this session.";
                 });
         }
 
@@ -486,6 +954,23 @@ namespace AttendanceShiftingManagement.ViewModels
         private static Brush CreateBrush(string colorCode)
         {
             return new SolidColorBrush((Color)ColorConverter.ConvertFromString(colorCode));
+        }
+
+        private void RefreshSystemLogoPreview()
+        {
+            SystemLogoImage = LocalImageLoader.Load(SystemLogoPath);
+        }
+
+        private string? GetDisposableWorkingLogoPath()
+        {
+            if (string.IsNullOrWhiteSpace(SystemLogoPath))
+            {
+                return null;
+            }
+
+            return string.Equals(SystemLogoPath, _savedSystemLogoPath, StringComparison.OrdinalIgnoreCase)
+                ? null
+                : SystemLogoPath;
         }
 
         private void SetSnapshotNeutral(string message)
@@ -522,6 +1007,42 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             BackupStatusMessage = message;
             BackupStatusBrush = CreateBrush("#991B1B");
+        }
+
+        private void SetSystemProfileSuccess(string message)
+        {
+            SystemProfileStatusMessage = message;
+            SystemProfileStatusBrush = CreateBrush("#1A7A4A");
+        }
+
+        private void SetSystemProfileError(string message)
+        {
+            SystemProfileStatusMessage = message;
+            SystemProfileStatusBrush = CreateBrush("#991B1B");
+        }
+
+        private void SetAccountSuccess(string message)
+        {
+            AccountStatusMessage = message;
+            AccountStatusBrush = CreateBrush("#1A7A4A");
+        }
+
+        private void SetAccountError(string message)
+        {
+            AccountStatusMessage = message;
+            AccountStatusBrush = CreateBrush("#991B1B");
+        }
+
+        private void SetSecuritySuccess(string message)
+        {
+            SecurityStatusMessage = message;
+            SecurityStatusBrush = CreateBrush("#1A7A4A");
+        }
+
+        private void SetSecurityError(string message)
+        {
+            SecurityStatusMessage = message;
+            SecurityStatusBrush = CreateBrush("#991B1B");
         }
 
         private void SetFeatureRulesSuccess(string message)
@@ -673,6 +1194,19 @@ namespace AttendanceShiftingManagement.ViewModels
 
             return decimal.TryParse(LargeAssistanceWarningThresholdText, NumberStyles.Number, CultureInfo.InvariantCulture, out threshold)
                 || decimal.TryParse(LargeAssistanceWarningThresholdText, NumberStyles.Number, CultureInfo.CurrentCulture, out threshold);
+        }
+
+        private static bool IsValidEmail(string email)
+        {
+            try
+            {
+                _ = new MailAddress(email);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
     }
 }

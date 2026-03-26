@@ -16,13 +16,14 @@ namespace AttendanceShiftingManagement.Views
 
         private void Settings_Click(object sender, RoutedEventArgs e)
         {
-            var window = new SettingsWindow
+            var window = new SettingsWindow(ViewModel.CurrentUser)
             {
                 Owner = this
             };
 
             window.ShowDialog();
             ViewModel.RefreshConnectionSummary();
+            ViewModel.RefreshUserSummary();
             ViewModel.ReloadCurrentView();
         }
 
