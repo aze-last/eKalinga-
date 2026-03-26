@@ -158,7 +158,7 @@
                             Command="{Binding ShowMasterListCommand}">
                         <StackPanel Orientation="Horizontal">
                             <materialDesign:PackIcon Kind="TableLarge" Width="18" Height="18" Margin="0,0,10,0" />
-                            <TextBlock Text="Masterlist" VerticalAlignment="Center" />
+                            <TextBlock Text="Validated Beneficiaries" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
 

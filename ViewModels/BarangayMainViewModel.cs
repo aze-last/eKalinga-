@@ -14,7 +14,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _currentSection = "Dashboard";
         private object _currentView;
         private string _currentSectionTitle = "Dashboard";
-        private string _currentSectionSubtitle = "Monitor masterlist, beneficiary review, assistance cases, households, and cash-for-work at a glance.";
+        private string _currentSectionSubtitle = "Monitor validated beneficiaries, beneficiary review, assistance cases, households, and cash-for-work at a glance.";
         private string _connectionSummary = string.Empty;
         private ImageSource? _userPhotoImage;
         private string _userDisplayName = "Barangay Administrator";
@@ -133,11 +133,11 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 case "Dashboard":
                     CurrentSectionTitle = "Dashboard";
-                    CurrentSectionSubtitle = "Monitor masterlist, beneficiary review, assistance cases, households, and cash-for-work at a glance.";
+                    CurrentSectionSubtitle = "Monitor validated beneficiaries, beneficiary review, assistance cases, households, and cash-for-work at a glance.";
                     return new BarangayDashboardPage();
                 case "MasterList":
-                    CurrentSectionTitle = "Masterlist";
-                    CurrentSectionSubtitle = "Review locally synced beneficiary records from the active database.";
+                    CurrentSectionTitle = "Validated Beneficiaries";
+                    CurrentSectionSubtitle = "Review locally synced validated beneficiary records from the active database one page at a time.";
                     return new MasterListPage();
                 case "Beneficiaries":
                     CurrentSectionTitle = "Beneficiaries";

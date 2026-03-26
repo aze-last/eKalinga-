@@ -18,7 +18,7 @@ namespace AttendanceShiftingManagement.ViewModels
     {
         private const string MasterListTableName = "val_beneficiaries";
         private const string StagingTableName = "BeneficiaryStaging";
-        private const string MasterListPreviewLabel = "Masterlist Snapshot";
+        private const string MasterListPreviewLabel = "Validated Beneficiaries Snapshot";
         private const string StagingPreviewLabel = "Beneficiary Staging";
 
         private readonly RelayCommand _testConnectionCommand;
@@ -343,7 +343,7 @@ namespace AttendanceShiftingManagement.ViewModels
         public string PreviewCardTitle =>
             SelectedPreviewLabel == StagingPreviewLabel
                 ? "Local Staging Preview"
-                : "Local Masterlist Preview";
+                : "Local Validated Beneficiaries Preview";
 
         public DataView? PreviewRowsView
         {
@@ -837,7 +837,7 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 PreviewRowsView = new DataTable().DefaultView;
                 PreviewSummary = previewTableName == MasterListTableName
-                    ? "`val_beneficiaries` is not in the active database yet. Run Snapshot Masterlist first."
+                    ? "`val_beneficiaries` is not in the active database yet. Run Snapshot Validated Beneficiaries first."
                     : "`BeneficiaryStaging` is not in the active database yet.";
                 return;
             }

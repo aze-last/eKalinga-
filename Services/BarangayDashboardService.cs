@@ -177,7 +177,7 @@ namespace AttendanceShiftingManagement.Services
 
                 if (!await TableExistsAsync(connection, preset.Database, cancellationToken))
                 {
-                    return new MasterListMetrics(false, 0, null, "Masterlist snapshot is not available yet.");
+                    return new MasterListMetrics(false, 0, null, "Validated beneficiaries snapshot is not available yet.");
                 }
 
                 const string sql =
@@ -191,7 +191,7 @@ namespace AttendanceShiftingManagement.Services
 
                 if (!await reader.ReadAsync(cancellationToken))
                 {
-                    return new MasterListMetrics(true, 0, null, "Masterlist snapshot is ready.");
+                    return new MasterListMetrics(true, 0, null, "Validated beneficiaries snapshot is ready.");
                 }
 
                 var count = reader.IsDBNull(reader.GetOrdinal("total_count"))
@@ -202,11 +202,11 @@ namespace AttendanceShiftingManagement.Services
                     ? null
                     : (DateTime?)reader.GetDateTime(reader.GetOrdinal("last_updated"));
 
-                return new MasterListMetrics(true, count, lastUpdatedAt, "Masterlist snapshot is ready.");
+                return new MasterListMetrics(true, count, lastUpdatedAt, "Validated beneficiaries snapshot is ready.");
             }
             catch (Exception ex)
             {
-                return new MasterListMetrics(false, 0, null, $"Masterlist snapshot unavailable: {ex.Message}");
+                return new MasterListMetrics(false, 0, null, $"Validated beneficiaries snapshot unavailable: {ex.Message}");
             }
         }
 

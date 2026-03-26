@@ -22,11 +22,11 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel>
-                    <TextBlock Text="Master List"
+                    <TextBlock Text="Validated Beneficiaries"
                                FontSize="26"
                                FontWeight="SemiBold"
                                Foreground="White"/>
-                    <TextBlock Text="Your local beneficiary snapshot is now live. Search fast, validate identities, and review senior or PWD records in one place."
+                    <TextBlock Text="Browse the validated beneficiaries snapshot in smaller pages so large barangay datasets stay responsive while you search, filter, and review records."
                                Margin="0,8,0,0"
                                MaxWidth="640"
                                Foreground="#D6E3FF"
@@ -107,10 +107,11 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
                     <DockPanel Grid.Row="0" Margin="0,0,0,14">
-                        <TextBlock Text="Beneficiary Registry"
+                        <TextBlock Text="Validated Beneficiary Registry"
                                    FontSize="15"
                                    FontWeight="SemiBold"
                                    Foreground="{StaticResource BrandMidnightBrush}"/>
@@ -135,7 +136,7 @@
                                TextWrapping="Wrap"/>
 
                     <DataGrid Grid.Row="2"
-                              ItemsSource="{Binding BeneficiariesView}"
+                              ItemsSource="{Binding Beneficiaries}"
                               SelectedItem="{Binding SelectedBeneficiary}"
                               AutoGenerateColumns="False"
                               CanUserAddRows="False"
@@ -151,6 +152,44 @@
                             <DataGridTextColumn Header="Address" Binding="{Binding Address}" Width="220"/>
                         </DataGrid.Columns>
                     </DataGrid>
+
+                    <DockPanel Grid.Row="3" Margin="0,14,0,0" LastChildFill="False">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Margin="0,0,10,0"
+                                       VerticalAlignment="Center"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                       Text="Rows per page"/>
+                            <ComboBox Width="100"
+                                      ItemsSource="{Binding PageSizeOptions}"
+                                      SelectedItem="{Binding SelectedPageSize}"
+                                      Style="{StaticResource MaterialDesignOutlinedComboBox}"/>
+                        </StackPanel>
+
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <TextBlock Margin="0,0,14,0"
+                                       VerticalAlignment="Center"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                       Text="{Binding PageSummary}"/>
+                            <TextBlock Margin="0,0,14,0"
+                                       VerticalAlignment="Center"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrandMidnightBrush}"
+                                       Text="{Binding PageIndicator}"/>
+                            <Button Width="110"
+                                    Height="36"
+                                    Margin="0,0,8,0"
+                                    Command="{Binding PreviousPageCommand}"
+                                    Content="PREVIOUS"
+                                    Style="{StaticResource SecondaryActionButton}"/>
+                            <Button Width="90"
+                                    Height="36"
+                                    Command="{Binding NextPageCommand}"
+                                    Content="NEXT"
+                                    Style="{StaticResource GoldActionButton}"/>
+                        </StackPanel>
+                    </DockPanel>
                 </Grid>
             </materialDesign:Card>
 

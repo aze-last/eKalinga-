@@ -401,7 +401,7 @@
                                         Padding="14"
                                         CornerRadius="10"
                                         Background="#FFF7D6">
-                                    <TextBlock Text="Snapshot Masterlist copies `val_beneficiaries` into the active database so the Masterlist page has local data. Import to Staging appends new records into `BeneficiaryStaging` as Pending."
+                                    <TextBlock Text="Snapshot Validated Beneficiaries copies `val_beneficiaries` into the active database so the Validated Beneficiaries page has local data. Import to Staging appends new records into `BeneficiaryStaging` as Pending."
                                                Foreground="#9A5A00"
                                                TextWrapping="Wrap" />
                                 </Border>
@@ -415,7 +415,7 @@
                                             Margin="0,0,12,12"
                                             Style="{StaticResource SecondaryActionButton}"
                                             Command="{Binding SaveImportConnectionCommand}" />
-                                    <Button Content="SNAPSHOT MASTERLIST"
+                                    <Button Content="SNAPSHOT VALIDATED BENEFICIARIES"
                                             Margin="0,0,12,12"
                                             Style="{StaticResource GoldActionButton}"
                                             Command="{Binding SnapshotMasterListCommand}" />
@@ -451,7 +451,7 @@
                                             CornerRadius="10"
                                             Background="{StaticResource BrandSurfaceBrush}">
                                         <StackPanel>
-                                            <TextBlock Text="MASTERLIST ROWS"
+                                            <TextBlock Text="VALIDATED BENEFICIARIES ROWS"
                                                        FontSize="10"
                                                        FontWeight="SemiBold"
                                                        Foreground="{StaticResource BrandTextSecondaryBrush}" />

@@ -201,7 +201,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
             ModuleCards.Add(new BarangayDashboardModuleCard
             {
-                Title = "Masterlist snapshot",
+                Title = "Validated beneficiaries snapshot",
                 Summary = snapshot.MasterListAvailable
                     ? $"{snapshot.MasterListCount:N0} record(s) available"
                     : "Snapshot unavailable",

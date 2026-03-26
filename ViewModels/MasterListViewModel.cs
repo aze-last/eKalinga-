@@ -2,8 +2,6 @@ using AttendanceShiftingManagement.Helpers;
 using AttendanceShiftingManagement.Models;
 using AttendanceShiftingManagement.Services;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 
@@ -13,45 +11,54 @@ namespace AttendanceShiftingManagement.ViewModels
     {
         private readonly ObservableCollection<MasterListBeneficiary> _beneficiaries = new();
         private readonly RelayCommand _refreshCommand;
-        private ICollectionView _beneficiariesView;
+        private readonly RelayCommand _previousPageCommand;
+        private readonly RelayCommand _nextPageCommand;
+        private readonly IMasterListQueryService _queryService;
+        private readonly bool _autoRefresh;
+        private CancellationTokenSource? _loadCts;
         private MasterListBeneficiary? _selectedBeneficiary;
         private string _searchText = string.Empty;
-        private string _selectedQuickFilter = "All beneficiaries";
+        private string _selectedQuickFilter = MasterListQuickFilters.AllBeneficiaries;
+        private int _selectedPageSize = 100;
         private bool _isBusy;
-        private string _statusMessage = "Loading local beneficiary snapshot...";
+        private string _statusMessage = "Loading validated beneficiaries...";
         private Brush _statusBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#6B7280"));
         private int _totalBeneficiaries;
         private int _linkedCivilRegistryCount;
         private int _seniorCount;
         private int _pwdCount;
-        private string _snapshotSourceSummary = "Local snapshot";
+        private int _filteredBeneficiaryCount;
+        private int _currentPage = 1;
+        private string _snapshotSourceSummary = "Validated beneficiaries snapshot";
         private string _lastUpdatedSummary = "Last refresh: --";
 
         public MasterListViewModel()
+            : this(new MasterListService(), autoLoad: true, autoRefresh: true)
         {
-            QuickFilters = new ObservableCollection<string>
+        }
+
+        internal MasterListViewModel(IMasterListQueryService queryService, bool autoLoad, bool autoRefresh)
+        {
+            _queryService = queryService ?? throw new ArgumentNullException(nameof(queryService));
+            _autoRefresh = autoRefresh;
+
+            QuickFilters = new ObservableCollection<string>(MasterListQuickFilters.All);
+            PageSizeOptions = new ObservableCollection<int> { 50, 100, 250, 500 };
+            _refreshCommand = new RelayCommand(async _ => await RefreshAsync(), _ => !IsBusy);
+            _previousPageCommand = new RelayCommand(async _ => await GoToPreviousPageAsync(), _ => !IsBusy && CurrentPage > 1);
+            _nextPageCommand = new RelayCommand(async _ => await GoToNextPageAsync(), _ => !IsBusy && CurrentPage < TotalPages);
+
+            if (autoLoad)
             {
-                "All beneficiaries",
-                "Senior citizens",
-                "PWD",
-                "With civil registry ID",
-                "Missing civil registry ID"
-            };
-
-            _beneficiariesView = CollectionViewSource.GetDefaultView(_beneficiaries);
-            _refreshCommand = new RelayCommand(async _ => await LoadAsync(), _ => !IsBusy);
-
-            ApplyFilter();
-            _ = LoadAsync();
+                _ = RefreshAsync();
+            }
         }
 
         public ObservableCollection<string> QuickFilters { get; }
 
-        public ICollectionView BeneficiariesView
-        {
-            get => _beneficiariesView;
-            private set => SetProperty(ref _beneficiariesView, value);
-        }
+        public ObservableCollection<int> PageSizeOptions { get; }
+
+        public ObservableCollection<MasterListBeneficiary> Beneficiaries => _beneficiaries;
 
         public MasterListBeneficiary? SelectedBeneficiary
         {
@@ -66,7 +73,7 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 if (SetProperty(ref _searchText, value))
                 {
-                    ApplyFilter();
+                    QueueReloadFromFirstPage();
                 }
             }
         }
@@ -78,7 +85,22 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 if (SetProperty(ref _selectedQuickFilter, value))
                 {
-                    ApplyFilter();
+                    QueueReloadFromFirstPage();
+                }
+            }
+        }
+
+        public int SelectedPageSize
+        {
+            get => _selectedPageSize;
+            set
+            {
+                if (SetProperty(ref _selectedPageSize, value))
+                {
+                    OnPropertyChanged(nameof(TotalPages));
+                    OnPropertyChanged(nameof(PageIndicator));
+                    OnPropertyChanged(nameof(PageSummary));
+                    QueueReloadFromFirstPage();
                 }
             }
         }
@@ -91,6 +113,8 @@ namespace AttendanceShiftingManagement.ViewModels
                 if (SetProperty(ref _isBusy, value))
                 {
                     _refreshCommand.RaiseCanExecuteChanged();
+                    _previousPageCommand.RaiseCanExecuteChanged();
+                    _nextPageCommand.RaiseCanExecuteChanged();
                 }
             }
         }
@@ -131,6 +155,56 @@ namespace AttendanceShiftingManagement.ViewModels
             private set => SetProperty(ref _pwdCount, value);
         }
 
+        public int FilteredBeneficiaryCount
+        {
+            get => _filteredBeneficiaryCount;
+            private set
+            {
+                if (SetProperty(ref _filteredBeneficiaryCount, value))
+                {
+                    OnPropertyChanged(nameof(TotalPages));
+                    OnPropertyChanged(nameof(PageIndicator));
+                    OnPropertyChanged(nameof(PageSummary));
+                    _previousPageCommand.RaiseCanExecuteChanged();
+                    _nextPageCommand.RaiseCanExecuteChanged();
+                }
+            }
+        }
+
+        public int CurrentPage
+        {
+            get => _currentPage;
+            private set
+            {
+                if (SetProperty(ref _currentPage, value))
+                {
+                    OnPropertyChanged(nameof(PageIndicator));
+                    OnPropertyChanged(nameof(PageSummary));
+                    _previousPageCommand.RaiseCanExecuteChanged();
+                    _nextPageCommand.RaiseCanExecuteChanged();
+                }
+            }
+        }
+
+        public int TotalPages => Math.Max(1, (int)Math.Ceiling((double)Math.Max(FilteredBeneficiaryCount, 1) / SelectedPageSize));
+
+        public string PageIndicator => $"Page {CurrentPage} of {TotalPages}";
+
+        public string PageSummary
+        {
+            get
+            {
+                if (FilteredBeneficiaryCount == 0 || Beneficiaries.Count == 0)
+                {
+                    return "Showing 0 validated beneficiaries";
+                }
+
+                var start = ((CurrentPage - 1) * SelectedPageSize) + 1;
+                var end = start + Beneficiaries.Count - 1;
+                return $"Showing {start:N0}-{end:N0} of {FilteredBeneficiaryCount:N0} validated beneficiaries";
+            }
+        }
+
         public string SnapshotSourceSummary
         {
             get => _snapshotSourceSummary;
@@ -145,106 +219,133 @@ namespace AttendanceShiftingManagement.ViewModels
 
         public ICommand RefreshCommand => _refreshCommand;
 
-        private async Task LoadAsync()
+        public ICommand PreviousPageCommand => _previousPageCommand;
+
+        public ICommand NextPageCommand => _nextPageCommand;
+
+        internal Task RefreshAsync(CancellationToken cancellationToken = default)
         {
-            if (IsBusy)
+            return LoadPageAsync(CurrentPage, cancellationToken);
+        }
+
+        internal Task GoToNextPageAsync(CancellationToken cancellationToken = default)
+        {
+            if (CurrentPage >= TotalPages)
             {
-                return;
+                return Task.CompletedTask;
             }
 
+            return LoadPageAsync(CurrentPage + 1, cancellationToken);
+        }
+
+        internal Task GoToPreviousPageAsync(CancellationToken cancellationToken = default)
+        {
+            if (CurrentPage <= 1)
+            {
+                return Task.CompletedTask;
+            }
+
+            return LoadPageAsync(CurrentPage - 1, cancellationToken);
+        }
+
+        private async Task LoadPageAsync(int targetPage, CancellationToken cancellationToken)
+        {
+            _loadCts?.Cancel();
+            var loadCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            _loadCts = loadCts;
+
             IsBusy = true;
-            SetNeutralStatus("Loading local beneficiary snapshot...");
+            SetNeutralStatus($"Loading validated beneficiaries page {Math.Max(1, targetPage):N0}...");
 
             try
             {
-                var snapshot = await MasterListService.LoadLocalSnapshotAsync();
+                var result = await _queryService.LoadPageAsync(
+                    new MasterListPageRequest
+                    {
+                        SearchText = SearchText.Trim(),
+                        QuickFilter = SelectedQuickFilter,
+                        PageNumber = Math.Max(1, targetPage),
+                        PageSize = SelectedPageSize
+                    },
+                    loadCts.Token);
+
+                if (loadCts.IsCancellationRequested)
+                {
+                    return;
+                }
 
                 _beneficiaries.Clear();
-                foreach (var beneficiary in snapshot.Beneficiaries)
+                foreach (var beneficiary in result.Beneficiaries)
                 {
                     _beneficiaries.Add(beneficiary);
                 }
 
-                TotalBeneficiaries = _beneficiaries.Count;
-                LinkedCivilRegistryCount = _beneficiaries.Count(item => !string.IsNullOrWhiteSpace(item.CivilRegistryId));
-                SeniorCount = _beneficiaries.Count(item => item.IsSenior);
-                PwdCount = _beneficiaries.Count(item => item.IsPwd);
+                TotalBeneficiaries = result.TotalBeneficiaries;
+                LinkedCivilRegistryCount = result.LinkedCivilRegistryCount;
+                SeniorCount = result.SeniorCount;
+                PwdCount = result.PwdCount;
+                FilteredBeneficiaryCount = result.FilteredBeneficiaryCount;
+                CurrentPage = Math.Max(1, targetPage);
 
-                SnapshotSourceSummary = $"Local snapshot from {snapshot.SourceDatabase} on {snapshot.SourceServer}";
-                LastUpdatedSummary = snapshot.LastUpdatedAt.HasValue
-                    ? $"Last synced data: {snapshot.LastUpdatedAt.Value:MMMM dd, yyyy hh:mm tt}"
+                SnapshotSourceSummary = $"Validated beneficiaries snapshot from {result.SourceDatabase} on {result.SourceServer}";
+                LastUpdatedSummary = result.LastUpdatedAt.HasValue
+                    ? $"Last synced data: {result.LastUpdatedAt.Value:MMMM dd, yyyy hh:mm tt}"
                     : "Last synced data: unavailable";
 
-                BeneficiariesView = CollectionViewSource.GetDefaultView(_beneficiaries);
-                ApplyFilter();
                 SelectedBeneficiary = _beneficiaries.FirstOrDefault();
 
-                SetSuccessStatus($"Loaded {TotalBeneficiaries:N0} beneficiary record(s) from local snapshot.");
+                SetSuccessStatus(
+                    FilteredBeneficiaryCount == 0
+                        ? "No validated beneficiaries matched the current filters."
+                        : $"Loaded {PageSummary.ToLowerInvariant()}.");
+            }
+            catch (OperationCanceledException) when (loadCts.IsCancellationRequested)
+            {
             }
             catch (Exception ex)
             {
-                _beneficiaries.Clear();
-                BeneficiariesView = CollectionViewSource.GetDefaultView(_beneficiaries);
-                SelectedBeneficiary = null;
-                TotalBeneficiaries = 0;
-                LinkedCivilRegistryCount = 0;
-                SeniorCount = 0;
-                PwdCount = 0;
-                SnapshotSourceSummary = "Local snapshot unavailable";
-                LastUpdatedSummary = "Last synced data: unavailable";
+                if (loadCts.IsCancellationRequested)
+                {
+                    return;
+                }
+
+                ClearResults();
                 SetErrorStatus(ex.Message);
             }
             finally
             {
-                IsBusy = false;
+                if (ReferenceEquals(_loadCts, loadCts))
+                {
+                    _loadCts = null;
+                    IsBusy = false;
+                }
+
+                loadCts.Dispose();
             }
         }
 
-        private void ApplyFilter()
+        private void QueueReloadFromFirstPage()
         {
-            BeneficiariesView.Filter = item =>
+            if (!_autoRefresh)
             {
-                if (item is not MasterListBeneficiary beneficiary)
-                {
-                    return false;
-                }
+                return;
+            }
 
-                if (!MatchesQuickFilter(beneficiary))
-                {
-                    return false;
-                }
-
-                if (string.IsNullOrWhiteSpace(SearchText))
-                {
-                    return true;
-                }
-
-                return Contains(beneficiary.DisplayName, SearchText)
-                    || Contains(beneficiary.BeneficiaryId, SearchText)
-                    || Contains(beneficiary.CivilRegistryId, SearchText)
-                    || Contains(beneficiary.Address, SearchText)
-                    || Contains(beneficiary.Sex, SearchText);
-            };
-
-            BeneficiariesView.Refresh();
+            _ = LoadPageAsync(1, CancellationToken.None);
         }
 
-        private bool MatchesQuickFilter(MasterListBeneficiary beneficiary)
+        private void ClearResults()
         {
-            return SelectedQuickFilter switch
-            {
-                "Senior citizens" => beneficiary.IsSenior,
-                "PWD" => beneficiary.IsPwd,
-                "With civil registry ID" => !string.IsNullOrWhiteSpace(beneficiary.CivilRegistryId),
-                "Missing civil registry ID" => string.IsNullOrWhiteSpace(beneficiary.CivilRegistryId),
-                _ => true
-            };
-        }
-
-        private static bool Contains(string source, string searchText)
-        {
-            return !string.IsNullOrWhiteSpace(source)
-                && source.Contains(searchText, StringComparison.OrdinalIgnoreCase);
+            _beneficiaries.Clear();
+            SelectedBeneficiary = null;
+            TotalBeneficiaries = 0;
+            LinkedCivilRegistryCount = 0;
+            SeniorCount = 0;
+            PwdCount = 0;
+            FilteredBeneficiaryCount = 0;
+            CurrentPage = 1;
+            SnapshotSourceSummary = "Validated beneficiaries snapshot unavailable";
+            LastUpdatedSummary = "Last synced data: unavailable";
         }
 
         private void SetNeutralStatus(string message)

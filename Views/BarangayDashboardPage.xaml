@@ -47,7 +47,7 @@
                                    FontSize="28"
                                    FontWeight="SemiBold"
                                    Foreground="White" />
-                        <TextBlock Text="Monitor masterlist sync, beneficiary review, household data, and cash-for-work from one landing page."
+                        <TextBlock Text="Monitor validated beneficiaries sync, beneficiary review, household data, and cash-for-work from one landing page."
                                    Margin="0,8,0,0"
                                    FontSize="14"
                                    Foreground="#D7E3FF"
@@ -129,7 +129,7 @@
                 <materialDesign:Card Style="{StaticResource MetricCardStyle}">
                     <StackPanel>
                         <TextBlock Text="{Binding MasterListCount, StringFormat=N0}" FontSize="28" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}" />
-                        <TextBlock Text="Masterlist snapshot" Margin="0,4,0,0" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}" />
+                        <TextBlock Text="Validated beneficiaries snapshot" Margin="0,4,0,0" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}" />
                         <TextBlock Text="Local val_beneficiaries records available." Margin="0,6,0,0" FontSize="12" Foreground="{StaticResource BrandTextSecondaryBrush}" TextWrapping="Wrap" />
                     </StackPanel>
                 </materialDesign:Card>
@@ -241,7 +241,7 @@
                         <StackPanel>
                             <TextBlock Text="Quick actions" Style="{StaticResource MaterialDesignHeadline5TextBlock}" />
                             <StackPanel Margin="0,18,0,0">
-                                <Button Style="{StaticResource QuickActionButtonStyle}" Command="{Binding DataContext.ShowMasterListCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}" Content="OPEN MASTERLIST" />
+                                <Button Style="{StaticResource QuickActionButtonStyle}" Command="{Binding DataContext.ShowMasterListCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}" Content="OPEN VALIDATED BENEFICIARIES" />
                                 <Button Style="{StaticResource QuickActionButtonStyle}" Command="{Binding DataContext.ShowBeneficiariesCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}" Content="REVIEW BENEFICIARIES" />
                                 <Button Style="{StaticResource QuickActionButtonStyle}" Command="{Binding DataContext.ShowHouseholdRegistryCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}" Content="BROWSE HOUSEHOLDS" />
                                 <Button Style="{StaticResource QuickActionButtonStyle}" Margin="0" Command="{Binding DataContext.ShowCashForWorkCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}" Content="OPEN CASH-FOR-WORK" />
