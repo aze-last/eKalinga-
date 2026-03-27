@@ -177,6 +177,56 @@
                 <StackPanel Grid.Column="2">
                     <materialDesign:Card Padding="18" Margin="0,0,0,16" Background="White">
                         <StackPanel>
+                            <DockPanel>
+                                <TextBlock Text="Seminar Setup" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
+                                <Border DockPanel.Dock="Right"
+                                        Padding="10,4"
+                                        CornerRadius="12"
+                                        Background="#FEF3C7">
+                                    <TextBlock Text="New panel" FontWeight="SemiBold" Foreground="#92400E"/>
+                                </Border>
+                            </DockPanel>
+
+                            <TextBlock Text="Create seminar entries in a cleaner way. Open the panel only when you need to fill in the seminar title, credentials, whether the support is cash or goods, and the seminar agenda."
+                                       Margin="0,8,0,0"
+                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                       TextWrapping="Wrap"/>
+
+                            <Border Margin="0,14,0,0"
+                                    Padding="16"
+                                    CornerRadius="12"
+                                    Background="#EEF4FF"
+                                    BorderBrush="{StaticResource BrandBorderBrush}"
+                                    BorderThickness="1">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding SeminarTitle, TargetNullValue=No seminar draft yet}"
+                                               FontSize="17"
+                                               FontWeight="SemiBold"
+                                               Foreground="{StaticResource BrandMidnightBrush}"
+                                               TextWrapping="Wrap"/>
+                                    <TextBlock Text="{Binding SeminarCode, StringFormat='Code: {0}', TargetNullValue=Code: --}"
+                                               Margin="0,6,0,0"
+                                               Foreground="{StaticResource BrandTextSecondaryBrush}"/>
+                                    <TextBlock Text="{Binding SelectedSeminarSupportKind, StringFormat='Support: {0}'}"
+                                               Margin="0,4,0,0"
+                                               Foreground="{StaticResource BrandTextSecondaryBrush}"/>
+                                    <TextBlock Text="{Binding SeminarAgenda, TargetNullValue=Add the agenda inside the panel.}"
+                                               Margin="0,4,0,0"
+                                               Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                               TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Border>
+
+                            <Button Content="OPEN SEMINAR PANEL"
+                                    Margin="0,14,0,0"
+                                    Height="42"
+                                    Style="{StaticResource GoldActionButton}"
+                                    Command="{Binding OpenSeminarPanelCommand}"/>
+                        </StackPanel>
+                    </materialDesign:Card>
+
+                    <materialDesign:Card Padding="18" Margin="0,0,0,16" Background="White">
+                        <StackPanel>
                             <TextBlock Text="Project / Distribution Setup" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
                             <TextBlock Text="Create the ayuda project first, define the item or amount, keep dates optional, and use the Distribution workspace to attach approved beneficiaries plus open the phone scanner."
                                        Margin="0,6,0,0"
@@ -318,6 +368,106 @@
                         </DataGrid.Columns>
                     </DataGrid>
                 </StackPanel>
+            </materialDesign:Card>
+
+            <Border Grid.RowSpan="4"
+                    Panel.ZIndex="19"
+                    Background="#660F172A"
+                    CornerRadius="20"
+                    Visibility="{Binding SeminarPanelVisibility}"/>
+
+            <materialDesign:Card Grid.RowSpan="4"
+                                 Panel.ZIndex="20"
+                                 Width="720"
+                                 Margin="0,24,0,24"
+                                 Padding="18"
+                                 HorizontalAlignment="Right"
+                                 VerticalAlignment="Stretch"
+                                 Background="White"
+                                 Visibility="{Binding SeminarPanelVisibility}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <DockPanel>
+                        <StackPanel>
+                            <TextBlock Text="Seminar Setup Panel"
+                                       FontSize="18"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrandMidnightBrush}"/>
+                            <TextBlock Margin="0,4,0,0"
+                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                       Text="Record the seminar title, credentials, support kind, amount or goods details, and the agenda here."
+                                       TextWrapping="Wrap"/>
+                        </StackPanel>
+
+                        <Button DockPanel.Dock="Right"
+                                Content="CLOSE"
+                                Height="36"
+                                Style="{StaticResource SecondaryActionButton}"
+                                Command="{Binding CloseSeminarPanelCommand}"/>
+                    </DockPanel>
+
+                    <ScrollViewer Grid.Row="1"
+                                  Margin="0,16,0,0"
+                                  VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <UniformGrid Columns="2">
+                                <TextBox Margin="0,0,8,10"
+                                         Text="{Binding SeminarCode, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="Seminar code"/>
+                                <DatePicker Margin="8,0,0,10"
+                                            SelectedDate="{Binding SeminarDate}"
+                                            materialDesign:HintAssist.Hint="Seminar date"/>
+                            </UniformGrid>
+
+                            <TextBox Margin="0,0,0,10"
+                                     Text="{Binding SeminarTitle, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     materialDesign:HintAssist.Hint="Seminar title"/>
+
+                            <TextBox Margin="0,0,0,10"
+                                     Text="{Binding SeminarCredentials, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     materialDesign:HintAssist.Hint="Speaker / organizer credentials"/>
+
+                            <ComboBox Margin="0,0,0,10"
+                                      ItemsSource="{Binding SeminarSupportKinds}"
+                                      SelectedItem="{Binding SelectedSeminarSupportKind}"
+                                      Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                      materialDesign:HintAssist.Hint="Support kind"/>
+
+                            <TextBox Margin="0,0,0,10"
+                                     Text="{Binding SeminarAmountText, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     Visibility="{Binding SeminarAmountVisibility}"
+                                     materialDesign:HintAssist.Hint="Amount for seminar support"/>
+
+                            <TextBox Margin="0,0,0,10"
+                                     Text="{Binding SeminarGoodsDescription, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     Visibility="{Binding SeminarGoodsVisibility}"
+                                     materialDesign:HintAssist.Hint="Goods / package details"/>
+
+                            <TextBox Height="110"
+                                     Margin="0,0,0,10"
+                                     AcceptsReturn="True"
+                                     TextWrapping="Wrap"
+                                     VerticalScrollBarVisibility="Auto"
+                                     Text="{Binding SeminarAgenda, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     materialDesign:HintAssist.Hint="Seminar agenda"/>
+
+                            <Button Content="CREATE SEMINAR"
+                                    Height="42"
+                                    Style="{StaticResource GoldActionButton}"
+                                    Command="{Binding CreateSeminarCommand}"/>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
             </materialDesign:Card>
         </Grid>
     </ScrollViewer>

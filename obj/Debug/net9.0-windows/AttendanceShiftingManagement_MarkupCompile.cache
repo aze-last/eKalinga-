@@ -1,18 +1,18 @@
 ﻿AttendanceShiftingManagement
-1.0.0.0
+
 
 winexe
 C#
 .cs
-c:\Users\ASUS\source\repos\AttendanceShiftingManagement\AttendanceShiftingManagement\obj\Debug\net9.0-windows\
+C:\Users\ASUS\source\repos\AttendanceShiftingManagement\AttendanceShiftingManagement\obj\Debug\net9.0-windows\
 AttendanceShiftingManagement
 none
 false
 TRACE;DEBUG;NET;NET9_0;NETCOREAPP;WINDOWS;WINDOWS7_0;NET5_0_OR_GREATER;NET6_0_OR_GREATER;NET7_0_OR_GREATER;NET8_0_OR_GREATER;NET9_0_OR_GREATER;NETCOREAPP3_0_OR_GREATER;NETCOREAPP3_1_OR_GREATER;WINDOWS7_0_OR_GREATER
-c:\Users\ASUS\source\repos\AttendanceShiftingManagement\AttendanceShiftingManagement\App.xaml
+C:\Users\ASUS\source\repos\AttendanceShiftingManagement\AttendanceShiftingManagement\App.xaml
 131796007369
 22-1380674967
-116650547
+114-1073908030
 349-1808256471
 Views\AssistanceCaseManagementPage.xaml;Views\BarangayDashboardPage.xaml;Views\BeneficiaryVerificationPage.xaml;Views\BudgetPage.xaml;Views\CashForWorkOcrPage.xaml;Views\ConnectionSettingsWindow.xaml;Views\HouseholdRegistryPage.xaml;Views\LoadTablesWindow.xaml;Views\LoginWindow.xaml;Views\MainWindow.xaml;Views\MasterListPage.xaml;Views\ProjectDistributionPage.xaml;Views\SettingsWindow.xaml;
 

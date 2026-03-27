@@ -312,7 +312,8 @@ namespace AttendanceShiftingManagement.Models
     {
         AssistanceCase,
         CashForWork,
-        GeneralPurpose
+        GeneralPurpose,
+        Seminar
     }
 
     public enum AyudaProgramDistributionStatus

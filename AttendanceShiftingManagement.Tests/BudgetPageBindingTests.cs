@@ -21,6 +21,15 @@ public sealed class BudgetPageBindingTests
         Assert.Contains("Command=\"{Binding RecordDonationCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding CreateProgramCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"Project / Distribution Setup\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"Seminar Setup\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding OpenSeminarPanelCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding CloseSeminarPanelCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding CreateSeminarCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding SeminarCode, UpdateSourceTrigger=PropertyChanged}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding SeminarTitle, UpdateSourceTrigger=PropertyChanged}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding SeminarCredentials, UpdateSourceTrigger=PropertyChanged}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding SeminarAgenda, UpdateSourceTrigger=PropertyChanged}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Visibility=\"{Binding SeminarPanelVisibility}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"{Binding ProgramAssistanceType, UpdateSourceTrigger=PropertyChanged}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"{Binding ProgramUnitAmountText, UpdateSourceTrigger=PropertyChanged}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"{Binding ProgramItemDescription, UpdateSourceTrigger=PropertyChanged}\"", xaml, StringComparison.Ordinal);

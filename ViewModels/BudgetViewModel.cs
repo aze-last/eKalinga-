@@ -5,6 +5,7 @@ using AttendanceShiftingManagement.Services;
 using Microsoft.Win32;
 using System.Collections.ObjectModel;
 using System.Globalization;
+using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 
@@ -20,6 +21,9 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly RelayCommand _syncGovernmentBudgetCommand;
         private readonly RelayCommand _recordDonationCommand;
         private readonly RelayCommand _createProgramCommand;
+        private readonly RelayCommand _openSeminarPanelCommand;
+        private readonly RelayCommand _closeSeminarPanelCommand;
+        private readonly RelayCommand _createSeminarCommand;
         private readonly RelayCommand _browseProofCommand;
         private string _statusMessage = "Loading budget controls...";
         private Brush _statusBrush = Brushes.DimGray;
@@ -52,6 +56,15 @@ namespace AttendanceShiftingManagement.ViewModels
         private DateTime? _programEndDate;
         private string _programBudgetCapText = string.Empty;
         private AyudaProgramDistributionStatus _selectedProgramDistributionStatus = AyudaProgramDistributionStatus.Draft;
+        private string _seminarCode = string.Empty;
+        private string _seminarTitle = string.Empty;
+        private string _seminarCredentials = string.Empty;
+        private AssistanceReleaseKind _selectedSeminarSupportKind = AssistanceReleaseKind.Cash;
+        private string _seminarAmountText = string.Empty;
+        private string _seminarGoodsDescription = string.Empty;
+        private string _seminarAgenda = string.Empty;
+        private DateTime? _seminarDate = DateTime.Today;
+        private bool _isSeminarPanelOpen;
         private bool _isBusy;
 
         public BudgetViewModel(User currentUser)
@@ -64,6 +77,7 @@ namespace AttendanceShiftingManagement.ViewModels
             ProofTypes = new ObservableCollection<DonationProofType>(Enum.GetValues<DonationProofType>());
             ProgramTypes = new ObservableCollection<AyudaProgramType>(Enum.GetValues<AyudaProgramType>());
             ProgramDistributionStatuses = new ObservableCollection<AyudaProgramDistributionStatus>(Enum.GetValues<AyudaProgramDistributionStatus>());
+            SeminarSupportKinds = new ObservableCollection<AssistanceReleaseKind>(Enum.GetValues<AssistanceReleaseKind>());
             Programs = new ObservableCollection<AyudaProgram>();
             Donations = new ObservableCollection<PrivateDonation>();
             LedgerEntries = new ObservableCollection<BudgetLedgerEntryListItem>();
@@ -71,6 +85,9 @@ namespace AttendanceShiftingManagement.ViewModels
             _syncGovernmentBudgetCommand = new RelayCommand(async _ => await SyncGovernmentBudgetAsync(), _ => !IsBusy);
             _recordDonationCommand = new RelayCommand(async _ => await RecordDonationAsync(), _ => !IsBusy);
             _createProgramCommand = new RelayCommand(async _ => await CreateProgramAsync(), _ => !IsBusy);
+            _openSeminarPanelCommand = new RelayCommand(_ => OpenSeminarPanel(), _ => !IsBusy && !IsSeminarPanelOpen);
+            _closeSeminarPanelCommand = new RelayCommand(_ => CloseSeminarPanel(), _ => IsSeminarPanelOpen);
+            _createSeminarCommand = new RelayCommand(async _ => await CreateSeminarAsync(), _ => !IsBusy);
             _browseProofCommand = new RelayCommand(_ => BrowseProof());
             _ = LoadAsync();
         }
@@ -79,6 +96,7 @@ namespace AttendanceShiftingManagement.ViewModels
         public ObservableCollection<DonationProofType> ProofTypes { get; }
         public ObservableCollection<AyudaProgramType> ProgramTypes { get; }
         public ObservableCollection<AyudaProgramDistributionStatus> ProgramDistributionStatuses { get; }
+        public ObservableCollection<AssistanceReleaseKind> SeminarSupportKinds { get; }
         public ObservableCollection<AyudaProgram> Programs { get; }
         public ObservableCollection<PrivateDonation> Donations { get; }
         public ObservableCollection<BudgetLedgerEntryListItem> LedgerEntries { get; }
@@ -87,6 +105,9 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand SyncGovernmentBudgetCommand => _syncGovernmentBudgetCommand;
         public ICommand RecordDonationCommand => _recordDonationCommand;
         public ICommand CreateProgramCommand => _createProgramCommand;
+        public ICommand OpenSeminarPanelCommand => _openSeminarPanelCommand;
+        public ICommand CloseSeminarPanelCommand => _closeSeminarPanelCommand;
+        public ICommand CreateSeminarCommand => _createSeminarCommand;
         public ICommand BrowseProofCommand => _browseProofCommand;
 
         public bool IsBusy
@@ -100,6 +121,9 @@ namespace AttendanceShiftingManagement.ViewModels
                     _syncGovernmentBudgetCommand.RaiseCanExecuteChanged();
                     _recordDonationCommand.RaiseCanExecuteChanged();
                     _createProgramCommand.RaiseCanExecuteChanged();
+                    _openSeminarPanelCommand.RaiseCanExecuteChanged();
+                    _closeSeminarPanelCommand.RaiseCanExecuteChanged();
+                    _createSeminarCommand.RaiseCanExecuteChanged();
                 }
             }
         }
@@ -289,6 +313,85 @@ namespace AttendanceShiftingManagement.ViewModels
             get => _selectedProgramDistributionStatus;
             set => SetProperty(ref _selectedProgramDistributionStatus, value);
         }
+
+        public string SeminarCode
+        {
+            get => _seminarCode;
+            set => SetProperty(ref _seminarCode, value);
+        }
+
+        public string SeminarTitle
+        {
+            get => _seminarTitle;
+            set => SetProperty(ref _seminarTitle, value);
+        }
+
+        public string SeminarCredentials
+        {
+            get => _seminarCredentials;
+            set => SetProperty(ref _seminarCredentials, value);
+        }
+
+        public AssistanceReleaseKind SelectedSeminarSupportKind
+        {
+            get => _selectedSeminarSupportKind;
+            set
+            {
+                if (SetProperty(ref _selectedSeminarSupportKind, value))
+                {
+                    OnPropertyChanged(nameof(SeminarAmountVisibility));
+                    OnPropertyChanged(nameof(SeminarGoodsVisibility));
+                }
+            }
+        }
+
+        public string SeminarAmountText
+        {
+            get => _seminarAmountText;
+            set => SetProperty(ref _seminarAmountText, value);
+        }
+
+        public string SeminarGoodsDescription
+        {
+            get => _seminarGoodsDescription;
+            set => SetProperty(ref _seminarGoodsDescription, value);
+        }
+
+        public string SeminarAgenda
+        {
+            get => _seminarAgenda;
+            set => SetProperty(ref _seminarAgenda, value);
+        }
+
+        public DateTime? SeminarDate
+        {
+            get => _seminarDate;
+            set => SetProperty(ref _seminarDate, value);
+        }
+
+        public bool IsSeminarPanelOpen
+        {
+            get => _isSeminarPanelOpen;
+            private set
+            {
+                if (SetProperty(ref _isSeminarPanelOpen, value))
+                {
+                    OnPropertyChanged(nameof(SeminarPanelVisibility));
+                    _openSeminarPanelCommand.RaiseCanExecuteChanged();
+                    _closeSeminarPanelCommand.RaiseCanExecuteChanged();
+                }
+            }
+        }
+
+        public Visibility SeminarPanelVisibility => IsSeminarPanelOpen ? Visibility.Visible : Visibility.Collapsed;
+
+        public Visibility SeminarAmountVisibility => SelectedSeminarSupportKind == AssistanceReleaseKind.Cash
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
+        public Visibility SeminarGoodsVisibility => SelectedSeminarSupportKind == AssistanceReleaseKind.Goods
+            ? Visibility.Visible
+            : Visibility.Collapsed;
 
         private async Task LoadAsync()
         {
@@ -521,6 +624,104 @@ namespace AttendanceShiftingManagement.ViewModels
             }
         }
 
+        private async Task CreateSeminarAsync()
+        {
+            if (IsBusy)
+            {
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(SeminarCode))
+            {
+                SetErrorStatus("Enter a seminar code.");
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(SeminarTitle))
+            {
+                SetErrorStatus("Enter the seminar title.");
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(SeminarAgenda))
+            {
+                SetErrorStatus("Enter the seminar agenda.");
+                return;
+            }
+
+            decimal? unitAmount = null;
+            if (SelectedSeminarSupportKind == AssistanceReleaseKind.Cash)
+            {
+                if (!TryParseAmount(SeminarAmountText, out var parsedAmount))
+                {
+                    SetErrorStatus("Enter a valid seminar amount.");
+                    return;
+                }
+
+                unitAmount = parsedAmount;
+            }
+            else if (string.IsNullOrWhiteSpace(SeminarGoodsDescription))
+            {
+                SetErrorStatus("Describe the seminar goods or package.");
+                return;
+            }
+
+            IsBusy = true;
+            SetNeutralStatus("Creating seminar setup...");
+
+            try
+            {
+                var result = await _budgetService.CreateProgramAsync(
+                    new AyudaProgramRequest(
+                        SeminarCode,
+                        SeminarTitle,
+                        AyudaProgramType.Seminar,
+                        BuildSeminarDescription(),
+                        SelectedSeminarSupportKind == AssistanceReleaseKind.Cash ? "Seminar Amount" : "Seminar Goods",
+                        unitAmount,
+                        NormalizeNullable(SeminarGoodsDescription),
+                        SeminarDate?.Date,
+                        SeminarDate?.Date,
+                        unitAmount,
+                        AyudaProgramDistributionStatus.Draft),
+                    _currentUser.Id);
+
+                if (!result.IsSuccess)
+                {
+                    SetErrorStatus(result.Message);
+                    return;
+                }
+
+                ResetSeminarForm();
+                CloseSeminarPanel();
+                await LoadProgramsAsync();
+                SetSuccessStatus(result.Message);
+            }
+            catch (Exception ex)
+            {
+                SetErrorStatus($"Unable to create seminar setup: {ex.Message}");
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
+        private void OpenSeminarPanel()
+        {
+            if (IsBusy)
+            {
+                return;
+            }
+
+            IsSeminarPanelOpen = true;
+        }
+
+        private void CloseSeminarPanel()
+        {
+            IsSeminarPanelOpen = false;
+        }
+
         private void BrowseProof()
         {
             var dialog = new OpenFileDialog
@@ -561,6 +762,18 @@ namespace AttendanceShiftingManagement.ViewModels
             ProgramEndDate = null;
             ProgramBudgetCapText = string.Empty;
             SelectedProgramDistributionStatus = AyudaProgramDistributionStatus.Draft;
+        }
+
+        private void ResetSeminarForm()
+        {
+            SeminarCode = string.Empty;
+            SeminarTitle = string.Empty;
+            SeminarCredentials = string.Empty;
+            SelectedSeminarSupportKind = AssistanceReleaseKind.Cash;
+            SeminarAmountText = string.Empty;
+            SeminarGoodsDescription = string.Empty;
+            SeminarAgenda = string.Empty;
+            SeminarDate = DateTime.Today;
         }
 
         private void SetNeutralStatus(string message)
@@ -613,6 +826,20 @@ namespace AttendanceShiftingManagement.ViewModels
             }
 
             return false;
+        }
+
+        private string BuildSeminarDescription()
+        {
+            var sections = new List<string>();
+
+            if (!string.IsNullOrWhiteSpace(SeminarCredentials))
+            {
+                sections.Add($"Credentials: {SeminarCredentials.Trim()}");
+            }
+
+            sections.Add($"Agenda: {SeminarAgenda.Trim()}");
+
+            return string.Join(Environment.NewLine, sections);
         }
 
         private static string? NormalizeNullable(string? value)
