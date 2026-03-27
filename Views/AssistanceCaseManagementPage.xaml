@@ -22,11 +22,11 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel>
-                    <TextBlock Text="Assistance Case Management"
+                    <TextBlock Text="Aid Request"
                                FontSize="26"
                                FontWeight="SemiBold"
                                Foreground="White"/>
-                    <TextBlock Text="Track household assistance requests, review approvals, and manage release or closure using one local case registry."
+                    <TextBlock Text="Track barangay aid requests, link releases to the shared budget ledger, and demo quickly using validated beneficiaries or registered households."
                                Margin="0,8,0,0"
                                MaxWidth="760"
                                Foreground="#D6E3FF"
@@ -36,7 +36,7 @@
                 <WrapPanel Grid.Column="1"
                            HorizontalAlignment="Right"
                            VerticalAlignment="Top">
-                    <Button Content="NEW CASE"
+                    <Button Content="NEW REQUEST"
                             Command="{Binding NewCaseCommand}"
                             Style="{StaticResource SecondaryActionButton}"
                             Height="40"
@@ -53,7 +53,7 @@
             <materialDesign:Card Width="160" Margin="8" Background="{StaticResource BrandMidnightBrush}" Padding="16" BorderThickness="0">
                 <StackPanel>
                     <TextBlock Text="{Binding TotalCases, StringFormat=N0}" FontSize="28" FontWeight="Medium" Foreground="White"/>
-                    <TextBlock Text="TOTAL CASES" Foreground="#A5B4FC" FontSize="9"/>
+                    <TextBlock Text="TOTAL REQUESTS" Foreground="#A5B4FC" FontSize="9"/>
                 </StackPanel>
             </materialDesign:Card>
 
@@ -102,7 +102,7 @@
                     </Grid.RowDefinitions>
 
                     <DockPanel Grid.Row="0" Margin="0,0,0,14">
-                        <TextBlock Text="Assistance Cases"
+                        <TextBlock Text="Aid Requests"
                                    FontSize="15"
                                    FontWeight="SemiBold"
                                    Foreground="{StaticResource BrandMidnightBrush}"/>
@@ -115,7 +115,7 @@
                             <TextBox Width="280"
                                      Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                                      Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                     materialDesign:HintAssist.Hint="Search case number, household, type..."/>
+                                     materialDesign:HintAssist.Hint="Search request number, applicant, type..."/>
                         </StackPanel>
                     </DockPanel>
 
@@ -136,8 +136,11 @@
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Case No." Binding="{Binding CaseNumber}" Width="140"/>
                             <DataGridTextColumn Header="Type" Binding="{Binding AssistanceType}" Width="160"/>
+                            <DataGridTextColumn Header="Release" Binding="{Binding ReleaseKindText}" Width="90"/>
                             <DataGridTextColumn Header="Household" Binding="{Binding HouseholdLabel}" Width="*"/>
                             <DataGridTextColumn Header="Applicant" Binding="{Binding ApplicantLabel}" Width="170"/>
+                            <DataGridTextColumn Header="Program" Binding="{Binding AyudaProgramLabel}" Width="170"/>
+                            <DataGridTextColumn Header="Amount" Binding="{Binding AssistanceAmountText}" Width="120"/>
                             <DataGridTextColumn Header="Priority" Binding="{Binding PriorityText}" Width="90"/>
                             <DataGridTemplateColumn Header="Status" Width="110">
                                 <DataGridTemplateColumn.CellTemplate>
@@ -162,7 +165,7 @@
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <TextBlock Text="Case Detail"
+                    <TextBlock Text="Aid Request Detail"
                                FontSize="15"
                                FontWeight="SemiBold"
                                Foreground="{StaticResource BrandMidnightBrush}"/>
@@ -183,7 +186,15 @@
                                        Margin="0,6,0,0"
                                        Foreground="{StaticResource BrandTextSecondaryBrush}"
                                        TextWrapping="Wrap"/>
-                            <TextBlock Text="{Binding SelectedCase.AmountsSummary, TargetNullValue=Requested: -- | Approved: --}"
+                            <TextBlock Text="{Binding SelectedCase.AmountsSummary, TargetNullValue=Amount: --}"
+                                       Margin="0,4,0,0"
+                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                       TextWrapping="Wrap"/>
+                            <TextBlock Text="{Binding ReleaseKindSummary}"
+                                       Margin="0,4,0,0"
+                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                       TextWrapping="Wrap"/>
+                            <TextBlock Text="Budget is recorded only when the request is released as cash or goods."
                                        Margin="0,4,0,0"
                                        Foreground="{StaticResource BrandTextSecondaryBrush}"
                                        TextWrapping="Wrap"/>
@@ -192,9 +203,25 @@
 
                     <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
                         <StackPanel>
-                            <TextBlock Text="Case Setup"
+                            <TextBlock Text="Aid Request Setup"
                                        FontWeight="SemiBold"
                                        Foreground="{StaticResource BrandMidnightBrush}"/>
+
+                            <TextBlock Margin="0,10,0,8"
+                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                       Text="Pick either a validated beneficiary for demo/live lookup, or a household/member from the registry."/>
+
+                            <TextBox Margin="0,0,0,10"
+                                     Text="{Binding ValidatedBeneficiarySearchText, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     materialDesign:HintAssist.Hint="Search validated beneficiary by name, beneficiary ID, or civil registry ID"/>
+
+                            <ComboBox Margin="0,0,0,10"
+                                      ItemsSource="{Binding ValidatedBeneficiaries}"
+                                      SelectedItem="{Binding SelectedValidatedBeneficiary}"
+                                      DisplayMemberPath="DisplayLabel"
+                                      Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                      materialDesign:HintAssist.Hint="Validated beneficiary"/>
 
                             <ComboBox Margin="0,12,0,10"
                                       ItemsSource="{Binding Households}"
@@ -216,21 +243,28 @@
                                      materialDesign:HintAssist.Hint="Assistance type"/>
 
                             <ComboBox Margin="0,0,0,10"
+                                      ItemsSource="{Binding ReleaseKindOptions}"
+                                      SelectedItem="{Binding SelectedReleaseKind}"
+                                      Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                      materialDesign:HintAssist.Hint="Release kind"/>
+
+                            <ComboBox Margin="0,0,0,10"
+                                      ItemsSource="{Binding AyudaPrograms}"
+                                      SelectedItem="{Binding SelectedAyudaProgram}"
+                                      DisplayMemberPath="DisplayLabel"
+                                      Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                      materialDesign:HintAssist.Hint="Ayuda program / event"/>
+
+                            <ComboBox Margin="0,0,0,10"
                                       ItemsSource="{Binding PriorityOptions}"
                                       SelectedItem="{Binding SelectedPriority}"
                                       Style="{StaticResource MaterialDesignOutlinedComboBox}"
                                       materialDesign:HintAssist.Hint="Priority"/>
 
-                            <UniformGrid Columns="2" Margin="0,0,0,10">
-                                <TextBox Margin="0,0,8,0"
-                                         Text="{Binding EditableRequestedAmount, UpdateSourceTrigger=PropertyChanged}"
-                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                         materialDesign:HintAssist.Hint="Requested amount"/>
-                                <TextBox Margin="8,0,0,0"
-                                         Text="{Binding EditableApprovedAmount, UpdateSourceTrigger=PropertyChanged}"
-                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                         materialDesign:HintAssist.Hint="Approved amount"/>
-                            </UniformGrid>
+                            <TextBox Margin="0,0,0,10"
+                                     Text="{Binding EditableAssistanceAmount, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     materialDesign:HintAssist.Hint="Assistance amount"/>
 
                             <UniformGrid Columns="2" Margin="0,0,0,10">
                                 <DatePicker Margin="0,0,8,0"
@@ -246,29 +280,19 @@
                                      Style="{StaticResource MaterialDesignOutlinedTextBox}"
                                      materialDesign:HintAssist.Hint="Summary"/>
 
-                            <TextBox Margin="0,0,0,10"
-                                     Height="90"
-                                     AcceptsReturn="True"
-                                     TextWrapping="Wrap"
-                                     VerticalScrollBarVisibility="Auto"
-                                     Text="{Binding EditableNotes, UpdateSourceTrigger=PropertyChanged}"
-                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                     materialDesign:HintAssist.Hint="Case notes"/>
-
-                            <TextBox Margin="0,0,0,10"
-                                     Height="90"
-                                     AcceptsReturn="True"
-                                     TextWrapping="Wrap"
-                                     VerticalScrollBarVisibility="Auto"
-                                     Text="{Binding EditableResolutionNotes, UpdateSourceTrigger=PropertyChanged}"
-                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                     materialDesign:HintAssist.Hint="Resolution notes for close, reject, or cancel"/>
-
                             <WrapPanel Margin="0,4,0,0">
-                                <Button Content="SAVE"
+                                <Button Content="SAVE REQUEST"
                                         Command="{Binding SaveCaseCommand}"
                                         Style="{StaticResource MaterialDesignRaisedButton}"
                                         Background="{StaticResource BrandMidnightBrush}"
+                                        Foreground="White"
+                                        Height="38"
+                                        Margin="0,0,10,10"
+                                        Padding="18,0"/>
+                                <Button Content="DELETE"
+                                        Command="{Binding DeleteCommand}"
+                                        Style="{StaticResource MaterialDesignRaisedButton}"
+                                        Background="{StaticResource BrandRedBrush}"
                                         Foreground="White"
                                         Height="38"
                                         Margin="0,0,10,10"

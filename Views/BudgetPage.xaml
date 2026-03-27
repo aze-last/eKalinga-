@@ -1,0 +1,324 @@
+<UserControl x:Class="AttendanceShiftingManagement.Views.BudgetPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             Background="{StaticResource BrandSurfaceBrush}">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <Grid Margin="24">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <materialDesign:Card Grid.Row="0" Padding="20" Background="White">
+                <DockPanel>
+                    <StackPanel>
+                        <TextBlock Text="Budget Control" FontSize="22" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
+                        <TextBlock Text="Manage the combined Ayuda budget, sync GGMS allocation snapshots, record private donations, and keep one shared release ledger."
+                                   Margin="0,6,0,0"
+                                   Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                   TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding StatusMessage}"
+                                   Margin="0,10,0,0"
+                                   FontWeight="SemiBold"
+                                   Foreground="{Binding StatusBrush}"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
+
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
+                        <Button Content="SYNC GGMS BUDGET"
+                                Margin="0,0,12,0"
+                                Height="40"
+                                Style="{StaticResource GoldActionButton}"
+                                Command="{Binding SyncGovernmentBudgetCommand}"/>
+                        <Button Content="REFRESH"
+                                Height="40"
+                                Style="{StaticResource SecondaryActionButton}"
+                                Command="{Binding RefreshCommand}"/>
+                    </StackPanel>
+                </DockPanel>
+            </materialDesign:Card>
+
+            <UniformGrid Grid.Row="1" Margin="0,18,0,18" Columns="4">
+                <materialDesign:Card Margin="0,0,12,0" Padding="16" Background="{StaticResource BrandMidnightBrush}">
+                    <StackPanel>
+                        <TextBlock Text="{Binding CombinedAvailable, StringFormat=N2}" FontSize="26" FontWeight="SemiBold" Foreground="White"/>
+                        <TextBlock Text="COMBINED AVAILABLE" FontSize="10" Foreground="#D6E3FF"/>
+                    </StackPanel>
+                </materialDesign:Card>
+
+                <materialDesign:Card Margin="0,0,12,0" Padding="16" Background="#0F766E">
+                    <StackPanel>
+                        <TextBlock Text="{Binding GovernmentAvailable, StringFormat=N2}" FontSize="26" FontWeight="SemiBold" Foreground="White"/>
+                        <TextBlock Text="GOVERNMENT AVAILABLE" FontSize="10" Foreground="#CCFBF1"/>
+                    </StackPanel>
+                </materialDesign:Card>
+
+                <materialDesign:Card Margin="0,0,12,0" Padding="16" Background="{StaticResource BrandYellowBrush}">
+                    <StackPanel>
+                        <TextBlock Text="{Binding PrivateAvailable, StringFormat=N2}" FontSize="26" FontWeight="SemiBold" Foreground="{StaticResource BrandGoldTextBrush}"/>
+                        <TextBlock Text="PRIVATE AVAILABLE" FontSize="10" Foreground="#7A5A00"/>
+                    </StackPanel>
+                </materialDesign:Card>
+
+                <materialDesign:Card Padding="16" Background="{StaticResource BrandSuccessBrush}">
+                    <StackPanel>
+                        <TextBlock Text="{Binding ReleasedTotal, StringFormat=N2}" FontSize="26" FontWeight="SemiBold" Foreground="White"/>
+                        <TextBlock Text="TOTAL RELEASED" FontSize="10" Foreground="#DDF7E5"/>
+                    </StackPanel>
+                </materialDesign:Card>
+            </UniformGrid>
+
+            <Grid Grid.Row="2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="16"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0">
+                    <materialDesign:Card Padding="18" Margin="0,0,0,16" Background="White">
+                        <StackPanel>
+                            <TextBlock Text="GGMS Government Snapshot" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
+                            <TextBlock Text="{Binding LatestGovernmentSyncLabel}" Margin="0,6,0,0" Foreground="{StaticResource BrandTextSecondaryBrush}"/>
+                            <UniformGrid Margin="0,14,0,0" Columns="2">
+                                <TextBlock Text="{Binding GovernmentOfficeCode, StringFormat=Office Code: {0}}" Foreground="{StaticResource BrandMidnightBrush}"/>
+                                <TextBlock Text="{Binding GovernmentOfficeName, StringFormat=Office: {0}}" Foreground="{StaticResource BrandMidnightBrush}"/>
+                                <TextBlock Margin="0,10,0,0" Text="{Binding GovernmentAllocated, StringFormat=Allocated: {0:N2}}" Foreground="{StaticResource BrandMidnightBrush}"/>
+                                <TextBlock Margin="0,10,0,0" Text="{Binding GovernmentSpentReference, StringFormat=GGMS Spent Ref.: {0:N2}}" Foreground="{StaticResource BrandMidnightBrush}"/>
+                            </UniformGrid>
+                        </StackPanel>
+                    </materialDesign:Card>
+
+                    <materialDesign:Card Padding="18" Background="White">
+                        <StackPanel>
+                            <TextBlock Text="Private Donation Entry" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
+
+                            <UniformGrid Margin="0,14,0,0" Columns="2">
+                                <ComboBox Margin="0,0,8,0"
+                                          ItemsSource="{Binding DonorTypes}"
+                                          SelectedItem="{Binding SelectedDonorType}"
+                                          Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                          materialDesign:HintAssist.Hint="Donor type"/>
+                                <ComboBox Margin="8,0,0,0"
+                                          ItemsSource="{Binding ProofTypes}"
+                                          SelectedItem="{Binding SelectedProofType}"
+                                          Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                          materialDesign:HintAssist.Hint="Proof type"/>
+                            </UniformGrid>
+
+                            <TextBox Margin="0,12,0,0"
+                                     Text="{Binding DonorName, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     materialDesign:HintAssist.Hint="Donor name"/>
+
+                            <UniformGrid Margin="0,12,0,0" Columns="2">
+                                <TextBox Margin="0,0,8,0"
+                                         Text="{Binding DonationAmountText, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="Amount"/>
+                                <DatePicker Margin="8,0,0,0"
+                                            SelectedDate="{Binding DonationDateReceived}"
+                                            materialDesign:HintAssist.Hint="Date received"/>
+                            </UniformGrid>
+
+                            <UniformGrid Margin="0,12,0,0" Columns="2">
+                                <TextBox Margin="0,0,8,0"
+                                         Text="{Binding DonationReferenceNumber, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="Reference number"/>
+                                <TextBox Margin="8,0,0,0"
+                                         Text="{Binding ProofReferenceNumber, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="Proof reference"/>
+                            </UniformGrid>
+
+                            <Grid Margin="0,12,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="150"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBox Grid.Column="0"
+                                         IsReadOnly="True"
+                                         Text="{Binding ProofFilePath}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="Optional proof file"/>
+
+                                <Button Grid.Column="2"
+                                        Content="Browse Proof"
+                                        Height="42"
+                                        Style="{StaticResource SecondaryActionButton}"
+                                        Command="{Binding BrowseProofCommand}"/>
+                            </Grid>
+
+                            <TextBox Margin="0,12,0,0"
+                                     Height="80"
+                                     AcceptsReturn="True"
+                                     TextWrapping="Wrap"
+                                     VerticalScrollBarVisibility="Auto"
+                                     Text="{Binding DonationRemarks, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     materialDesign:HintAssist.Hint="Remarks / liquidation notes"/>
+
+                            <Button Content="Record Private Donation"
+                                    Margin="0,14,0,0"
+                                    Height="42"
+                                    Style="{StaticResource PrimaryActionButton}"
+                                    Command="{Binding RecordDonationCommand}"/>
+                        </StackPanel>
+                    </materialDesign:Card>
+                </StackPanel>
+
+                <StackPanel Grid.Column="2">
+                    <materialDesign:Card Padding="18" Margin="0,0,0,16" Background="White">
+                        <StackPanel>
+                            <TextBlock Text="Project / Distribution Setup" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
+                            <TextBlock Text="Create the ayuda project first, define the item or amount, keep dates optional, and use the Distribution workspace to attach approved beneficiaries plus open the phone scanner."
+                                       Margin="0,6,0,0"
+                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                       TextWrapping="Wrap"/>
+
+                            <UniformGrid Margin="0,14,0,0" Columns="2">
+                                <TextBox Margin="0,0,8,0"
+                                         Text="{Binding ProgramCode, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="Program code"/>
+                                <ComboBox Margin="8,0,0,0"
+                                          ItemsSource="{Binding ProgramTypes}"
+                                          SelectedItem="{Binding SelectedProgramType}"
+                                          Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                          materialDesign:HintAssist.Hint="Program type"/>
+                            </UniformGrid>
+
+                            <TextBox Margin="0,12,0,0"
+                                     Text="{Binding ProgramName, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     materialDesign:HintAssist.Hint="Program / event name"/>
+
+                            <UniformGrid Margin="0,12,0,0" Columns="2">
+                                <TextBox Margin="0,0,8,0"
+                                         Text="{Binding ProgramAssistanceType, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="Assistance type"/>
+                                <TextBox Margin="8,0,0,0"
+                                         Text="{Binding ProgramUnitAmountText, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="Unit amount"/>
+                            </UniformGrid>
+
+                            <TextBox Margin="0,12,0,0"
+                                     Text="{Binding ProgramItemDescription, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     materialDesign:HintAssist.Hint="Item description / package details"/>
+
+                            <UniformGrid Margin="0,12,0,0" Columns="2">
+                                <DatePicker Margin="0,0,8,0"
+                                            SelectedDate="{Binding ProgramStartDate}"
+                                            materialDesign:HintAssist.Hint="Optional start date"/>
+                                <DatePicker Margin="8,0,0,0"
+                                            SelectedDate="{Binding ProgramEndDate}"
+                                            materialDesign:HintAssist.Hint="Optional end date"/>
+                            </UniformGrid>
+
+                            <UniformGrid Margin="0,12,0,0" Columns="2">
+                                <TextBox Margin="0,0,8,0"
+                                         Text="{Binding ProgramBudgetCapText, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="Project budget cap"/>
+                                <ComboBox Margin="8,0,0,0"
+                                          ItemsSource="{Binding ProgramDistributionStatuses}"
+                                          SelectedItem="{Binding SelectedProgramDistributionStatus}"
+                                          Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                          materialDesign:HintAssist.Hint="Distribution status"/>
+                            </UniformGrid>
+
+                            <TextBox Margin="0,12,0,0"
+                                     Height="80"
+                                     AcceptsReturn="True"
+                                     TextWrapping="Wrap"
+                                     VerticalScrollBarVisibility="Auto"
+                                     Text="{Binding ProgramDescription, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     materialDesign:HintAssist.Hint="Description"/>
+
+                            <Button Content="Create Program"
+                                    Margin="0,14,0,0"
+                                    Height="42"
+                                    Style="{StaticResource GoldActionButton}"
+                                    Command="{Binding CreateProgramCommand}"/>
+
+                            <DataGrid Margin="0,14,0,0"
+                                      ItemsSource="{Binding Programs}"
+                                      AutoGenerateColumns="False"
+                                      CanUserAddRows="False"
+                                      CanUserDeleteRows="False"
+                                      IsReadOnly="True"
+                                      MinHeight="220">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Code" Binding="{Binding ProgramCode}" Width="110"/>
+                                    <DataGridTextColumn Header="Program" Binding="{Binding ProgramName}" Width="*"/>
+                                    <DataGridTextColumn Header="Type" Binding="{Binding ProgramType}" Width="130"/>
+                                    <DataGridTextColumn Header="Assistance" Binding="{Binding AssistanceType}" Width="140"/>
+                                    <DataGridTextColumn Header="Unit" Binding="{Binding UnitAmount, StringFormat=N2}" Width="100"/>
+                                    <DataGridTextColumn Header="Budget Cap" Binding="{Binding BudgetCap, StringFormat=N2}" Width="120"/>
+                                    <DataGridTextColumn Header="Status" Binding="{Binding DistributionStatus}" Width="110"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </StackPanel>
+                    </materialDesign:Card>
+
+                    <materialDesign:Card Padding="18" Background="White">
+                        <StackPanel>
+                            <TextBlock Text="Private Donations" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
+                            <DataGrid Margin="0,14,0,0"
+                                      ItemsSource="{Binding Donations}"
+                                      AutoGenerateColumns="False"
+                                      CanUserAddRows="False"
+                                      IsReadOnly="True"
+                                      MinHeight="220">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Date" Binding="{Binding DateReceived, StringFormat='{}{0:yyyy-MM-dd}'}" Width="110"/>
+                                    <DataGridTextColumn Header="Donor" Binding="{Binding DonorName}" Width="*"/>
+                                    <DataGridTextColumn Header="Type" Binding="{Binding DonorType}" Width="110"/>
+                                    <DataGridTextColumn Header="Amount" Binding="{Binding Amount, StringFormat=N2}" Width="110"/>
+                                    <DataGridTextColumn Header="Proof" Binding="{Binding ProofType}" Width="110"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </StackPanel>
+                    </materialDesign:Card>
+                </StackPanel>
+            </Grid>
+
+            <materialDesign:Card Grid.Row="3" Margin="0,18,0,0" Padding="18" Background="White">
+                <StackPanel>
+                    <TextBlock Text="Budget Ledger / Liquidation" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
+                    <DataGrid Margin="0,14,0,0"
+                              ItemsSource="{Binding LedgerEntries}"
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False"
+                              CanUserDeleteRows="False"
+                              IsReadOnly="True"
+                              MinHeight="260">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Date" Binding="{Binding EntryDate, StringFormat='{}{0:yyyy-MM-dd}'}" Width="110"/>
+                            <DataGridTextColumn Header="Entry" Binding="{Binding EntryType}" Width="90"/>
+                            <DataGridTextColumn Header="Source" Binding="{Binding FeatureSource}" Width="110"/>
+                            <DataGridTextColumn Header="Release" Binding="{Binding ReleaseKind}" Width="90"/>
+                            <DataGridTextColumn Header="Program" Binding="{Binding ProgramName}" Width="*"/>
+                            <DataGridTextColumn Header="Recipients" Binding="{Binding RecipientCount}" Width="90"/>
+                            <DataGridTextColumn Header="Total" Binding="{Binding TotalAmount, StringFormat=N2}" Width="110"/>
+                            <DataGridTextColumn Header="Gov't" Binding="{Binding GovernmentPortion, StringFormat=N2}" Width="110"/>
+                            <DataGridTextColumn Header="Private" Binding="{Binding PrivatePortion, StringFormat=N2}" Width="110"/>
+                            <DataGridTextColumn Header="Remarks" Binding="{Binding Remarks}" Width="200"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </StackPanel>
+            </materialDesign:Card>
+        </Grid>
+    </ScrollViewer>
+</UserControl>

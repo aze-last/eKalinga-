@@ -117,6 +117,44 @@
                         </StackPanel>
                     </materialDesign:Card>
 
+                    <materialDesign:Card Padding="18" Margin="0,0,0,16" Background="White">
+                        <StackPanel>
+                            <TextBlock Text="Phone Scanner Session" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
+                            <TextBlock Text="Create a temporary QR session plus 6-digit PIN for the employee phone scanner."
+                                       Margin="0,6,0,0"
+                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                       TextWrapping="Wrap"/>
+                            <Button Content="Create Attendance Scanner Session"
+                                    Margin="0,14,0,0"
+                                    Height="42"
+                                    Style="{StaticResource GoldActionButton}"
+                                    Command="{Binding CreateAttendanceScannerSessionCommand}"/>
+                            <TextBox Margin="0,12,0,0"
+                                     IsReadOnly="True"
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     materialDesign:HintAssist.Hint="Scanner URL"
+                                     Text="{Binding AttendanceScannerSessionUrl, Mode=OneWay}"/>
+                            <TextBlock Margin="0,10,0,0"
+                                       Text="{Binding AttendanceScannerSessionPin}"
+                                       FontSize="24"
+                                       FontWeight="Bold"
+                                       Foreground="{StaticResource BrandMidnightBrush}"/>
+                            <TextBlock Margin="0,4,0,0"
+                                       Text="{Binding AttendanceScannerSessionExpiresAtText}"
+                                       Foreground="{StaticResource BrandTextSecondaryBrush}"/>
+                            <Border Margin="0,14,0,0"
+                                    Width="180"
+                                    Height="180"
+                                    HorizontalAlignment="Left"
+                                    Background="White"
+                                    BorderBrush="{StaticResource BrandBorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="12">
+                                <Image Source="{Binding AttendanceScannerQrImage}" Stretch="Uniform"/>
+                            </Border>
+                        </StackPanel>
+                    </materialDesign:Card>
+
                     <materialDesign:Card Padding="18" Background="White">
                         <StackPanel>
                             <TextBlock Text="Approved Participants" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
@@ -302,6 +340,34 @@
                                     </StackPanel>
                                 </Border>
                             </UniformGrid>
+
+                            <Grid Margin="0,14,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="180"/>
+                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="180"/>
+                                </Grid.ColumnDefinitions>
+
+                                <ComboBox Grid.Column="0"
+                                          ItemsSource="{Binding AyudaPrograms}"
+                                          SelectedItem="{Binding SelectedAyudaProgram}"
+                                          DisplayMemberPath="ProgramName"
+                                          Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                          materialDesign:HintAssist.Hint="Ayuda program / event"/>
+
+                                <TextBox Grid.Column="2"
+                                         Text="{Binding ReleaseAmountText, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="Release amount"/>
+
+                                <Button Grid.Column="4"
+                                        Content="Release C4W Budget"
+                                        Height="42"
+                                        Style="{StaticResource GoldActionButton}"
+                                        Command="{Binding ReleaseBudgetCommand}"/>
+                            </Grid>
                         </StackPanel>
                     </materialDesign:Card>
 

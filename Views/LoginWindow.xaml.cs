@@ -1,4 +1,5 @@
 using AttendanceShiftingManagement.ViewModels;
+using AttendanceShiftingManagement.Services;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -12,6 +13,7 @@ namespace AttendanceShiftingManagement.Views
         {
             InitializeComponent();
             DataContext = new LoginViewModel();
+            WindowBrandingService.ApplyWindowIcon(this);
         }
 
         private void PasswordBox_PasswordChanged(object sender, RoutedEventArgs e)

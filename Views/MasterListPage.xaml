@@ -153,8 +153,16 @@
                         </DataGrid.Columns>
                     </DataGrid>
 
-                    <DockPanel Grid.Row="3" Margin="0,14,0,0" LastChildFill="False">
-                        <StackPanel Orientation="Horizontal">
+                    <Grid Grid.Row="3" Margin="0,14,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="16"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="16"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Orientation="Horizontal">
                             <TextBlock Margin="0,0,10,0"
                                        VerticalAlignment="Center"
                                        FontWeight="SemiBold"
@@ -166,17 +174,29 @@
                                       Style="{StaticResource MaterialDesignOutlinedComboBox}"/>
                         </StackPanel>
 
-                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                            <TextBlock Margin="0,0,14,0"
+                        <Grid Grid.Column="2" VerticalAlignment="Center">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Grid.Column="0"
                                        VerticalAlignment="Center"
                                        FontWeight="SemiBold"
                                        Foreground="{StaticResource BrandTextSecondaryBrush}"
-                                       Text="{Binding PageSummary}"/>
-                            <TextBlock Margin="0,0,14,0"
+                                       Text="{Binding PageSummary}"
+                                       TextTrimming="CharacterEllipsis"/>
+                            <TextBlock Grid.Column="1"
+                                       Margin="14,0,0,0"
                                        VerticalAlignment="Center"
                                        FontWeight="SemiBold"
                                        Foreground="{StaticResource BrandMidnightBrush}"
                                        Text="{Binding PageIndicator}"/>
+                        </Grid>
+
+                        <StackPanel Grid.Column="4"
+                                    Orientation="Horizontal"
+                                    HorizontalAlignment="Right">
                             <Button Width="110"
                                     Height="36"
                                     Margin="0,0,8,0"
@@ -189,7 +209,7 @@
                                     Content="NEXT"
                                     Style="{StaticResource GoldActionButton}"/>
                         </StackPanel>
-                    </DockPanel>
+                    </Grid>
                 </Grid>
             </materialDesign:Card>
 

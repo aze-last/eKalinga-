@@ -16,7 +16,7 @@ namespace AttendanceShiftingManagement.Data
             }
 
             // `EnsureCreated()` handles fresh databases. The follow-up repair scripts keep
-            // existing databases aligned with the current Ayuda-only schema.
+            // existing databases aligned with the current runtime schema.
             context.Database.EnsureCreated();
             ExecuteSchemaRepairs(connectionString);
         }
@@ -29,17 +29,37 @@ namespace AttendanceShiftingManagement.Data
                 throw new InvalidOperationException("The active database name is missing from the connection string.");
             }
 
+            try
+            {
+                using var existingDatabaseConnection = new MySqlConnection(builder.ConnectionString);
+                existingDatabaseConnection.Open();
+                return;
+            }
+            catch (MySqlException ex) when (ex.Number == 1049)
+            {
+                // Unknown database. Fall through and attempt to create it.
+            }
+
             var databaseName = builder.Database;
             builder.Database = string.Empty;
 
-            using var connection = new MySqlConnection(builder.ConnectionString);
-            connection.Open();
+            try
+            {
+                using var connection = new MySqlConnection(builder.ConnectionString);
+                connection.Open();
 
-            using var command = new MySqlCommand(
-                $"CREATE DATABASE IF NOT EXISTS `{EscapeIdentifier(databaseName)}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;",
-                connection);
+                using var command = new MySqlCommand(
+                    $"CREATE DATABASE IF NOT EXISTS `{EscapeIdentifier(databaseName)}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;",
+                    connection);
 
-            command.ExecuteNonQuery();
+                command.ExecuteNonQuery();
+            }
+            catch (MySqlException ex) when (ex.Number is 1044 or 1045 or 1142)
+            {
+                throw new InvalidOperationException(
+                    $"Database '{databaseName}' does not exist and the configured MySQL account cannot create databases. Create it first in your hosting panel, then rerun migrations.",
+                    ex);
+            }
         }
 
         internal static void RepairLegacySchema(string connectionString)
@@ -97,6 +117,36 @@ namespace AttendanceShiftingManagement.Data
             EnsureColumnExists(
                 connection,
                 "assistance_cases",
+                "validated_beneficiary_name",
+                "ALTER TABLE `assistance_cases` ADD COLUMN `validated_beneficiary_name` varchar(150) NULL;");
+
+            EnsureColumnExists(
+                connection,
+                "assistance_cases",
+                "validated_beneficiary_id",
+                "ALTER TABLE `assistance_cases` ADD COLUMN `validated_beneficiary_id` varchar(120) NULL;");
+
+            EnsureColumnExists(
+                connection,
+                "assistance_cases",
+                "validated_civil_registry_id",
+                "ALTER TABLE `assistance_cases` ADD COLUMN `validated_civil_registry_id` varchar(120) NULL;");
+
+            EnsureColumnExists(
+                connection,
+                "assistance_cases",
+                "release_kind",
+                "ALTER TABLE `assistance_cases` ADD COLUMN `release_kind` varchar(32) NOT NULL DEFAULT 'Cash';");
+
+            EnsureColumnNullable(
+                connection,
+                "assistance_cases",
+                "household_id",
+                "ALTER TABLE `assistance_cases` MODIFY COLUMN `household_id` int NULL;");
+
+            EnsureColumnExists(
+                connection,
+                "assistance_cases",
                 "approved_amount",
                 "ALTER TABLE `assistance_cases` ADD COLUMN `approved_amount` decimal(18,2) NULL;");
 
@@ -129,6 +179,167 @@ namespace AttendanceShiftingManagement.Data
                 "assistance_cases",
                 "reviewed_by_user_id",
                 "ALTER TABLE `assistance_cases` ADD COLUMN `reviewed_by_user_id` int NULL;");
+
+            EnsureColumnExists(
+                connection,
+                "assistance_cases",
+                "ayuda_program_id",
+                "ALTER TABLE `assistance_cases` ADD COLUMN `ayuda_program_id` int NULL;");
+
+            EnsureColumnExists(
+                connection,
+                "assistance_cases",
+                "budget_ledger_entry_id",
+                "ALTER TABLE `assistance_cases` ADD COLUMN `budget_ledger_entry_id` int NULL;");
+
+            EnsureColumnExists(
+                connection,
+                "budget_ledger_entries",
+                "release_kind",
+                "ALTER TABLE `budget_ledger_entries` ADD COLUMN `release_kind` varchar(32) NULL;");
+
+            EnsureColumnExists(
+                connection,
+                "scanner_sessions",
+                "ayuda_program_id",
+                "ALTER TABLE `scanner_sessions` ADD COLUMN `ayuda_program_id` int NULL;");
+
+            EnsureColumnExists(
+                connection,
+                "ayuda_programs",
+                "assistance_type",
+                "ALTER TABLE `ayuda_programs` ADD COLUMN `assistance_type` varchar(120) NULL;");
+
+            EnsureColumnExists(
+                connection,
+                "ayuda_programs",
+                "unit_amount",
+                "ALTER TABLE `ayuda_programs` ADD COLUMN `unit_amount` decimal(18,2) NULL;");
+
+            EnsureColumnExists(
+                connection,
+                "ayuda_programs",
+                "item_description",
+                "ALTER TABLE `ayuda_programs` ADD COLUMN `item_description` varchar(250) NULL;");
+
+            EnsureColumnExists(
+                connection,
+                "ayuda_programs",
+                "start_date",
+                "ALTER TABLE `ayuda_programs` ADD COLUMN `start_date` datetime(6) NULL;");
+
+            EnsureColumnExists(
+                connection,
+                "ayuda_programs",
+                "end_date",
+                "ALTER TABLE `ayuda_programs` ADD COLUMN `end_date` datetime(6) NULL;");
+
+            EnsureColumnExists(
+                connection,
+                "ayuda_programs",
+                "budget_cap",
+                "ALTER TABLE `ayuda_programs` ADD COLUMN `budget_cap` decimal(18,2) NULL;");
+
+            EnsureColumnExists(
+                connection,
+                "ayuda_programs",
+                "distribution_status",
+                "ALTER TABLE `ayuda_programs` ADD COLUMN `distribution_status` longtext NULL;");
+
+            EnsureColumnExists(
+                connection,
+                "cash_for_work_events",
+                "ayuda_program_id",
+                "ALTER TABLE `cash_for_work_events` ADD COLUMN `ayuda_program_id` int NULL;");
+
+            EnsureColumnExists(
+                connection,
+                "cash_for_work_events",
+                "budget_ledger_entry_id",
+                "ALTER TABLE `cash_for_work_events` ADD COLUMN `budget_ledger_entry_id` int NULL;");
+
+            EnsureColumnExists(
+                connection,
+                "cash_for_work_events",
+                "release_amount",
+                "ALTER TABLE `cash_for_work_events` ADD COLUMN `release_amount` decimal(18,2) NULL;");
+
+            EnsureColumnExists(
+                connection,
+                "cash_for_work_events",
+                "released_at",
+                "ALTER TABLE `cash_for_work_events` ADD COLUMN `released_at` datetime(6) NULL;");
+
+            ExecuteNonQuery(
+                connection,
+                """
+                CREATE TABLE IF NOT EXISTS `ayuda_project_beneficiaries` (
+                    `id` int NOT NULL AUTO_INCREMENT,
+                    `ayuda_program_id` int NOT NULL,
+                    `beneficiary_staging_id` int NOT NULL,
+                    `household_id` int NULL,
+                    `household_member_id` int NULL,
+                    `beneficiary_id` varchar(120) NULL,
+                    `civil_registry_id` varchar(120) NULL,
+                    `full_name` varchar(200) NOT NULL,
+                    `added_by_user_id` int NOT NULL,
+                    `added_at` datetime(6) NOT NULL,
+                    PRIMARY KEY (`id`),
+                    UNIQUE KEY `IX_ayuda_project_beneficiaries_program_beneficiary` (`ayuda_program_id`, `beneficiary_staging_id`)
+                ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+                """);
+
+            ExecuteNonQuery(
+                connection,
+                """
+                CREATE TABLE IF NOT EXISTS `ayuda_project_claims` (
+                    `id` int NOT NULL AUTO_INCREMENT,
+                    `ayuda_program_id` int NOT NULL,
+                    `beneficiary_staging_id` int NOT NULL,
+                    `project_beneficiary_id` int NULL,
+                    `household_id` int NULL,
+                    `household_member_id` int NULL,
+                    `beneficiary_id` varchar(120) NULL,
+                    `civil_registry_id` varchar(120) NULL,
+                    `full_name` varchar(200) NOT NULL,
+                    `assistance_type_snapshot` varchar(120) NULL,
+                    `item_description_snapshot` varchar(250) NULL,
+                    `unit_amount_snapshot` decimal(18,2) NULL,
+                    `qr_payload` varchar(200) NULL,
+                    `remarks` varchar(1000) NULL,
+                    `claimed_by_user_id` int NOT NULL,
+                    `claimed_at` datetime(6) NOT NULL,
+                    PRIMARY KEY (`id`),
+                    UNIQUE KEY `IX_ayuda_project_claims_program_beneficiary` (`ayuda_program_id`, `beneficiary_staging_id`)
+                ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+                """);
+
+            ExecuteNonQuery(
+                connection,
+                """
+                UPDATE `assistance_cases`
+                SET `release_kind` = 'Cash'
+                WHERE `release_kind` IS NULL
+                   OR `release_kind` = '';
+                """);
+
+            ExecuteNonQuery(
+                connection,
+                """
+                UPDATE `ayuda_programs`
+                SET `distribution_status` = 'Draft'
+                WHERE `distribution_status` IS NULL
+                   OR `distribution_status` = '';
+                """);
+
+            ExecuteNonQuery(
+                connection,
+                """
+                UPDATE `budget_ledger_entries`
+                SET `release_kind` = 'Cash'
+                WHERE `entry_type` = 'Release'
+                  AND (`release_kind` IS NULL OR `release_kind` = '');
+                """);
         }
 
         private static IReadOnlyList<string> GetSchemaScripts()
@@ -177,6 +388,18 @@ namespace AttendanceShiftingManagement.Data
                     `updated_at` datetime(6) NOT NULL,
                     PRIMARY KEY (`id`),
                     UNIQUE KEY `IX_user_profiles_user_id` (`user_id`)
+                ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+                """,
+                """
+                CREATE TABLE IF NOT EXISTS `system_registrations` (
+                    `id` int NOT NULL AUTO_INCREMENT,
+                    `company_serial_number` varchar(80) NOT NULL,
+                    `company_name` varchar(180) NULL,
+                    `created_at` datetime(6) NOT NULL,
+                    `updated_at` datetime(6) NOT NULL,
+                    `last_validated_at` datetime(6) NULL,
+                    PRIMARY KEY (`id`),
+                    UNIQUE KEY `IX_system_registrations_company_serial_number` (`company_serial_number`)
                 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
                 """,
                 """
@@ -242,12 +465,52 @@ namespace AttendanceShiftingManagement.Data
                 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
                 """,
                 """
+                CREATE TABLE IF NOT EXISTS `beneficiary_digital_ids` (
+                    `id` int NOT NULL AUTO_INCREMENT,
+                    `beneficiary_staging_id` int NOT NULL,
+                    `household_id` int NOT NULL,
+                    `household_member_id` int NULL,
+                    `card_number` varchar(40) NOT NULL,
+                    `qr_payload` varchar(200) NOT NULL,
+                    `photo_path` varchar(255) NULL,
+                    `issued_by_user_id` int NOT NULL,
+                    `issued_at` datetime(6) NOT NULL,
+                    `last_printed_at` datetime(6) NULL,
+                    `is_active` tinyint(1) NOT NULL,
+                    `revoked_at` datetime(6) NULL,
+                    PRIMARY KEY (`id`),
+                    UNIQUE KEY `IX_beneficiary_digital_ids_beneficiary_staging_id` (`beneficiary_staging_id`),
+                    UNIQUE KEY `IX_beneficiary_digital_ids_card_number` (`card_number`),
+                    UNIQUE KEY `IX_beneficiary_digital_ids_qr_payload` (`qr_payload`)
+                ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+                """,
+                """
+                CREATE TABLE IF NOT EXISTS `scanner_sessions` (
+                    `id` int NOT NULL AUTO_INCREMENT,
+                    `mode` longtext NOT NULL,
+                    `session_token` varchar(80) NOT NULL,
+                    `pin_hash` varchar(128) NOT NULL,
+                    `cash_for_work_event_id` int NULL,
+                    `created_by_user_id` int NOT NULL,
+                    `created_at` datetime(6) NOT NULL,
+                    `expires_at` datetime(6) NOT NULL,
+                    `last_accessed_at` datetime(6) NULL,
+                    `is_active` tinyint(1) NOT NULL,
+                    PRIMARY KEY (`id`),
+                    UNIQUE KEY `IX_scanner_sessions_session_token` (`session_token`)
+                ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+                """,
+                """
                 CREATE TABLE IF NOT EXISTS `assistance_cases` (
                     `id` int NOT NULL AUTO_INCREMENT,
                     `case_number` varchar(40) NOT NULL,
-                    `household_id` int NOT NULL,
+                    `household_id` int NULL,
                     `household_member_id` int NULL,
+                    `validated_beneficiary_name` varchar(150) NULL,
+                    `validated_beneficiary_id` varchar(120) NULL,
+                    `validated_civil_registry_id` varchar(120) NULL,
                     `assistance_type` varchar(120) NOT NULL,
+                    `release_kind` varchar(32) NOT NULL DEFAULT 'Cash',
                     `priority` longtext NOT NULL,
                     `status` longtext NOT NULL,
                     `requested_amount` decimal(18,2) NULL,
@@ -268,31 +531,6 @@ namespace AttendanceShiftingManagement.Data
                 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
                 """,
                 """
-                CREATE TABLE IF NOT EXISTS `grievance_records` (
-                    `id` int NOT NULL AUTO_INCREMENT,
-                    `grievance_number` varchar(40) NOT NULL,
-                    `civil_registry_id` varchar(120) NULL,
-                    `beneficiary_id` varchar(120) NULL,
-                    `staging_id` int NULL,
-                    `assistance_case_id` int NULL,
-                    `cash_for_work_event_id` int NULL,
-                    `type` longtext NOT NULL,
-                    `status` longtext NOT NULL,
-                    `title` varchar(200) NOT NULL,
-                    `description` varchar(1000) NOT NULL,
-                    `filed_by_user_id` int NOT NULL,
-                    `assigned_to_user_id` int NULL,
-                    `resolution_remarks` varchar(1000) NULL,
-                    `created_at` datetime(6) NOT NULL,
-                    `updated_at` datetime(6) NOT NULL,
-                    `resolved_at` datetime(6) NULL,
-                    PRIMARY KEY (`id`),
-                    UNIQUE KEY `IX_grievance_records_grievance_number` (`grievance_number`),
-                    KEY `IX_grievance_records_civil_registry_id` (`civil_registry_id`),
-                    KEY `IX_grievance_records_beneficiary_id` (`beneficiary_id`)
-                ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-                """,
-                """
                 CREATE TABLE IF NOT EXISTS `beneficiary_assistance_ledger` (
                     `id` int NOT NULL AUTO_INCREMENT,
                     `civil_registry_id` varchar(120) NULL,
@@ -310,6 +548,75 @@ namespace AttendanceShiftingManagement.Data
                 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
                 """,
                 """
+                CREATE TABLE IF NOT EXISTS `ayuda_programs` (
+                    `id` int NOT NULL AUTO_INCREMENT,
+                    `program_code` varchar(40) NOT NULL,
+                    `program_name` varchar(150) NOT NULL,
+                    `program_type` longtext NOT NULL,
+                    `description` varchar(500) NULL,
+                    `is_active` tinyint(1) NOT NULL,
+                    `created_by_user_id` int NOT NULL,
+                    `created_at` datetime(6) NOT NULL,
+                    `updated_at` datetime(6) NOT NULL,
+                    PRIMARY KEY (`id`),
+                    UNIQUE KEY `IX_ayuda_programs_program_code` (`program_code`)
+                ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+                """,
+                """
+                CREATE TABLE IF NOT EXISTS `government_budget_snapshots` (
+                    `id` int NOT NULL AUTO_INCREMENT,
+                    `office_code` varchar(40) NOT NULL,
+                    `office_name` varchar(120) NOT NULL,
+                    `yearly_budget_id` int NOT NULL,
+                    `allocated_amount` decimal(18,2) NOT NULL,
+                    `spent_amount` decimal(18,2) NOT NULL,
+                    `source_row_id` varchar(80) NULL,
+                    `sync_status` longtext NOT NULL,
+                    `synced_at` datetime(6) NOT NULL,
+                    `created_at` datetime(6) NOT NULL,
+                    `updated_at` datetime(6) NOT NULL,
+                    PRIMARY KEY (`id`),
+                    KEY `IX_government_budget_snapshots_office_code` (`office_code`)
+                ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+                """,
+                """
+                CREATE TABLE IF NOT EXISTS `private_donations` (
+                    `id` int NOT NULL AUTO_INCREMENT,
+                    `donor_type` longtext NOT NULL,
+                    `donor_name` varchar(180) NOT NULL,
+                    `amount` decimal(18,2) NOT NULL,
+                    `date_received` datetime(6) NOT NULL,
+                    `reference_number` varchar(80) NULL,
+                    `remarks` varchar(1000) NULL,
+                    `proof_type` longtext NOT NULL,
+                    `proof_reference_number` varchar(80) NULL,
+                    `proof_file_path` varchar(255) NULL,
+                    `received_by_user_id` int NOT NULL,
+                    `created_at` datetime(6) NOT NULL,
+                    PRIMARY KEY (`id`)
+                ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+                """,
+                """
+                CREATE TABLE IF NOT EXISTS `budget_ledger_entries` (
+                    `id` int NOT NULL AUTO_INCREMENT,
+                    `entry_type` longtext NOT NULL,
+                    `feature_source` longtext NOT NULL,
+                    `source_record_id` varchar(80) NOT NULL,
+                    `program_id` int NULL,
+                    `recipient_count` int NOT NULL,
+                    `total_amount` decimal(18,2) NOT NULL,
+                    `government_portion` decimal(18,2) NOT NULL,
+                    `private_portion` decimal(18,2) NOT NULL,
+                    `entry_date` datetime(6) NOT NULL,
+                    `remarks` varchar(1000) NULL,
+                    `release_kind` varchar(32) NULL,
+                    `recorded_by_user_id` int NOT NULL,
+                    `created_at` datetime(6) NOT NULL,
+                    PRIMARY KEY (`id`),
+                    KEY `IX_budget_ledger_entries_source` (`feature_source`(255), `source_record_id`, `entry_type`(255))
+                ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+                """,
+                """
                 CREATE TABLE IF NOT EXISTS `cash_for_work_events` (
                     `id` int NOT NULL AUTO_INCREMENT,
                     `title` varchar(150) NOT NULL,
@@ -320,6 +627,10 @@ namespace AttendanceShiftingManagement.Data
                     `notes` varchar(500) NULL,
                     `created_by_user_id` int NOT NULL,
                     `status` longtext NOT NULL,
+                    `ayuda_program_id` int NULL,
+                    `budget_ledger_entry_id` int NULL,
+                    `release_amount` decimal(18,2) NULL,
+                    `released_at` datetime(6) NULL,
                     `created_at` datetime(6) NOT NULL,
                     `updated_at` datetime(6) NOT NULL,
                     PRIMARY KEY (`id`),
@@ -368,6 +679,17 @@ namespace AttendanceShiftingManagement.Data
             alterCommand.ExecuteNonQuery();
         }
 
+        private static void EnsureColumnNullable(MySqlConnection connection, string tableName, string columnName, string alterStatement)
+        {
+            if (ColumnAllowsNull(connection, tableName, columnName))
+            {
+                return;
+            }
+
+            using var alterCommand = new MySqlCommand(alterStatement, connection);
+            alterCommand.ExecuteNonQuery();
+        }
+
         private static bool ColumnExists(MySqlConnection connection, string tableName, string columnName)
         {
             using var command = new MySqlCommand(
@@ -384,6 +706,34 @@ namespace AttendanceShiftingManagement.Data
             command.Parameters.AddWithValue("@columnName", columnName);
 
             return Convert.ToInt32(command.ExecuteScalar()) > 0;
+        }
+
+        private static bool ColumnAllowsNull(MySqlConnection connection, string tableName, string columnName)
+        {
+            using var command = new MySqlCommand(
+                """
+                SELECT IS_NULLABLE
+                FROM information_schema.COLUMNS
+                WHERE TABLE_SCHEMA = DATABASE()
+                  AND TABLE_NAME = @tableName
+                  AND COLUMN_NAME = @columnName
+                LIMIT 1;
+                """,
+                connection);
+
+            command.Parameters.AddWithValue("@tableName", tableName);
+            command.Parameters.AddWithValue("@columnName", columnName);
+
+            return string.Equals(
+                Convert.ToString(command.ExecuteScalar()),
+                "YES",
+                StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static void ExecuteNonQuery(MySqlConnection connection, string statement)
+        {
+            using var command = new MySqlCommand(statement, connection);
+            command.ExecuteNonQuery();
         }
 
         private static string EscapeIdentifier(string identifier)

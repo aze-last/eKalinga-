@@ -93,6 +93,14 @@ namespace AttendanceShiftingManagement.Data.Migrations
                         .HasColumnType("varchar(120)")
                         .HasColumnName("assistance_type");
 
+                    b.Property<int?>("AyudaProgramId")
+                        .HasColumnType("int")
+                        .HasColumnName("ayuda_program_id");
+
+                    b.Property<int?>("BudgetLedgerEntryId")
+                        .HasColumnType("int")
+                        .HasColumnName("budget_ledger_entry_id");
+
                     b.Property<string>("CaseNumber")
                         .IsRequired()
                         .HasMaxLength(40)
@@ -107,7 +115,7 @@ namespace AttendanceShiftingManagement.Data.Migrations
                         .HasColumnType("int")
                         .HasColumnName("created_by_user_id");
 
-                    b.Property<int>("HouseholdId")
+                    b.Property<int?>("HouseholdId")
                         .HasColumnType("int")
                         .HasColumnName("household_id");
 
@@ -124,6 +132,11 @@ namespace AttendanceShiftingManagement.Data.Migrations
                         .IsRequired()
                         .HasColumnType("longtext")
                         .HasColumnName("priority");
+
+                    b.Property<string>("ReleaseKind")
+                        .IsRequired()
+                        .HasColumnType("varchar(32)")
+                        .HasColumnName("release_kind");
 
                     b.Property<decimal?>("RequestedAmount")
                         .HasColumnType("decimal(18,2)")
@@ -160,7 +173,26 @@ namespace AttendanceShiftingManagement.Data.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("updated_at");
 
+                    b.Property<string>("ValidatedBeneficiaryId")
+                        .HasMaxLength(120)
+                        .HasColumnType("varchar(120)")
+                        .HasColumnName("validated_beneficiary_id");
+
+                    b.Property<string>("ValidatedBeneficiaryName")
+                        .HasMaxLength(150)
+                        .HasColumnType("varchar(150)")
+                        .HasColumnName("validated_beneficiary_name");
+
+                    b.Property<string>("ValidatedCivilRegistryId")
+                        .HasMaxLength(120)
+                        .HasColumnType("varchar(120)")
+                        .HasColumnName("validated_civil_registry_id");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("AyudaProgramId");
+
+                    b.HasIndex("BudgetLedgerEntryId");
 
                     b.HasIndex("CaseNumber")
                         .IsUnique();
@@ -170,6 +202,234 @@ namespace AttendanceShiftingManagement.Data.Migrations
                     b.HasIndex("HouseholdMemberId");
 
                     b.ToTable("assistance_cases");
+                });
+
+            modelBuilder.Entity("AttendanceShiftingManagement.Models.AyudaProgram", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AssistanceType")
+                        .HasMaxLength(120)
+                        .HasColumnType("varchar(120)")
+                        .HasColumnName("assistance_type");
+
+                    b.Property<decimal?>("BudgetCap")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("budget_cap");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)")
+                        .HasColumnName("description");
+
+                    b.Property<string>("DistributionStatus")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("distribution_status");
+
+                    b.Property<DateTime?>("EndDate")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("end_date");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("ItemDescription")
+                        .HasMaxLength(250)
+                        .HasColumnType("varchar(250)")
+                        .HasColumnName("item_description");
+
+                    b.Property<string>("ProgramCode")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("varchar(40)")
+                        .HasColumnName("program_code");
+
+                    b.Property<string>("ProgramName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("varchar(150)")
+                        .HasColumnName("program_name");
+
+                    b.Property<string>("ProgramType")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("program_type");
+
+                    b.Property<DateTime?>("StartDate")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("start_date");
+
+                    b.Property<decimal?>("UnitAmount")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("unit_amount");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProgramCode")
+                        .IsUnique();
+
+                    b.ToTable("ayuda_programs");
+                });
+
+            modelBuilder.Entity("AttendanceShiftingManagement.Models.AyudaProjectBeneficiary", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("AddedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("added_at");
+
+                    b.Property<int>("AddedByUserId")
+                        .HasColumnType("int")
+                        .HasColumnName("added_by_user_id");
+
+                    b.Property<int>("AyudaProgramId")
+                        .HasColumnType("int")
+                        .HasColumnName("ayuda_program_id");
+
+                    b.Property<string>("BeneficiaryId")
+                        .HasMaxLength(120)
+                        .HasColumnType("varchar(120)")
+                        .HasColumnName("beneficiary_id");
+
+                    b.Property<int>("BeneficiaryStagingId")
+                        .HasColumnType("int")
+                        .HasColumnName("beneficiary_staging_id");
+
+                    b.Property<string>("CivilRegistryId")
+                        .HasMaxLength(120)
+                        .HasColumnType("varchar(120)")
+                        .HasColumnName("civil_registry_id");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)")
+                        .HasColumnName("full_name");
+
+                    b.Property<int?>("HouseholdId")
+                        .HasColumnType("int")
+                        .HasColumnName("household_id");
+
+                    b.Property<int?>("HouseholdMemberId")
+                        .HasColumnType("int")
+                        .HasColumnName("household_member_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AyudaProgramId", "BeneficiaryStagingId")
+                        .IsUnique();
+
+                    b.ToTable("ayuda_project_beneficiaries");
+                });
+
+            modelBuilder.Entity("AttendanceShiftingManagement.Models.AyudaProjectClaim", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AssistanceTypeSnapshot")
+                        .HasMaxLength(120)
+                        .HasColumnType("varchar(120)")
+                        .HasColumnName("assistance_type_snapshot");
+
+                    b.Property<int>("AyudaProgramId")
+                        .HasColumnType("int")
+                        .HasColumnName("ayuda_program_id");
+
+                    b.Property<string>("BeneficiaryId")
+                        .HasMaxLength(120)
+                        .HasColumnType("varchar(120)")
+                        .HasColumnName("beneficiary_id");
+
+                    b.Property<int>("BeneficiaryStagingId")
+                        .HasColumnType("int")
+                        .HasColumnName("beneficiary_staging_id");
+
+                    b.Property<string>("CivilRegistryId")
+                        .HasMaxLength(120)
+                        .HasColumnType("varchar(120)")
+                        .HasColumnName("civil_registry_id");
+
+                    b.Property<DateTime>("ClaimedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("claimed_at");
+
+                    b.Property<int>("ClaimedByUserId")
+                        .HasColumnType("int")
+                        .HasColumnName("claimed_by_user_id");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)")
+                        .HasColumnName("full_name");
+
+                    b.Property<int?>("HouseholdId")
+                        .HasColumnType("int")
+                        .HasColumnName("household_id");
+
+                    b.Property<int?>("HouseholdMemberId")
+                        .HasColumnType("int")
+                        .HasColumnName("household_member_id");
+
+                    b.Property<string>("ItemDescriptionSnapshot")
+                        .HasMaxLength(250)
+                        .HasColumnType("varchar(250)")
+                        .HasColumnName("item_description_snapshot");
+
+                    b.Property<int?>("ProjectBeneficiaryId")
+                        .HasColumnType("int")
+                        .HasColumnName("project_beneficiary_id");
+
+                    b.Property<string>("QrPayload")
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)")
+                        .HasColumnName("qr_payload");
+
+                    b.Property<string>("Remarks")
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)")
+                        .HasColumnName("remarks");
+
+                    b.Property<decimal?>("UnitAmountSnapshot")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("unit_amount_snapshot");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AyudaProgramId", "BeneficiaryStagingId")
+                        .IsUnique();
+
+                    b.ToTable("ayuda_project_claims");
                 });
 
             modelBuilder.Entity("AttendanceShiftingManagement.Models.BeneficiaryAssistanceLedgerEntry", b =>
@@ -230,6 +490,78 @@ namespace AttendanceShiftingManagement.Data.Migrations
                     b.HasIndex("CivilRegistryId");
 
                     b.ToTable("beneficiary_assistance_ledger");
+                });
+
+            modelBuilder.Entity("AttendanceShiftingManagement.Models.BeneficiaryDigitalId", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("BeneficiaryStagingId")
+                        .HasColumnType("int")
+                        .HasColumnName("beneficiary_staging_id");
+
+                    b.Property<string>("CardNumber")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("varchar(40)")
+                        .HasColumnName("card_number");
+
+                    b.Property<int>("HouseholdId")
+                        .HasColumnType("int")
+                        .HasColumnName("household_id");
+
+                    b.Property<int?>("HouseholdMemberId")
+                        .HasColumnType("int")
+                        .HasColumnName("household_member_id");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_active");
+
+                    b.Property<DateTime>("IssuedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("issued_at");
+
+                    b.Property<int>("IssuedByUserId")
+                        .HasColumnType("int")
+                        .HasColumnName("issued_by_user_id");
+
+                    b.Property<DateTime?>("LastPrintedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("last_printed_at");
+
+                    b.Property<string>("PhotoPath")
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)")
+                        .HasColumnName("photo_path");
+
+                    b.Property<string>("QrPayload")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)")
+                        .HasColumnName("qr_payload");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("revoked_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BeneficiaryStagingId")
+                        .IsUnique();
+
+                    b.HasIndex("CardNumber")
+                        .IsUnique();
+
+                    b.HasIndex("QrPayload")
+                        .IsUnique();
+
+                    b.ToTable("beneficiary_digital_ids");
                 });
 
             modelBuilder.Entity("AttendanceShiftingManagement.Models.BeneficiaryStaging", b =>
@@ -322,6 +654,79 @@ namespace AttendanceShiftingManagement.Data.Migrations
                     b.ToTable("BeneficiaryStaging");
                 });
 
+            modelBuilder.Entity("AttendanceShiftingManagement.Models.BudgetLedgerEntry", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime>("EntryDate")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("entry_date");
+
+                    b.Property<string>("EntryType")
+                        .IsRequired()
+                        .HasColumnType("varchar(255)")
+                        .HasColumnName("entry_type");
+
+                    b.Property<string>("FeatureSource")
+                        .IsRequired()
+                        .HasColumnType("varchar(255)")
+                        .HasColumnName("feature_source");
+
+                    b.Property<decimal>("GovernmentPortion")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("government_portion");
+
+                    b.Property<decimal>("PrivatePortion")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("private_portion");
+
+                    b.Property<int?>("ProgramId")
+                        .HasColumnType("int")
+                        .HasColumnName("program_id");
+
+                    b.Property<int>("RecipientCount")
+                        .HasColumnType("int")
+                        .HasColumnName("recipient_count");
+
+                    b.Property<int>("RecordedByUserId")
+                        .HasColumnType("int")
+                        .HasColumnName("recorded_by_user_id");
+
+                    b.Property<string>("ReleaseKind")
+                        .HasColumnType("varchar(32)")
+                        .HasColumnName("release_kind");
+
+                    b.Property<string>("Remarks")
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)")
+                        .HasColumnName("remarks");
+
+                    b.Property<string>("SourceRecordId")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("varchar(80)")
+                        .HasColumnName("source_record_id");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("total_amount");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FeatureSource", "SourceRecordId", "EntryType");
+
+                    b.ToTable("budget_ledger_entries");
+                });
+
             modelBuilder.Entity("AttendanceShiftingManagement.Models.CashForWorkAttendance", b =>
                 {
                     b.Property<int>("Id")
@@ -380,6 +785,14 @@ namespace AttendanceShiftingManagement.Data.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("AyudaProgramId")
+                        .HasColumnType("int")
+                        .HasColumnName("ayuda_program_id");
+
+                    b.Property<int?>("BudgetLedgerEntryId")
+                        .HasColumnType("int")
+                        .HasColumnName("budget_ledger_entry_id");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("created_at");
@@ -407,6 +820,14 @@ namespace AttendanceShiftingManagement.Data.Migrations
                         .HasColumnType("varchar(500)")
                         .HasColumnName("notes");
 
+                    b.Property<decimal?>("ReleaseAmount")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("release_amount");
+
+                    b.Property<DateTime?>("ReleasedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("released_at");
+
                     b.Property<TimeSpan>("StartTime")
                         .HasColumnType("time(6)")
                         .HasColumnName("start_time");
@@ -427,6 +848,10 @@ namespace AttendanceShiftingManagement.Data.Migrations
                         .HasColumnName("updated_at");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AyudaProgramId");
+
+                    b.HasIndex("BudgetLedgerEntryId");
 
                     b.HasIndex("CreatedByUserId");
 
@@ -470,7 +895,7 @@ namespace AttendanceShiftingManagement.Data.Migrations
                     b.ToTable("cash_for_work_participants");
                 });
 
-            modelBuilder.Entity("AttendanceShiftingManagement.Models.GrievanceRecord", b =>
+            modelBuilder.Entity("AttendanceShiftingManagement.Models.GovernmentBudgetSnapshot", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -479,87 +904,55 @@ namespace AttendanceShiftingManagement.Data.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("AssignedToUserId")
-                        .HasColumnType("int")
-                        .HasColumnName("assigned_to_user_id");
-
-                    b.Property<int?>("AssistanceCaseId")
-                        .HasColumnType("int")
-                        .HasColumnName("assistance_case_id");
-
-                    b.Property<string>("BeneficiaryId")
-                        .HasMaxLength(120)
-                        .HasColumnType("varchar(120)")
-                        .HasColumnName("beneficiary_id");
-
-                    b.Property<int?>("CashForWorkEventId")
-                        .HasColumnType("int")
-                        .HasColumnName("cash_for_work_event_id");
-
-                    b.Property<string>("CivilRegistryId")
-                        .HasMaxLength(120)
-                        .HasColumnType("varchar(120)")
-                        .HasColumnName("civil_registry_id");
+                    b.Property<decimal>("AllocatedAmount")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("allocated_amount");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("created_at");
 
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("varchar(1000)")
-                        .HasColumnName("description");
-
-                    b.Property<int>("FiledByUserId")
-                        .HasColumnType("int")
-                        .HasColumnName("filed_by_user_id");
-
-                    b.Property<string>("GrievanceNumber")
+                    b.Property<string>("OfficeCode")
                         .IsRequired()
                         .HasMaxLength(40)
                         .HasColumnType("varchar(40)")
-                        .HasColumnName("grievance_number");
+                        .HasColumnName("office_code");
 
-                    b.Property<string>("ResolutionRemarks")
-                        .HasMaxLength(1000)
-                        .HasColumnType("varchar(1000)")
-                        .HasColumnName("resolution_remarks");
+                    b.Property<string>("OfficeName")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("varchar(120)")
+                        .HasColumnName("office_name");
 
-                    b.Property<DateTime?>("ResolvedAt")
+                    b.Property<string>("SourceRowId")
+                        .HasMaxLength(80)
+                        .HasColumnType("varchar(80)")
+                        .HasColumnName("source_row_id");
+
+                    b.Property<decimal>("SpentAmount")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("spent_amount");
+
+                    b.Property<string>("SyncStatus")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("sync_status");
+
+                    b.Property<DateTime>("SyncedAt")
                         .HasColumnType("datetime(6)")
-                        .HasColumnName("resolved_at");
-
-                    b.Property<int?>("StagingId")
-                        .HasColumnType("int")
-                        .HasColumnName("staging_id");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("longtext")
-                        .HasColumnName("status");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("varchar(200)")
-                        .HasColumnName("title");
-
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasColumnType("longtext")
-                        .HasColumnName("type");
+                        .HasColumnName("synced_at");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("updated_at");
 
+                    b.Property<int>("YearlyBudgetId")
+                        .HasColumnType("int")
+                        .HasColumnName("yearly_budget_id");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("GrievanceNumber")
-                        .IsUnique();
-
-                    b.ToTable("grievance_records");
+                    b.ToTable("government_budget_snapshots");
                 });
 
             modelBuilder.Entity("AttendanceShiftingManagement.Models.Household", b =>
@@ -675,6 +1068,174 @@ namespace AttendanceShiftingManagement.Data.Migrations
                     b.HasIndex("HouseholdId");
 
                     b.ToTable("household_members");
+                });
+
+            modelBuilder.Entity("AttendanceShiftingManagement.Models.PrivateDonation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("amount");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime>("DateReceived")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("date_received");
+
+                    b.Property<string>("DonorName")
+                        .IsRequired()
+                        .HasMaxLength(180)
+                        .HasColumnType("varchar(180)")
+                        .HasColumnName("donor_name");
+
+                    b.Property<string>("DonorType")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("donor_type");
+
+                    b.Property<string>("ProofFilePath")
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)")
+                        .HasColumnName("proof_file_path");
+
+                    b.Property<string>("ProofReferenceNumber")
+                        .HasMaxLength(80)
+                        .HasColumnType("varchar(80)")
+                        .HasColumnName("proof_reference_number");
+
+                    b.Property<string>("ProofType")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("proof_type");
+
+                    b.Property<int>("ReceivedByUserId")
+                        .HasColumnType("int")
+                        .HasColumnName("received_by_user_id");
+
+                    b.Property<string>("ReferenceNumber")
+                        .HasMaxLength(80)
+                        .HasColumnType("varchar(80)")
+                        .HasColumnName("reference_number");
+
+                    b.Property<string>("Remarks")
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)")
+                        .HasColumnName("remarks");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("private_donations");
+                });
+
+            modelBuilder.Entity("AttendanceShiftingManagement.Models.ScannerSession", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("AyudaProgramId")
+                        .HasColumnType("int")
+                        .HasColumnName("ayuda_program_id");
+
+                    b.Property<int?>("CashForWorkEventId")
+                        .HasColumnType("int")
+                        .HasColumnName("cash_for_work_event_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("expires_at");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_active");
+
+                    b.Property<DateTime?>("LastAccessedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("last_accessed_at");
+
+                    b.Property<string>("Mode")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("mode");
+
+                    b.Property<string>("PinHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)")
+                        .HasColumnName("pin_hash");
+
+                    b.Property<string>("SessionToken")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("varchar(80)")
+                        .HasColumnName("session_token");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SessionToken")
+                        .IsUnique();
+
+                    b.ToTable("scanner_sessions");
+                });
+
+            modelBuilder.Entity("AttendanceShiftingManagement.Models.SystemRegistration", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("CompanyName")
+                        .HasMaxLength(180)
+                        .HasColumnType("varchar(180)")
+                        .HasColumnName("company_name");
+
+                    b.Property<string>("CompanySerialNumber")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("varchar(80)")
+                        .HasColumnName("company_serial_number");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime?>("LastValidatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("last_validated_at");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanySerialNumber")
+                        .IsUnique();
+
+                    b.ToTable("system_registrations");
                 });
 
             modelBuilder.Entity("AttendanceShiftingManagement.Models.User", b =>
@@ -815,19 +1376,51 @@ namespace AttendanceShiftingManagement.Data.Migrations
 
             modelBuilder.Entity("AttendanceShiftingManagement.Models.AssistanceCase", b =>
                 {
+                    b.HasOne("AttendanceShiftingManagement.Models.AyudaProgram", "AyudaProgram")
+                        .WithMany()
+                        .HasForeignKey("AyudaProgramId");
+
+                    b.HasOne("AttendanceShiftingManagement.Models.BudgetLedgerEntry", "BudgetLedgerEntry")
+                        .WithMany()
+                        .HasForeignKey("BudgetLedgerEntryId");
+
                     b.HasOne("AttendanceShiftingManagement.Models.Household", "Household")
                         .WithMany()
-                        .HasForeignKey("HouseholdId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("HouseholdId");
 
                     b.HasOne("AttendanceShiftingManagement.Models.HouseholdMember", "HouseholdMember")
                         .WithMany()
                         .HasForeignKey("HouseholdMemberId");
 
+                    b.Navigation("AyudaProgram");
+
+                    b.Navigation("BudgetLedgerEntry");
+
                     b.Navigation("Household");
 
                     b.Navigation("HouseholdMember");
+                });
+
+            modelBuilder.Entity("AttendanceShiftingManagement.Models.AyudaProjectBeneficiary", b =>
+                {
+                    b.HasOne("AttendanceShiftingManagement.Models.AyudaProgram", "AyudaProgram")
+                        .WithMany()
+                        .HasForeignKey("AyudaProgramId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AyudaProgram");
+                });
+
+            modelBuilder.Entity("AttendanceShiftingManagement.Models.AyudaProjectClaim", b =>
+                {
+                    b.HasOne("AttendanceShiftingManagement.Models.AyudaProgram", "AyudaProgram")
+                        .WithMany()
+                        .HasForeignKey("AyudaProgramId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AyudaProgram");
                 });
 
             modelBuilder.Entity("AttendanceShiftingManagement.Models.CashForWorkAttendance", b =>
@@ -851,11 +1444,23 @@ namespace AttendanceShiftingManagement.Data.Migrations
 
             modelBuilder.Entity("AttendanceShiftingManagement.Models.CashForWorkEvent", b =>
                 {
+                    b.HasOne("AttendanceShiftingManagement.Models.AyudaProgram", "AyudaProgram")
+                        .WithMany()
+                        .HasForeignKey("AyudaProgramId");
+
+                    b.HasOne("AttendanceShiftingManagement.Models.BudgetLedgerEntry", "BudgetLedgerEntry")
+                        .WithMany()
+                        .HasForeignKey("BudgetLedgerEntryId");
+
                     b.HasOne("AttendanceShiftingManagement.Models.User", "CreatedByUser")
                         .WithMany()
                         .HasForeignKey("CreatedByUserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("AyudaProgram");
+
+                    b.Navigation("BudgetLedgerEntry");
 
                     b.Navigation("CreatedByUser");
                 });

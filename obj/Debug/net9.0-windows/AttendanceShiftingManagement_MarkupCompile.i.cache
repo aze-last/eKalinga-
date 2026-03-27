@@ -10,11 +10,11 @@ none
 false
 TRACE;DEBUG;NET;NET9_0;NETCOREAPP;WINDOWS;WINDOWS7_0;NET5_0_OR_GREATER;NET6_0_OR_GREATER;NET7_0_OR_GREATER;NET8_0_OR_GREATER;NET9_0_OR_GREATER;NETCOREAPP3_0_OR_GREATER;NETCOREAPP3_1_OR_GREATER;WINDOWS7_0_OR_GREATER
 C:\Users\ASUS\source\repos\AttendanceShiftingManagement\AttendanceShiftingManagement\App.xaml
-12-1989811467
+131796007369
 22-1380674967
-86-1464320675
-225-1488835264
-Views\AssistanceCaseManagementPage.xaml;Views\BarangayDashboardPage.xaml;Views\BeneficiaryVerificationPage.xaml;Views\CashForWorkOcrPage.xaml;Views\ConnectionSettingsWindow.xaml;Views\GrievanceCorrectionsPage.xaml;Views\HouseholdRegistryPage.xaml;Views\LoadTablesWindow.xaml;Views\LoginWindow.xaml;Views\MainWindow.xaml;Views\MasterListPage.xaml;Views\SettingsWindow.xaml;
+116650547
+349-1808256471
+Views\AssistanceCaseManagementPage.xaml;Views\BarangayDashboardPage.xaml;Views\BeneficiaryVerificationPage.xaml;Views\BudgetPage.xaml;Views\CashForWorkOcrPage.xaml;Views\ConnectionSettingsWindow.xaml;Views\HouseholdRegistryPage.xaml;Views\LoadTablesWindow.xaml;Views\LoginWindow.xaml;Views\MainWindow.xaml;Views\MasterListPage.xaml;Views\ProjectDistributionPage.xaml;Views\SettingsWindow.xaml;
 
 False
 

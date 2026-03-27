@@ -114,6 +114,9 @@ namespace AttendanceShiftingManagement.Services
             stagingRow.LinkedHouseholdMemberId = linkedHouseholdMemberId;
             await _context.SaveChangesAsync();
 
+            var digitalIdService = new BeneficiaryDigitalIdService(_context, _auditService);
+            await digitalIdService.EnsureIssuedAsync(stagingRow.StagingID, actedByUserId);
+
             await _auditService.LogActivityAsync(
                 actedByUserId,
                 "BeneficiaryApproved",

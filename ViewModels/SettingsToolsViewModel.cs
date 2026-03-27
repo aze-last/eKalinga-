@@ -49,7 +49,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _savedSystemLogoPath = string.Empty;
         private string _systemInstallSerial = string.Empty;
         private ImageSource? _systemLogoImage;
-        private string _systemProfileStatusMessage = "Set the app-wide system identity shown to administrators and operators.";
+        private string _systemProfileStatusMessage = "Set the app-wide system identity and keep the company serial number matched to the active database.";
         private Brush _systemProfileStatusBrush = CreateBrush("#6B7280");
         private string _accountFullName = string.Empty;
         private string _accountUsername = string.Empty;

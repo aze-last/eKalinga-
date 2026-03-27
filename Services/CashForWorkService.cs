@@ -4,6 +4,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AttendanceShiftingManagement.Services
 {
+    public sealed record CashForWorkReleaseOperationResult(bool IsSuccess, string Message, int? BudgetLedgerEntryId = null);
+
     public sealed class CashForWorkService
     {
         private readonly AppDbContext _context;
@@ -294,6 +296,118 @@ namespace AttendanceShiftingManagement.Services
                 $"Saved {savedCount} manual attendance record(s) for event '{GetEventTitle(eventId)}'.");
 
             return savedCount;
+        }
+
+        public bool SaveScannerAttendance(int eventId, int recordedByUserId, int participantId, string qrPayload)
+        {
+            var cashForWorkEvent = _context.CashForWorkEvents
+                .AsNoTracking()
+                .FirstOrDefault(item => item.Id == eventId)
+                ?? throw new InvalidOperationException("Cash-for-work event was not found.");
+
+            var validParticipantIds = GetValidParticipantIds(eventId);
+            if (!validParticipantIds.Contains(participantId))
+            {
+                return false;
+            }
+
+            var recordedParticipantIds = GetRecordedParticipantIds(eventId, cashForWorkEvent.EventDate.Date);
+            if (!recordedParticipantIds.Add(participantId))
+            {
+                return false;
+            }
+
+            _context.CashForWorkAttendances.Add(new CashForWorkAttendance
+            {
+                ParticipantId = participantId,
+                AttendanceDate = cashForWorkEvent.EventDate.Date,
+                Status = CashForWorkAttendanceStatus.Present,
+                Source = AttendanceCaptureSource.ScannerSession,
+                OcrExtractedName = string.IsNullOrWhiteSpace(qrPayload) ? null : qrPayload.Trim(),
+                RecordedByUserId = recordedByUserId,
+                RecordedAt = DateTime.Now
+            });
+
+            _context.SaveChanges();
+            _auditService?.LogActivity(
+                recordedByUserId,
+                "CashForWorkScannerAttendanceSaved",
+                "CashForWorkEvent",
+                eventId,
+                $"Saved scanner attendance for participant #{participantId} in event '{GetEventTitle(eventId)}'.");
+
+            return true;
+        }
+
+        public async Task<CashForWorkReleaseOperationResult> ReleaseEventAsync(
+            int eventId,
+            int ayudaProgramId,
+            decimal totalAmount,
+            int recordedByUserId,
+            string? remarks)
+        {
+            if (totalAmount <= 0)
+            {
+                return new CashForWorkReleaseOperationResult(false, "Release amount must be greater than zero.");
+            }
+
+            var cashForWorkEvent = await _context.CashForWorkEvents
+                .FirstOrDefaultAsync(item => item.Id == eventId);
+
+            if (cashForWorkEvent == null)
+            {
+                return new CashForWorkReleaseOperationResult(false, "Cash-for-work event was not found.");
+            }
+
+            if (cashForWorkEvent.BudgetLedgerEntryId.HasValue)
+            {
+                return new CashForWorkReleaseOperationResult(false, "This cash-for-work event already has a recorded release.");
+            }
+
+            var releaseReadySummary = GetReleaseReadySummary(eventId);
+            if (releaseReadySummary.ReleaseReadyParticipantCount <= 0)
+            {
+                return new CashForWorkReleaseOperationResult(false, "Save attendance before releasing cash-for-work funds.");
+            }
+
+            var budgetService = new BudgetManagementService(_context, _auditService);
+            var budgetResult = await budgetService.RecordReleaseAsync(
+                new BudgetReleaseRequest(
+                    ayudaProgramId,
+                    BudgetLedgerFeatureSource.CashForWork,
+                    $"cash-for-work:{cashForWorkEvent.Id}",
+                    releaseReadySummary.ReleaseReadyParticipantCount,
+                    AssistanceReleaseKind.Cash,
+                    totalAmount,
+                    DateTime.Now,
+                    remarks ?? cashForWorkEvent.Title),
+                recordedByUserId);
+
+            if (!budgetResult.IsSuccess)
+            {
+                return new CashForWorkReleaseOperationResult(false, budgetResult.Message);
+            }
+
+            cashForWorkEvent.AyudaProgramId = ayudaProgramId;
+            cashForWorkEvent.BudgetLedgerEntryId = budgetResult.LedgerEntryId;
+            cashForWorkEvent.ReleaseAmount = totalAmount;
+            cashForWorkEvent.ReleasedAt = DateTime.Now;
+            cashForWorkEvent.Status = CashForWorkEventStatus.Completed;
+            cashForWorkEvent.UpdatedAt = DateTime.Now;
+
+            await _context.SaveChangesAsync();
+
+            if (_auditService != null)
+            {
+                await _auditService.LogActivityAsync(
+                    recordedByUserId,
+                    "CashForWorkReleased",
+                    "CashForWorkEvent",
+                    cashForWorkEvent.Id,
+                    $"Released {totalAmount:N2} for event '{cashForWorkEvent.Title}'.");
+            }
+
+            return new CashForWorkReleaseOperationResult(true, "Cash-for-work release recorded.", budgetResult.LedgerEntryId);
         }
 
         private string GetEventTitle(int eventId)

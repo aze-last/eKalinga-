@@ -1,0 +1,172 @@
+<UserControl x:Class="AttendanceShiftingManagement.Views.ProjectDistributionPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             Background="{StaticResource BrandSurfaceBrush}">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <Grid Margin="24">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <materialDesign:Card Grid.Row="0" Margin="0,0,0,20" Padding="20" Background="White">
+                <DockPanel>
+                    <StackPanel>
+                        <TextBlock Text="Project Distribution" FontSize="22" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
+                        <TextBlock Text="Select the project first, attach approved beneficiaries, then use the phone scanner to validate membership and mark one project claim per beneficiary."
+                                   Margin="0,6,0,0"
+                                   Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                   TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding StatusMessage}"
+                                   Margin="0,10,0,0"
+                                   FontWeight="SemiBold"
+                                   Foreground="{Binding StatusBrush}"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
+
+                    <Button DockPanel.Dock="Right"
+                            Content="REFRESH"
+                            Height="40"
+                            Style="{StaticResource SecondaryActionButton}"
+                            Command="{Binding RefreshCommand}"/>
+                </DockPanel>
+            </materialDesign:Card>
+
+            <Grid Grid.Row="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="420"/>
+                    <ColumnDefinition Width="16"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0">
+                    <materialDesign:Card Padding="18" Margin="0,0,0,16" Background="White">
+                        <StackPanel>
+                            <TextBlock Text="Selected Project / Program" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
+                            <ComboBox Margin="0,14,0,0"
+                                      ItemsSource="{Binding Programs}"
+                                      SelectedItem="{Binding SelectedProgram}"
+                                      DisplayMemberPath="ProgramName"
+                                      Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                      materialDesign:HintAssist.Hint="Project / program"/>
+                            <Border Margin="0,12,0,0"
+                                    Padding="12"
+                                    CornerRadius="8"
+                                    Background="{StaticResource BrandSurfaceBrush}"
+                                    BorderBrush="{StaticResource BrandBorderBrush}"
+                                    BorderThickness="1">
+                                <TextBlock Text="{Binding SelectedProgramWarning}"
+                                           Foreground="{StaticResource BrandMidnightBrush}"
+                                           TextWrapping="Wrap"/>
+                            </Border>
+                        </StackPanel>
+                    </materialDesign:Card>
+
+                    <materialDesign:Card Padding="18" Margin="0,0,0,16" Background="White">
+                        <StackPanel>
+                            <TextBlock Text="Approved Beneficiary Inclusion" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
+                            <TextBlock Text="Qualification in v1 is simple: beneficiary must already be approved and must be explicitly included in this selected project."
+                                       Margin="0,6,0,0"
+                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                       TextWrapping="Wrap"/>
+                            <ComboBox Margin="0,14,0,0"
+                                      ItemsSource="{Binding ApprovedBeneficiaries}"
+                                      SelectedItem="{Binding SelectedApprovedBeneficiary}"
+                                      DisplayMemberPath="FullName"
+                                      Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                      materialDesign:HintAssist.Hint="Approved beneficiary"/>
+                            <Button Content="Add Beneficiary to Project"
+                                    Margin="0,14,0,0"
+                                    Height="42"
+                                    Style="{StaticResource GoldActionButton}"
+                                    Command="{Binding AddBeneficiaryToProjectCommand}"/>
+                        </StackPanel>
+                    </materialDesign:Card>
+
+                    <materialDesign:Card Padding="18" Background="White">
+                        <StackPanel>
+                            <TextBlock Text="Phone Scanner Session" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
+                            <TextBlock Text="Open a temporary phone scanner session for distribution day. Staff will select this project first, then scan beneficiary QR codes."
+                                       Margin="0,6,0,0"
+                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                       TextWrapping="Wrap"/>
+                            <Button Content="Create Distribution Scanner Session"
+                                    Margin="0,14,0,0"
+                                    Height="42"
+                                    Style="{StaticResource PrimaryActionButton}"
+                                    Command="{Binding CreateDistributionScannerSessionCommand}"/>
+                            <TextBox Margin="0,12,0,0"
+                                     IsReadOnly="True"
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     materialDesign:HintAssist.Hint="Scanner URL"
+                                     Text="{Binding DistributionScannerSessionUrl, Mode=OneWay}"/>
+                            <TextBlock Margin="0,10,0,0"
+                                       Text="{Binding DistributionScannerSessionPin}"
+                                       FontSize="24"
+                                       FontWeight="Bold"
+                                       Foreground="{StaticResource BrandMidnightBrush}"/>
+                            <TextBlock Margin="0,4,0,0"
+                                       Text="{Binding DistributionScannerSessionExpiresAtText}"
+                                       Foreground="{StaticResource BrandTextSecondaryBrush}"/>
+                            <Border Margin="0,14,0,0"
+                                    Width="180"
+                                    Height="180"
+                                    HorizontalAlignment="Left"
+                                    Background="White"
+                                    BorderBrush="{StaticResource BrandBorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="12">
+                                <Image Source="{Binding DistributionScannerQrImage}" Stretch="Uniform"/>
+                            </Border>
+                        </StackPanel>
+                    </materialDesign:Card>
+                </StackPanel>
+
+                <StackPanel Grid.Column="2">
+                    <materialDesign:Card Padding="18" Margin="0,0,0,16" Background="White">
+                        <StackPanel>
+                            <TextBlock Text="Included Beneficiaries" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
+                            <DataGrid Margin="0,14,0,0"
+                                      ItemsSource="{Binding ProjectBeneficiaries}"
+                                      AutoGenerateColumns="False"
+                                      CanUserAddRows="False"
+                                      CanUserDeleteRows="False"
+                                      IsReadOnly="True"
+                                      MinHeight="260">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Beneficiary ID" Binding="{Binding BeneficiaryId}" Width="130"/>
+                                    <DataGridTextColumn Header="Civil Registry" Binding="{Binding CivilRegistryId}" Width="130"/>
+                                    <DataGridTextColumn Header="Full Name" Binding="{Binding FullName}" Width="*"/>
+                                    <DataGridTextColumn Header="Added At" Binding="{Binding AddedAt, StringFormat='{}{0:yyyy-MM-dd hh:mm tt}'}" Width="160"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </StackPanel>
+                    </materialDesign:Card>
+
+                    <materialDesign:Card Padding="18" Background="White">
+                        <StackPanel>
+                            <TextBlock Text="Project Claim Log" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
+                            <DataGrid Margin="0,14,0,0"
+                                      ItemsSource="{Binding ProjectClaims}"
+                                      AutoGenerateColumns="False"
+                                      CanUserAddRows="False"
+                                      CanUserDeleteRows="False"
+                                      IsReadOnly="True"
+                                      MinHeight="260">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Full Name" Binding="{Binding FullName}" Width="*"/>
+                                    <DataGridTextColumn Header="Assistance" Binding="{Binding AssistanceTypeSnapshot}" Width="140"/>
+                                    <DataGridTextColumn Header="Item / Detail" Binding="{Binding ItemDescriptionSnapshot}" Width="180"/>
+                                    <DataGridTextColumn Header="Amount" Binding="{Binding UnitAmountSnapshot, StringFormat=N2}" Width="110"/>
+                                    <DataGridTextColumn Header="Claimed At" Binding="{Binding ClaimedAt, StringFormat='{}{0:yyyy-MM-dd hh:mm tt}'}" Width="160"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </StackPanel>
+                    </materialDesign:Card>
+                </StackPanel>
+            </Grid>
+        </Grid>
+    </ScrollViewer>
+</UserControl>

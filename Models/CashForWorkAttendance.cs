@@ -51,6 +51,7 @@ namespace AttendanceShiftingManagement.Models
     public enum AttendanceCaptureSource
     {
         Manual,
-        OcrUpload
+        OcrUpload,
+        ScannerSession
     }
 }

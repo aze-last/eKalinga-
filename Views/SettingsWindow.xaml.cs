@@ -1,4 +1,5 @@
 using AttendanceShiftingManagement.Models;
+using AttendanceShiftingManagement.Services;
 using AttendanceShiftingManagement.ViewModels;
 using System.Windows;
 using System.Windows.Controls;
@@ -14,6 +15,7 @@ namespace AttendanceShiftingManagement.Views
             InitializeComponent();
             DataContext = new SettingsToolsViewModel(currentUser);
             ViewModel.AdvancedLoadTablesRequested += OpenAdvancedLoadTables;
+            WindowBrandingService.ApplyWindowIcon(this);
         }
 
         private void OpenAdvancedLoadTables()

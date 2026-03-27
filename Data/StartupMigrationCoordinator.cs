@@ -21,7 +21,7 @@ namespace AttendanceShiftingManagement.Data
 
             if (!hasApplicationTables)
             {
-                context.Database.Migrate();
+                ApplyMigrationsAndRepairs(context, connectionString);
                 return;
             }
 
@@ -31,7 +31,17 @@ namespace AttendanceShiftingManagement.Data
                 BaselineMigrationsHistory(connection, context);
             }
 
+            ApplyMigrationsAndRepairs(context, connectionString);
+        }
+
+        private static void ApplyMigrationsAndRepairs(AppDbContext context, string connectionString)
+        {
             context.Database.Migrate();
+
+            // Keep startup migration mode aligned with the runtime bootstrap repairs so
+            // upgraded databases self-heal when a table or column was introduced outside
+            // the existing migration chain.
+            RuntimeSchemaBootstrapper.RepairLegacySchema(connectionString);
         }
 
         private static bool HasApplicationTables(MySqlConnection connection, bool historyTableExists)

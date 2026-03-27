@@ -139,6 +139,35 @@ public sealed class CashForWorkServiceTests
         Assert.Equal(1, summary.OcrAttendanceCount);
     }
 
+    [Fact]
+    public void SaveScannerAttendance_UsesScannerSource_AndPreventsDuplicateAttendance()
+    {
+        using var context = TestDbContextFactory.CreateContext();
+        var admin = SeedAdmin(context);
+        var household = SeedHousehold(context);
+        var member = SeedMember(context, household.Id, "Pedro Santos");
+        var service = new CashForWorkService(context);
+
+        var cashForWorkEvent = service.CreateEvent(
+            "Barangay Clean-Up",
+            "Hall",
+            DateTime.Today,
+            new TimeSpan(7, 0, 0),
+            new TimeSpan(12, 0, 0),
+            null,
+            admin.Id);
+
+        service.AddParticipant(cashForWorkEvent.Id, member.Id, admin.Id);
+        var participantId = context.CashForWorkParticipants.Single().Id;
+
+        Assert.True(service.SaveScannerAttendance(cashForWorkEvent.Id, admin.Id, participantId, "BEN-QR-001"));
+        Assert.False(service.SaveScannerAttendance(cashForWorkEvent.Id, admin.Id, participantId, "BEN-QR-001"));
+
+        var attendance = Assert.Single(context.CashForWorkAttendances);
+        Assert.Equal(AttendanceCaptureSource.ScannerSession, attendance.Source);
+        Assert.Equal("BEN-QR-001", attendance.OcrExtractedName);
+    }
+
     private static User SeedAdmin(Data.AppDbContext context)
     {
         var user = new User

@@ -30,6 +30,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _brandAddress = string.Empty;
         private string _brandInstallSerial = string.Empty;
         private ImageSource? _brandLogoImage;
+        private bool _isCompanySerialAccessValid = true;
 
         public string UsernameOrEmail
         {
@@ -171,7 +172,7 @@ namespace AttendanceShiftingManagement.ViewModels
             }
         }
 
-        public string BrandInstallSerialLabel => $"Install Serial: {BrandInstallSerial}";
+        public string BrandInstallSerialLabel => $"Company Serial: {BrandInstallSerial}";
 
         public ImageSource? BrandLogoImage
         {
@@ -250,20 +251,35 @@ namespace AttendanceShiftingManagement.ViewModels
                 EnsureDatabaseReady();
 
                 using var context = new AppDbContext();
+                var companySerialCheck = ValidateCompanySerial(context);
+                if (!companySerialCheck.IsSuccess)
+                {
+                    IsBootstrapMode = false;
+                    SetErrorStatus(companySerialCheck.Message);
+                    return;
+                }
+
                 var state = InitialAdminSetupService.GetState(context);
                 IsBootstrapMode = state.RequiresSetup;
 
                 if (state.RequiresSetup)
                 {
-                    SetNeutralStatus(state.Message);
+                    SetNeutralStatus(companySerialCheck.WasBoundToDatabase
+                        ? $"{companySerialCheck.Message} {state.Message}"
+                        : state.Message);
                 }
                 else if (string.IsNullOrWhiteSpace(StatusMessage))
                 {
-                    SetNeutralStatus("Sign in with an existing admin account.");
+                    SetNeutralStatus(companySerialCheck.WasBoundToDatabase
+                        ? companySerialCheck.Message
+                        : "Sign in with an existing admin account.");
                 }
             }
             catch (Exception ex)
             {
+                _isCompanySerialAccessValid = false;
+                _loginCommand.RaiseCanExecuteChanged();
+                _createInitialAdminCommand.RaiseCanExecuteChanged();
                 IsBootstrapMode = false;
                 SetErrorStatus($"Database connection failed. Check App Database settings. {ex.Message}");
             }
@@ -271,14 +287,16 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private bool CanExecuteLogin(object? parameter)
         {
-            return !IsBootstrapMode &&
+            return _isCompanySerialAccessValid &&
+                   !IsBootstrapMode &&
                    !string.IsNullOrWhiteSpace(UsernameOrEmail) &&
                    !string.IsNullOrWhiteSpace(Password);
         }
 
         private bool CanCreateInitialAdmin(object? parameter)
         {
-            return IsBootstrapMode &&
+            return _isCompanySerialAccessValid &&
+                   IsBootstrapMode &&
                    !string.IsNullOrWhiteSpace(BootstrapFullName) &&
                    !string.IsNullOrWhiteSpace(BootstrapUsername) &&
                    !string.IsNullOrWhiteSpace(BootstrapEmail) &&
@@ -298,6 +316,16 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 SetErrorStatus($"Database connection failed. Check App Database settings. {ex.Message}");
                 return;
+            }
+
+            using (var validationContext = new AppDbContext())
+            {
+                var companySerialCheck = ValidateCompanySerial(validationContext);
+                if (!companySerialCheck.IsSuccess)
+                {
+                    SetErrorStatus(companySerialCheck.Message);
+                    return;
+                }
             }
 
             var user = _authService.Login(UsernameOrEmail.Trim(), Password);
@@ -353,6 +381,13 @@ namespace AttendanceShiftingManagement.ViewModels
             }
 
             using var context = new AppDbContext();
+            var companySerialCheck = ValidateCompanySerial(context);
+            if (!companySerialCheck.IsSuccess)
+            {
+                SetErrorStatus(companySerialCheck.Message);
+                return;
+            }
+
             var result = InitialAdminSetupService.CreateInitialAdmin(
                 context,
                 new InitialAdminSetupRequest(
@@ -403,6 +438,16 @@ namespace AttendanceShiftingManagement.ViewModels
             var resetDb = configuration.GetValue("Database:ResetOnStartup", false);
             var migrateOnStartup = configuration.GetValue("Database:MigrateOnStartup", false);
             DatabaseInitializer.Initialize(resetDb, migrateOnStartup);
+        }
+
+        private CompanySerialValidationResult ValidateCompanySerial(AppDbContext context)
+        {
+            var localSettings = SystemProfileSettingsService.Load();
+            var result = CompanySerialGateService.ValidateOrBind(context, localSettings);
+            _isCompanySerialAccessValid = result.IsSuccess;
+            _loginCommand.RaiseCanExecuteChanged();
+            _createInitialAdminCommand.RaiseCanExecuteChanged();
+            return result;
         }
     }
 }

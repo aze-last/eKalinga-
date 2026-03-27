@@ -14,7 +14,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _currentSection = "Dashboard";
         private object _currentView;
         private string _currentSectionTitle = "Dashboard";
-        private string _currentSectionSubtitle = "Monitor validated beneficiaries, beneficiary review, assistance cases, households, and cash-for-work at a glance.";
+        private string _currentSectionSubtitle = "Monitor validated beneficiaries, pending approvals, aid requests, budgets, households, and cash-for-work at a glance.";
         private string _connectionSummary = string.Empty;
         private ImageSource? _userPhotoImage;
         private string _userDisplayName = "Barangay Administrator";
@@ -26,10 +26,10 @@ namespace AttendanceShiftingManagement.ViewModels
 
             ShowDashboardCommand = new RelayCommand(_ => SwitchSection("Dashboard"));
             ShowCashForWorkCommand = new RelayCommand(_ => SwitchSection("CashForWork"));
+            ShowBudgetCommand = new RelayCommand(_ => SwitchSection("Budget"));
+            ShowDistributionCommand = new RelayCommand(_ => SwitchSection("Distribution"));
             ShowMasterListCommand = new RelayCommand(_ => SwitchSection("MasterList"));
-            ShowBeneficiariesCommand = new RelayCommand(_ => SwitchSection("Beneficiaries"));
             ShowAssistanceCasesCommand = new RelayCommand(_ => SwitchSection("AssistanceCases"));
-            ShowGrievancesCommand = new RelayCommand(_ => SwitchSection("Grievances"));
             ShowHouseholdRegistryCommand = new RelayCommand(_ => SwitchSection("HouseholdRegistry"));
 
             RefreshConnectionSummary();
@@ -76,18 +76,18 @@ namespace AttendanceShiftingManagement.ViewModels
 
         public bool IsDashboardSelected => _currentSection == "Dashboard";
         public bool IsCashForWorkSelected => _currentSection == "CashForWork";
+        public bool IsBudgetSelected => _currentSection == "Budget";
+        public bool IsDistributionSelected => _currentSection == "Distribution";
         public bool IsMasterListSelected => _currentSection == "MasterList";
-        public bool IsBeneficiariesSelected => _currentSection == "Beneficiaries";
         public bool IsAssistanceCasesSelected => _currentSection == "AssistanceCases";
-        public bool IsGrievancesSelected => _currentSection == "Grievances";
         public bool IsHouseholdRegistrySelected => _currentSection == "HouseholdRegistry";
 
         public RelayCommand ShowDashboardCommand { get; }
         public RelayCommand ShowCashForWorkCommand { get; }
+        public RelayCommand ShowBudgetCommand { get; }
+        public RelayCommand ShowDistributionCommand { get; }
         public RelayCommand ShowMasterListCommand { get; }
-        public RelayCommand ShowBeneficiariesCommand { get; }
         public RelayCommand ShowAssistanceCasesCommand { get; }
-        public RelayCommand ShowGrievancesCommand { get; }
         public RelayCommand ShowHouseholdRegistryCommand { get; }
 
         public void RefreshConnectionSummary()
@@ -118,10 +118,10 @@ namespace AttendanceShiftingManagement.ViewModels
             _currentSection = section;
             OnPropertyChanged(nameof(IsDashboardSelected));
             OnPropertyChanged(nameof(IsCashForWorkSelected));
+            OnPropertyChanged(nameof(IsBudgetSelected));
+            OnPropertyChanged(nameof(IsDistributionSelected));
             OnPropertyChanged(nameof(IsMasterListSelected));
-            OnPropertyChanged(nameof(IsBeneficiariesSelected));
             OnPropertyChanged(nameof(IsAssistanceCasesSelected));
-            OnPropertyChanged(nameof(IsGrievancesSelected));
             OnPropertyChanged(nameof(IsHouseholdRegistrySelected));
 
             CurrentView = BuildView(section);
@@ -133,24 +133,24 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 case "Dashboard":
                     CurrentSectionTitle = "Dashboard";
-                    CurrentSectionSubtitle = "Monitor validated beneficiaries, beneficiary review, assistance cases, households, and cash-for-work at a glance.";
+                    CurrentSectionSubtitle = "Monitor validated beneficiaries, pending approvals, aid requests, budgets, households, and cash-for-work at a glance.";
                     return new BarangayDashboardPage();
+                case "Budget":
+                    CurrentSectionTitle = "Budget";
+                    CurrentSectionSubtitle = "Sync GGMS allocation, record private donations, and audit the shared Ayuda release ledger.";
+                    return new BudgetPage(_currentUser);
+                case "Distribution":
+                    CurrentSectionTitle = "Project Distribution";
+                    CurrentSectionSubtitle = "Select a project first, attach approved beneficiaries, and use the phone scanner to mark one claim per beneficiary.";
+                    return new ProjectDistributionPage(_currentUser);
                 case "MasterList":
                     CurrentSectionTitle = "Validated Beneficiaries";
-                    CurrentSectionSubtitle = "Review locally synced validated beneficiary records from the active database one page at a time.";
-                    return new MasterListPage();
-                case "Beneficiaries":
-                    CurrentSectionTitle = "Beneficiaries";
-                    CurrentSectionSubtitle = "Verify staged beneficiaries and attach them to existing households.";
+                    CurrentSectionSubtitle = "Read the local val_beneficiaries snapshot, keep new rows pending by default, and approve or reject them before downstream use.";
                     return new BeneficiaryVerificationPage(_currentUser);
                 case "AssistanceCases":
-                    CurrentSectionTitle = "Assistance cases";
-                    CurrentSectionSubtitle = "Create, review, approve, and close barangay assistance requests.";
+                    CurrentSectionTitle = "Aid Request";
+                    CurrentSectionSubtitle = "Create requests, choose a validated beneficiary or household, and release approved aid against budget.";
                     return new AssistanceCaseManagementPage(_currentUser);
-                case "Grievances":
-                    CurrentSectionTitle = "Grievance / Corrections";
-                    CurrentSectionSubtitle = "Track beneficiary complaints, corrections, and large-assistance warnings without auto-declining records.";
-                    return new GrievanceCorrectionsPage(_currentUser);
                 case "HouseholdRegistry":
                     CurrentSectionTitle = "Household registry";
                     CurrentSectionSubtitle = "Browse registered households and inspect eligible members.";

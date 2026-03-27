@@ -25,11 +25,11 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel>
-                    <TextBlock Text="Beneficiary Registry Checklist"
+                    <TextBlock Text="Validated Beneficiaries"
                                FontSize="26"
                                FontWeight="SemiBold"
                                Foreground="White"/>
-                    <TextBlock Text="Review staged CRS imports, correct beneficiary details, verify the checklist status, then approve into a household or link to an existing member."
+                    <TextBlock Text="Read the local `val_beneficiaries` snapshot, keep every new account pending by default, then approve or reject each beneficiary before they appear in downstream operations."
                                Margin="0,8,0,0"
                                MaxWidth="760"
                                Foreground="#D6E3FF"
@@ -109,10 +109,11 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
                     <DockPanel Grid.Row="0" Margin="0,0,0,14">
-                        <TextBlock Text="Staged Beneficiaries"
+                        <TextBlock Text="Validated Snapshot Approval Queue"
                                    FontSize="15"
                                    FontWeight="SemiBold"
                                    Foreground="{StaticResource BrandMidnightBrush}"/>
@@ -161,6 +162,64 @@
                             <DataGridTextColumn Header="Imported" Binding="{Binding ImportedAt, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}" Width="140"/>
                         </DataGrid.Columns>
                     </DataGrid>
+
+                    <Grid Grid.Row="3" Margin="0,14,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="16"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="16"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Orientation="Horizontal">
+                            <TextBlock Margin="0,0,10,0"
+                                       VerticalAlignment="Center"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                       Text="Rows per page"/>
+                            <ComboBox Width="100"
+                                      ItemsSource="{Binding PageSizeOptions}"
+                                      SelectedItem="{Binding SelectedPageSize}"
+                                      Style="{StaticResource MaterialDesignOutlinedComboBox}"/>
+                        </StackPanel>
+
+                        <Grid Grid.Column="2" VerticalAlignment="Center">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Grid.Column="0"
+                                       VerticalAlignment="Center"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                       Text="{Binding PageSummary}"
+                                       TextTrimming="CharacterEllipsis"/>
+                            <TextBlock Grid.Column="1"
+                                       Margin="14,0,0,0"
+                                       VerticalAlignment="Center"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrandMidnightBrush}"
+                                       Text="{Binding PageIndicator}"/>
+                        </Grid>
+
+                        <StackPanel Grid.Column="4"
+                                    Orientation="Horizontal"
+                                    HorizontalAlignment="Right">
+                            <Button Width="110"
+                                    Height="36"
+                                    Margin="0,0,8,0"
+                                    Command="{Binding PreviousPageCommand}"
+                                    Content="PREVIOUS"
+                                    Style="{StaticResource SecondaryActionButton}"/>
+                            <Button Width="90"
+                                    Height="36"
+                                    Command="{Binding NextPageCommand}"
+                                    Content="NEXT"
+                                    Style="{StaticResource GoldActionButton}"/>
+                        </StackPanel>
+                    </Grid>
                 </Grid>
             </materialDesign:Card>
 
@@ -367,6 +426,118 @@
                                         Margin="0,0,10,10"
                                         Padding="18,0"/>
                             </WrapPanel>
+
+                            <Border Margin="0,18,0,0"
+                                    Padding="16"
+                                    CornerRadius="12"
+                                    Background="#F8FAFC"
+                                    BorderBrush="{StaticResource BrandBorderBrush}"
+                                    BorderThickness="1">
+                                <StackPanel>
+                                    <TextBlock Text="Digital ID"
+                                               FontSize="15"
+                                               FontWeight="SemiBold"
+                                               Foreground="{StaticResource BrandMidnightBrush}"/>
+                                    <TextBlock Text="{Binding DigitalIdCardNumber}"
+                                               Margin="0,6,0,0"
+                                               FontWeight="SemiBold"
+                                               Foreground="{StaticResource BrandMidnightBrush}"/>
+                                    <TextBlock Text="{Binding DigitalIdIssuedAtText}"
+                                               Margin="0,4,0,0"
+                                               Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                               TextWrapping="Wrap"/>
+
+                                    <Grid Margin="0,14,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="16"/>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <Border Grid.Column="0"
+                                                Width="120"
+                                                Height="120"
+                                                Background="#DBEAFE"
+                                                CornerRadius="12"
+                                                BorderBrush="{StaticResource BrandBorderBrush}"
+                                                BorderThickness="1">
+                                            <Grid>
+                                                <Image Source="{Binding DigitalIdPhotoImage}" Stretch="UniformToFill"/>
+                                                <TextBlock Text="PHOTO"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"
+                                                           Foreground="#1D4ED8"
+                                                           FontWeight="SemiBold"/>
+                                            </Grid>
+                                        </Border>
+
+                                        <Border Grid.Column="2"
+                                                Width="120"
+                                                Height="120"
+                                                Background="White"
+                                                CornerRadius="12"
+                                                BorderBrush="{StaticResource BrandBorderBrush}"
+                                                BorderThickness="1">
+                                            <Image Source="{Binding DigitalIdQrImage}" Stretch="Uniform"/>
+                                        </Border>
+
+                                        <StackPanel Grid.Column="3" Margin="16,0,0,0">
+                                            <TextBlock Text="Printable card-sized ID with QR lookup handle."
+                                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                                       TextWrapping="Wrap"/>
+                                            <Button Content="UPLOAD PHOTO"
+                                                    Command="{Binding UploadDigitalIdPhotoCommand}"
+                                                    Margin="0,12,0,0"
+                                                    Height="38"
+                                                    Style="{StaticResource SecondaryActionButton}"/>
+                                            <Button Content="PRINT ID"
+                                                    Command="{Binding PrintDigitalIdCommand}"
+                                                    Margin="0,10,0,0"
+                                                    Height="38"
+                                                    Style="{StaticResource GoldActionButton}"/>
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <Separator Margin="0,18,0,14"/>
+
+                                    <TextBlock Text="Lookup Scanner Session"
+                                               FontWeight="SemiBold"
+                                               Foreground="{StaticResource BrandMidnightBrush}"/>
+                                    <TextBlock Text="Generate a same-Wi-Fi scanner QR plus temporary PIN for employee phones."
+                                               Margin="0,6,0,0"
+                                               Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                               TextWrapping="Wrap"/>
+                                    <Button Content="CREATE LOOKUP SCANNER SESSION"
+                                            Command="{Binding CreateLookupScannerSessionCommand}"
+                                            Margin="0,12,0,0"
+                                            Height="40"
+                                            Style="{StaticResource PrimaryActionButton}"/>
+                                    <TextBox Margin="0,12,0,0"
+                                             IsReadOnly="True"
+                                             Text="{Binding LookupScannerSessionUrl, Mode=OneWay}"
+                                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                             materialDesign:HintAssist.Hint="Scanner URL"/>
+                                    <TextBlock Margin="0,8,0,0"
+                                               Text="{Binding LookupScannerSessionPin}"
+                                               FontSize="20"
+                                               FontWeight="Bold"
+                                               Foreground="{StaticResource BrandMidnightBrush}"/>
+                                    <TextBlock Margin="0,4,0,0"
+                                               Text="{Binding LookupScannerSessionExpiresAtText}"
+                                               Foreground="{StaticResource BrandTextSecondaryBrush}"/>
+                                    <Border Margin="0,12,0,0"
+                                            Width="150"
+                                            Height="150"
+                                            HorizontalAlignment="Left"
+                                            Background="White"
+                                            BorderBrush="{StaticResource BrandBorderBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="12">
+                                        <Image Source="{Binding LookupScannerQrImage}" Stretch="Uniform"/>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
                         </StackPanel>
                     </ScrollViewer>
                 </Grid>

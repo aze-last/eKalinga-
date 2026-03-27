@@ -7,26 +7,48 @@ namespace AttendanceShiftingManagement.Data
 {
 	public class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbContext>
 	{
+		internal const string PresetOverrideEnvironmentVariable = "ASM_DB_PRESET";
+		internal const string ConnectionStringOverrideEnvironmentVariable = "ASM_DB_CONNECTION_STRING";
+
 		public AppDbContext CreateDbContext(string[] args)
 		{
 			var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
-
-			var connectionString = ConnectionSettingsService.BuildConnectionString(new DatabaseConnectionPreset
-			{
-				DisplayName = "Local",
-				Server = "127.0.0.1",
-				Port = 3306,
-				Database = "attendance_shifting_db",
-				Username = "root",
-				Password = "codenameHylux122818"
-			});
+			var settings = ConnectionSettingsService.Load();
+			var connectionString = ResolveConnectionString(
+				settings,
+				Environment.GetEnvironmentVariable(PresetOverrideEnvironmentVariable),
+				Environment.GetEnvironmentVariable(ConnectionStringOverrideEnvironmentVariable));
 
 			optionsBuilder.UseMySql(
 				connectionString,
-				new MySqlServerVersion(new Version(8, 0, 36))
+				ServerVersion.AutoDetect(connectionString)
 			);
 
 			return new AppDbContext(optionsBuilder.Options);
+		}
+
+		internal static string ResolveConnectionString(
+			ConnectionSettingsModel settings,
+			string? presetOverride,
+			string? connectionStringOverride)
+		{
+			ArgumentNullException.ThrowIfNull(settings);
+
+			if (!string.IsNullOrWhiteSpace(connectionStringOverride))
+			{
+				return connectionStringOverride.Trim();
+			}
+
+			var presetKey = string.IsNullOrWhiteSpace(presetOverride)
+				? settings.SelectedPreset
+				: presetOverride.Trim();
+
+			if (!settings.Presets.ContainsKey(presetKey))
+			{
+				throw new InvalidOperationException($"Database preset '{presetKey}' was not found. Set {ConnectionStringOverrideEnvironmentVariable} or use a valid preset.");
+			}
+
+			return ConnectionSettingsService.BuildConnectionString(settings.GetPreset(presetKey));
 		}
 	}
 }

@@ -43,6 +43,18 @@ namespace AttendanceShiftingManagement.Models
         [Column("status")]
         public CashForWorkEventStatus Status { get; set; } = CashForWorkEventStatus.Draft;
 
+        [Column("ayuda_program_id")]
+        public int? AyudaProgramId { get; set; }
+
+        [Column("budget_ledger_entry_id")]
+        public int? BudgetLedgerEntryId { get; set; }
+
+        [Column("release_amount", TypeName = "decimal(18,2)")]
+        public decimal? ReleaseAmount { get; set; }
+
+        [Column("released_at")]
+        public DateTime? ReleasedAt { get; set; }
+
         [Column("created_at")]
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 
@@ -51,6 +63,12 @@ namespace AttendanceShiftingManagement.Models
 
         [ForeignKey(nameof(CreatedByUserId))]
         public User CreatedByUser { get; set; } = null!;
+
+        [ForeignKey(nameof(AyudaProgramId))]
+        public AyudaProgram? AyudaProgram { get; set; }
+
+        [ForeignKey(nameof(BudgetLedgerEntryId))]
+        public BudgetLedgerEntry? BudgetLedgerEntry { get; set; }
 
         public ICollection<CashForWorkParticipant> Participants { get; set; } = new List<CashForWorkParticipant>();
     }

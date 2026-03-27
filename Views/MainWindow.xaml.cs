@@ -1,4 +1,5 @@
 using AttendanceShiftingManagement.Models;
+using AttendanceShiftingManagement.Services;
 using AttendanceShiftingManagement.ViewModels;
 using System.Windows;
 
@@ -12,6 +13,7 @@ namespace AttendanceShiftingManagement.Views
         {
             InitializeComponent();
             DataContext = new BarangayMainViewModel(user);
+            WindowBrandingService.ApplyWindowIcon(this);
         }
 
         private void Settings_Click(object sender, RoutedEventArgs e)
@@ -22,6 +24,7 @@ namespace AttendanceShiftingManagement.Views
             };
 
             window.ShowDialog();
+            WindowBrandingService.ApplyWindowIcon(this);
             ViewModel.RefreshConnectionSummary();
             ViewModel.RefreshUserSummary();
             ViewModel.ReloadCurrentView();

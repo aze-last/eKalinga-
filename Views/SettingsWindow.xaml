@@ -54,7 +54,7 @@
                                      Text="{Binding SystemInstallSerial, Mode=OneWay}"
                                      IsReadOnly="True"
                                      Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                     materialDesign:HintAssist.Hint="Install Serial Number" />
+                                     materialDesign:HintAssist.Hint="Company Serial Number" />
 
                             <TextBox Margin="0,12,0,0"
                                      Text="{Binding SystemName, UpdateSourceTrigger=PropertyChanged}"

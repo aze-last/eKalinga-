@@ -30,9 +30,8 @@ public sealed class BeneficiaryVerificationServiceTests
         Assert.Equal(household.Id, staged.LinkedHouseholdId);
         Assert.Equal(member.Id, staged.LinkedHouseholdMemberId);
 
-        var auditLog = Assert.Single(context.ActivityLogs);
-        Assert.Equal("BeneficiaryApproved", auditLog.Action);
-        Assert.Equal(stagingRow.StagingID, auditLog.EntityId);
+        Assert.Equal(2, context.ActivityLogs.Count());
+        Assert.Contains(context.ActivityLogs, log => log.Action == "BeneficiaryApproved" && log.EntityId == stagingRow.StagingID);
     }
 
     [Fact]
@@ -80,6 +79,37 @@ public sealed class BeneficiaryVerificationServiceTests
         Assert.Equal(existingMember.Id, staged.LinkedHouseholdMemberId);
         Assert.Equal(admin.Id, staged.ReviewedByUserId);
         Assert.Equal("Matched to an existing household member.", staged.ReviewNotes);
+    }
+
+    [Fact]
+    public async Task ApproveAsync_AutoIssuesDigitalIdForApprovedBeneficiary()
+    {
+        using var context = TestDbContextFactory.CreateContext();
+        var admin = SeedAdmin(context);
+        var household = SeedHousehold(context);
+        var stagingRow = SeedStaging(context);
+        var service = new BeneficiaryVerificationService(context);
+
+        var result = await service.ApproveAsync(
+            new BeneficiaryApprovalRequest(
+                stagingRow.StagingID,
+                household.Id,
+                ExistingHouseholdMemberId: null,
+                ReviewNotes: "Ready for digital ID issuance."),
+            admin.Id);
+
+        Assert.True(result.IsSuccess);
+
+        var digitalId = Assert.Single(context.BeneficiaryDigitalIds);
+        var staged = Assert.Single(context.BeneficiaryStaging);
+
+        Assert.Equal(stagingRow.StagingID, digitalId.BeneficiaryStagingId);
+        Assert.Equal(household.Id, digitalId.HouseholdId);
+        Assert.Equal(staged.LinkedHouseholdMemberId, digitalId.HouseholdMemberId);
+        Assert.Equal(admin.Id, digitalId.IssuedByUserId);
+        Assert.True(digitalId.IsActive);
+        Assert.False(string.IsNullOrWhiteSpace(digitalId.CardNumber));
+        Assert.False(string.IsNullOrWhiteSpace(digitalId.QrPayload));
     }
 
     [Fact]

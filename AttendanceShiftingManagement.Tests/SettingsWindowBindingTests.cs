@@ -17,6 +17,7 @@ public sealed class SettingsWindowBindingTests
         var xaml = File.ReadAllText(settingsWindowPath);
 
         Assert.Contains("Text=\"{Binding SystemInstallSerial, Mode=OneWay}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Company Serial Number", xaml, StringComparison.Ordinal);
     }
 
     [Fact]

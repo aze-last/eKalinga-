@@ -3,21 +3,27 @@ using AttendanceShiftingManagement.Helpers;
 using AttendanceShiftingManagement.Models;
 using AttendanceShiftingManagement.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Win32;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 
 namespace AttendanceShiftingManagement.ViewModels
 {
     public sealed class BeneficiaryVerificationViewModel : ObservableObject
     {
         private readonly User _currentUser;
+        private readonly IBeneficiaryVerificationQueueService _queueService;
         private readonly ObservableCollection<StagedBeneficiaryItem> _records = new();
         private readonly ObservableCollection<HouseholdOption> _households = new();
         private readonly ObservableCollection<HouseholdMemberOption> _availableHouseholdMembers = new();
+        private readonly RelayCommand _previousPageCommand;
+        private readonly RelayCommand _nextPageCommand;
         private readonly RelayCommand _refreshCommand;
         private readonly RelayCommand _saveCorrectionsCommand;
         private readonly RelayCommand _verifyCommand;
@@ -25,12 +31,18 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly RelayCommand _markDuplicateCommand;
         private readonly RelayCommand _markInactiveCommand;
         private readonly RelayCommand _rejectCommand;
+        private readonly RelayCommand _uploadDigitalIdPhotoCommand;
+        private readonly RelayCommand _printDigitalIdCommand;
+        private readonly RelayCommand _createLookupScannerSessionCommand;
+        private readonly bool _autoRefresh;
+        private CancellationTokenSource? _loadCts;
         private ICollectionView _recordsView;
         private StagedBeneficiaryItem? _selectedBeneficiary;
         private HouseholdOption? _selectedHousehold;
         private HouseholdMemberOption? _selectedHouseholdMember;
         private string _searchText = string.Empty;
         private string _selectedStatusFilter = "Pending";
+        private int _selectedPageSize = 100;
         private bool _isBusy;
         private string _statusMessage = "Loading staged beneficiaries...";
         private Brush _statusBrush = CreateBrush("#6B7280");
@@ -41,6 +53,8 @@ namespace AttendanceShiftingManagement.ViewModels
         private int _duplicateCount;
         private int _inactiveCount;
         private int _rejectedCount;
+        private int _filteredRecordCount;
+        private int _currentPage = 1;
         private string _editableBeneficiaryId = string.Empty;
         private string _editableCivilRegistryId = string.Empty;
         private string _editableFirstName = string.Empty;
@@ -56,35 +70,55 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _editableSeniorIdNo = string.Empty;
         private string _editableDisabilityType = string.Empty;
         private string _editableReviewNotes = string.Empty;
+        private string _digitalIdCardNumber = "No digital ID issued yet.";
+        private string _digitalIdIssuedAtText = "Approve a beneficiary to generate a digital ID.";
+        private BitmapSource? _digitalIdPhotoImage;
+        private BitmapSource? _digitalIdQrImage;
+        private string _lookupScannerSessionUrl = string.Empty;
+        private string _lookupScannerSessionPin = string.Empty;
+        private string _lookupScannerSessionExpiresAtText = string.Empty;
+        private BitmapSource? _lookupScannerQrImage;
 
         public BeneficiaryVerificationViewModel(User currentUser)
+            : this(currentUser, new BeneficiaryVerificationQueueService(), autoLoad: true, autoRefresh: true)
+        {
+        }
+
+        internal BeneficiaryVerificationViewModel(
+            User currentUser,
+            IBeneficiaryVerificationQueueService queueService,
+            bool autoLoad,
+            bool autoRefresh)
         {
             _currentUser = currentUser;
-            StatusFilters = new ObservableCollection<string>
-            {
-                "Pending",
-                "Verified",
-                "Approved",
-                "Duplicate",
-                "Inactive",
-                "Rejected",
-                "All"
-            };
+            _queueService = queueService ?? throw new ArgumentNullException(nameof(queueService));
+            _autoRefresh = autoRefresh;
+            StatusFilters = new ObservableCollection<string>(BeneficiaryVerificationStatusFilters.Options);
+            PageSizeOptions = new ObservableCollection<int> { 50, 100, 250, 500 };
 
             _recordsView = CollectionViewSource.GetDefaultView(_records);
-            _refreshCommand = new RelayCommand(async _ => await LoadAsync(), _ => !IsBusy);
+            _previousPageCommand = new RelayCommand(async _ => await GoToPreviousPageAsync(), _ => !IsBusy && CurrentPage > 1);
+            _nextPageCommand = new RelayCommand(async _ => await GoToNextPageAsync(), _ => !IsBusy && CurrentPage < TotalPages);
+            _refreshCommand = new RelayCommand(async _ => await RefreshAsync(), _ => !IsBusy);
             _saveCorrectionsCommand = new RelayCommand(async _ => await SaveCorrectionsAsync(), _ => CanSaveCorrectionsSelected());
             _verifyCommand = new RelayCommand(async _ => await VerifySelectedAsync(), _ => CanVerifySelected());
             _approveCommand = new RelayCommand(async _ => await ApproveSelectedAsync(), _ => CanApproveSelected());
             _markDuplicateCommand = new RelayCommand(async _ => await MarkDuplicateSelectedAsync(), _ => CanMarkDuplicateSelected());
             _markInactiveCommand = new RelayCommand(async _ => await MarkInactiveSelectedAsync(), _ => CanMarkInactiveSelected());
             _rejectCommand = new RelayCommand(async _ => await RejectSelectedAsync(), _ => CanRejectSelected());
+            _uploadDigitalIdPhotoCommand = new RelayCommand(async _ => await UploadDigitalIdPhotoAsync(), _ => CanUseDigitalId());
+            _printDigitalIdCommand = new RelayCommand(async _ => await PrintDigitalIdAsync(), _ => CanUseDigitalId());
+            _createLookupScannerSessionCommand = new RelayCommand(async _ => await CreateLookupScannerSessionAsync(), _ => CanCreateLookupScannerSession());
 
-            ApplyFilter();
-            _ = LoadAsync();
+            if (autoLoad)
+            {
+                _ = LoadPageAsync(1, null, syncValidatedSnapshot: false, CancellationToken.None);
+            }
         }
 
         public ObservableCollection<string> StatusFilters { get; }
+
+        public ObservableCollection<int> PageSizeOptions { get; }
 
         public ObservableCollection<HouseholdOption> Households => _households;
 
@@ -142,7 +176,7 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 if (SetProperty(ref _searchText, value))
                 {
-                    ApplyFilter();
+                    QueueReloadFromFirstPage();
                 }
             }
         }
@@ -154,7 +188,22 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 if (SetProperty(ref _selectedStatusFilter, value))
                 {
-                    ApplyFilter();
+                    QueueReloadFromFirstPage();
+                }
+            }
+        }
+
+        public int SelectedPageSize
+        {
+            get => _selectedPageSize;
+            set
+            {
+                if (SetProperty(ref _selectedPageSize, value))
+                {
+                    OnPropertyChanged(nameof(TotalPages));
+                    OnPropertyChanged(nameof(PageIndicator));
+                    OnPropertyChanged(nameof(PageSummary));
+                    QueueReloadFromFirstPage();
                 }
             }
         }
@@ -167,6 +216,8 @@ namespace AttendanceShiftingManagement.ViewModels
                 if (SetProperty(ref _isBusy, value))
                 {
                     RaiseActionCanExecuteChanged();
+                    _previousPageCommand.RaiseCanExecuteChanged();
+                    _nextPageCommand.RaiseCanExecuteChanged();
                 }
             }
         }
@@ -223,6 +274,56 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             get => _rejectedCount;
             private set => SetProperty(ref _rejectedCount, value);
+        }
+
+        public int FilteredRecordCount
+        {
+            get => _filteredRecordCount;
+            private set
+            {
+                if (SetProperty(ref _filteredRecordCount, value))
+                {
+                    OnPropertyChanged(nameof(TotalPages));
+                    OnPropertyChanged(nameof(PageIndicator));
+                    OnPropertyChanged(nameof(PageSummary));
+                    _previousPageCommand.RaiseCanExecuteChanged();
+                    _nextPageCommand.RaiseCanExecuteChanged();
+                }
+            }
+        }
+
+        public int CurrentPage
+        {
+            get => _currentPage;
+            private set
+            {
+                if (SetProperty(ref _currentPage, value))
+                {
+                    OnPropertyChanged(nameof(PageIndicator));
+                    OnPropertyChanged(nameof(PageSummary));
+                    _previousPageCommand.RaiseCanExecuteChanged();
+                    _nextPageCommand.RaiseCanExecuteChanged();
+                }
+            }
+        }
+
+        public int TotalPages => Math.Max(1, (int)Math.Ceiling((double)Math.Max(FilteredRecordCount, 1) / SelectedPageSize));
+
+        public string PageIndicator => $"Page {CurrentPage} of {TotalPages}";
+
+        public string PageSummary
+        {
+            get
+            {
+                if (FilteredRecordCount == 0 || _records.Count == 0)
+                {
+                    return "Showing 0 beneficiary approval records";
+                }
+
+                var start = ((CurrentPage - 1) * SelectedPageSize) + 1;
+                var end = start + _records.Count - 1;
+                return $"Showing {start:N0}-{end:N0} of {FilteredRecordCount:N0} beneficiary approval records";
+            }
         }
 
         public string EditableBeneficiaryId
@@ -326,132 +427,264 @@ namespace AttendanceShiftingManagement.ViewModels
                 ? "Approve and create a new household member"
                 : "Approve and link the selected existing member";
 
+        public string DigitalIdCardNumber
+        {
+            get => _digitalIdCardNumber;
+            private set => SetProperty(ref _digitalIdCardNumber, value);
+        }
+
+        public string DigitalIdIssuedAtText
+        {
+            get => _digitalIdIssuedAtText;
+            private set => SetProperty(ref _digitalIdIssuedAtText, value);
+        }
+
+        public BitmapSource? DigitalIdPhotoImage
+        {
+            get => _digitalIdPhotoImage;
+            private set => SetProperty(ref _digitalIdPhotoImage, value);
+        }
+
+        public BitmapSource? DigitalIdQrImage
+        {
+            get => _digitalIdQrImage;
+            private set => SetProperty(ref _digitalIdQrImage, value);
+        }
+
+        public string LookupScannerSessionUrl
+        {
+            get => _lookupScannerSessionUrl;
+            private set => SetProperty(ref _lookupScannerSessionUrl, value);
+        }
+
+        public string LookupScannerSessionPin
+        {
+            get => _lookupScannerSessionPin;
+            private set => SetProperty(ref _lookupScannerSessionPin, value);
+        }
+
+        public string LookupScannerSessionExpiresAtText
+        {
+            get => _lookupScannerSessionExpiresAtText;
+            private set => SetProperty(ref _lookupScannerSessionExpiresAtText, value);
+        }
+
+        public BitmapSource? LookupScannerQrImage
+        {
+            get => _lookupScannerQrImage;
+            private set => SetProperty(ref _lookupScannerQrImage, value);
+        }
+
         public ICommand RefreshCommand => _refreshCommand;
+        public ICommand PreviousPageCommand => _previousPageCommand;
+        public ICommand NextPageCommand => _nextPageCommand;
         public ICommand SaveCorrectionsCommand => _saveCorrectionsCommand;
         public ICommand VerifyCommand => _verifyCommand;
         public ICommand ApproveCommand => _approveCommand;
         public ICommand MarkDuplicateCommand => _markDuplicateCommand;
         public ICommand MarkInactiveCommand => _markInactiveCommand;
         public ICommand RejectCommand => _rejectCommand;
+        public ICommand UploadDigitalIdPhotoCommand => _uploadDigitalIdPhotoCommand;
+        public ICommand PrintDigitalIdCommand => _printDigitalIdCommand;
+        public ICommand CreateLookupScannerSessionCommand => _createLookupScannerSessionCommand;
 
-        private async Task LoadAsync()
+        internal Task RefreshAsync(CancellationToken cancellationToken = default)
         {
-            if (IsBusy)
+            return LoadPageAsync(CurrentPage, SelectedBeneficiary?.StagingId, syncValidatedSnapshot: true, cancellationToken);
+        }
+
+        internal Task LoadCurrentPageAsync(CancellationToken cancellationToken = default)
+        {
+            return LoadPageAsync(CurrentPage, SelectedBeneficiary?.StagingId, syncValidatedSnapshot: false, cancellationToken);
+        }
+
+        internal Task GoToNextPageAsync(CancellationToken cancellationToken = default)
+        {
+            if (CurrentPage >= TotalPages)
             {
-                return;
+                return Task.CompletedTask;
             }
 
+            return LoadPageAsync(CurrentPage + 1, null, syncValidatedSnapshot: false, cancellationToken);
+        }
+
+        internal Task GoToPreviousPageAsync(CancellationToken cancellationToken = default)
+        {
+            if (CurrentPage <= 1)
+            {
+                return Task.CompletedTask;
+            }
+
+            return LoadPageAsync(CurrentPage - 1, null, syncValidatedSnapshot: false, cancellationToken);
+        }
+
+        private async Task LoadPageAsync(
+            int targetPage,
+            int? preferredStagingId,
+            bool syncValidatedSnapshot,
+            CancellationToken cancellationToken)
+        {
+            _loadCts?.Cancel();
+            var loadCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            _loadCts = loadCts;
+
+            var previouslySelectedHouseholdId = SelectedHousehold?.Id;
+            var previouslySelectedHouseholdMemberId = SelectedHouseholdMember?.Id;
+            var normalizedTargetPage = Math.Max(1, targetPage);
+
             IsBusy = true;
-            SetNeutralStatus("Loading staged beneficiaries...");
+            SetNeutralStatus(
+                syncValidatedSnapshot
+                    ? "Syncing validated snapshot into the approval queue..."
+                    : $"Loading beneficiary approval queue page {normalizedTargetPage:N0}...");
 
             try
             {
-                await LoadCoreAsync(SelectedBeneficiary?.StagingId);
-                SetSuccessStatus($"Loaded {TotalCount:N0} staged beneficiary record(s).");
+                CrsBeneficiaryImportResult? syncResult = null;
+                if (syncValidatedSnapshot)
+                {
+                    syncResult = await SyncPendingFromValidatedSnapshotAsync(loadCts.Token);
+                    if (loadCts.IsCancellationRequested)
+                    {
+                        return;
+                    }
+                }
+
+                var result = await _queueService.LoadPageAsync(
+                    new BeneficiaryVerificationQueuePageRequest
+                    {
+                        SearchText = SearchText.Trim(),
+                        StatusFilter = SelectedStatusFilter,
+                        PageNumber = normalizedTargetPage,
+                        PageSize = SelectedPageSize
+                    },
+                    loadCts.Token);
+
+                if (loadCts.IsCancellationRequested)
+                {
+                    return;
+                }
+
+                await LoadHouseholdsAsync(loadCts.Token);
+                if (loadCts.IsCancellationRequested)
+                {
+                    return;
+                }
+
+                _records.Clear();
+                foreach (var row in result.Rows)
+                {
+                    _records.Add(StagedBeneficiaryItem.FromEntity(row.Staging, row.DigitalId));
+                }
+
+                RecordsView = CollectionViewSource.GetDefaultView(_records);
+                UpdateCounts(result);
+                FilteredRecordCount = result.FilteredRecordCount;
+                CurrentPage = result.PageNumber;
+
+                SelectedBeneficiary = _records.FirstOrDefault(row => row.StagingId == preferredStagingId)
+                    ?? _records.FirstOrDefault(row => row.VerificationStatus == VerificationStatus.Pending)
+                    ?? _records.FirstOrDefault(row => row.VerificationStatus == VerificationStatus.Verified)
+                    ?? _records.FirstOrDefault();
+
+                var preferredHouseholdId = SelectedBeneficiary?.LinkedHouseholdId ?? previouslySelectedHouseholdId;
+                SelectedHousehold = _households.FirstOrDefault(household => household.Id == preferredHouseholdId)
+                    ?? _households.FirstOrDefault();
+
+                var preferredHouseholdMemberId = SelectedBeneficiary?.LinkedHouseholdMemberId ?? previouslySelectedHouseholdMemberId;
+                if (preferredHouseholdMemberId.HasValue)
+                {
+                    SelectedHouseholdMember = _availableHouseholdMembers
+                        .FirstOrDefault(member => member.Id == preferredHouseholdMemberId.Value);
+                }
+
+                if (syncResult != null)
+                {
+                    if (syncResult.IsSuccess)
+                    {
+                        SetSuccessStatus($"{syncResult.Message} {PageSummary}.");
+                    }
+                    else
+                    {
+                        SetWarningStatus($"Validated snapshot sync warning: {syncResult.Message} {PageSummary}.");
+                    }
+                }
+                else
+                {
+                    SetSuccessStatus(
+                        FilteredRecordCount == 0
+                            ? "No beneficiary approval records matched the current filters."
+                            : $"{PageSummary}.");
+                }
+            }
+            catch (OperationCanceledException) when (loadCts.IsCancellationRequested)
+            {
             }
             catch (Exception ex)
             {
+                if (loadCts.IsCancellationRequested)
+                {
+                    return;
+                }
+
                 ClearLoadedState();
-                SetErrorStatus($"Unable to load staged beneficiaries: {ex.Message}");
+                SetErrorStatus($"Unable to load validated beneficiaries approval queue: {ex.Message}");
             }
             finally
             {
-                IsBusy = false;
+                if (ReferenceEquals(_loadCts, loadCts))
+                {
+                    _loadCts = null;
+                    IsBusy = false;
+                }
+
+                loadCts.Dispose();
             }
         }
 
-        private async Task LoadCoreAsync(int? preferredStagingId)
+        private static Task<CrsBeneficiaryImportResult> SyncPendingFromValidatedSnapshotAsync(CancellationToken cancellationToken)
         {
-            var previouslySelectedHouseholdId = SelectedHousehold?.Id;
-            var previouslySelectedHouseholdMemberId = SelectedHouseholdMember?.Id;
+            var settings = ConnectionSettingsService.Load();
+            var activePreset = settings.GetPreset(settings.SelectedPreset);
+            return CrsBeneficiaryImportService.ImportPendingAsync(activePreset, cancellationToken);
+        }
 
+        private async Task LoadHouseholdsAsync(CancellationToken cancellationToken)
+        {
             await using var context = new AppDbContext();
-
-            var stagingRows = await context.BeneficiaryStaging
-                .AsNoTracking()
-                .OrderByDescending(row => row.ImportedAt)
-                .ToListAsync();
-
             var households = await context.Households
                 .AsNoTracking()
                 .Include(household => household.Members)
                 .OrderBy(household => household.HouseholdCode)
                 .ThenBy(household => household.HeadName)
-                .ToListAsync();
-
-            _records.Clear();
-            foreach (var row in stagingRows)
-            {
-                _records.Add(StagedBeneficiaryItem.FromEntity(row));
-            }
+                .ToListAsync(cancellationToken);
 
             _households.Clear();
             foreach (var household in households)
             {
                 _households.Add(HouseholdOption.FromEntity(household));
             }
+        }
 
-            UpdateCounts();
-
-            RecordsView = CollectionViewSource.GetDefaultView(_records);
-            ApplyFilter();
-
-            SelectedBeneficiary = _records.FirstOrDefault(row => row.StagingId == preferredStagingId)
-                ?? _records.FirstOrDefault(row => row.VerificationStatus == VerificationStatus.Pending)
-                ?? _records.FirstOrDefault(row => row.VerificationStatus == VerificationStatus.Verified)
-                ?? _records.FirstOrDefault();
-
-            var preferredHouseholdId = SelectedBeneficiary?.LinkedHouseholdId ?? previouslySelectedHouseholdId;
-            SelectedHousehold = _households.FirstOrDefault(household => household.Id == preferredHouseholdId)
-                ?? _households.FirstOrDefault();
-
-            var preferredHouseholdMemberId = SelectedBeneficiary?.LinkedHouseholdMemberId ?? previouslySelectedHouseholdMemberId;
-            if (preferredHouseholdMemberId.HasValue)
+        private void QueueReloadFromFirstPage()
+        {
+            if (!_autoRefresh)
             {
-                SelectedHouseholdMember = _availableHouseholdMembers
-                    .FirstOrDefault(member => member.Id == preferredHouseholdMemberId.Value);
+                return;
             }
+
+            _ = LoadPageAsync(1, null, syncValidatedSnapshot: false, CancellationToken.None);
         }
 
-        private void UpdateCounts()
+        private void UpdateCounts(BeneficiaryVerificationQueuePageResult result)
         {
-            TotalCount = _records.Count;
-            PendingCount = _records.Count(row => row.VerificationStatus == VerificationStatus.Pending);
-            VerifiedCount = _records.Count(row => row.VerificationStatus == VerificationStatus.Verified);
-            ApprovedCount = _records.Count(row => row.VerificationStatus == VerificationStatus.Approved);
-            DuplicateCount = _records.Count(row => row.VerificationStatus == VerificationStatus.Duplicate);
-            InactiveCount = _records.Count(row => row.VerificationStatus == VerificationStatus.Inactive);
-            RejectedCount = _records.Count(row => row.VerificationStatus == VerificationStatus.Rejected);
-        }
-
-        private void ApplyFilter()
-        {
-            RecordsView.Filter = item =>
-            {
-                if (item is not StagedBeneficiaryItem row)
-                {
-                    return false;
-                }
-
-                if (SelectedStatusFilter != "All" &&
-                    !string.Equals(row.StatusText, SelectedStatusFilter, StringComparison.OrdinalIgnoreCase))
-                {
-                    return false;
-                }
-
-                if (string.IsNullOrWhiteSpace(SearchText))
-                {
-                    return true;
-                }
-
-                return Contains(row.FullName, SearchText)
-                    || Contains(row.BeneficiaryId, SearchText)
-                    || Contains(row.CivilRegistryId, SearchText)
-                    || Contains(row.Address, SearchText)
-                    || Contains(row.ReviewNotes, SearchText);
-            };
-
-            RecordsView.Refresh();
+            TotalCount = result.TotalCount;
+            PendingCount = result.PendingCount;
+            VerifiedCount = result.VerifiedCount;
+            ApprovedCount = result.ApprovedCount;
+            DuplicateCount = result.DuplicateCount;
+            InactiveCount = result.InactiveCount;
+            RejectedCount = result.RejectedCount;
         }
 
         private void SyncEditableFieldsFromSelection()
@@ -474,6 +707,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 EditableDisabilityType = string.Empty;
                 EditableReviewNotes = string.Empty;
                 SelectedHouseholdMember = null;
+                ResetDigitalIdPreview();
                 return;
             }
 
@@ -513,6 +747,8 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 SelectedHouseholdMember = null;
             }
+
+            SyncDigitalIdPreviewFromSelection();
         }
 
         private void RefreshAvailableHouseholdMembers()
@@ -544,6 +780,146 @@ namespace AttendanceShiftingManagement.ViewModels
             else
             {
                 SelectedHouseholdMember = null;
+            }
+        }
+
+        private void SyncDigitalIdPreviewFromSelection()
+        {
+            if (SelectedBeneficiary == null || !SelectedBeneficiary.HasDigitalId)
+            {
+                ResetDigitalIdPreview();
+                return;
+            }
+
+            DigitalIdCardNumber = SelectedBeneficiary.DigitalIdCardNumber;
+            DigitalIdIssuedAtText = SelectedBeneficiary.DigitalIdIssuedAt.HasValue
+                ? $"Issued on {SelectedBeneficiary.DigitalIdIssuedAt.Value:MMMM dd, yyyy hh:mm tt}"
+                : "Digital ID issued.";
+            DigitalIdPhotoImage = BuildImage(SelectedBeneficiary.DigitalIdPhotoPath);
+            DigitalIdQrImage = QrCodeToolkitService.GenerateQrImage(SelectedBeneficiary.DigitalIdQrPayload, 10);
+
+            LookupScannerSessionUrl = string.Empty;
+            LookupScannerSessionPin = string.Empty;
+            LookupScannerSessionExpiresAtText = string.Empty;
+            LookupScannerQrImage = null;
+        }
+
+        private void ResetDigitalIdPreview()
+        {
+            DigitalIdCardNumber = "No digital ID issued yet.";
+            DigitalIdIssuedAtText = "Approve a beneficiary to generate a digital ID.";
+            DigitalIdPhotoImage = null;
+            DigitalIdQrImage = null;
+            LookupScannerSessionUrl = string.Empty;
+            LookupScannerSessionPin = string.Empty;
+            LookupScannerSessionExpiresAtText = string.Empty;
+            LookupScannerQrImage = null;
+        }
+
+        private bool CanUseDigitalId()
+        {
+            return !IsBusy
+                && SelectedBeneficiary?.HasDigitalId == true;
+        }
+
+        private bool CanCreateLookupScannerSession()
+        {
+            return CanUseDigitalId();
+        }
+
+        private async Task UploadDigitalIdPhotoAsync()
+        {
+            if (!CanUseDigitalId() || SelectedBeneficiary == null)
+            {
+                return;
+            }
+
+            var dialog = new OpenFileDialog
+            {
+                Filter = "Image Files (*.png;*.jpg;*.jpeg;*.bmp;*.webp)|*.png;*.jpg;*.jpeg;*.bmp;*.webp",
+                CheckFileExists = true,
+                Title = "Select Beneficiary ID Photo"
+            };
+
+            if (dialog.ShowDialog() != true)
+            {
+                return;
+            }
+
+            try
+            {
+                var storedPhotoPath = StoreBeneficiaryPhoto(dialog.FileName, SelectedBeneficiary.StagingId);
+                await using var context = new AppDbContext();
+                var digitalIdService = new BeneficiaryDigitalIdService(context);
+                var wasSaved = await digitalIdService.UpdatePhotoAsync(SelectedBeneficiary.StagingId, storedPhotoPath, _currentUser.Id);
+
+                if (!wasSaved)
+                {
+                    SetErrorStatus("Digital ID was not found for the selected beneficiary.");
+                    return;
+                }
+
+                await LoadPageAsync(CurrentPage, SelectedBeneficiary.StagingId, syncValidatedSnapshot: false, CancellationToken.None);
+                SetSuccessStatus("Beneficiary digital ID photo updated.");
+            }
+            catch (Exception ex)
+            {
+                SetErrorStatus($"Unable to update the beneficiary photo: {ex.Message}");
+            }
+        }
+
+        private async Task PrintDigitalIdAsync()
+        {
+            if (!CanUseDigitalId() || SelectedBeneficiary == null)
+            {
+                return;
+            }
+
+            var printService = new DigitalIdPrintService();
+            var wasPrinted = printService.PrintCard(new DigitalIdPrintRequest(
+                SelectedBeneficiary.FullName,
+                SelectedBeneficiary.DigitalIdCardNumber,
+                SelectedBeneficiary.BeneficiaryId,
+                SelectedBeneficiary.CivilRegistryId,
+                DigitalIdPhotoImage,
+                DigitalIdQrImage));
+
+            if (!wasPrinted)
+            {
+                return;
+            }
+
+            await using var context = new AppDbContext();
+            var digitalIdService = new BeneficiaryDigitalIdService(context);
+            await digitalIdService.MarkPrintedAsync(SelectedBeneficiary.StagingId, _currentUser.Id);
+            await LoadPageAsync(CurrentPage, SelectedBeneficiary.StagingId, syncValidatedSnapshot: false, CancellationToken.None);
+            SetSuccessStatus("Beneficiary digital ID sent to printer.");
+        }
+
+        private async Task CreateLookupScannerSessionAsync()
+        {
+            if (!CanCreateLookupScannerSession())
+            {
+                return;
+            }
+
+            try
+            {
+                var baseUrl = await LocalScannerGatewayService.Shared.EnsureStartedAsync();
+                await using var context = new AppDbContext();
+                var sessionService = new ScannerSessionService(context);
+                var session = await sessionService.CreateLookupSessionAsync(_currentUser.Id, TimeSpan.FromMinutes(15));
+                var sessionUrl = $"{baseUrl}/scanner?session={Uri.EscapeDataString(session.SessionToken)}";
+
+                LookupScannerSessionUrl = sessionUrl;
+                LookupScannerSessionPin = session.Pin;
+                LookupScannerSessionExpiresAtText = $"Expires {session.ExpiresAt:MMMM dd, yyyy hh:mm tt}";
+                LookupScannerQrImage = QrCodeToolkitService.GenerateQrImage(sessionUrl, 8);
+                SetSuccessStatus("Lookup scanner session is ready for the employee phone.");
+            }
+            catch (Exception ex)
+            {
+                SetErrorStatus($"Unable to start the lookup scanner session: {ex.Message}");
             }
         }
 
@@ -645,7 +1021,7 @@ namespace AttendanceShiftingManagement.ViewModels
                     return;
                 }
 
-                await LoadCoreAsync(stagingId);
+                await LoadPageAsync(CurrentPage, stagingId, syncValidatedSnapshot: false, CancellationToken.None);
                 SetSuccessStatus(result.Message);
             }
             catch (Exception ex)
@@ -683,7 +1059,7 @@ namespace AttendanceShiftingManagement.ViewModels
                     return;
                 }
 
-                await LoadCoreAsync(stagingId);
+                await LoadPageAsync(CurrentPage, stagingId, syncValidatedSnapshot: false, CancellationToken.None);
                 SetSuccessStatus(result.Message);
             }
             catch (Exception ex)
@@ -740,7 +1116,7 @@ namespace AttendanceShiftingManagement.ViewModels
                     return;
                 }
 
-                await LoadCoreAsync(stagingId);
+                await LoadPageAsync(CurrentPage, stagingId, syncValidatedSnapshot: false, CancellationToken.None);
                 SetSuccessStatus(result.Message);
             }
             catch (Exception ex)
@@ -843,7 +1219,7 @@ namespace AttendanceShiftingManagement.ViewModels
                     return;
                 }
 
-                await LoadCoreAsync(stagingId);
+                await LoadPageAsync(CurrentPage, stagingId, syncValidatedSnapshot: false, CancellationToken.None);
                 SetSuccessStatus(result.Message);
             }
             catch (Exception ex)
@@ -865,6 +1241,9 @@ namespace AttendanceShiftingManagement.ViewModels
             _markDuplicateCommand.RaiseCanExecuteChanged();
             _markInactiveCommand.RaiseCanExecuteChanged();
             _rejectCommand.RaiseCanExecuteChanged();
+            _uploadDigitalIdPhotoCommand.RaiseCanExecuteChanged();
+            _printDigitalIdCommand.RaiseCanExecuteChanged();
+            _createLookupScannerSessionCommand.RaiseCanExecuteChanged();
         }
 
         private void ClearLoadedState()
@@ -883,12 +1262,9 @@ namespace AttendanceShiftingManagement.ViewModels
             DuplicateCount = 0;
             InactiveCount = 0;
             RejectedCount = 0;
-        }
-
-        private static bool Contains(string? source, string searchText)
-        {
-            return !string.IsNullOrWhiteSpace(source)
-                && source.Contains(searchText, StringComparison.OrdinalIgnoreCase);
+            FilteredRecordCount = 0;
+            CurrentPage = 1;
+            ResetDigitalIdPreview();
         }
 
         private void SetNeutralStatus(string message)
@@ -903,6 +1279,12 @@ namespace AttendanceShiftingManagement.ViewModels
             StatusBrush = CreateBrush("#1A7A4A");
         }
 
+        private void SetWarningStatus(string message)
+        {
+            StatusMessage = message;
+            StatusBrush = CreateBrush("#92400E");
+        }
+
         private void SetErrorStatus(string message)
         {
             StatusMessage = message;
@@ -912,6 +1294,37 @@ namespace AttendanceShiftingManagement.ViewModels
         private static Brush CreateBrush(string hexColor)
         {
             return new SolidColorBrush((Color)ColorConverter.ConvertFromString(hexColor));
+        }
+
+        private static BitmapSource? BuildImage(string? path)
+        {
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+            {
+                return null;
+            }
+
+            using var stream = File.OpenRead(path);
+            var image = new BitmapImage();
+            image.BeginInit();
+            image.CacheOption = BitmapCacheOption.OnLoad;
+            image.StreamSource = stream;
+            image.EndInit();
+            image.Freeze();
+            return image;
+        }
+
+        private static string StoreBeneficiaryPhoto(string sourcePath, int stagingId)
+        {
+            var extension = Path.GetExtension(sourcePath);
+            var targetDirectory = Path.Combine(AppContext.BaseDirectory, "beneficiary-id-photos");
+            Directory.CreateDirectory(targetDirectory);
+
+            var targetPath = Path.Combine(
+                targetDirectory,
+                $"beneficiary-{stagingId:D6}-{DateTime.Now:yyyyMMddHHmmss}{extension}");
+
+            File.Copy(sourcePath, targetPath, overwrite: true);
+            return targetPath;
         }
 
         private static string? NormalizeNullable(string? value)
@@ -945,6 +1358,11 @@ namespace AttendanceShiftingManagement.ViewModels
         public string ReviewNotes { get; init; } = string.Empty;
         public int? LinkedHouseholdId { get; init; }
         public int? LinkedHouseholdMemberId { get; init; }
+        public string DigitalIdCardNumber { get; init; } = string.Empty;
+        public string DigitalIdQrPayload { get; init; } = string.Empty;
+        public string? DigitalIdPhotoPath { get; init; }
+        public DateTime? DigitalIdIssuedAt { get; init; }
+        public bool HasDigitalId => !string.IsNullOrWhiteSpace(DigitalIdCardNumber) && !string.IsNullOrWhiteSpace(DigitalIdQrPayload);
 
         public string StatusText => VerificationStatus.ToString();
         public string PwdLabel => IsPwd ? "Yes" : "No";
@@ -979,7 +1397,7 @@ namespace AttendanceShiftingManagement.ViewModels
             _ => CreateBrush("#92400E")
         };
 
-        public static StagedBeneficiaryItem FromEntity(BeneficiaryStaging row)
+        public static StagedBeneficiaryItem FromEntity(BeneficiaryStaging row, BeneficiaryDigitalId? digitalId = null)
         {
             var fullName = string.IsNullOrWhiteSpace(row.FullName)
                 ? string.Join(" ", new[] { row.FirstName, row.MiddleName, row.LastName }
@@ -1010,7 +1428,11 @@ namespace AttendanceShiftingManagement.ViewModels
                 PwdIdNo = row.PwdIdNo ?? string.Empty,
                 ReviewNotes = row.ReviewNotes ?? string.Empty,
                 LinkedHouseholdId = row.LinkedHouseholdId,
-                LinkedHouseholdMemberId = row.LinkedHouseholdMemberId
+                LinkedHouseholdMemberId = row.LinkedHouseholdMemberId,
+                DigitalIdCardNumber = digitalId?.CardNumber ?? string.Empty,
+                DigitalIdQrPayload = digitalId?.QrPayload ?? string.Empty,
+                DigitalIdPhotoPath = digitalId?.PhotoPath,
+                DigitalIdIssuedAt = digitalId?.IssuedAt
             };
         }
 

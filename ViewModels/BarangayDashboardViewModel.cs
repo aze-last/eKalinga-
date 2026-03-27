@@ -217,10 +217,10 @@ namespace AttendanceShiftingManagement.ViewModels
 
             ModuleCards.Add(new BarangayDashboardModuleCard
             {
-                Title = "Beneficiary review",
-                Summary = $"{snapshot.PendingBeneficiaries:N0} pending verification",
+                Title = "Validated beneficiaries",
+                Summary = $"{snapshot.PendingBeneficiaries:N0} pending approval",
                 Detail = $"{snapshot.ApprovedBeneficiaries:N0} approved • {snapshot.RejectedBeneficiaries:N0} rejected",
-                StatusText = snapshot.PendingBeneficiaries > 0 ? "Needs review" : "Up to date",
+                StatusText = snapshot.PendingBeneficiaries > 0 ? "Needs approval" : "Up to date",
                 IconKind = "AccountCheckOutline",
                 AccentBrush = CreateBrush("#F59E0B"),
                 StatusBackground = snapshot.PendingBeneficiaries > 0 ? CreateBrush("#FEF3C7") : CreateBrush("#DCFCE7"),

@@ -6,7 +6,7 @@ namespace AttendanceShiftingManagement.Tests;
 public sealed class AssistanceCaseManagementServiceTests
 {
     [Fact]
-    public async Task CreateAsync_CreatesPendingCase_AssignsCaseNumber_AndWritesAuditLog()
+    public async Task CreateAsync_CreatesPendingAidRequest_AssignsCaseNumber_AndWritesAuditLog()
     {
         using var context = TestDbContextFactory.CreateContext();
         var admin = SeedAdmin(context);
@@ -18,26 +18,63 @@ public sealed class AssistanceCaseManagementServiceTests
             new AssistanceCaseUpsertRequest(
                 household.Id,
                 member.Id,
+                null,
+                null,
+                null,
                 "Medical assistance",
                 AssistanceCasePriority.High,
+                AssistanceReleaseKind.Cash,
                 5000m,
-                null,
                 new DateTime(2026, 3, 23),
                 new DateTime(2026, 3, 30),
-                "Hospital confinement support",
-                "Initial intake completed."),
+                "Hospital confinement support"),
             admin.Id);
 
         Assert.True(result.IsSuccess);
         var assistanceCase = Assert.Single(context.AssistanceCases);
-        Assert.StartsWith("AC-", assistanceCase.CaseNumber);
+        Assert.StartsWith("AR-", assistanceCase.CaseNumber);
         Assert.Equal(AssistanceCaseStatus.Pending, assistanceCase.Status);
         Assert.Equal(member.Id, assistanceCase.HouseholdMemberId);
         Assert.Equal("Medical assistance", assistanceCase.AssistanceType);
+        Assert.Equal(AssistanceReleaseKind.Cash, assistanceCase.ReleaseKind);
+        Assert.Equal(5000m, assistanceCase.RequestedAmount);
+        Assert.Equal(5000m, assistanceCase.ApprovedAmount);
 
         var auditLog = Assert.Single(context.ActivityLogs);
         Assert.Equal("AssistanceCaseCreated", auditLog.Action);
         Assert.Equal(assistanceCase.Id, auditLog.EntityId);
+    }
+
+    [Fact]
+    public async Task CreateAsync_WithValidatedBeneficiaryOnly_Succeeds()
+    {
+        using var context = TestDbContextFactory.CreateContext();
+        var admin = SeedAdmin(context);
+        var service = new AssistanceCaseManagementService(context);
+
+        var result = await service.CreateAsync(
+            new AssistanceCaseUpsertRequest(
+                null,
+                null,
+                "Tessie Flores",
+                "BEN-2026-700016595-1",
+                "CR-12345",
+                "Medical assistance",
+                AssistanceCasePriority.Medium,
+                AssistanceReleaseKind.Goods,
+                2500m,
+                new DateTime(2026, 3, 27),
+                null,
+                "Demo request from validated beneficiary"),
+            admin.Id);
+
+        Assert.True(result.IsSuccess);
+        var assistanceCase = Assert.Single(context.AssistanceCases);
+        Assert.Equal("Tessie Flores", assistanceCase.ValidatedBeneficiaryName);
+        Assert.Equal("BEN-2026-700016595-1", assistanceCase.ValidatedBeneficiaryId);
+        Assert.Equal("CR-12345", assistanceCase.ValidatedCivilRegistryId);
+        Assert.Equal(AssistanceReleaseKind.Goods, assistanceCase.ReleaseKind);
+        Assert.Null(assistanceCase.HouseholdId);
     }
 
     [Fact]
@@ -55,14 +92,16 @@ public sealed class AssistanceCaseManagementServiceTests
             new AssistanceCaseUpsertRequest(
                 household.Id,
                 member.Id,
+                null,
+                null,
+                null,
                 "Burial assistance",
                 AssistanceCasePriority.Critical,
-                15000m,
+                AssistanceReleaseKind.Goods,
                 10000m,
                 assistanceCase.RequestedOn,
                 new DateTime(2026, 4, 2),
-                "Funeral support",
-                "Supporting documents validated."),
+                "Funeral support"),
             admin.Id);
 
         Assert.True(result.IsSuccess);
@@ -70,9 +109,10 @@ public sealed class AssistanceCaseManagementServiceTests
         Assert.Equal(member.Id, updatedCase.HouseholdMemberId);
         Assert.Equal("Burial assistance", updatedCase.AssistanceType);
         Assert.Equal(AssistanceCasePriority.Critical, updatedCase.Priority);
-        Assert.Equal(15000m, updatedCase.RequestedAmount);
+        Assert.Equal(AssistanceReleaseKind.Goods, updatedCase.ReleaseKind);
         Assert.Equal(10000m, updatedCase.ApprovedAmount);
-        Assert.Equal("Supporting documents validated.", updatedCase.Notes);
+        Assert.Equal(10000m, updatedCase.RequestedAmount);
+        Assert.Null(updatedCase.Notes);
 
         var auditLog = context.ActivityLogs.Single(log => log.Action == "AssistanceCaseUpdated");
         Assert.Equal(updatedCase.Id, auditLog.EntityId);
@@ -91,20 +131,20 @@ public sealed class AssistanceCaseManagementServiceTests
             assistanceCase.Id,
             AssistanceCaseStatus.Approved,
             admin.Id,
-            "Approved after case conference.");
+            null);
 
         Assert.True(result.IsSuccess);
         var updatedCase = Assert.Single(context.AssistanceCases);
         Assert.Equal(AssistanceCaseStatus.Approved, updatedCase.Status);
         Assert.Equal(admin.Id, updatedCase.ReviewedByUserId);
-        Assert.Equal("Approved after case conference.", updatedCase.ResolutionNotes);
+        Assert.Null(updatedCase.ResolutionNotes);
 
         var auditLog = context.ActivityLogs.Single(log => log.Action == "AssistanceCaseStatusChanged");
         Assert.Equal(updatedCase.Id, auditLog.EntityId);
     }
 
     [Fact]
-    public async Task ChangeStatusAsync_RejectingWithoutResolutionNotes_ReturnsFailure()
+    public async Task ChangeStatusAsync_RejectingWithoutResolutionNotes_AllowsTransition()
     {
         using var context = TestDbContextFactory.CreateContext();
         var admin = SeedAdmin(context);
@@ -118,9 +158,42 @@ public sealed class AssistanceCaseManagementServiceTests
             admin.Id,
             null);
 
+        Assert.True(result.IsSuccess);
+        Assert.Equal(AssistanceCaseStatus.Rejected, context.AssistanceCases.Single().Status);
+        Assert.Contains(context.ActivityLogs, log => log.Action == "AssistanceCaseStatusChanged");
+    }
+
+    [Fact]
+    public async Task DeleteAsync_RemovesNonBudgetAidRequest()
+    {
+        using var context = TestDbContextFactory.CreateContext();
+        var admin = SeedAdmin(context);
+        var household = SeedHousehold(context);
+        var assistanceCase = SeedAssistanceCase(context, household.Id, null, admin.Id);
+        var service = new AssistanceCaseManagementService(context);
+
+        var result = await service.DeleteAsync(assistanceCase.Id, admin.Id);
+
+        Assert.True(result.IsSuccess);
+        Assert.Empty(context.AssistanceCases);
+        Assert.Contains(context.ActivityLogs, log => log.Action == "AssistanceCaseDeleted");
+    }
+
+    [Fact]
+    public async Task DeleteAsync_WhenBudgetAlreadyLinked_ReturnsFailure()
+    {
+        using var context = TestDbContextFactory.CreateContext();
+        var admin = SeedAdmin(context);
+        var household = SeedHousehold(context);
+        var assistanceCase = SeedAssistanceCase(context, household.Id, null, admin.Id);
+        assistanceCase.BudgetLedgerEntryId = 99;
+        context.SaveChanges();
+        var service = new AssistanceCaseManagementService(context);
+
+        var result = await service.DeleteAsync(assistanceCase.Id, admin.Id);
+
         Assert.False(result.IsSuccess);
-        Assert.Equal(AssistanceCaseStatus.Pending, context.AssistanceCases.Single().Status);
-        Assert.DoesNotContain(context.ActivityLogs, log => log.Action == "AssistanceCaseStatusChanged");
+        Assert.Single(context.AssistanceCases);
     }
 
     private static User SeedAdmin(Data.AppDbContext context)
@@ -179,16 +252,17 @@ public sealed class AssistanceCaseManagementServiceTests
     {
         var assistanceCase = new AssistanceCase
         {
-            CaseNumber = "AC-20260323-0001",
+            CaseNumber = "AR-20260323-0001",
             HouseholdId = householdId,
             HouseholdMemberId = householdMemberId,
             AssistanceType = "Food assistance",
+            ReleaseKind = AssistanceReleaseKind.Cash,
             Priority = AssistanceCasePriority.Medium,
             Status = AssistanceCaseStatus.Pending,
             RequestedAmount = 2500m,
+            ApprovedAmount = 2500m,
             RequestedOn = new DateTime(2026, 3, 23),
             Summary = "Initial assistance request",
-            Notes = "Waiting for review",
             CreatedByUserId = createdByUserId,
             CreatedAt = DateTime.Now,
             UpdatedAt = DateTime.Now

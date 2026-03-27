@@ -2,12 +2,15 @@ using AttendanceShiftingManagement.Data;
 using AttendanceShiftingManagement.Helpers;
 using AttendanceShiftingManagement.Models;
 using AttendanceShiftingManagement.Services;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Win32;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.IO;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 
 namespace AttendanceShiftingManagement.ViewModels
 {
@@ -20,6 +23,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly CashForWorkService _cashForWorkService;
 
         private CashForWorkEvent? _selectedEvent;
+        private AyudaProgram? _selectedAyudaProgram;
         private HouseholdMember? _selectedEligibleMember;
         private OcrProfile? _selectedOcrProfile;
         private string _eventTitle = "Barangay Clean-Up Drive";
@@ -33,6 +37,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _ocrStatusText = "Checking OCR service...";
         private Brush _ocrStatusBrush = Brushes.DarkGoldenrod;
         private string _attendanceSummary = "No event selected.";
+        private string _releaseAmountText = string.Empty;
         private string _releaseSummaryEventLabel = "No event selected.";
         private string _releaseSummaryStatusText = "Select an event to build a release-ready summary.";
         private string _releaseSummaryDetail = "Attendance totals will appear here once an event is selected.";
@@ -43,6 +48,10 @@ namespace AttendanceShiftingManagement.ViewModels
         private int _manualAttendanceCount;
         private int _ocrAttendanceCount;
         private bool _isBusy;
+        private string _attendanceScannerSessionUrl = string.Empty;
+        private string _attendanceScannerSessionPin = string.Empty;
+        private string _attendanceScannerSessionExpiresAtText = string.Empty;
+        private BitmapSource? _attendanceScannerQrImage;
 
         public CashForWorkOcrViewModel(User currentUser)
         {
@@ -59,14 +68,18 @@ namespace AttendanceShiftingManagement.ViewModels
             ProcessImageCommand = new RelayCommand(async _ => await ExecuteProcessImageAsync());
             SaveAttendanceCommand = new RelayCommand(_ => ExecuteSaveAttendance());
             SaveManualAttendanceCommand = new RelayCommand(_ => ExecuteSaveManualAttendance());
+            ReleaseBudgetCommand = new RelayCommand(async _ => await ExecuteReleaseBudgetAsync());
+            CreateAttendanceScannerSessionCommand = new RelayCommand(async _ => await ExecuteCreateAttendanceScannerSessionAsync());
 
             LoadOcrProfiles();
+            LoadAyudaPrograms();
             LoadEvents();
             LoadEligibleMembers();
             _ = ExecuteRefreshOcrStatusAsync();
         }
 
         public ObservableCollection<OcrProfile> OcrProfiles { get; } = new();
+        public ObservableCollection<AyudaProgram> AyudaPrograms { get; } = new();
         public ObservableCollection<CashForWorkEvent> Events { get; } = new();
         public ObservableCollection<HouseholdMember> EligibleMembers { get; } = new();
         public ObservableCollection<CashForWorkParticipantListItem> Participants { get; } = new();
@@ -80,6 +93,8 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand ProcessImageCommand { get; }
         public ICommand SaveAttendanceCommand { get; }
         public ICommand SaveManualAttendanceCommand { get; }
+        public ICommand ReleaseBudgetCommand { get; }
+        public ICommand CreateAttendanceScannerSessionCommand { get; }
 
         public CashForWorkEvent? SelectedEvent
         {
@@ -91,11 +106,25 @@ namespace AttendanceShiftingManagement.ViewModels
                     LoadParticipants();
                     LoadSavedAttendance();
                     ReviewRows.Clear();
+                    SelectedAyudaProgram = value?.AyudaProgramId.HasValue == true
+                        ? AyudaPrograms.FirstOrDefault(program => program.Id == value.AyudaProgramId.Value)
+                        : null;
+                    ReleaseAmountText = value?.ReleaseAmount?.ToString("N2") ?? string.Empty;
+                    AttendanceScannerSessionUrl = string.Empty;
+                    AttendanceScannerSessionPin = string.Empty;
+                    AttendanceScannerSessionExpiresAtText = string.Empty;
+                    AttendanceScannerQrImage = null;
                     StatusMessage = value == null
                         ? "Create or select a cash-for-work event to begin."
                         : $"Loaded event: {value.Title}";
                 }
             }
+        }
+
+        public AyudaProgram? SelectedAyudaProgram
+        {
+            get => _selectedAyudaProgram;
+            set => SetProperty(ref _selectedAyudaProgram, value);
         }
 
         public HouseholdMember? SelectedEligibleMember
@@ -192,6 +221,12 @@ namespace AttendanceShiftingManagement.ViewModels
             set => SetProperty(ref _attendanceSummary, value);
         }
 
+        public string ReleaseAmountText
+        {
+            get => _releaseAmountText;
+            set => SetProperty(ref _releaseAmountText, value);
+        }
+
         public string ReleaseSummaryEventLabel
         {
             get => _releaseSummaryEventLabel;
@@ -246,6 +281,30 @@ namespace AttendanceShiftingManagement.ViewModels
             set => SetProperty(ref _ocrAttendanceCount, value);
         }
 
+        public string AttendanceScannerSessionUrl
+        {
+            get => _attendanceScannerSessionUrl;
+            set => SetProperty(ref _attendanceScannerSessionUrl, value);
+        }
+
+        public string AttendanceScannerSessionPin
+        {
+            get => _attendanceScannerSessionPin;
+            set => SetProperty(ref _attendanceScannerSessionPin, value);
+        }
+
+        public string AttendanceScannerSessionExpiresAtText
+        {
+            get => _attendanceScannerSessionExpiresAtText;
+            set => SetProperty(ref _attendanceScannerSessionExpiresAtText, value);
+        }
+
+        public BitmapSource? AttendanceScannerQrImage
+        {
+            get => _attendanceScannerQrImage;
+            set => SetProperty(ref _attendanceScannerQrImage, value);
+        }
+
         private void LoadOcrProfiles()
         {
             OcrProfiles.Clear();
@@ -263,13 +322,27 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private void LoadEvents()
         {
+            var selectedEventId = SelectedEvent?.Id;
             Events.Clear();
             foreach (var cashForWorkEvent in _cashForWorkService.GetEvents())
             {
                 Events.Add(cashForWorkEvent);
             }
 
-            SelectedEvent ??= Events.FirstOrDefault();
+            SelectedEvent = Events.FirstOrDefault(item => item.Id == selectedEventId)
+                ?? Events.FirstOrDefault();
+        }
+
+        private void LoadAyudaPrograms()
+        {
+            AyudaPrograms.Clear();
+            foreach (var program in _context.AyudaPrograms
+                         .AsNoTracking()
+                         .Where(item => item.IsActive)
+                         .OrderBy(item => item.ProgramName))
+            {
+                AyudaPrograms.Add(program);
+            }
         }
 
         private void LoadEligibleMembers()
@@ -368,6 +441,14 @@ namespace AttendanceShiftingManagement.ViewModels
             PendingParticipantCount = summary.PendingParticipantCount;
             ManualAttendanceCount = summary.ManualAttendanceCount;
             OcrAttendanceCount = summary.OcrAttendanceCount;
+
+            if (SelectedEvent.BudgetLedgerEntryId.HasValue && SelectedEvent.ReleaseAmount.HasValue)
+            {
+                ReleaseSummaryStatusText = "Released";
+                ReleaseSummaryDetail = $"{summary.ReleaseReadyParticipantCount} participant(s) were released under this event. Total release amount: {SelectedEvent.ReleaseAmount.Value:N2}.";
+                ReleaseSummaryStatusBrush = Brushes.ForestGreen;
+                return;
+            }
 
             if (summary.ReleaseReadyParticipantCount == 0)
             {
@@ -589,9 +670,94 @@ namespace AttendanceShiftingManagement.ViewModels
             MessageBox.Show(StatusMessage, "Manual Attendance Saved", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
+        private async Task ExecuteReleaseBudgetAsync()
+        {
+            if (SelectedEvent == null)
+            {
+                MessageBox.Show("Select an event first.", "No Event Selected", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (SelectedAyudaProgram == null)
+            {
+                MessageBox.Show("Select an ayuda program before releasing funds.", "No Program Selected", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (!TryParseAmount(ReleaseAmountText, out var releaseAmount))
+            {
+                MessageBox.Show("Enter a valid release amount greater than zero.", "Invalid Release Amount", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var result = await _cashForWorkService.ReleaseEventAsync(
+                SelectedEvent.Id,
+                SelectedAyudaProgram.Id,
+                releaseAmount,
+                _currentUser.Id,
+                string.IsNullOrWhiteSpace(EventNotes) ? SelectedEvent.Title : EventNotes);
+
+            if (!result.IsSuccess)
+            {
+                MessageBox.Show(result.Message, "Unable to Release Budget", MessageBoxButton.OK, MessageBoxImage.Warning);
+                StatusMessage = result.Message;
+                return;
+            }
+
+            LoadEvents();
+            LoadSavedAttendance();
+            StatusMessage = result.Message;
+            MessageBox.Show(result.Message, "Cash-for-Work Released", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        private async Task ExecuteCreateAttendanceScannerSessionAsync()
+        {
+            if (SelectedEvent == null)
+            {
+                MessageBox.Show("Select an event before opening the phone scanner.", "No Event Selected", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            try
+            {
+                var baseUrl = await LocalScannerGatewayService.Shared.EnsureStartedAsync();
+                var sessionService = new ScannerSessionService(_context);
+                var session = await sessionService.CreateAttendanceSessionAsync(SelectedEvent.Id, _currentUser.Id, TimeSpan.FromMinutes(15));
+                var sessionUrl = $"{baseUrl}/scanner?session={Uri.EscapeDataString(session.SessionToken)}";
+
+                AttendanceScannerSessionUrl = sessionUrl;
+                AttendanceScannerSessionPin = session.Pin;
+                AttendanceScannerSessionExpiresAtText = $"Expires {session.ExpiresAt:MMMM dd, yyyy hh:mm tt}";
+                AttendanceScannerQrImage = QrCodeToolkitService.GenerateQrImage(sessionUrl, 8);
+                StatusMessage = "Attendance scanner session is ready for the employee phone.";
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Unable to start the attendance scanner session: {ex.Message}";
+                MessageBox.Show(ex.Message, "Scanner Session Failed", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
         private IOcrService CreateSelectedOcrService()
         {
             return OcrServiceFactory.Create(_ocrOptions, SelectedOcrProfile);
+        }
+
+        private static bool TryParseAmount(string text, out decimal amount)
+        {
+            amount = 0m;
+
+            if (decimal.TryParse(text, NumberStyles.Number, CultureInfo.CurrentCulture, out amount))
+            {
+                return amount > 0;
+            }
+
+            if (decimal.TryParse(text, NumberStyles.Number, CultureInfo.InvariantCulture, out amount))
+            {
+                return amount > 0;
+            }
+
+            return false;
         }
     }
 

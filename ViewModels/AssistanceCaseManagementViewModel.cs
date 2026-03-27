@@ -19,6 +19,8 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly ObservableCollection<AssistanceCaseListItem> _cases = new();
         private readonly ObservableCollection<AssistanceHouseholdOption> _households = new();
         private readonly ObservableCollection<AssistanceHouseholdMemberOption> _availableHouseholdMembers = new();
+        private readonly ObservableCollection<AssistanceAyudaProgramOption> _ayudaPrograms = new();
+        private readonly ObservableCollection<AssistanceValidatedBeneficiaryOption> _validatedBeneficiaries = new();
         private readonly RelayCommand _refreshCommand;
         private readonly RelayCommand _newCaseCommand;
         private readonly RelayCommand _saveCaseCommand;
@@ -28,30 +30,32 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly RelayCommand _closeCommand;
         private readonly RelayCommand _rejectCommand;
         private readonly RelayCommand _cancelCommand;
+        private readonly RelayCommand _deleteCommand;
         private ICollectionView _casesView;
         private AssistanceCaseListItem? _selectedCase;
         private AssistanceHouseholdOption? _selectedHousehold;
         private AssistanceHouseholdMemberOption? _selectedHouseholdMember;
+        private AssistanceAyudaProgramOption? _selectedAyudaProgram;
+        private AssistanceValidatedBeneficiaryOption? _selectedValidatedBeneficiary;
         private string _searchText = string.Empty;
+        private string _validatedBeneficiarySearchText = string.Empty;
         private string _selectedStatusFilter = "All";
         private bool _isBusy;
-        private string _statusMessage = "Loading assistance cases...";
+        private string _statusMessage = "Loading aid requests...";
         private Brush _statusBrush = CreateBrush("#6B7280");
         private int _totalCases;
         private int _pendingCount;
         private int _approvedCount;
         private int _releasedCount;
         private int _closedCount;
-        private string _editableCaseNumber = "New case";
+        private string _editableCaseNumber = "New aid request";
         private string _editableAssistanceType = string.Empty;
+        private AssistanceReleaseKind _selectedReleaseKind = AssistanceReleaseKind.Cash;
         private AssistanceCasePriority _selectedPriority = AssistanceCasePriority.Medium;
-        private string _editableRequestedAmount = string.Empty;
-        private string _editableApprovedAmount = string.Empty;
+        private string _editableAssistanceAmount = string.Empty;
         private DateTime _requestedOnDate = DateTime.Today;
         private DateTime? _scheduledReleaseDate;
         private string _editableSummary = string.Empty;
-        private string _editableNotes = string.Empty;
-        private string _editableResolutionNotes = string.Empty;
 
         public AssistanceCaseManagementViewModel(User currentUser)
         {
@@ -69,6 +73,7 @@ namespace AttendanceShiftingManagement.ViewModels
             };
 
             PriorityOptions = new ObservableCollection<AssistanceCasePriority>(Enum.GetValues<AssistanceCasePriority>());
+            ReleaseKindOptions = new ObservableCollection<AssistanceReleaseKind>(Enum.GetValues<AssistanceReleaseKind>());
 
             _casesView = CollectionViewSource.GetDefaultView(_cases);
             _refreshCommand = new RelayCommand(async _ => await LoadAsync(), _ => !IsBusy);
@@ -80,18 +85,26 @@ namespace AttendanceShiftingManagement.ViewModels
             _closeCommand = new RelayCommand(async _ => await ChangeStatusAsync(AssistanceCaseStatus.Closed, "closed"), _ => CanChangeStatus(AssistanceCaseStatus.Closed));
             _rejectCommand = new RelayCommand(async _ => await ChangeStatusAsync(AssistanceCaseStatus.Rejected, "rejected"), _ => CanChangeStatus(AssistanceCaseStatus.Rejected));
             _cancelCommand = new RelayCommand(async _ => await ChangeStatusAsync(AssistanceCaseStatus.Cancelled, "cancelled"), _ => CanChangeStatus(AssistanceCaseStatus.Cancelled));
+            _deleteCommand = new RelayCommand(async _ => await DeleteCaseAsync(), _ => CanDeleteCase());
 
             ApplyFilter();
             _ = LoadAsync();
+            _ = LoadValidatedBeneficiariesAsync();
         }
 
         public ObservableCollection<string> StatusFilters { get; }
 
         public ObservableCollection<AssistanceCasePriority> PriorityOptions { get; }
 
+        public ObservableCollection<AssistanceReleaseKind> ReleaseKindOptions { get; }
+
         public ObservableCollection<AssistanceHouseholdOption> Households => _households;
 
         public ObservableCollection<AssistanceHouseholdMemberOption> AvailableHouseholdMembers => _availableHouseholdMembers;
+
+        public ObservableCollection<AssistanceAyudaProgramOption> AyudaPrograms => _ayudaPrograms;
+
+        public ObservableCollection<AssistanceValidatedBeneficiaryOption> ValidatedBeneficiaries => _validatedBeneficiaries;
 
         public ICollectionView CasesView
         {
@@ -120,6 +133,12 @@ namespace AttendanceShiftingManagement.ViewModels
                 if (SetProperty(ref _selectedHousehold, value))
                 {
                     RefreshAvailableHouseholdMembers();
+                    if (value != null && SelectedValidatedBeneficiary != null)
+                    {
+                        SelectedValidatedBeneficiary = null;
+                    }
+
+                    OnPropertyChanged(nameof(ApplicantSummary));
                     RaiseCommandStates();
                 }
             }
@@ -128,7 +147,44 @@ namespace AttendanceShiftingManagement.ViewModels
         public AssistanceHouseholdMemberOption? SelectedHouseholdMember
         {
             get => _selectedHouseholdMember;
-            set => SetProperty(ref _selectedHouseholdMember, value);
+            set
+            {
+                if (SetProperty(ref _selectedHouseholdMember, value))
+                {
+                    OnPropertyChanged(nameof(ApplicantSummary));
+                }
+            }
+        }
+
+        public AssistanceAyudaProgramOption? SelectedAyudaProgram
+        {
+            get => _selectedAyudaProgram;
+            set
+            {
+                if (SetProperty(ref _selectedAyudaProgram, value))
+                {
+                    RaiseCommandStates();
+                }
+            }
+        }
+
+        public AssistanceValidatedBeneficiaryOption? SelectedValidatedBeneficiary
+        {
+            get => _selectedValidatedBeneficiary;
+            set
+            {
+                if (SetProperty(ref _selectedValidatedBeneficiary, value))
+                {
+                    if (value != null)
+                    {
+                        SelectedHouseholdMember = null;
+                        SelectedHousehold = null;
+                    }
+
+                    OnPropertyChanged(nameof(ApplicantSummary));
+                    RaiseCommandStates();
+                }
+            }
         }
 
         public string SearchText
@@ -139,6 +195,18 @@ namespace AttendanceShiftingManagement.ViewModels
                 if (SetProperty(ref _searchText, value))
                 {
                     ApplyFilter();
+                }
+            }
+        }
+
+        public string ValidatedBeneficiarySearchText
+        {
+            get => _validatedBeneficiarySearchText;
+            set
+            {
+                if (SetProperty(ref _validatedBeneficiarySearchText, value))
+                {
+                    _ = LoadValidatedBeneficiariesAsync();
                 }
             }
         }
@@ -218,7 +286,25 @@ namespace AttendanceShiftingManagement.ViewModels
         public string EditableAssistanceType
         {
             get => _editableAssistanceType;
-            set => SetProperty(ref _editableAssistanceType, value);
+            set
+            {
+                if (SetProperty(ref _editableAssistanceType, value))
+                {
+                    RaiseCommandStates();
+                }
+            }
+        }
+
+        public AssistanceReleaseKind SelectedReleaseKind
+        {
+            get => _selectedReleaseKind;
+            set
+            {
+                if (SetProperty(ref _selectedReleaseKind, value))
+                {
+                    OnPropertyChanged(nameof(ReleaseKindSummary));
+                }
+            }
         }
 
         public AssistanceCasePriority SelectedPriority
@@ -227,16 +313,16 @@ namespace AttendanceShiftingManagement.ViewModels
             set => SetProperty(ref _selectedPriority, value);
         }
 
-        public string EditableRequestedAmount
+        public string EditableAssistanceAmount
         {
-            get => _editableRequestedAmount;
-            set => SetProperty(ref _editableRequestedAmount, value);
-        }
-
-        public string EditableApprovedAmount
-        {
-            get => _editableApprovedAmount;
-            set => SetProperty(ref _editableApprovedAmount, value);
+            get => _editableAssistanceAmount;
+            set
+            {
+                if (SetProperty(ref _editableAssistanceAmount, value))
+                {
+                    OnPropertyChanged(nameof(SelectedCase));
+                }
+            }
         }
 
         public DateTime RequestedOnDate
@@ -257,28 +343,13 @@ namespace AttendanceShiftingManagement.ViewModels
             set => SetProperty(ref _editableSummary, value);
         }
 
-        public string EditableNotes
-        {
-            get => _editableNotes;
-            set => SetProperty(ref _editableNotes, value);
-        }
-
-        public string EditableResolutionNotes
-        {
-            get => _editableResolutionNotes;
-            set
-            {
-                if (SetProperty(ref _editableResolutionNotes, value))
-                {
-                    RaiseCommandStates();
-                }
-            }
-        }
-
         public string ApplicantSummary =>
             SelectedHouseholdMember?.DisplayLabel
+            ?? SelectedValidatedBeneficiary?.DisplayLabel
             ?? SelectedHousehold?.HeadName
-            ?? "Select a household or member";
+            ?? "Select a validated beneficiary or household/member";
+
+        public string ReleaseKindSummary => $"Release kind: {SelectedReleaseKind}";
 
         public ICommand RefreshCommand => _refreshCommand;
         public ICommand NewCaseCommand => _newCaseCommand;
@@ -289,6 +360,7 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand CloseCommand => _closeCommand;
         public ICommand RejectCommand => _rejectCommand;
         public ICommand CancelCommand => _cancelCommand;
+        public ICommand DeleteCommand => _deleteCommand;
 
         private async Task LoadAsync()
         {
@@ -298,17 +370,17 @@ namespace AttendanceShiftingManagement.ViewModels
             }
 
             IsBusy = true;
-            SetNeutralStatus("Loading assistance cases...");
+            SetNeutralStatus("Loading aid requests...");
 
             try
             {
                 await LoadCoreAsync(SelectedCase?.Id);
-                SetSuccessStatus($"Loaded {TotalCases:N0} assistance case(s).");
+                SetSuccessStatus($"Loaded {TotalCases:N0} aid request(s).");
             }
             catch (Exception ex)
             {
                 ClearLoadedState();
-                SetErrorStatus($"Unable to load assistance cases: {ex.Message}");
+                SetErrorStatus($"Unable to load aid requests: {ex.Message}");
             }
             finally
             {
@@ -320,6 +392,8 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             var preferredHouseholdId = SelectedHousehold?.Id;
             var preferredMemberId = SelectedHouseholdMember?.Id;
+            var preferredProgramId = SelectedAyudaProgram?.Id;
+            var preferredValidatedBeneficiary = SelectedValidatedBeneficiary;
 
             await using var context = new AppDbContext();
 
@@ -327,6 +401,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 .AsNoTracking()
                 .Include(item => item.Household)
                 .Include(item => item.HouseholdMember)
+                .Include(item => item.AyudaProgram)
                 .OrderByDescending(item => item.RequestedOn)
                 .ThenByDescending(item => item.CreatedAt)
                 .ToListAsync();
@@ -336,6 +411,12 @@ namespace AttendanceShiftingManagement.ViewModels
                 .Include(item => item.Members)
                 .OrderBy(item => item.HouseholdCode)
                 .ThenBy(item => item.HeadName)
+                .ToListAsync();
+
+            var ayudaPrograms = await context.AyudaPrograms
+                .AsNoTracking()
+                .Where(item => item.IsActive)
+                .OrderBy(item => item.ProgramName)
                 .ToListAsync();
 
             _cases.Clear();
@@ -350,6 +431,12 @@ namespace AttendanceShiftingManagement.ViewModels
                 _households.Add(AssistanceHouseholdOption.FromEntity(household));
             }
 
+            _ayudaPrograms.Clear();
+            foreach (var ayudaProgram in ayudaPrograms)
+            {
+                _ayudaPrograms.Add(AssistanceAyudaProgramOption.FromEntity(ayudaProgram));
+            }
+
             UpdateCounts();
 
             CasesView = CollectionViewSource.GetDefaultView(_cases);
@@ -359,13 +446,51 @@ namespace AttendanceShiftingManagement.ViewModels
                 ?? _cases.FirstOrDefault();
 
             var selectedHouseholdId = SelectedCase?.HouseholdId ?? preferredHouseholdId;
-            SelectedHousehold = _households.FirstOrDefault(item => item.Id == selectedHouseholdId)
-                ?? _households.FirstOrDefault();
+            SelectedHousehold = selectedHouseholdId.HasValue
+                ? _households.FirstOrDefault(item => item.Id == selectedHouseholdId.Value)
+                : null;
 
             var selectedMemberId = SelectedCase?.HouseholdMemberId ?? preferredMemberId;
             if (selectedMemberId.HasValue)
             {
                 SelectedHouseholdMember = _availableHouseholdMembers.FirstOrDefault(item => item.Id == selectedMemberId.Value);
+            }
+
+            var selectedProgramId = SelectedCase?.AyudaProgramId ?? preferredProgramId;
+            if (selectedProgramId.HasValue)
+            {
+                SelectedAyudaProgram = _ayudaPrograms.FirstOrDefault(item => item.Id == selectedProgramId.Value);
+            }
+            else
+            {
+                SelectedAyudaProgram = null;
+            }
+
+            if (!string.IsNullOrWhiteSpace(SelectedCase?.ValidatedBeneficiaryName))
+            {
+                var validatedBeneficiary = new AssistanceValidatedBeneficiaryOption(
+                    SelectedCase.ValidatedBeneficiaryName,
+                    SelectedCase.ValidatedBeneficiaryId,
+                    SelectedCase.ValidatedCivilRegistryId);
+
+                if (!_validatedBeneficiaries.Any(item => item.Matches(validatedBeneficiary)))
+                {
+                    _validatedBeneficiaries.Insert(0, validatedBeneficiary);
+                }
+
+                SelectedValidatedBeneficiary = _validatedBeneficiaries.FirstOrDefault(item => item.Matches(validatedBeneficiary))
+                    ?? validatedBeneficiary;
+            }
+            else if (SelectedCase != null)
+            {
+                SelectedValidatedBeneficiary = null;
+            }
+            else
+            {
+                SelectedValidatedBeneficiary = preferredValidatedBeneficiary != null
+                    ? _validatedBeneficiaries.FirstOrDefault(item => item.Matches(preferredValidatedBeneficiary))
+                        ?? preferredValidatedBeneficiary
+                    : null;
             }
 
             if (SelectedCase == null)
@@ -405,6 +530,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
                 return Contains(assistanceCase.CaseNumber, SearchText)
                     || Contains(assistanceCase.AssistanceType, SearchText)
+                    || Contains(assistanceCase.ReleaseKindText, SearchText)
                     || Contains(assistanceCase.HouseholdLabel, SearchText)
                     || Contains(assistanceCase.ApplicantLabel, SearchText)
                     || Contains(assistanceCase.Summary, SearchText);
@@ -416,18 +542,18 @@ namespace AttendanceShiftingManagement.ViewModels
         private void BeginNewCase()
         {
             SelectedCase = null;
-            EditableCaseNumber = "New case";
+            EditableCaseNumber = "New aid request";
             EditableAssistanceType = string.Empty;
+            SelectedReleaseKind = AssistanceReleaseKind.Cash;
             SelectedPriority = AssistanceCasePriority.Medium;
-            EditableRequestedAmount = string.Empty;
-            EditableApprovedAmount = string.Empty;
+            EditableAssistanceAmount = string.Empty;
             RequestedOnDate = DateTime.Today;
             ScheduledReleaseDate = null;
             EditableSummary = string.Empty;
-            EditableNotes = string.Empty;
-            EditableResolutionNotes = string.Empty;
-            SelectedHousehold = _households.FirstOrDefault();
+            SelectedHousehold = null;
             SelectedHouseholdMember = null;
+            SelectedValidatedBeneficiary = null;
+            SelectedAyudaProgram = null;
             RaiseCommandStates();
             OnPropertyChanged(nameof(ApplicantSummary));
         }
@@ -442,18 +568,16 @@ namespace AttendanceShiftingManagement.ViewModels
 
             EditableCaseNumber = SelectedCase.CaseNumber;
             EditableAssistanceType = SelectedCase.AssistanceType;
+            SelectedReleaseKind = SelectedCase.ReleaseKind;
             SelectedPriority = SelectedCase.Priority;
-            EditableRequestedAmount = SelectedCase.RequestedAmountText;
-            EditableApprovedAmount = SelectedCase.ApprovedAmountText;
+            EditableAssistanceAmount = SelectedCase.AssistanceAmountText;
             RequestedOnDate = SelectedCase.RequestedOn;
             ScheduledReleaseDate = SelectedCase.ScheduledReleaseDate;
             EditableSummary = SelectedCase.Summary;
-            EditableNotes = SelectedCase.Notes;
-            EditableResolutionNotes = SelectedCase.ResolutionNotes;
 
-            SelectedHousehold = _households.FirstOrDefault(item => item.Id == SelectedCase.HouseholdId)
-                ?? SelectedHousehold
-                ?? _households.FirstOrDefault();
+            SelectedHousehold = SelectedCase.HouseholdId.HasValue
+                ? _households.FirstOrDefault(item => item.Id == SelectedCase.HouseholdId.Value)
+                : null;
 
             if (SelectedCase.HouseholdMemberId.HasValue)
             {
@@ -462,6 +586,34 @@ namespace AttendanceShiftingManagement.ViewModels
             else
             {
                 SelectedHouseholdMember = null;
+            }
+
+            if (SelectedCase.AyudaProgramId.HasValue)
+            {
+                SelectedAyudaProgram = _ayudaPrograms.FirstOrDefault(item => item.Id == SelectedCase.AyudaProgramId.Value);
+            }
+            else
+            {
+                SelectedAyudaProgram = null;
+            }
+
+            if (!string.IsNullOrWhiteSpace(SelectedCase.ValidatedBeneficiaryName))
+            {
+                var validatedBeneficiary = new AssistanceValidatedBeneficiaryOption(
+                    SelectedCase.ValidatedBeneficiaryName,
+                    SelectedCase.ValidatedBeneficiaryId,
+                    SelectedCase.ValidatedCivilRegistryId);
+
+                if (!_validatedBeneficiaries.Any(item => item.Matches(validatedBeneficiary)))
+                {
+                    _validatedBeneficiaries.Insert(0, validatedBeneficiary);
+                }
+
+                SelectedValidatedBeneficiary = _validatedBeneficiaries.First(item => item.Matches(validatedBeneficiary));
+            }
+            else
+            {
+                SelectedValidatedBeneficiary = null;
             }
 
             OnPropertyChanged(nameof(ApplicantSummary));
@@ -497,7 +649,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private bool CanSaveCase()
         {
             return !IsBusy
-                && SelectedHousehold != null
+                && (SelectedHousehold != null || SelectedValidatedBeneficiary != null)
                 && !string.IsNullOrWhiteSpace(EditableAssistanceType);
         }
 
@@ -510,50 +662,54 @@ namespace AttendanceShiftingManagement.ViewModels
 
             return targetStatus switch
             {
-                AssistanceCaseStatus.Rejected or AssistanceCaseStatus.Closed or AssistanceCaseStatus.Cancelled
-                    => !string.IsNullOrWhiteSpace(EditableResolutionNotes),
+                AssistanceCaseStatus.Released => SelectedCase.ApprovedAmount.HasValue
+                    && SelectedCase.ApprovedAmount.Value > 0
+                    && SelectedCase.AyudaProgramId.HasValue,
                 _ => true
             };
         }
 
         private async Task SaveCaseAsync()
         {
-            if (!CanSaveCase() || SelectedHousehold == null)
+            if (!CanSaveCase())
             {
                 return;
             }
 
-            if (!TryParseAmount(EditableRequestedAmount, out var requestedAmount, out var requestedAmountError))
+            if (!TryParseAmount(EditableAssistanceAmount, out var assistanceAmount, out var amountError))
             {
-                SetErrorStatus(requestedAmountError);
+                SetErrorStatus(amountError);
                 return;
             }
 
-            if (!TryParseAmount(EditableApprovedAmount, out var approvedAmount, out var approvedAmountError))
+            if (!assistanceAmount.HasValue || assistanceAmount.Value <= 0)
             {
-                SetErrorStatus(approvedAmountError);
+                SetErrorStatus("Enter the assistance amount before saving this aid request.");
                 return;
             }
 
             var editingCaseId = SelectedCase?.Id;
             IsBusy = true;
-            SetNeutralStatus(editingCaseId.HasValue ? $"Saving {EditableCaseNumber}..." : "Creating assistance case...");
+            SetNeutralStatus(editingCaseId.HasValue ? $"Saving {EditableCaseNumber}..." : "Creating aid request...");
 
             try
             {
                 await using var context = new AppDbContext();
                 var service = new AssistanceCaseManagementService(context);
                 var request = new AssistanceCaseUpsertRequest(
-                    SelectedHousehold.Id,
+                    SelectedHousehold?.Id,
                     SelectedHouseholdMember?.Id,
+                    SelectedValidatedBeneficiary?.FullName,
+                    SelectedValidatedBeneficiary?.BeneficiaryId,
+                    SelectedValidatedBeneficiary?.CivilRegistryId,
                     EditableAssistanceType.Trim(),
                     SelectedPriority,
-                    requestedAmount,
-                    approvedAmount,
+                    SelectedReleaseKind,
+                    assistanceAmount,
                     RequestedOnDate,
                     ScheduledReleaseDate,
                     NormalizeNullable(EditableSummary),
-                    NormalizeNullable(EditableNotes));
+                    SelectedAyudaProgram?.Id);
 
                 AssistanceCaseOperationResult result = editingCaseId.HasValue
                     ? await service.UpdateAsync(editingCaseId.Value, request, _currentUser.Id)
@@ -570,7 +726,7 @@ namespace AttendanceShiftingManagement.ViewModels
             }
             catch (Exception ex)
             {
-                SetErrorStatus($"Could not save assistance case: {ex.Message}");
+                SetErrorStatus($"Could not save aid request: {ex.Message}");
             }
             finally
             {
@@ -587,7 +743,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
             if (MessageBox.Show(
                     $"Mark {SelectedCase.CaseNumber} as {actionLabel}?",
-                    "Update Assistance Case",
+                    "Update Aid Request",
                     MessageBoxButton.YesNo,
                     MessageBoxImage.Question) != MessageBoxResult.Yes)
             {
@@ -606,7 +762,7 @@ namespace AttendanceShiftingManagement.ViewModels
                     assistanceCaseId,
                     targetStatus,
                     _currentUser.Id,
-                    NormalizeNullable(EditableResolutionNotes));
+                    null);
 
                 if (!result.IsSuccess)
                 {
@@ -619,11 +775,108 @@ namespace AttendanceShiftingManagement.ViewModels
             }
             catch (Exception ex)
             {
-                SetErrorStatus($"Could not update assistance case status: {ex.Message}");
+                SetErrorStatus($"Could not update aid request status: {ex.Message}");
             }
             finally
             {
                 IsBusy = false;
+            }
+        }
+
+        private async Task DeleteCaseAsync()
+        {
+            if (!CanDeleteCase() || SelectedCase == null)
+            {
+                return;
+            }
+
+            if (MessageBox.Show(
+                    $"Delete {SelectedCase.CaseNumber}?",
+                    "Delete Aid Request",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning) != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            var caseId = SelectedCase.Id;
+            IsBusy = true;
+            SetNeutralStatus($"Deleting {SelectedCase.CaseNumber}...");
+
+            try
+            {
+                await using var context = new AppDbContext();
+                var service = new AssistanceCaseManagementService(context);
+                var result = await service.DeleteAsync(caseId, _currentUser.Id);
+
+                if (!result.IsSuccess)
+                {
+                    SetErrorStatus(result.Message);
+                    return;
+                }
+
+                await LoadCoreAsync(null);
+                SetSuccessStatus(result.Message);
+            }
+            catch (Exception ex)
+            {
+                SetErrorStatus($"Could not delete aid request: {ex.Message}");
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
+        private bool CanDeleteCase()
+        {
+            return !IsBusy
+                && SelectedCase != null
+                && !SelectedCase.BudgetLedgerEntryId.HasValue;
+        }
+
+        private async Task LoadValidatedBeneficiariesAsync()
+        {
+            try
+            {
+                var preferredMatch = SelectedValidatedBeneficiary;
+                var searchText = ValidatedBeneficiarySearchText.Trim();
+
+                await using var context = new AppDbContext();
+                var query = context.BeneficiaryStaging
+                    .AsNoTracking()
+                    .Where(item => item.VerificationStatus == VerificationStatus.Approved);
+
+                if (!string.IsNullOrWhiteSpace(searchText))
+                {
+                    query = query.Where(item =>
+                        (item.FullName ?? string.Empty).Contains(searchText) ||
+                        (item.BeneficiaryId ?? string.Empty).Contains(searchText) ||
+                        (item.CivilRegistryId ?? string.Empty).Contains(searchText) ||
+                        (item.Address ?? string.Empty).Contains(searchText));
+                }
+
+                var beneficiaries = await query
+                    .OrderBy(item => item.FullName ?? item.LastName)
+                    .ThenBy(item => item.FirstName)
+                    .Take(50)
+                    .ToListAsync();
+
+                _validatedBeneficiaries.Clear();
+                foreach (var beneficiary in beneficiaries)
+                {
+                    _validatedBeneficiaries.Add(AssistanceValidatedBeneficiaryOption.FromApprovedStaging(beneficiary));
+                }
+
+                if (preferredMatch != null)
+                {
+                    SelectedValidatedBeneficiary = _validatedBeneficiaries.FirstOrDefault(item => item.Matches(preferredMatch))
+                        ?? preferredMatch;
+                }
+            }
+            catch
+            {
+                _validatedBeneficiaries.Clear();
             }
         }
 
@@ -638,6 +891,7 @@ namespace AttendanceShiftingManagement.ViewModels
             _closeCommand.RaiseCanExecuteChanged();
             _rejectCommand.RaiseCanExecuteChanged();
             _cancelCommand.RaiseCanExecuteChanged();
+            _deleteCommand.RaiseCanExecuteChanged();
         }
 
         private void ClearLoadedState()
@@ -645,6 +899,8 @@ namespace AttendanceShiftingManagement.ViewModels
             _cases.Clear();
             _households.Clear();
             _availableHouseholdMembers.Clear();
+            _ayudaPrograms.Clear();
+            _validatedBeneficiaries.Clear();
             CasesView = CollectionViewSource.GetDefaultView(_cases);
             TotalCases = 0;
             PendingCount = 0;
@@ -713,9 +969,15 @@ namespace AttendanceShiftingManagement.ViewModels
     {
         public int Id { get; init; }
         public string CaseNumber { get; init; } = string.Empty;
-        public int HouseholdId { get; init; }
+        public int? HouseholdId { get; init; }
         public int? HouseholdMemberId { get; init; }
+        public int? AyudaProgramId { get; init; }
+        public int? BudgetLedgerEntryId { get; init; }
+        public string ValidatedBeneficiaryName { get; init; } = string.Empty;
+        public string ValidatedBeneficiaryId { get; init; } = string.Empty;
+        public string ValidatedCivilRegistryId { get; init; } = string.Empty;
         public string AssistanceType { get; init; } = string.Empty;
+        public AssistanceReleaseKind ReleaseKind { get; init; }
         public AssistanceCasePriority Priority { get; init; }
         public AssistanceCaseStatus Status { get; init; }
         public decimal? RequestedAmount { get; init; }
@@ -723,10 +985,9 @@ namespace AttendanceShiftingManagement.ViewModels
         public DateTime RequestedOn { get; init; }
         public DateTime? ScheduledReleaseDate { get; init; }
         public string Summary { get; init; } = string.Empty;
-        public string Notes { get; init; } = string.Empty;
-        public string ResolutionNotes { get; init; } = string.Empty;
         public string HouseholdLabel { get; init; } = string.Empty;
         public string ApplicantLabel { get; init; } = string.Empty;
+        public string AyudaProgramLabel { get; init; } = string.Empty;
 
         public string PriorityText => Priority.ToString();
         public string StatusText => Status switch
@@ -735,10 +996,10 @@ namespace AttendanceShiftingManagement.ViewModels
             _ => Status.ToString()
         };
 
-        public string RequestedAmountText => RequestedAmount?.ToString("N2") ?? string.Empty;
-        public string ApprovedAmountText => ApprovedAmount?.ToString("N2") ?? string.Empty;
-        public string AmountsSummary =>
-            $"Requested: {(RequestedAmount?.ToString("N2") ?? "--")} | Approved: {(ApprovedAmount?.ToString("N2") ?? "--")}";
+        public decimal? AssistanceAmount => ApprovedAmount ?? RequestedAmount;
+        public string AssistanceAmountText => AssistanceAmount?.ToString("N2") ?? string.Empty;
+        public string ReleaseKindText => ReleaseKind.ToString();
+        public string AmountsSummary => $"Amount: {(AssistanceAmount?.ToString("N2") ?? "--")} | Release: {ReleaseKindText}";
 
         public Brush StatusBrush => Status switch
         {
@@ -772,7 +1033,13 @@ namespace AttendanceShiftingManagement.ViewModels
                 CaseNumber = assistanceCase.CaseNumber,
                 HouseholdId = assistanceCase.HouseholdId,
                 HouseholdMemberId = assistanceCase.HouseholdMemberId,
+                AyudaProgramId = assistanceCase.AyudaProgramId,
+                BudgetLedgerEntryId = assistanceCase.BudgetLedgerEntryId,
+                ValidatedBeneficiaryName = assistanceCase.ValidatedBeneficiaryName ?? string.Empty,
+                ValidatedBeneficiaryId = assistanceCase.ValidatedBeneficiaryId ?? string.Empty,
+                ValidatedCivilRegistryId = assistanceCase.ValidatedCivilRegistryId ?? string.Empty,
                 AssistanceType = assistanceCase.AssistanceType,
+                ReleaseKind = assistanceCase.ReleaseKind,
                 Priority = assistanceCase.Priority,
                 Status = assistanceCase.Status,
                 RequestedAmount = assistanceCase.RequestedAmount,
@@ -780,10 +1047,14 @@ namespace AttendanceShiftingManagement.ViewModels
                 RequestedOn = assistanceCase.RequestedOn,
                 ScheduledReleaseDate = assistanceCase.ScheduledReleaseDate,
                 Summary = assistanceCase.Summary ?? string.Empty,
-                Notes = assistanceCase.Notes ?? string.Empty,
-                ResolutionNotes = assistanceCase.ResolutionNotes ?? string.Empty,
-                HouseholdLabel = $"{assistanceCase.Household.HouseholdCode} - {assistanceCase.Household.HeadName}",
-                ApplicantLabel = assistanceCase.HouseholdMember?.FullName ?? assistanceCase.Household.HeadName
+                HouseholdLabel = assistanceCase.Household != null
+                    ? $"{assistanceCase.Household.HouseholdCode} - {assistanceCase.Household.HeadName}"
+                    : "Validated beneficiary",
+                ApplicantLabel = assistanceCase.HouseholdMember?.FullName
+                    ?? assistanceCase.ValidatedBeneficiaryName
+                    ?? assistanceCase.Household?.HeadName
+                    ?? "No applicant selected",
+                AyudaProgramLabel = assistanceCase.AyudaProgram?.ProgramName ?? "Program not set"
             };
         }
 
@@ -836,6 +1107,85 @@ namespace AttendanceShiftingManagement.ViewModels
                 FullName = member.FullName,
                 RelationshipToHead = member.RelationshipToHead
             };
+        }
+    }
+
+    public sealed class AssistanceAyudaProgramOption
+    {
+        public int Id { get; init; }
+        public string ProgramCode { get; init; } = string.Empty;
+        public string ProgramName { get; init; } = string.Empty;
+        public string DisplayLabel => $"{ProgramCode} - {ProgramName}";
+
+        public static AssistanceAyudaProgramOption FromEntity(AyudaProgram program)
+        {
+            return new AssistanceAyudaProgramOption
+            {
+                Id = program.Id,
+                ProgramCode = program.ProgramCode,
+                ProgramName = program.ProgramName
+            };
+        }
+    }
+
+    public sealed class AssistanceValidatedBeneficiaryOption
+    {
+        public AssistanceValidatedBeneficiaryOption(string fullName, string? beneficiaryId, string? civilRegistryId)
+        {
+            FullName = string.IsNullOrWhiteSpace(fullName) ? "Unnamed beneficiary" : fullName.Trim();
+            BeneficiaryId = string.IsNullOrWhiteSpace(beneficiaryId) ? string.Empty : beneficiaryId.Trim();
+            CivilRegistryId = string.IsNullOrWhiteSpace(civilRegistryId) ? string.Empty : civilRegistryId.Trim();
+        }
+
+        public string FullName { get; }
+        public string BeneficiaryId { get; }
+        public string CivilRegistryId { get; }
+
+        public string DisplayLabel
+        {
+            get
+            {
+                if (!string.IsNullOrWhiteSpace(BeneficiaryId))
+                {
+                    return $"{FullName} [{BeneficiaryId}]";
+                }
+
+                if (!string.IsNullOrWhiteSpace(CivilRegistryId))
+                {
+                    return $"{FullName} [CR: {CivilRegistryId}]";
+                }
+
+                return FullName;
+            }
+        }
+
+        public bool Matches(AssistanceValidatedBeneficiaryOption other)
+        {
+            if (!string.IsNullOrWhiteSpace(BeneficiaryId) &&
+                !string.IsNullOrWhiteSpace(other.BeneficiaryId))
+            {
+                return string.Equals(BeneficiaryId, other.BeneficiaryId, StringComparison.OrdinalIgnoreCase);
+            }
+
+            if (!string.IsNullOrWhiteSpace(CivilRegistryId) &&
+                !string.IsNullOrWhiteSpace(other.CivilRegistryId))
+            {
+                return string.Equals(CivilRegistryId, other.CivilRegistryId, StringComparison.OrdinalIgnoreCase);
+            }
+
+            return string.Equals(FullName, other.FullName, StringComparison.OrdinalIgnoreCase);
+        }
+
+        public static AssistanceValidatedBeneficiaryOption FromApprovedStaging(BeneficiaryStaging beneficiary)
+        {
+            return new AssistanceValidatedBeneficiaryOption(
+                !string.IsNullOrWhiteSpace(beneficiary.FullName)
+                    ? beneficiary.FullName
+                    : string.Join(" ", new[] { beneficiary.FirstName, beneficiary.MiddleName, beneficiary.LastName }
+                        .Where(value => !string.IsNullOrWhiteSpace(value))
+                        .Select(value => value!.Trim())),
+                beneficiary.BeneficiaryId,
+                beneficiary.CivilRegistryId);
         }
     }
 }

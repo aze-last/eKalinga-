@@ -49,11 +49,11 @@
             </Style.Triggers>
         </Style>
 
-        <Style x:Key="MasterListSidebarButtonStyle"
+        <Style x:Key="BudgetSidebarButtonStyle"
                TargetType="Button"
                BasedOn="{StaticResource SidebarButtonBaseStyle}">
             <Style.Triggers>
-                <DataTrigger Binding="{Binding IsMasterListSelected}" Value="True">
+                <DataTrigger Binding="{Binding IsBudgetSelected}" Value="True">
                     <Setter Property="Foreground" Value="{StaticResource BrandYellowBrush}" />
                     <Setter Property="Background" Value="#26F9C231" />
                     <Setter Property="FontWeight" Value="SemiBold" />
@@ -61,11 +61,23 @@
             </Style.Triggers>
         </Style>
 
-        <Style x:Key="BeneficiariesSidebarButtonStyle"
+        <Style x:Key="DistributionSidebarButtonStyle"
                TargetType="Button"
                BasedOn="{StaticResource SidebarButtonBaseStyle}">
             <Style.Triggers>
-                <DataTrigger Binding="{Binding IsBeneficiariesSelected}" Value="True">
+                <DataTrigger Binding="{Binding IsDistributionSelected}" Value="True">
+                    <Setter Property="Foreground" Value="{StaticResource BrandYellowBrush}" />
+                    <Setter Property="Background" Value="#26F9C231" />
+                    <Setter Property="FontWeight" Value="SemiBold" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="MasterListSidebarButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource SidebarButtonBaseStyle}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsMasterListSelected}" Value="True">
                     <Setter Property="Foreground" Value="{StaticResource BrandYellowBrush}" />
                     <Setter Property="Background" Value="#26F9C231" />
                     <Setter Property="FontWeight" Value="SemiBold" />
@@ -97,17 +109,6 @@
             </Style.Triggers>
         </Style>
 
-        <Style x:Key="GrievancesSidebarButtonStyle"
-               TargetType="Button"
-               BasedOn="{StaticResource SidebarButtonBaseStyle}">
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding IsGrievancesSelected}" Value="True">
-                    <Setter Property="Foreground" Value="{StaticResource BrandYellowBrush}" />
-                    <Setter Property="Background" Value="#26F9C231" />
-                    <Setter Property="FontWeight" Value="SemiBold" />
-                </DataTrigger>
-            </Style.Triggers>
-        </Style>
     </Window.Resources>
 
     <Grid>
@@ -154,6 +155,22 @@
                         </StackPanel>
                     </Button>
 
+                    <Button Style="{StaticResource BudgetSidebarButtonStyle}"
+                            Command="{Binding ShowBudgetCommand}">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="WalletBifoldOutline" Width="18" Height="18" Margin="0,0,10,0" />
+                            <TextBlock Text="Budget" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+
+                    <Button Style="{StaticResource DistributionSidebarButtonStyle}"
+                            Command="{Binding ShowDistributionCommand}">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="GiftOutline" Width="18" Height="18" Margin="0,0,10,0" />
+                            <TextBlock Text="Distribution" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+
                     <Button Style="{StaticResource MasterListSidebarButtonStyle}"
                             Command="{Binding ShowMasterListCommand}">
                         <StackPanel Orientation="Horizontal">
@@ -162,27 +179,11 @@
                         </StackPanel>
                     </Button>
 
-                    <Button Style="{StaticResource BeneficiariesSidebarButtonStyle}"
-                            Command="{Binding ShowBeneficiariesCommand}">
-                        <StackPanel Orientation="Horizontal">
-                            <materialDesign:PackIcon Kind="AccountCheckOutline" Width="18" Height="18" Margin="0,0,10,0" />
-                            <TextBlock Text="Beneficiaries" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Button>
-
                     <Button Style="{StaticResource AssistanceCasesSidebarButtonStyle}"
                             Command="{Binding ShowAssistanceCasesCommand}">
                         <StackPanel Orientation="Horizontal">
                             <materialDesign:PackIcon Kind="ClipboardPulseOutline" Width="18" Height="18" Margin="0,0,10,0" />
-                            <TextBlock Text="Assistance cases" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Button>
-
-                    <Button Style="{StaticResource GrievancesSidebarButtonStyle}"
-                            Command="{Binding ShowGrievancesCommand}">
-                        <StackPanel Orientation="Horizontal">
-                            <materialDesign:PackIcon Kind="AlertCircleOutline" Width="18" Height="18" Margin="0,0,10,0" />
-                            <TextBlock Text="Grievance / Corrections" VerticalAlignment="Center" />
+                            <TextBlock Text="Aid Request" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
 
