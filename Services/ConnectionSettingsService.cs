@@ -1,0 +1,375 @@
+using Microsoft.Extensions.Configuration;
+using MySqlConnector;
+using System.IO;
+using System.Text.Json;
+
+namespace AttendanceShiftingManagement.Services
+{
+    public sealed class DatabaseConnectionPreset
+    {
+        public string DisplayName { get; set; } = string.Empty;
+        public string Server { get; set; } = string.Empty;
+        public int Port { get; set; } = 3306;
+        public string Database { get; set; } = string.Empty;
+        public string Username { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+    }
+
+    public sealed class ConnectionSettingsModel
+    {
+        public string SelectedPreset { get; set; } = "Local";
+        public Dictionary<string, DatabaseConnectionPreset> Presets { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+        public DatabaseConnectionPreset GetPreset(string presetKey)
+        {
+            if (!Presets.TryGetValue(presetKey, out var preset))
+            {
+                preset = new DatabaseConnectionPreset();
+                Presets[presetKey] = preset;
+            }
+
+            return preset;
+        }
+    }
+
+    public sealed class ConnectionTestResult
+    {
+        public bool IsSuccess { get; init; }
+        public string Message { get; init; } = string.Empty;
+    }
+
+    public static class ConnectionSettingsService
+    {
+        private const string LocalPresetKey = "Local";
+        private const string LanPresetKey = "Lan";
+        private const string RemotePresetKey = "Remote";
+        private const string DefaultAppPresetKey = "Local";
+        private static readonly HashSet<string> AllowedActiveAppPresetKeys = new(StringComparer.OrdinalIgnoreCase)
+        {
+            LocalPresetKey,
+            LanPresetKey,
+            RemotePresetKey
+        };
+
+        private static readonly HashSet<string> RuntimeEditablePresetKeys = new(StringComparer.OrdinalIgnoreCase)
+        {
+            LocalPresetKey,
+            LanPresetKey,
+            RemotePresetKey
+        };
+
+        private static readonly JsonSerializerOptions JsonOptions = new()
+        {
+            PropertyNameCaseInsensitive = true,
+            WriteIndented = true
+        };
+
+        public static string GetEffectiveConnectionString()
+        {
+            var settings = Load();
+            return BuildConnectionString(settings.GetPreset(settings.SelectedPreset));
+        }
+
+        public static ConnectionSettingsModel Load()
+        {
+            return Load(GetRuntimeSettingsPath());
+        }
+
+        internal static ConnectionSettingsModel Load(string runtimePath)
+        {
+            var settings = LoadDefaultsFromAppSettings();
+
+            if (!File.Exists(runtimePath))
+            {
+                EnsureRequiredPresets(settings);
+                NormalizeActiveAppPreset(settings);
+                return settings;
+            }
+
+            try
+            {
+                var runtimeJson = File.ReadAllText(runtimePath);
+                var runtimeSettings = JsonSerializer.Deserialize<ConnectionSettingsModel>(runtimeJson, JsonOptions);
+                if (runtimeSettings == null)
+                {
+                    EnsureRequiredPresets(settings);
+                    NormalizeActiveAppPreset(settings);
+                    return settings;
+                }
+
+                if (!string.IsNullOrWhiteSpace(runtimeSettings.SelectedPreset))
+                {
+                    settings.SelectedPreset = runtimeSettings.SelectedPreset;
+                }
+
+                foreach (var preset in runtimeSettings.Presets)
+                {
+                    if (!RuntimeEditablePresetKeys.Contains(preset.Key))
+                    {
+                        continue;
+                    }
+
+                    settings.Presets[preset.Key] = ClonePresetForUse(preset.Value);
+                }
+            }
+            catch
+            {
+                EnsureRequiredPresets(settings);
+                NormalizeActiveAppPreset(settings);
+                return settings;
+            }
+
+            EnsureRequiredPresets(settings);
+            NormalizeActiveAppPreset(settings);
+            return settings;
+        }
+
+        public static void Save(ConnectionSettingsModel settings)
+        {
+            Save(settings, GetRuntimeSettingsPath());
+        }
+
+        internal static void Save(ConnectionSettingsModel settings, string runtimePath)
+        {
+            EnsureRequiredPresets(settings);
+            NormalizeActiveAppPreset(settings);
+
+            var runtimeDirectory = Path.GetDirectoryName(runtimePath);
+            if (!string.IsNullOrWhiteSpace(runtimeDirectory))
+            {
+                Directory.CreateDirectory(runtimeDirectory);
+            }
+
+            var payload = new ConnectionSettingsModel
+            {
+                SelectedPreset = settings.SelectedPreset,
+                Presets = settings.Presets
+                    .Where(pair => RuntimeEditablePresetKeys.Contains(pair.Key))
+                    .ToDictionary(
+                        pair => pair.Key,
+                        pair => ClonePresetForStorage(pair.Value),
+                        StringComparer.OrdinalIgnoreCase)
+            };
+
+            File.WriteAllText(runtimePath, JsonSerializer.Serialize(payload, JsonOptions));
+        }
+
+        public static async Task<ConnectionTestResult> TestConnectionAsync(DatabaseConnectionPreset preset)
+        {
+            try
+            {
+                await using var connection = new MySqlConnection(BuildConnectionString(preset));
+                await connection.OpenAsync();
+                await using var command = new MySqlCommand("SELECT DATABASE();", connection);
+                var databaseName = (string?)await command.ExecuteScalarAsync() ?? preset.Database;
+
+                return new ConnectionTestResult
+                {
+                    IsSuccess = true,
+                    Message = $"Connected successfully to {databaseName} on {preset.Server}:{preset.Port}."
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ConnectionTestResult
+                {
+                    IsSuccess = false,
+                    Message = $"Connection failed: {ex.Message}"
+                };
+            }
+        }
+
+        public static bool IsPresetConfigured(DatabaseConnectionPreset preset)
+        {
+            ArgumentNullException.ThrowIfNull(preset);
+
+            return !string.IsNullOrWhiteSpace(preset.Server)
+                && preset.Port > 0
+                && !string.IsNullOrWhiteSpace(preset.Database)
+                && !string.IsNullOrWhiteSpace(preset.Username);
+        }
+
+        public static string FormatPresetSummary(DatabaseConnectionPreset preset)
+        {
+            ArgumentNullException.ThrowIfNull(preset);
+
+            var displayName = string.IsNullOrWhiteSpace(preset.DisplayName)
+                ? "Database preset"
+                : preset.DisplayName.Trim();
+
+            return IsPresetConfigured(preset)
+                ? $"{displayName}: {preset.Server}:{preset.Port} / {preset.Database}"
+                : $"{displayName}: not configured yet.";
+        }
+
+        public static string BuildConnectionString(DatabaseConnectionPreset preset)
+        {
+            var builder = new MySqlConnectionStringBuilder
+            {
+                Server = preset.Server,
+                Port = (uint)Math.Max(1, preset.Port),
+                Database = preset.Database,
+                UserID = preset.Username,
+                Password = preset.Password,
+                CharacterSet = "utf8mb4",
+                ConnectionTimeout = 15,
+                DefaultCommandTimeout = 300,
+                AllowLoadLocalInfile = true,
+                Keepalive = 30,
+                AllowZeroDateTime = true,
+                ConvertZeroDateTime = true
+            };
+
+            return builder.ConnectionString;
+        }
+
+        private static ConnectionSettingsModel LoadDefaultsFromAppSettings()
+        {
+            var configuration = new ConfigurationBuilder()
+                .SetBasePath(ResolveConfigurationBasePath())
+                .AddJsonFile("appsettings.json", optional: false)
+                .Build();
+
+            var settings = new ConnectionSettingsModel
+            {
+                SelectedPreset = configuration["ConnectionSettings:SelectedPreset"] ?? InferSelectedPreset(configuration.GetConnectionString("DefaultConnection"))
+            };
+
+            foreach (var presetSection in configuration.GetSection("ConnectionSettings:Presets").GetChildren())
+            {
+                var preset = presetSection.Get<DatabaseConnectionPreset>();
+                if (preset == null)
+                {
+                    continue;
+                }
+
+                if (string.IsNullOrWhiteSpace(preset.DisplayName))
+                {
+                    preset.DisplayName = presetSection.Key;
+                }
+
+                settings.Presets[presetSection.Key] = ClonePresetForUse(preset);
+            }
+
+            EnsureRequiredPresets(settings);
+            return settings;
+        }
+
+        private static void EnsureRequiredPresets(ConnectionSettingsModel settings)
+        {
+            if (!settings.Presets.ContainsKey(LocalPresetKey))
+            {
+                settings.Presets[LocalPresetKey] = new DatabaseConnectionPreset
+                {
+                    DisplayName = "Local",
+                    Server = "127.0.0.1",
+                    Port = 3306,
+                    Database = "attendance_shifting_db",
+                    Username = "root",
+                    Password = string.Empty
+                };
+            }
+
+            if (!settings.Presets.ContainsKey(LanPresetKey))
+            {
+                settings.Presets[LanPresetKey] = new DatabaseConnectionPreset
+                {
+                    DisplayName = "Network (LAN)",
+                    Server = string.Empty,
+                    Port = 3306,
+                    Database = "attendance_shifting_db",
+                    Username = "root",
+                    Password = string.Empty
+                };
+            }
+
+            if (!settings.Presets.ContainsKey(RemotePresetKey))
+            {
+                settings.Presets[RemotePresetKey] = new DatabaseConnectionPreset
+                {
+                    DisplayName = "Remote",
+                    Server = string.Empty,
+                    Port = 3306,
+                    Database = string.Empty,
+                    Username = string.Empty,
+                    Password = string.Empty
+                };
+            }
+
+            if (string.IsNullOrWhiteSpace(settings.SelectedPreset) || !settings.Presets.ContainsKey(settings.SelectedPreset))
+            {
+                settings.SelectedPreset = DefaultAppPresetKey;
+            }
+        }
+
+        private static void NormalizeActiveAppPreset(ConnectionSettingsModel settings)
+        {
+            if (string.IsNullOrWhiteSpace(settings.SelectedPreset)
+                || !AllowedActiveAppPresetKeys.Contains(settings.SelectedPreset))
+            {
+                settings.SelectedPreset = DefaultAppPresetKey;
+            }
+        }
+
+        private static DatabaseConnectionPreset ClonePresetForUse(DatabaseConnectionPreset preset)
+        {
+            return new DatabaseConnectionPreset
+            {
+                DisplayName = preset.DisplayName,
+                Server = preset.Server,
+                Port = preset.Port,
+                Database = preset.Database,
+                Username = preset.Username,
+                Password = ConnectionSecretProtector.Unprotect(preset.Password)
+            };
+        }
+
+        private static DatabaseConnectionPreset ClonePresetForStorage(DatabaseConnectionPreset preset)
+        {
+            return new DatabaseConnectionPreset
+            {
+                DisplayName = preset.DisplayName,
+                Server = preset.Server,
+                Port = preset.Port,
+                Database = preset.Database,
+                Username = preset.Username,
+                Password = ConnectionSecretProtector.Protect(preset.Password)
+            };
+        }
+
+        private static string InferSelectedPreset(string? connectionString)
+        {
+            if (string.IsNullOrWhiteSpace(connectionString))
+            {
+                return "Local";
+            }
+
+            var builder = new MySqlConnectionStringBuilder(connectionString);
+            if (builder.Server is "127.0.0.1" or "localhost")
+            {
+                return "Local";
+            }
+
+            return "Remote";
+        }
+
+        private static string ResolveConfigurationBasePath()
+        {
+            var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
+            if (File.Exists(Path.Combine(baseDirectory, "appsettings.json")))
+            {
+                return baseDirectory;
+            }
+
+            return Directory.GetCurrentDirectory();
+        }
+
+        private static string GetRuntimeSettingsPath()
+        {
+            return Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "AttendanceShiftingManagement",
+                "connectionsettings.json");
+        }
+    }
+}
