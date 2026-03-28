@@ -67,7 +67,7 @@ namespace AttendanceShiftingManagement.Services
 
         private void MapEndpoints(WebApplication app)
         {
-            app.MapGet("/", () => Results.Text("Attendance Shifting Management local scanner gateway is running."));
+            app.MapGet("/", () => Results.Text("Barangay Ayuda System local scanner gateway is running."));
 
             app.MapGet("/scanner", (HttpContext context) =>
             {

@@ -219,7 +219,7 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 Title = "Validated beneficiaries",
                 Summary = $"{snapshot.PendingBeneficiaries:N0} pending approval",
-                Detail = $"{snapshot.ApprovedBeneficiaries:N0} approved • {snapshot.RejectedBeneficiaries:N0} rejected",
+                Detail = $"{snapshot.ApprovedBeneficiaries:N0} approved | {snapshot.RejectedBeneficiaries:N0} rejected",
                 StatusText = snapshot.PendingBeneficiaries > 0 ? "Needs approval" : "Up to date",
                 IconKind = "AccountCheckOutline",
                 AccentBrush = CreateBrush("#F59E0B"),
@@ -229,21 +229,9 @@ namespace AttendanceShiftingManagement.ViewModels
 
             ModuleCards.Add(new BarangayDashboardModuleCard
             {
-                Title = "Household registry",
-                Summary = $"{snapshot.ActiveHouseholds:N0} active household(s)",
-                Detail = $"{snapshot.TotalMembers:N0} member(s) recorded • {snapshot.EligibleWorkers:N0} eligible for work",
-                StatusText = "Ready",
-                IconKind = "HomeGroup",
-                AccentBrush = CreateBrush("#166534"),
-                StatusBackground = CreateBrush("#DCFCE7"),
-                StatusForeground = CreateBrush("#166534")
-            });
-
-            ModuleCards.Add(new BarangayDashboardModuleCard
-            {
                 Title = "Cash-for-work",
                 Summary = $"{snapshot.OpenCashForWorkEvents:N0} open event(s)",
-                Detail = $"{snapshot.TodayAttendanceCount:N0} attendance record(s) today • {snapshot.CompletedEventsThisMonth:N0} completed this month",
+                Detail = $"{snapshot.TodayAttendanceCount:N0} attendance record(s) today | {snapshot.CompletedEventsThisMonth:N0} completed this month",
                 StatusText = snapshot.OpenCashForWorkEvents > 0 ? "Active" : "Monitoring",
                 IconKind = "CalendarClock",
                 AccentBrush = CreateBrush("#991B1B"),
@@ -262,7 +250,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 {
                     Title = cashForWorkEvent.Title,
                     Location = cashForWorkEvent.Location,
-                    ScheduleLabel = $"{cashForWorkEvent.EventDate:dddd, MMM dd} • {cashForWorkEvent.StartTime:hh\\:mm}",
+                    ScheduleLabel = $"{cashForWorkEvent.EventDate:dddd, MMM dd} | {cashForWorkEvent.StartTime:hh\\:mm}",
                     ParticipantsLabel = $"{cashForWorkEvent.ParticipantCount:N0} participant(s)",
                     StatusText = cashForWorkEvent.Status.ToString(),
                     StatusBackground = CreateStatusBackground(cashForWorkEvent.Status),

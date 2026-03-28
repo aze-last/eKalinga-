@@ -17,37 +17,13 @@
             </Grid.RowDefinitions>
 
             <materialDesign:Card Grid.Row="0" Margin="0,0,0,20" Padding="20" Background="White">
-                <DockPanel LastChildFill="False">
-                    <StackPanel>
-                        <TextBlock Text="Cash-for-Work Operations" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
-                        <TextBlock Text="Create work events, assign approved participants, save manual attendance as the default record path, and optionally use local OCR to review attendance photos."
-                                   Margin="0,6,0,0"
-                                   Foreground="{StaticResource BrandTextSecondaryBrush}"
-                                   TextWrapping="Wrap"/>
-                    </StackPanel>
-
-                    <Border DockPanel.Dock="Right"
-                            Padding="12,8"
-                            CornerRadius="8"
-                            Background="{StaticResource BrandSurfaceBrush}"
-                            BorderThickness="1"
-                            BorderBrush="{StaticResource BrandBorderBrush}">
-                        <StackPanel>
-                            <TextBlock Text="OCR Tools" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
-                            <ComboBox Margin="0,10,0,0"
-                                      MinWidth="260"
-                                      Style="{StaticResource MaterialDesignOutlinedComboBox}"
-                                      ItemsSource="{Binding OcrProfiles}"
-                                      SelectedItem="{Binding SelectedOcrProfile}"
-                                      DisplayMemberPath="Name"/>
-                            <TextBlock Text="{Binding OcrStatusText}" Foreground="{Binding OcrStatusBrush}" Margin="0,10,0,0" TextWrapping="Wrap"/>
-                            <Button Content="Refresh Status"
-                                    Margin="0,10,0,0"
-                                    Style="{StaticResource SecondaryActionButton}"
-                                    Command="{Binding RefreshOcrStatusCommand}"/>
-                        </StackPanel>
-                    </Border>
-                </DockPanel>
+                <StackPanel>
+                    <TextBlock Text="Cash-for-Work Operations" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
+                    <TextBlock Text="Create work events, assign approved participants, record attendance manually or through the phone scanner, and release cash-for-work budgets."
+                               Margin="0,6,0,0"
+                               Foreground="{StaticResource BrandTextSecondaryBrush}"
+                               TextWrapping="Wrap"/>
+                </StackPanel>
             </materialDesign:Card>
 
             <Grid Grid.Row="1">
@@ -207,39 +183,11 @@
                 <StackPanel Grid.Column="2">
                     <materialDesign:Card Padding="18" Margin="0,0,0,16" Background="White">
                         <StackPanel>
-                            <TextBlock Text="OCR Review Assist" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
-                            <TextBlock Text="Optional assistant workflow. Manual attendance remains the reliable default source record."
+                            <TextBlock Text="Operation Status" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
+                            <TextBlock Text="Current workflow and release updates appear here."
                                        Margin="0,6,0,0"
                                        Foreground="{StaticResource BrandTextSecondaryBrush}"
                                        TextWrapping="Wrap"/>
-
-                            <Grid Margin="0,14,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="12"/>
-                                    <ColumnDefinition Width="140"/>
-                                    <ColumnDefinition Width="12"/>
-                                    <ColumnDefinition Width="140"/>
-                                </Grid.ColumnDefinitions>
-
-                                <TextBox Grid.Column="0"
-                                         IsReadOnly="True"
-                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                         materialDesign:HintAssist.Hint="Uploaded Image"
-                                         Text="{Binding SelectedImagePath}"/>
-
-                                <Button Grid.Column="2"
-                                        Content="Upload Image"
-                                        Height="42"
-                                        Style="{StaticResource SecondaryActionButton}"
-                                        Command="{Binding BrowseImageCommand}"/>
-
-                                <Button Grid.Column="4"
-                                        Content="Review with OCR"
-                                        Height="42"
-                                        Style="{StaticResource GoldActionButton}"
-                                        Command="{Binding ProcessImageCommand}"/>
-                            </Grid>
 
                             <Border Margin="0,14,0,0"
                                     Padding="12"
@@ -255,35 +203,6 @@
                     </materialDesign:Card>
 
                     <materialDesign:Card Padding="18" Background="White">
-                        <StackPanel>
-                            <DockPanel>
-                                <TextBlock Text="OCR Suggested Matches" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
-                                <Button DockPanel.Dock="Right"
-                                        Content="Save Reviewed Attendance"
-                                        Height="36"
-                                        Padding="16,0"
-                                        Style="{StaticResource GoldActionButton}"
-                                        Command="{Binding SaveAttendanceCommand}"/>
-                            </DockPanel>
-
-                            <DataGrid Margin="0,14,0,0"
-                                      ItemsSource="{Binding ReviewRows}"
-                                      AutoGenerateColumns="False"
-                                      CanUserAddRows="False"
-                                      HeadersVisibility="Column"
-                                      MinHeight="420">
-                                <DataGrid.Columns>
-                                    <DataGridCheckBoxColumn Header="Save" Binding="{Binding IsSelected}" Width="70"/>
-                                    <DataGridTextColumn Header="Extracted Name" Binding="{Binding ExtractedName}" Width="*"/>
-                                    <DataGridTextColumn Header="Match Status" Binding="{Binding MatchStatus}" Width="130"/>
-                                    <DataGridTextColumn Header="Suggested Participant" Binding="{Binding SuggestedParticipantName}" Width="200"/>
-                                    <DataGridTextColumn Header="Similarity" Binding="{Binding SimilarityPercent}" Width="90"/>
-                                </DataGrid.Columns>
-                            </DataGrid>
-                        </StackPanel>
-                    </materialDesign:Card>
-
-                    <materialDesign:Card Padding="18" Margin="0,16,0,0" Background="White">
                         <StackPanel>
                             <TextBlock Text="Release-ready Summary" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
                             <TextBlock Text="{Binding ReleaseSummaryEventLabel}"
@@ -308,7 +227,7 @@
                                 </StackPanel>
                             </Border>
 
-                            <UniformGrid Margin="0,14,0,0" Columns="5">
+                            <UniformGrid Margin="0,14,0,0" Columns="4">
                                 <Border Margin="0,0,8,0" Padding="10" CornerRadius="8" Background="#EEF4FF">
                                     <StackPanel>
                                         <TextBlock Text="{Binding ApprovedParticipantCount, StringFormat=N0}" FontSize="22" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
@@ -331,12 +250,6 @@
                                     <StackPanel>
                                         <TextBlock Text="{Binding ManualAttendanceCount, StringFormat=N0}" FontSize="22" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
                                         <TextBlock Text="MANUAL" FontSize="10" Foreground="{StaticResource BrandTextSecondaryBrush}"/>
-                                    </StackPanel>
-                                </Border>
-                                <Border Padding="10" CornerRadius="8" Background="#FFF7ED">
-                                    <StackPanel>
-                                        <TextBlock Text="{Binding OcrAttendanceCount, StringFormat=N0}" FontSize="22" FontWeight="SemiBold" Foreground="#C2410C"/>
-                                        <TextBlock Text="OCR" FontSize="10" Foreground="{StaticResource BrandTextSecondaryBrush}"/>
                                     </StackPanel>
                                 </Border>
                             </UniformGrid>

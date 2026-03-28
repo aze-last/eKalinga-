@@ -39,60 +39,13 @@ public sealed class CashForWorkServiceTests
     }
 
     [Fact]
-    public void SaveAttendanceSelections_DeduplicatesSameParticipantWithinSingleBatch()
-    {
-        using var context = TestDbContextFactory.CreateContext();
-        var admin = SeedAdmin(context);
-        var household = SeedHousehold(context);
-        var member = SeedMember(context, household.Id, "Pedro Santos");
-        var service = new CashForWorkService(context);
-
-        var cashForWorkEvent = service.CreateEvent(
-            "Barangay Clean-Up",
-            "Hall",
-            DateTime.Today,
-            new TimeSpan(7, 0, 0),
-            new TimeSpan(12, 0, 0),
-            null,
-            admin.Id);
-
-        service.AddParticipant(cashForWorkEvent.Id, member.Id, admin.Id);
-        var participantId = context.CashForWorkParticipants.Single().Id;
-
-        var savedCount = service.SaveAttendanceSelections(
-            cashForWorkEvent.Id,
-            admin.Id,
-            [
-                new CashForWorkAttendanceReviewItem
-                {
-                    ExtractedName = "Pedro Santos",
-                    MatchStatus = AttendanceMatchStatus.Matched,
-                    SuggestedParticipantId = participantId,
-                    SuggestedParticipantName = "Pedro Santos",
-                    IsSelected = true
-                },
-                new CashForWorkAttendanceReviewItem
-                {
-                    ExtractedName = "P Santos",
-                    MatchStatus = AttendanceMatchStatus.Matched,
-                    SuggestedParticipantId = participantId,
-                    SuggestedParticipantName = "Pedro Santos",
-                    IsSelected = true
-                }
-            ]);
-
-        Assert.Equal(1, savedCount);
-        Assert.Single(context.CashForWorkAttendances);
-    }
-
-    [Fact]
     public void GetReleaseReadySummary_ReturnsAttendanceTotalsForSelectedEvent()
     {
         using var context = TestDbContextFactory.CreateContext();
         var admin = SeedAdmin(context);
         var household = SeedHousehold(context);
         var manualMember = SeedMember(context, household.Id, "Pedro Santos");
-        var ocrMember = SeedMember(context, household.Id, "Ana Santos");
+        var secondManualMember = SeedMember(context, household.Id, "Ana Santos");
         var pendingMember = SeedMember(context, household.Id, "Luis Santos");
         var service = new CashForWorkService(context);
 
@@ -106,26 +59,16 @@ public sealed class CashForWorkServiceTests
             admin.Id);
 
         service.AddParticipant(cashForWorkEvent.Id, manualMember.Id, admin.Id);
-        service.AddParticipant(cashForWorkEvent.Id, ocrMember.Id, admin.Id);
+        service.AddParticipant(cashForWorkEvent.Id, secondManualMember.Id, admin.Id);
         service.AddParticipant(cashForWorkEvent.Id, pendingMember.Id, admin.Id);
 
         var participantIds = context.CashForWorkParticipants
             .ToDictionary(participant => participant.HouseholdMemberId, participant => participant.Id);
 
-        service.SaveManualAttendance(cashForWorkEvent.Id, admin.Id, [participantIds[manualMember.Id]]);
-        service.SaveAttendanceSelections(
+        service.SaveManualAttendance(
             cashForWorkEvent.Id,
             admin.Id,
-            [
-                new CashForWorkAttendanceReviewItem
-                {
-                    ExtractedName = "Ana Santos",
-                    MatchStatus = AttendanceMatchStatus.Matched,
-                    SuggestedParticipantId = participantIds[ocrMember.Id],
-                    SuggestedParticipantName = "Ana Santos",
-                    IsSelected = true
-                }
-            ]);
+            [participantIds[manualMember.Id], participantIds[secondManualMember.Id]]);
 
         var summary = service.GetReleaseReadySummary(cashForWorkEvent.Id);
 
@@ -135,8 +78,7 @@ public sealed class CashForWorkServiceTests
         Assert.Equal(2, summary.PresentParticipantCount);
         Assert.Equal(1, summary.PendingParticipantCount);
         Assert.Equal(2, summary.ReleaseReadyParticipantCount);
-        Assert.Equal(1, summary.ManualAttendanceCount);
-        Assert.Equal(1, summary.OcrAttendanceCount);
+        Assert.Equal(2, summary.ManualAttendanceCount);
     }
 
     [Fact]

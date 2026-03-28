@@ -43,4 +43,32 @@ public sealed class BeneficiaryApprovalFlowSourceTests
         Assert.Contains("FromApprovedStaging", source, StringComparison.Ordinal);
         Assert.DoesNotContain("new MasterListService()", source, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void BeneficiaryApprovalFlow_PassesEditableCorrectionsIntoApproveAction()
+    {
+        var viewModelPath = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..",
+            "..",
+            "..",
+            "..",
+            "ViewModels",
+            "BeneficiaryVerificationViewModel.cs"));
+        var servicePath = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..",
+            "..",
+            "..",
+            "..",
+            "Services",
+            "BeneficiaryVerificationService.cs"));
+
+        var viewModelSource = File.ReadAllText(viewModelPath);
+        var serviceSource = File.ReadAllText(servicePath);
+
+        Assert.Contains("new BeneficiaryCorrectionRequest(", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("Corrections:", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("request.Corrections", serviceSource, StringComparison.Ordinal);
+    }
 }

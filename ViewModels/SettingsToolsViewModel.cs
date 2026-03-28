@@ -31,6 +31,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly RelayCommand _createIncrementalBackupCommand;
         private readonly RelayCommand _createDifferentialBackupCommand;
         private readonly RelayCommand _restoreBackupCommand;
+        private readonly RelayCommand _migrateLocalAndRemoteCommand;
         private readonly RelayCommand _saveFeatureRulesCommand;
         private readonly RelayCommand _saveSystemProfileCommand;
         private readonly RelayCommand _browseSystemLogoCommand;
@@ -83,6 +84,8 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _lastDifferentialBackupDisplay = "No differential backup recorded for this preset yet.";
         private string _backupGuidanceMessage = "Incremental and differential backups require an existing full backup for the active preset.";
         private bool _canCreateDeltaBackups;
+        private string _appDatabaseStatusMessage = "Open App Database Settings to switch presets. Use the migrate action here after schema changes so both Local and Hostinger are ready.";
+        private Brush _appDatabaseStatusBrush = CreateBrush("#6B7280");
         private string _largeAssistanceWarningThresholdText = string.Empty;
         private string _featureRulesStatusMessage = "Set the warning-only threshold used when a beneficiary has already received significant assistance.";
         private Brush _featureRulesStatusBrush = CreateBrush("#6B7280");
@@ -117,6 +120,7 @@ namespace AttendanceShiftingManagement.ViewModels
             _createIncrementalBackupCommand = new RelayCommand(async _ => await ExecuteCreateBackupAsync(BackupTypes.Incremental), _ => !IsBusy && CanCreateDeltaBackups);
             _createDifferentialBackupCommand = new RelayCommand(async _ => await ExecuteCreateBackupAsync(BackupTypes.Differential), _ => !IsBusy && CanCreateDeltaBackups);
             _restoreBackupCommand = new RelayCommand(async _ => await ExecuteRestoreBackupAsync(), _ => !IsBusy);
+            _migrateLocalAndRemoteCommand = new RelayCommand(async _ => await ExecuteMigrateLocalAndRemoteAsync(), _ => !IsBusy);
             _saveFeatureRulesCommand = new RelayCommand(_ => ExecuteSaveFeatureRules(), _ => !IsBusy);
 
             LoadSystemProfile();
@@ -430,6 +434,18 @@ namespace AttendanceShiftingManagement.ViewModels
             }
         }
 
+        public string AppDatabaseStatusMessage
+        {
+            get => _appDatabaseStatusMessage;
+            private set => SetProperty(ref _appDatabaseStatusMessage, value);
+        }
+
+        public Brush AppDatabaseStatusBrush
+        {
+            get => _appDatabaseStatusBrush;
+            private set => SetProperty(ref _appDatabaseStatusBrush, value);
+        }
+
         public string LargeAssistanceWarningThresholdText
         {
             get => _largeAssistanceWarningThresholdText;
@@ -482,6 +498,7 @@ namespace AttendanceShiftingManagement.ViewModels
                     _createIncrementalBackupCommand.RaiseCanExecuteChanged();
                     _createDifferentialBackupCommand.RaiseCanExecuteChanged();
                     _restoreBackupCommand.RaiseCanExecuteChanged();
+                    _migrateLocalAndRemoteCommand.RaiseCanExecuteChanged();
                     _saveFeatureRulesCommand.RaiseCanExecuteChanged();
                 }
             }
@@ -502,6 +519,7 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand CreateIncrementalBackupCommand => _createIncrementalBackupCommand;
         public ICommand CreateDifferentialBackupCommand => _createDifferentialBackupCommand;
         public ICommand RestoreBackupCommand => _restoreBackupCommand;
+        public ICommand MigrateLocalAndRemoteCommand => _migrateLocalAndRemoteCommand;
         public ICommand SaveFeatureRulesCommand => _saveFeatureRulesCommand;
 
         private void LoadSystemProfile()
@@ -934,6 +952,27 @@ namespace AttendanceShiftingManagement.ViewModels
                 });
         }
 
+        private async Task ExecuteMigrateLocalAndRemoteAsync()
+        {
+            await ExecuteBusyAsync(
+                async () =>
+                {
+                    SetAppDatabaseNeutral("Migrating Local and Remote (Hostinger) app databases...");
+
+                    var result = await AppDatabaseMigrationService.MigrateLocalAndRemoteAsync();
+                    RefreshTargetSummaries();
+
+                    var statusMessage = string.Join(" ", result.PresetResults.Select(item => item.Message));
+                    if (result.IsSuccess)
+                    {
+                        SetAppDatabaseSuccess(statusMessage);
+                        return;
+                    }
+
+                    SetAppDatabaseError(statusMessage);
+                });
+        }
+
         private void ExecuteSaveFeatureRules()
         {
             if (!TryParseWarningThreshold(out var threshold))
@@ -1055,6 +1094,24 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             FeatureRulesStatusMessage = message;
             FeatureRulesStatusBrush = CreateBrush("#991B1B");
+        }
+
+        private void SetAppDatabaseNeutral(string message)
+        {
+            AppDatabaseStatusMessage = message;
+            AppDatabaseStatusBrush = CreateBrush("#6B7280");
+        }
+
+        private void SetAppDatabaseSuccess(string message)
+        {
+            AppDatabaseStatusMessage = message;
+            AppDatabaseStatusBrush = CreateBrush("#1A7A4A");
+        }
+
+        private void SetAppDatabaseError(string message)
+        {
+            AppDatabaseStatusMessage = message;
+            AppDatabaseStatusBrush = CreateBrush("#991B1B");
         }
 
         private async Task ExecuteBusyAsync(Func<Task> action)

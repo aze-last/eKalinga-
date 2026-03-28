@@ -45,7 +45,6 @@ namespace AttendanceShiftingManagement.Data
                 RuntimeSchemaBootstrapper.EnsureRuntimeSchema(context);
             }
 
-            DbSeeder.Seed(context);
         }
     }
 }

@@ -119,8 +119,6 @@ namespace AttendanceShiftingManagement.Services
                 user.Id,
                 $"Initial admin '{user.Username}' was created for database bootstrap.");
 
-            DbSeeder.Seed(context);
-
             return new InitialAdminSetupResult(
                 true,
                 "Initial admin account created. Sign in with the credentials you just set.",

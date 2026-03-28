@@ -721,17 +721,27 @@
                                     Padding="14"
                                     CornerRadius="10"
                                     Background="#FFF7D6">
-                                <TextBlock Text="Before login, users can only switch presets. Database credential editing is restricted to this Settings area so Network (LAN) can be maintained without exposing Local or Hostinger configuration."
+                                <TextBlock Text="Before login, users can only switch presets. Database credential editing is restricted to this Settings area, and the migrate action below updates both Local and Hostinger after schema changes."
                                            Foreground="#9A5A00"
                                            TextWrapping="Wrap" />
                             </Border>
 
-                            <Button Margin="0,18,0,0"
-                                    Width="250"
-                                    HorizontalAlignment="Left"
-                                    Content="OPEN APP DATABASE SETTINGS"
-                                    Style="{StaticResource PrimaryActionButton}"
-                                    Click="OpenAppDatabaseSettings_Click" />
+                            <WrapPanel Margin="0,18,0,0">
+                                <Button Width="250"
+                                        HorizontalAlignment="Left"
+                                        Content="OPEN APP DATABASE SETTINGS"
+                                        Style="{StaticResource PrimaryActionButton}"
+                                        Click="OpenAppDatabaseSettings_Click" />
+                                <Button Margin="12,0,0,0"
+                                        Content="MIGRATE LOCAL + HOSTINGER NOW"
+                                        Style="{StaticResource GoldActionButton}"
+                                        Command="{Binding MigrateLocalAndRemoteCommand}" />
+                            </WrapPanel>
+
+                            <TextBlock Margin="0,14,0,0"
+                                       Text="{Binding AppDatabaseStatusMessage}"
+                                       Foreground="{Binding AppDatabaseStatusBrush}"
+                                       TextWrapping="Wrap" />
                         </StackPanel>
                     </Border>
                 </Grid>

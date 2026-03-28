@@ -45,5 +45,9 @@ public sealed class BarangayMainViewModelSourceTests
         Assert.Contains("case \"Distribution\":", source, StringComparison.Ordinal);
         Assert.Contains("CurrentSectionTitle = \"Project Distribution\";", source, StringComparison.Ordinal);
         Assert.Contains("return new ProjectDistributionPage(_currentUser);", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("ShowHouseholdRegistryCommand", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("IsHouseholdRegistrySelected", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("case \"HouseholdRegistry\":", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("return new HouseholdRegistryPage();", source, StringComparison.Ordinal);
     }
 }

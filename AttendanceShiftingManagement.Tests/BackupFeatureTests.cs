@@ -1,4 +1,5 @@
 using AttendanceShiftingManagement.Models;
+using AttendanceShiftingManagement.Services;
 using System.Reflection;
 
 namespace AttendanceShiftingManagement.Tests;
@@ -132,6 +133,26 @@ public sealed class BackupFeatureTests
         Assert.Equal(new DateTime(2026, 3, 25, 8, 0, 0), ReadNullableDateTimeProperty(status, "LastFullBackupAt"));
         Assert.Equal(new DateTime(2026, 3, 25, 9, 0, 0), ReadNullableDateTimeProperty(status, "LastIncrementalBackupAt"));
         Assert.Equal(new DateTime(2026, 3, 25, 10, 0, 0), ReadNullableDateTimeProperty(status, "LastDifferentialBackupAt"));
+    }
+
+    [Fact]
+    public void ResolveTargetTableName_PreservesActualTargetCase()
+    {
+        var resolved = LocalBackupService.ResolveTargetTableName(
+            ["users", "BeneficiaryStaging", "cash_for_work_events"],
+            "beneficiarystaging");
+
+        Assert.Equal("BeneficiaryStaging", resolved);
+    }
+
+    [Fact]
+    public void ResolveTargetTableName_ReturnsNullWhenTableIsMissing()
+    {
+        var resolved = LocalBackupService.ResolveTargetTableName(
+            ["users", "cash_for_work_events"],
+            "BeneficiaryStaging");
+
+        Assert.Null(resolved);
     }
 
     private static void AssertPropertyExists(string typeName, string propertyName)

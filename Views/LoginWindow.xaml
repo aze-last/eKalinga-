@@ -10,7 +10,7 @@
         WindowStartupLocation="CenterScreen"
         Background="{StaticResource BrandSurfaceBrush}"
         FontFamily="Segoe UI"
-        Icon="/Images/app-icon.ico">
+        Icon="/Images/municipal-house.ico">
 
     <Grid Margin="28">
         <Grid.ColumnDefinitions>

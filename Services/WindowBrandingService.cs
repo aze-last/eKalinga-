@@ -8,7 +8,7 @@ namespace AttendanceShiftingManagement.Services
 {
     public static class WindowBrandingService
     {
-        private const string DefaultIconUri = "pack://application:,,,/Images/app-icon.ico";
+        private const string DefaultIconUri = "pack://application:,,,/Images/municipal-house.ico";
 
         public static void ApplyWindowIcon(Window window)
         {

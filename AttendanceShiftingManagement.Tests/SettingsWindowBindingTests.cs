@@ -3,9 +3,9 @@ namespace AttendanceShiftingManagement.Tests;
 public sealed class SettingsWindowBindingTests
 {
     [Fact]
-    public void SystemInstallSerialTextBox_UsesOneWayBinding()
+    public void SettingsWindow_AppDatabaseTabExposesMigrationButton()
     {
-        var settingsWindowPath = Path.GetFullPath(Path.Combine(
+        var windowPath = Path.GetFullPath(Path.Combine(
             AppContext.BaseDirectory,
             "..",
             "..",
@@ -14,46 +14,9 @@ public sealed class SettingsWindowBindingTests
             "Views",
             "SettingsWindow.xaml"));
 
-        var xaml = File.ReadAllText(settingsWindowPath);
+        var xaml = File.ReadAllText(windowPath);
 
-        Assert.Contains("Text=\"{Binding SystemInstallSerial, Mode=OneWay}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Company Serial Number", xaml, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void SystemProfileTab_UsesScrollViewer()
-    {
-        var settingsWindowPath = Path.GetFullPath(Path.Combine(
-            AppContext.BaseDirectory,
-            "..",
-            "..",
-            "..",
-            "..",
-            "Views",
-            "SettingsWindow.xaml"));
-
-        var xaml = File.ReadAllText(settingsWindowPath);
-
-        Assert.Contains("<ScrollViewer", xaml, StringComparison.Ordinal);
-        Assert.Contains("Header=\"System Profile\"", xaml, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void DatabaseBackupTab_ShowsPerTypeBackupDates()
-    {
-        var settingsWindowPath = Path.GetFullPath(Path.Combine(
-            AppContext.BaseDirectory,
-            "..",
-            "..",
-            "..",
-            "..",
-            "Views",
-            "SettingsWindow.xaml"));
-
-        var xaml = File.ReadAllText(settingsWindowPath);
-
-        Assert.Contains("Last Full Backup", xaml, StringComparison.Ordinal);
-        Assert.Contains("Last Incremental Backup", xaml, StringComparison.Ordinal);
-        Assert.Contains("Last Differential Backup", xaml, StringComparison.Ordinal);
+        Assert.Contains("MIGRATE LOCAL + HOSTINGER NOW", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding MigrateLocalAndRemoteCommand}\"", xaml, StringComparison.Ordinal);
     }
 }

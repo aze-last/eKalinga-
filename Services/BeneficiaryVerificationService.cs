@@ -10,7 +10,8 @@ namespace AttendanceShiftingManagement.Services
         int StagingId,
         int HouseholdId,
         int? ExistingHouseholdMemberId,
-        string? ReviewNotes);
+        string? ReviewNotes,
+        BeneficiaryCorrectionRequest? Corrections = null);
 
     public sealed record BeneficiaryCorrectionRequest(
         int StagingId,
@@ -63,6 +64,11 @@ namespace AttendanceShiftingManagement.Services
             if (household == null)
             {
                 return new BeneficiaryVerificationOperationResult(false, "The selected household no longer exists.");
+            }
+
+            if (request.Corrections != null)
+            {
+                ApplyCorrections(stagingRow, request.Corrections, actedByUserId);
             }
 
             var fullName = BuildDisplayName(stagingRow);
@@ -296,6 +302,27 @@ namespace AttendanceShiftingManagement.Services
                 $"{successVerb} '{fullName}'.");
 
             return new BeneficiaryVerificationOperationResult(true, $"{successVerb} {fullName}.");
+        }
+
+        private static void ApplyCorrections(BeneficiaryStaging stagingRow, BeneficiaryCorrectionRequest request, int actedByUserId)
+        {
+            stagingRow.BeneficiaryId = NormalizeNullable(request.BeneficiaryId);
+            stagingRow.CivilRegistryId = NormalizeNullable(request.CivilRegistryId);
+            stagingRow.FirstName = NormalizeNullable(request.FirstName);
+            stagingRow.MiddleName = NormalizeNullable(request.MiddleName);
+            stagingRow.LastName = NormalizeNullable(request.LastName);
+            stagingRow.FullName = NormalizeNullable(request.FullName) ?? BuildDisplayName(stagingRow);
+            stagingRow.Sex = NormalizeNullable(request.Sex);
+            stagingRow.DateOfBirth = NormalizeNullable(request.DateOfBirth);
+            stagingRow.Age = NormalizeNullable(request.Age);
+            stagingRow.MaritalStatus = NormalizeNullable(request.MaritalStatus);
+            stagingRow.Address = NormalizeNullable(request.Address);
+            stagingRow.PwdIdNo = NormalizeNullable(request.PwdIdNo);
+            stagingRow.SeniorIdNo = NormalizeNullable(request.SeniorIdNo);
+            stagingRow.DisabilityType = NormalizeNullable(request.DisabilityType);
+            stagingRow.ReviewNotes = NormalizeNullable(request.ReviewNotes);
+            stagingRow.ReviewedAt = DateTime.Now;
+            stagingRow.ReviewedByUserId = actedByUserId;
         }
 
         private static string BuildDisplayName(BeneficiaryStaging row)

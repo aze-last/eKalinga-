@@ -1,4 +1,6 @@
+using AttendanceShiftingManagement.Data;
 using AttendanceShiftingManagement.Models;
+using Microsoft.Extensions.Configuration;
 using MySqlConnector;
 using System.Globalization;
 using System.IO;
@@ -39,6 +41,8 @@ namespace AttendanceShiftingManagement.Services
         {
             try
             {
+                EnsureActiveDatabaseReady();
+
                 var normalizedType = BackupChainService.NormalizeBackupType(backupType);
                 var settings = ConnectionSettingsService.Load();
                 var preset = settings.GetPreset(settings.SelectedPreset);
@@ -156,6 +160,8 @@ namespace AttendanceShiftingManagement.Services
         {
             try
             {
+                EnsureActiveDatabaseReady();
+
                 var targetManifest = await ReadManifestAsync(filePath, cancellationToken);
                 if (targetManifest == null)
                 {
@@ -203,6 +209,7 @@ namespace AttendanceShiftingManagement.Services
                 var restorableTables = currentTables
                     .Where(table => !ExcludedTables.Contains(table))
                     .ToList();
+                var restorableTablesByName = restorableTables.ToDictionary(table => table, StringComparer.OrdinalIgnoreCase);
 
                 await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
                 try
@@ -219,13 +226,14 @@ namespace AttendanceShiftingManagement.Services
                         var snapshots = await ReadTableSnapshotsAsync(restoreFile, cancellationToken);
                         foreach (var snapshot in snapshots)
                         {
-                            if (!restorableTables.Contains(snapshot.TableName, StringComparer.OrdinalIgnoreCase))
+                            var targetTableName = ResolveTargetTableName(restorableTablesByName.Keys, snapshot.TableName);
+                            if (targetTableName == null)
                             {
                                 warnings.Add($"Skipped `{snapshot.TableName}` because it does not exist in the current database.");
                                 continue;
                             }
 
-                            await ApplySnapshotAsync(connection, transaction, snapshot, cancellationToken);
+                            await ApplySnapshotAsync(connection, transaction, targetTableName, snapshot, cancellationToken);
                         }
                     }
 
@@ -535,23 +543,25 @@ namespace AttendanceShiftingManagement.Services
         private static async Task ApplySnapshotAsync(
             MySqlConnection connection,
             MySqlTransaction transaction,
+            string targetTableName,
             BackupTableSnapshot snapshot,
             CancellationToken cancellationToken)
         {
             if (string.Equals(snapshot.SnapshotMode, BackupSnapshotModes.UpsertRows, StringComparison.OrdinalIgnoreCase)
                 && snapshot.PrimaryKeyColumns.Count > 0)
             {
-                await UpsertSnapshotAsync(connection, transaction, snapshot, cancellationToken);
+                await UpsertSnapshotAsync(connection, transaction, targetTableName, snapshot, cancellationToken);
                 return;
             }
 
-            await ExecuteNonQueryAsync(connection, transaction, $"DELETE FROM {EscapeIdentifier(snapshot.TableName)};", cancellationToken);
-            await InsertSnapshotAsync(connection, transaction, snapshot, cancellationToken);
+            await ExecuteNonQueryAsync(connection, transaction, $"DELETE FROM {EscapeIdentifier(targetTableName)};", cancellationToken);
+            await InsertSnapshotAsync(connection, transaction, targetTableName, snapshot, cancellationToken);
         }
 
         private static async Task InsertSnapshotAsync(
             MySqlConnection connection,
             MySqlTransaction transaction,
+            string targetTableName,
             BackupTableSnapshot snapshot,
             CancellationToken cancellationToken)
         {
@@ -562,7 +572,7 @@ namespace AttendanceShiftingManagement.Services
 
             var columnList = string.Join(", ", snapshot.Columns.Select(column => EscapeIdentifier(column.Name)));
             var parameterList = string.Join(", ", snapshot.Columns.Select((_, index) => $"@p{index}"));
-            var sql = $"INSERT INTO {EscapeIdentifier(snapshot.TableName)} ({columnList}) VALUES ({parameterList});";
+            var sql = $"INSERT INTO {EscapeIdentifier(targetTableName)} ({columnList}) VALUES ({parameterList});";
 
             foreach (var row in snapshot.Rows)
             {
@@ -581,6 +591,7 @@ namespace AttendanceShiftingManagement.Services
         private static async Task UpsertSnapshotAsync(
             MySqlConnection connection,
             MySqlTransaction transaction,
+            string targetTableName,
             BackupTableSnapshot snapshot,
             CancellationToken cancellationToken)
         {
@@ -599,7 +610,7 @@ namespace AttendanceShiftingManagement.Services
                     return $"{escapedName} = VALUES({escapedName})";
                 }));
 
-            var sql = $"INSERT INTO {EscapeIdentifier(snapshot.TableName)} ({columnList}) VALUES ({parameterList}) ON DUPLICATE KEY UPDATE {updateAssignments};";
+            var sql = $"INSERT INTO {EscapeIdentifier(targetTableName)} ({columnList}) VALUES ({parameterList}) ON DUPLICATE KEY UPDATE {updateAssignments};";
 
             foreach (var row in snapshot.Rows)
             {
@@ -881,6 +892,41 @@ namespace AttendanceShiftingManagement.Services
         {
             await using var command = new MySqlCommand(sql, connection, transaction);
             await command.ExecuteNonQueryAsync(cancellationToken);
+        }
+
+        internal static string? ResolveTargetTableName(IEnumerable<string> currentTableNames, string requestedTableName)
+        {
+            foreach (var currentTableName in currentTableNames)
+            {
+                if (string.Equals(currentTableName, requestedTableName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return currentTableName;
+                }
+            }
+
+            return null;
+        }
+
+        private static void EnsureActiveDatabaseReady()
+        {
+            var configuration = new ConfigurationBuilder()
+                .SetBasePath(ResolveConfigurationBasePath())
+                .AddJsonFile("appsettings.json", optional: true)
+                .Build();
+
+            var migrateOnStartup = configuration.GetValue("Database:MigrateOnStartup", false);
+            DatabaseInitializer.Initialize(resetDatabase: false, migrateOnStartup: migrateOnStartup);
+        }
+
+        private static string ResolveConfigurationBasePath()
+        {
+            var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
+            if (File.Exists(Path.Combine(baseDirectory, "appsettings.json")))
+            {
+                return baseDirectory;
+            }
+
+            return Directory.GetCurrentDirectory();
         }
 
         private static string EscapeIdentifier(string identifier)

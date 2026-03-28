@@ -14,7 +14,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _currentSection = "Dashboard";
         private object _currentView;
         private string _currentSectionTitle = "Dashboard";
-        private string _currentSectionSubtitle = "Monitor validated beneficiaries, pending approvals, aid requests, budgets, households, and cash-for-work at a glance.";
+        private string _currentSectionSubtitle = "Monitor validated beneficiaries, pending approvals, aid requests, budgets, and cash-for-work at a glance.";
         private string _connectionSummary = string.Empty;
         private ImageSource? _userPhotoImage;
         private string _userDisplayName = "Barangay Administrator";
@@ -30,8 +30,6 @@ namespace AttendanceShiftingManagement.ViewModels
             ShowDistributionCommand = new RelayCommand(_ => SwitchSection("Distribution"));
             ShowMasterListCommand = new RelayCommand(_ => SwitchSection("MasterList"));
             ShowAssistanceCasesCommand = new RelayCommand(_ => SwitchSection("AssistanceCases"));
-            ShowHouseholdRegistryCommand = new RelayCommand(_ => SwitchSection("HouseholdRegistry"));
-
             RefreshConnectionSummary();
             LoadUserSummary();
         }
@@ -80,15 +78,12 @@ namespace AttendanceShiftingManagement.ViewModels
         public bool IsDistributionSelected => _currentSection == "Distribution";
         public bool IsMasterListSelected => _currentSection == "MasterList";
         public bool IsAssistanceCasesSelected => _currentSection == "AssistanceCases";
-        public bool IsHouseholdRegistrySelected => _currentSection == "HouseholdRegistry";
-
         public RelayCommand ShowDashboardCommand { get; }
         public RelayCommand ShowCashForWorkCommand { get; }
         public RelayCommand ShowBudgetCommand { get; }
         public RelayCommand ShowDistributionCommand { get; }
         public RelayCommand ShowMasterListCommand { get; }
         public RelayCommand ShowAssistanceCasesCommand { get; }
-        public RelayCommand ShowHouseholdRegistryCommand { get; }
 
         public void RefreshConnectionSummary()
         {
@@ -122,8 +117,6 @@ namespace AttendanceShiftingManagement.ViewModels
             OnPropertyChanged(nameof(IsDistributionSelected));
             OnPropertyChanged(nameof(IsMasterListSelected));
             OnPropertyChanged(nameof(IsAssistanceCasesSelected));
-            OnPropertyChanged(nameof(IsHouseholdRegistrySelected));
-
             CurrentView = BuildView(section);
         }
 
@@ -133,7 +126,7 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 case "Dashboard":
                     CurrentSectionTitle = "Dashboard";
-                    CurrentSectionSubtitle = "Monitor validated beneficiaries, pending approvals, aid requests, budgets, households, and cash-for-work at a glance.";
+                    CurrentSectionSubtitle = "Monitor validated beneficiaries, pending approvals, aid requests, budgets, and cash-for-work at a glance.";
                     return new BarangayDashboardPage();
                 case "Budget":
                     CurrentSectionTitle = "Budget";
@@ -151,10 +144,6 @@ namespace AttendanceShiftingManagement.ViewModels
                     CurrentSectionTitle = "Aid Request";
                     CurrentSectionSubtitle = "Create requests, choose a validated beneficiary or household, and release approved aid against budget.";
                     return new AssistanceCaseManagementPage(_currentUser);
-                case "HouseholdRegistry":
-                    CurrentSectionTitle = "Household registry";
-                    CurrentSectionSubtitle = "Browse registered households and inspect eligible members.";
-                    return new HouseholdRegistryPage();
                 default:
                     CurrentSectionTitle = "Cash-for-work";
                     CurrentSectionSubtitle = "Create work events, assign participants, and save attendance.";

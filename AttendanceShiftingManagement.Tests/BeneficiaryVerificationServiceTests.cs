@@ -113,6 +113,53 @@ public sealed class BeneficiaryVerificationServiceTests
     }
 
     [Fact]
+    public async Task ApproveAsync_WhenCorrectionsAreProvided_AppliesEditedFieldsBeforeApproval()
+    {
+        using var context = TestDbContextFactory.CreateContext();
+        var admin = SeedAdmin(context);
+        var household = SeedHousehold(context);
+        var stagingRow = SeedStaging(context);
+        var service = new BeneficiaryVerificationService(context);
+
+        var result = await service.ApproveAsync(
+            new BeneficiaryApprovalRequest(
+                stagingRow.StagingID,
+                household.Id,
+                ExistingHouseholdMemberId: null,
+                ReviewNotes: "Approved with corrected details.",
+                Corrections: new BeneficiaryCorrectionRequest(
+                    stagingRow.StagingID,
+                    "BEN-CORRECTED",
+                    "CRS-CORRECTED",
+                    "Bien Josef",
+                    "Gallur",
+                    "Regidor",
+                    "Bien Josef G. Regidor",
+                    "Male",
+                    "2001-02-24",
+                    "25",
+                    "Single",
+                    "Purok 1, Barangay Centro",
+                    null,
+                    null,
+                    null,
+                    "Approved with corrected details.")),
+            admin.Id);
+
+        Assert.True(result.IsSuccess);
+
+        var staged = Assert.Single(context.BeneficiaryStaging);
+        Assert.Equal("BEN-CORRECTED", staged.BeneficiaryId);
+        Assert.Equal("CRS-CORRECTED", staged.CivilRegistryId);
+        Assert.Equal("Bien Josef G. Regidor", staged.FullName);
+        Assert.Equal("Purok 1, Barangay Centro", staged.Address);
+        Assert.Equal(VerificationStatus.Approved, staged.VerificationStatus);
+
+        var member = Assert.Single(context.HouseholdMembers);
+        Assert.Equal("Bien Josef G. Regidor", member.FullName);
+    }
+
+    [Fact]
     public async Task SaveCorrectionsAsync_UpdatesStagedFields_AndWritesAuditLog()
     {
         using var context = TestDbContextFactory.CreateContext();

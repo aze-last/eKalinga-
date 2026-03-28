@@ -54,6 +54,8 @@ public sealed class MasterListPageBindingTests
         Assert.DoesNotContain("Text=\"Grievance / Corrections\"", mainWindowXaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Text=\"Beneficiaries\"", mainWindowXaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Text=\"Masterlist\"", mainWindowXaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Text=\"Household registry\"", mainWindowXaml, StringComparison.Ordinal);
         Assert.Contains("Content=\"OPEN VALIDATED BENEFICIARIES\"", dashboardXaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Content=\"BROWSE HOUSEHOLDS\"", dashboardXaml, StringComparison.Ordinal);
     }
 }

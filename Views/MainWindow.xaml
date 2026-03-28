@@ -9,7 +9,7 @@
         WindowState="Maximized"
         Background="{StaticResource BrandSurfaceBrush}"
         FontFamily="Segoe UI"
-        Icon="/Images/app-icon.ico">
+        Icon="/Images/municipal-house.ico">
 
     <Window.Resources>
         <Style x:Key="SidebarButtonBaseStyle"
@@ -97,18 +97,6 @@
             </Style.Triggers>
         </Style>
 
-        <Style x:Key="HouseholdRegistrySidebarButtonStyle"
-               TargetType="Button"
-               BasedOn="{StaticResource SidebarButtonBaseStyle}">
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding IsHouseholdRegistrySelected}" Value="True">
-                    <Setter Property="Foreground" Value="{StaticResource BrandYellowBrush}" />
-                    <Setter Property="Background" Value="#26F9C231" />
-                    <Setter Property="FontWeight" Value="SemiBold" />
-                </DataTrigger>
-            </Style.Triggers>
-        </Style>
-
     </Window.Resources>
 
     <Grid>
@@ -187,13 +175,6 @@
                         </StackPanel>
                     </Button>
 
-                    <Button Style="{StaticResource HouseholdRegistrySidebarButtonStyle}"
-                            Command="{Binding ShowHouseholdRegistryCommand}">
-                        <StackPanel Orientation="Horizontal">
-                            <materialDesign:PackIcon Kind="HomeGroup" Width="18" Height="18" Margin="0,0,10,0" />
-                            <TextBlock Text="Household registry" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Button>
                 </StackPanel>
 
                 <Border Grid.Row="2"

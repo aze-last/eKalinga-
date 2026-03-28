@@ -6,7 +6,10 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
-    <ApplicationIcon>Images\app-icon.ico</ApplicationIcon>
+    <ApplicationIcon>Images\municipal-house.ico</ApplicationIcon>
+    <AssemblyTitle>Barangay Ayuda System</AssemblyTitle>
+    <Product>Barangay Ayuda System</Product>
+    <Description>Barangay Ayuda System desktop application.</Description>
   </PropertyGroup>
 
   <ItemGroup>
@@ -36,9 +39,6 @@
   <ItemGroup>
     <None Update="appsettings.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="ocr\**\*">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
 

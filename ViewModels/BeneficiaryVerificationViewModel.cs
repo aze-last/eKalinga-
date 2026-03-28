@@ -163,7 +163,6 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 if (SetProperty(ref _selectedHouseholdMember, value))
                 {
-                    OnPropertyChanged(nameof(ApprovalActionLabel));
                     RaiseActionCanExecuteChanged();
                 }
             }
@@ -421,11 +420,6 @@ namespace AttendanceShiftingManagement.ViewModels
                 }
             }
         }
-
-        public string ApprovalActionLabel =>
-            SelectedHouseholdMember == null
-                ? "Approve and create a new household member"
-                : "Approve and link the selected existing member";
 
         public string DigitalIdCardNumber
         {
@@ -1107,7 +1101,24 @@ namespace AttendanceShiftingManagement.ViewModels
                         stagingId,
                         SelectedHousehold.Id,
                         SelectedHouseholdMember?.Id,
-                        NormalizeNullable(EditableReviewNotes)),
+                        NormalizeNullable(EditableReviewNotes),
+                        Corrections: new BeneficiaryCorrectionRequest(
+                            stagingId,
+                            NormalizeNullable(EditableBeneficiaryId),
+                            NormalizeNullable(EditableCivilRegistryId),
+                            NormalizeNullable(EditableFirstName),
+                            NormalizeNullable(EditableMiddleName),
+                            NormalizeNullable(EditableLastName),
+                            NormalizeNullable(EditableFullName),
+                            NormalizeNullable(EditableSex),
+                            NormalizeNullable(EditableDateOfBirth),
+                            NormalizeNullable(EditableAge),
+                            NormalizeNullable(EditableMaritalStatus),
+                            NormalizeNullable(EditableAddress),
+                            NormalizeNullable(EditablePwdIdNo),
+                            NormalizeNullable(EditableSeniorIdNo),
+                            NormalizeNullable(EditableDisabilityType),
+                            NormalizeNullable(EditableReviewNotes))),
                     _currentUser.Id);
 
                 if (!result.IsSuccess)
