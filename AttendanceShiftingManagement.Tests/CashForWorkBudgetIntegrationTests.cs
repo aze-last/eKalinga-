@@ -10,8 +10,7 @@ public sealed class CashForWorkBudgetIntegrationTests
     {
         using var context = TestDbContextFactory.CreateContext();
         var admin = SeedAdmin(context);
-        var household = SeedHousehold(context);
-        var member = SeedMember(context, household.Id);
+        var beneficiary = SeedApprovedBeneficiary(context);
         var program = SeedProgram(context, admin.Id);
         SeedGovernmentSnapshot(context, 5000m);
         var service = new CashForWorkService(context);
@@ -25,7 +24,7 @@ public sealed class CashForWorkBudgetIntegrationTests
             "Morning batch",
             admin.Id);
 
-        service.AddParticipant(cashForWorkEvent.Id, member.Id, admin.Id);
+        service.AddParticipant(cashForWorkEvent.Id, beneficiary.StagingID, admin.Id);
         var participantId = context.CashForWorkParticipants.Single().Id;
         service.SaveManualAttendance(cashForWorkEvent.Id, admin.Id, [participantId]);
 
@@ -54,8 +53,7 @@ public sealed class CashForWorkBudgetIntegrationTests
     {
         using var context = TestDbContextFactory.CreateContext();
         var admin = SeedAdmin(context);
-        var household = SeedHousehold(context);
-        var member = SeedMember(context, household.Id);
+        var beneficiary = SeedApprovedBeneficiary(context, 2002, "Blocked Beneficiary");
         var program = SeedProgram(context, admin.Id);
         SeedGovernmentSnapshot(context, 1000m);
         var service = new CashForWorkService(context);
@@ -69,7 +67,7 @@ public sealed class CashForWorkBudgetIntegrationTests
             "Morning batch",
             admin.Id);
 
-        service.AddParticipant(cashForWorkEvent.Id, member.Id, admin.Id);
+        service.AddParticipant(cashForWorkEvent.Id, beneficiary.StagingID, admin.Id);
         var participantId = context.CashForWorkParticipants.Single().Id;
         service.SaveManualAttendance(cashForWorkEvent.Id, admin.Id, [participantId]);
 
@@ -101,37 +99,21 @@ public sealed class CashForWorkBudgetIntegrationTests
         return user;
     }
 
-    private static Household SeedHousehold(Data.AppDbContext context)
+    private static BeneficiaryStaging SeedApprovedBeneficiary(Data.AppDbContext context, int stagingId = 2001, string fullName = "Joel Cruz")
     {
-        var household = new Household
+        var beneficiary = new BeneficiaryStaging
         {
-            HouseholdCode = "HH-C4W-001",
-            HeadName = "Maribel Cruz",
-            AddressLine = "Sitio Uno",
-            Purok = "Purok 1",
-            ContactNumber = "09178889999",
-            Status = HouseholdStatus.Active
+            StagingID = stagingId,
+            BeneficiaryId = $"BEN-{stagingId:D4}",
+            CivilRegistryId = $"CR-{stagingId:D4}",
+            FullName = fullName,
+            VerificationStatus = VerificationStatus.Approved,
+            ReviewedAt = DateTime.Now
         };
 
-        context.Households.Add(household);
+        context.BeneficiaryStaging.Add(beneficiary);
         context.SaveChanges();
-        return household;
-    }
-
-    private static HouseholdMember SeedMember(Data.AppDbContext context, int householdId)
-    {
-        var member = new HouseholdMember
-        {
-            HouseholdId = householdId,
-            FullName = "Joel Cruz",
-            RelationshipToHead = "Son",
-            Occupation = "Laborer",
-            IsCashForWorkEligible = true
-        };
-
-        context.HouseholdMembers.Add(member);
-        context.SaveChanges();
-        return member;
+        return beneficiary;
     }
 
     private static AyudaProgram SeedProgram(Data.AppDbContext context, int createdByUserId)

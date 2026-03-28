@@ -39,6 +39,6 @@ public sealed class WindowBrandingServiceTests
             LogoPath = @"C:\missing\logo.png"
         });
 
-        Assert.Equal("pack://application:,,,/Images/app-icon.ico", source);
+        Assert.Equal("pack://application:,,,/Images/municipal-house.ico", source);
     }
 }

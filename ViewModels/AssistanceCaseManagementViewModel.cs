@@ -17,8 +17,6 @@ namespace AttendanceShiftingManagement.ViewModels
     {
         private readonly User _currentUser;
         private readonly ObservableCollection<AssistanceCaseListItem> _cases = new();
-        private readonly ObservableCollection<AssistanceHouseholdOption> _households = new();
-        private readonly ObservableCollection<AssistanceHouseholdMemberOption> _availableHouseholdMembers = new();
         private readonly ObservableCollection<AssistanceAyudaProgramOption> _ayudaPrograms = new();
         private readonly ObservableCollection<AssistanceValidatedBeneficiaryOption> _validatedBeneficiaries = new();
         private readonly RelayCommand _refreshCommand;
@@ -33,8 +31,6 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly RelayCommand _deleteCommand;
         private ICollectionView _casesView;
         private AssistanceCaseListItem? _selectedCase;
-        private AssistanceHouseholdOption? _selectedHousehold;
-        private AssistanceHouseholdMemberOption? _selectedHouseholdMember;
         private AssistanceAyudaProgramOption? _selectedAyudaProgram;
         private AssistanceValidatedBeneficiaryOption? _selectedValidatedBeneficiary;
         private string _searchText = string.Empty;
@@ -98,10 +94,6 @@ namespace AttendanceShiftingManagement.ViewModels
 
         public ObservableCollection<AssistanceReleaseKind> ReleaseKindOptions { get; }
 
-        public ObservableCollection<AssistanceHouseholdOption> Households => _households;
-
-        public ObservableCollection<AssistanceHouseholdMemberOption> AvailableHouseholdMembers => _availableHouseholdMembers;
-
         public ObservableCollection<AssistanceAyudaProgramOption> AyudaPrograms => _ayudaPrograms;
 
         public ObservableCollection<AssistanceValidatedBeneficiaryOption> ValidatedBeneficiaries => _validatedBeneficiaries;
@@ -125,37 +117,6 @@ namespace AttendanceShiftingManagement.ViewModels
             }
         }
 
-        public AssistanceHouseholdOption? SelectedHousehold
-        {
-            get => _selectedHousehold;
-            set
-            {
-                if (SetProperty(ref _selectedHousehold, value))
-                {
-                    RefreshAvailableHouseholdMembers();
-                    if (value != null && SelectedValidatedBeneficiary != null)
-                    {
-                        SelectedValidatedBeneficiary = null;
-                    }
-
-                    OnPropertyChanged(nameof(ApplicantSummary));
-                    RaiseCommandStates();
-                }
-            }
-        }
-
-        public AssistanceHouseholdMemberOption? SelectedHouseholdMember
-        {
-            get => _selectedHouseholdMember;
-            set
-            {
-                if (SetProperty(ref _selectedHouseholdMember, value))
-                {
-                    OnPropertyChanged(nameof(ApplicantSummary));
-                }
-            }
-        }
-
         public AssistanceAyudaProgramOption? SelectedAyudaProgram
         {
             get => _selectedAyudaProgram;
@@ -175,12 +136,6 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 if (SetProperty(ref _selectedValidatedBeneficiary, value))
                 {
-                    if (value != null)
-                    {
-                        SelectedHouseholdMember = null;
-                        SelectedHousehold = null;
-                    }
-
                     OnPropertyChanged(nameof(ApplicantSummary));
                     RaiseCommandStates();
                 }
@@ -344,10 +299,8 @@ namespace AttendanceShiftingManagement.ViewModels
         }
 
         public string ApplicantSummary =>
-            SelectedHouseholdMember?.DisplayLabel
-            ?? SelectedValidatedBeneficiary?.DisplayLabel
-            ?? SelectedHousehold?.HeadName
-            ?? "Select a validated beneficiary or household/member";
+            SelectedValidatedBeneficiary?.DisplayLabel
+            ?? "Select a validated beneficiary";
 
         public string ReleaseKindSummary => $"Release kind: {SelectedReleaseKind}";
 
@@ -390,8 +343,6 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private async Task LoadCoreAsync(int? preferredCaseId)
         {
-            var preferredHouseholdId = SelectedHousehold?.Id;
-            var preferredMemberId = SelectedHouseholdMember?.Id;
             var preferredProgramId = SelectedAyudaProgram?.Id;
             var preferredValidatedBeneficiary = SelectedValidatedBeneficiary;
 
@@ -399,18 +350,9 @@ namespace AttendanceShiftingManagement.ViewModels
 
             var assistanceCases = await context.AssistanceCases
                 .AsNoTracking()
-                .Include(item => item.Household)
-                .Include(item => item.HouseholdMember)
                 .Include(item => item.AyudaProgram)
                 .OrderByDescending(item => item.RequestedOn)
                 .ThenByDescending(item => item.CreatedAt)
-                .ToListAsync();
-
-            var households = await context.Households
-                .AsNoTracking()
-                .Include(item => item.Members)
-                .OrderBy(item => item.HouseholdCode)
-                .ThenBy(item => item.HeadName)
                 .ToListAsync();
 
             var ayudaPrograms = await context.AyudaPrograms
@@ -423,12 +365,6 @@ namespace AttendanceShiftingManagement.ViewModels
             foreach (var assistanceCase in assistanceCases)
             {
                 _cases.Add(AssistanceCaseListItem.FromEntity(assistanceCase));
-            }
-
-            _households.Clear();
-            foreach (var household in households)
-            {
-                _households.Add(AssistanceHouseholdOption.FromEntity(household));
             }
 
             _ayudaPrograms.Clear();
@@ -444,17 +380,6 @@ namespace AttendanceShiftingManagement.ViewModels
 
             SelectedCase = _cases.FirstOrDefault(item => item.Id == preferredCaseId)
                 ?? _cases.FirstOrDefault();
-
-            var selectedHouseholdId = SelectedCase?.HouseholdId ?? preferredHouseholdId;
-            SelectedHousehold = selectedHouseholdId.HasValue
-                ? _households.FirstOrDefault(item => item.Id == selectedHouseholdId.Value)
-                : null;
-
-            var selectedMemberId = SelectedCase?.HouseholdMemberId ?? preferredMemberId;
-            if (selectedMemberId.HasValue)
-            {
-                SelectedHouseholdMember = _availableHouseholdMembers.FirstOrDefault(item => item.Id == selectedMemberId.Value);
-            }
 
             var selectedProgramId = SelectedCase?.AyudaProgramId ?? preferredProgramId;
             if (selectedProgramId.HasValue)
@@ -531,8 +456,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 return Contains(assistanceCase.CaseNumber, SearchText)
                     || Contains(assistanceCase.AssistanceType, SearchText)
                     || Contains(assistanceCase.ReleaseKindText, SearchText)
-                    || Contains(assistanceCase.HouseholdLabel, SearchText)
-                    || Contains(assistanceCase.ApplicantLabel, SearchText)
+                    || Contains(assistanceCase.RecipientLabel, SearchText)
                     || Contains(assistanceCase.Summary, SearchText);
             };
 
@@ -550,8 +474,6 @@ namespace AttendanceShiftingManagement.ViewModels
             RequestedOnDate = DateTime.Today;
             ScheduledReleaseDate = null;
             EditableSummary = string.Empty;
-            SelectedHousehold = null;
-            SelectedHouseholdMember = null;
             SelectedValidatedBeneficiary = null;
             SelectedAyudaProgram = null;
             RaiseCommandStates();
@@ -574,19 +496,6 @@ namespace AttendanceShiftingManagement.ViewModels
             RequestedOnDate = SelectedCase.RequestedOn;
             ScheduledReleaseDate = SelectedCase.ScheduledReleaseDate;
             EditableSummary = SelectedCase.Summary;
-
-            SelectedHousehold = SelectedCase.HouseholdId.HasValue
-                ? _households.FirstOrDefault(item => item.Id == SelectedCase.HouseholdId.Value)
-                : null;
-
-            if (SelectedCase.HouseholdMemberId.HasValue)
-            {
-                SelectedHouseholdMember = _availableHouseholdMembers.FirstOrDefault(item => item.Id == SelectedCase.HouseholdMemberId.Value);
-            }
-            else
-            {
-                SelectedHouseholdMember = null;
-            }
 
             if (SelectedCase.AyudaProgramId.HasValue)
             {
@@ -619,37 +528,10 @@ namespace AttendanceShiftingManagement.ViewModels
             OnPropertyChanged(nameof(ApplicantSummary));
         }
 
-        private void RefreshAvailableHouseholdMembers()
-        {
-            var preferredMemberId = SelectedCase?.HouseholdId == SelectedHousehold?.Id
-                ? SelectedCase?.HouseholdMemberId
-                : SelectedHouseholdMember?.Id;
-
-            _availableHouseholdMembers.Clear();
-            if (SelectedHousehold != null)
-            {
-                foreach (var member in SelectedHousehold.Members)
-                {
-                    _availableHouseholdMembers.Add(member);
-                }
-            }
-
-            if (preferredMemberId.HasValue)
-            {
-                SelectedHouseholdMember = _availableHouseholdMembers.FirstOrDefault(item => item.Id == preferredMemberId.Value);
-            }
-            else
-            {
-                SelectedHouseholdMember = null;
-            }
-
-            OnPropertyChanged(nameof(ApplicantSummary));
-        }
-
         private bool CanSaveCase()
         {
             return !IsBusy
-                && (SelectedHousehold != null || SelectedValidatedBeneficiary != null)
+                && SelectedValidatedBeneficiary != null
                 && !string.IsNullOrWhiteSpace(EditableAssistanceType);
         }
 
@@ -697,8 +579,8 @@ namespace AttendanceShiftingManagement.ViewModels
                 await using var context = new AppDbContext();
                 var service = new AssistanceCaseManagementService(context);
                 var request = new AssistanceCaseUpsertRequest(
-                    SelectedHousehold?.Id,
-                    SelectedHouseholdMember?.Id,
+                    null,
+                    null,
                     SelectedValidatedBeneficiary?.FullName,
                     SelectedValidatedBeneficiary?.BeneficiaryId,
                     SelectedValidatedBeneficiary?.CivilRegistryId,
@@ -897,8 +779,6 @@ namespace AttendanceShiftingManagement.ViewModels
         private void ClearLoadedState()
         {
             _cases.Clear();
-            _households.Clear();
-            _availableHouseholdMembers.Clear();
             _ayudaPrograms.Clear();
             _validatedBeneficiaries.Clear();
             CasesView = CollectionViewSource.GetDefaultView(_cases);
@@ -969,8 +849,6 @@ namespace AttendanceShiftingManagement.ViewModels
     {
         public int Id { get; init; }
         public string CaseNumber { get; init; } = string.Empty;
-        public int? HouseholdId { get; init; }
-        public int? HouseholdMemberId { get; init; }
         public int? AyudaProgramId { get; init; }
         public int? BudgetLedgerEntryId { get; init; }
         public string ValidatedBeneficiaryName { get; init; } = string.Empty;
@@ -985,8 +863,7 @@ namespace AttendanceShiftingManagement.ViewModels
         public DateTime RequestedOn { get; init; }
         public DateTime? ScheduledReleaseDate { get; init; }
         public string Summary { get; init; } = string.Empty;
-        public string HouseholdLabel { get; init; } = string.Empty;
-        public string ApplicantLabel { get; init; } = string.Empty;
+        public string RecipientLabel { get; init; } = string.Empty;
         public string AyudaProgramLabel { get; init; } = string.Empty;
 
         public string PriorityText => Priority.ToString();
@@ -1031,8 +908,6 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 Id = assistanceCase.Id,
                 CaseNumber = assistanceCase.CaseNumber,
-                HouseholdId = assistanceCase.HouseholdId,
-                HouseholdMemberId = assistanceCase.HouseholdMemberId,
                 AyudaProgramId = assistanceCase.AyudaProgramId,
                 BudgetLedgerEntryId = assistanceCase.BudgetLedgerEntryId,
                 ValidatedBeneficiaryName = assistanceCase.ValidatedBeneficiaryName ?? string.Empty,
@@ -1047,13 +922,9 @@ namespace AttendanceShiftingManagement.ViewModels
                 RequestedOn = assistanceCase.RequestedOn,
                 ScheduledReleaseDate = assistanceCase.ScheduledReleaseDate,
                 Summary = assistanceCase.Summary ?? string.Empty,
-                HouseholdLabel = assistanceCase.Household != null
-                    ? $"{assistanceCase.Household.HouseholdCode} - {assistanceCase.Household.HeadName}"
-                    : "Validated beneficiary",
-                ApplicantLabel = assistanceCase.HouseholdMember?.FullName
-                    ?? assistanceCase.ValidatedBeneficiaryName
-                    ?? assistanceCase.Household?.HeadName
-                    ?? "No applicant selected",
+                RecipientLabel = !string.IsNullOrWhiteSpace(assistanceCase.ValidatedBeneficiaryName)
+                    ? assistanceCase.ValidatedBeneficiaryName
+                    : "Legacy household-linked record",
                 AyudaProgramLabel = assistanceCase.AyudaProgram?.ProgramName ?? "Program not set"
             };
         }
@@ -1061,52 +932,6 @@ namespace AttendanceShiftingManagement.ViewModels
         private static Brush CreateBrush(string hexColor)
         {
             return new SolidColorBrush((Color)ColorConverter.ConvertFromString(hexColor));
-        }
-    }
-
-    public sealed class AssistanceHouseholdOption
-    {
-        public int Id { get; init; }
-        public string HouseholdCode { get; init; } = string.Empty;
-        public string HeadName { get; init; } = string.Empty;
-        public string AddressLine { get; init; } = string.Empty;
-        public IReadOnlyList<AssistanceHouseholdMemberOption> Members { get; init; } = Array.Empty<AssistanceHouseholdMemberOption>();
-        public string DisplayLabel => $"{HouseholdCode} - {HeadName}";
-
-        public static AssistanceHouseholdOption FromEntity(Household household)
-        {
-            return new AssistanceHouseholdOption
-            {
-                Id = household.Id,
-                HouseholdCode = household.HouseholdCode,
-                HeadName = household.HeadName,
-                AddressLine = household.AddressLine,
-                Members = household.Members
-                    .OrderBy(member => member.FullName)
-                    .Select(AssistanceHouseholdMemberOption.FromEntity)
-                    .ToList()
-            };
-        }
-    }
-
-    public sealed class AssistanceHouseholdMemberOption
-    {
-        public int Id { get; init; }
-        public string FullName { get; init; } = string.Empty;
-        public string RelationshipToHead { get; init; } = string.Empty;
-        public string DisplayLabel =>
-            string.IsNullOrWhiteSpace(RelationshipToHead)
-                ? FullName
-                : $"{FullName} ({RelationshipToHead})";
-
-        public static AssistanceHouseholdMemberOption FromEntity(HouseholdMember member)
-        {
-            return new AssistanceHouseholdMemberOption
-            {
-                Id = member.Id,
-                FullName = member.FullName,
-                RelationshipToHead = member.RelationshipToHead
-            };
         }
     }
 

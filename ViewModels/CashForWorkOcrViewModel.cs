@@ -21,7 +21,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private CashForWorkEvent? _selectedEvent;
         private AyudaProgram? _selectedAyudaProgram;
-        private HouseholdMember? _selectedEligibleMember;
+        private CashForWorkEligibleBeneficiaryOption? _selectedEligibleBeneficiary;
         private string _eventTitle = "Barangay Clean-Up Drive";
         private string _eventLocation = "Barangay Hall Grounds";
         private string _eventNotes = string.Empty;
@@ -59,12 +59,12 @@ namespace AttendanceShiftingManagement.ViewModels
 
             LoadAyudaPrograms();
             LoadEvents();
-            LoadEligibleMembers();
+            LoadEligibleBeneficiaries();
         }
 
         public ObservableCollection<AyudaProgram> AyudaPrograms { get; } = new();
         public ObservableCollection<CashForWorkEvent> Events { get; } = new();
-        public ObservableCollection<HouseholdMember> EligibleMembers { get; } = new();
+        public ObservableCollection<CashForWorkEligibleBeneficiaryOption> EligibleBeneficiaries { get; } = new();
         public ObservableCollection<CashForWorkParticipantListItem> Participants { get; } = new();
         public ObservableCollection<CashForWorkSavedAttendanceRow> SavedAttendanceRows { get; } = new();
 
@@ -104,10 +104,10 @@ namespace AttendanceShiftingManagement.ViewModels
             set => SetProperty(ref _selectedAyudaProgram, value);
         }
 
-        public HouseholdMember? SelectedEligibleMember
+        public CashForWorkEligibleBeneficiaryOption? SelectedEligibleBeneficiary
         {
-            get => _selectedEligibleMember;
-            set => SetProperty(ref _selectedEligibleMember, value);
+            get => _selectedEligibleBeneficiary;
+            set => SetProperty(ref _selectedEligibleBeneficiary, value);
         }
 
         public string EventTitle
@@ -261,12 +261,12 @@ namespace AttendanceShiftingManagement.ViewModels
             }
         }
 
-        private void LoadEligibleMembers()
+        private void LoadEligibleBeneficiaries()
         {
-            EligibleMembers.Clear();
-            foreach (var member in _cashForWorkService.GetEligibleMembers())
+            EligibleBeneficiaries.Clear();
+            foreach (var beneficiary in _cashForWorkService.GetEligibleBeneficiaries())
             {
-                EligibleMembers.Add(member);
+                EligibleBeneficiaries.Add(CashForWorkEligibleBeneficiaryOption.FromServiceModel(beneficiary));
             }
         }
 
@@ -284,10 +284,10 @@ namespace AttendanceShiftingManagement.ViewModels
                 Participants.Add(new CashForWorkParticipantListItem
                 {
                     ParticipantId = participant.Id,
-                    HouseholdMemberId = participant.HouseholdMemberId,
-                    FullName = participant.HouseholdMember.FullName,
-                    HouseholdCode = participant.HouseholdMember.Household.HouseholdCode,
-                    Purok = participant.HouseholdMember.Household.Purok
+                    BeneficiaryStagingId = participant.BeneficiaryStagingId ?? 0,
+                    FullName = BuildParticipantName(participant),
+                    BeneficiaryId = NormalizeNullable(participant.Beneficiary?.BeneficiaryId) ?? "--",
+                    CivilRegistryId = NormalizeNullable(participant.Beneficiary?.CivilRegistryId) ?? "--"
                 });
             }
 
@@ -317,9 +317,9 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 SavedAttendanceRows.Add(new CashForWorkSavedAttendanceRow
                 {
-                    FullName = record.Participant.HouseholdMember.FullName,
-                    HouseholdCode = record.Participant.HouseholdMember.Household.HouseholdCode,
-                    Purok = record.Participant.HouseholdMember.Household.Purok,
+                    FullName = BuildParticipantName(record.Participant),
+                    BeneficiaryId = NormalizeNullable(record.Participant.Beneficiary?.BeneficiaryId) ?? "--",
+                    CivilRegistryId = NormalizeNullable(record.Participant.Beneficiary?.CivilRegistryId) ?? "--",
                     Status = record.Status.ToString(),
                     Source = record.Source.ToString(),
                     RecordedAt = record.RecordedAt
@@ -435,18 +435,18 @@ namespace AttendanceShiftingManagement.ViewModels
                 return;
             }
 
-            if (SelectedEligibleMember == null)
+            if (SelectedEligibleBeneficiary == null)
             {
-                MessageBox.Show("Select a household member to add.", "No Participant Selected", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Select an approved beneficiary to add.", "No Participant Selected", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
             try
             {
-                _cashForWorkService.AddParticipant(SelectedEvent.Id, SelectedEligibleMember.Id, _currentUser.Id);
+                _cashForWorkService.AddParticipant(SelectedEvent.Id, SelectedEligibleBeneficiary.BeneficiaryStagingId, _currentUser.Id);
                 LoadParticipants();
                 LoadSavedAttendance();
-                StatusMessage = $"Added participant: {SelectedEligibleMember.FullName}";
+                StatusMessage = $"Added participant: {SelectedEligibleBeneficiary.FullName}";
             }
             catch (Exception ex)
             {
@@ -562,6 +562,39 @@ namespace AttendanceShiftingManagement.ViewModels
 
             return false;
         }
+
+        private static string BuildParticipantName(CashForWorkParticipant participant)
+        {
+            if (participant.Beneficiary != null)
+            {
+                return BuildDisplayName(
+                    participant.Beneficiary.FullName,
+                    participant.Beneficiary.FirstName,
+                    participant.Beneficiary.MiddleName,
+                    participant.Beneficiary.LastName);
+            }
+
+            return $"Beneficiary #{participant.BeneficiaryStagingId?.ToString() ?? "legacy"}";
+        }
+
+        private static string BuildDisplayName(string? fullName, string? firstName, string? middleName, string? lastName)
+        {
+            if (!string.IsNullOrWhiteSpace(fullName))
+            {
+                return fullName.Trim();
+            }
+
+            return string.Join(
+                " ",
+                new[] { firstName, middleName, lastName }
+                    .Where(value => !string.IsNullOrWhiteSpace(value))
+                    .Select(value => value!.Trim()));
+        }
+
+        private static string? NormalizeNullable(string? value)
+        {
+            return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+        }
     }
 
     public sealed class CashForWorkParticipantListItem : ObservableObject
@@ -569,10 +602,10 @@ namespace AttendanceShiftingManagement.ViewModels
         private bool _isMarkedPresent;
 
         public int ParticipantId { get; set; }
-        public int HouseholdMemberId { get; set; }
+        public int BeneficiaryStagingId { get; set; }
         public string FullName { get; set; } = string.Empty;
-        public string HouseholdCode { get; set; } = string.Empty;
-        public string Purok { get; set; } = string.Empty;
+        public string BeneficiaryId { get; set; } = string.Empty;
+        public string CivilRegistryId { get; set; } = string.Empty;
 
         public bool IsMarkedPresent
         {
@@ -584,10 +617,47 @@ namespace AttendanceShiftingManagement.ViewModels
     public sealed class CashForWorkSavedAttendanceRow
     {
         public string FullName { get; set; } = string.Empty;
-        public string HouseholdCode { get; set; } = string.Empty;
-        public string Purok { get; set; } = string.Empty;
+        public string BeneficiaryId { get; set; } = string.Empty;
+        public string CivilRegistryId { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;
         public string Source { get; set; } = string.Empty;
         public DateTime RecordedAt { get; set; }
+    }
+
+    public sealed class CashForWorkEligibleBeneficiaryOption
+    {
+        public int BeneficiaryStagingId { get; init; }
+        public string FullName { get; init; } = string.Empty;
+        public string BeneficiaryId { get; init; } = string.Empty;
+        public string CivilRegistryId { get; init; } = string.Empty;
+
+        public string DisplayLabel
+        {
+            get
+            {
+                if (!string.IsNullOrWhiteSpace(BeneficiaryId))
+                {
+                    return $"{FullName} [{BeneficiaryId}]";
+                }
+
+                if (!string.IsNullOrWhiteSpace(CivilRegistryId))
+                {
+                    return $"{FullName} [CR: {CivilRegistryId}]";
+                }
+
+                return FullName;
+            }
+        }
+
+        public static CashForWorkEligibleBeneficiaryOption FromServiceModel(CashForWorkEligibleBeneficiary beneficiary)
+        {
+            return new CashForWorkEligibleBeneficiaryOption
+            {
+                BeneficiaryStagingId = beneficiary.BeneficiaryStagingId,
+                FullName = beneficiary.FullName,
+                BeneficiaryId = beneficiary.BeneficiaryId ?? string.Empty,
+                CivilRegistryId = beneficiary.CivilRegistryId ?? string.Empty
+            };
+        }
     }
 }

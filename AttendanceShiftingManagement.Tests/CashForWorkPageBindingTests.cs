@@ -23,5 +23,13 @@ public sealed class CashForWorkPageBindingTests
         Assert.Contains("Text=\"{Binding AttendanceScannerSessionUrl, Mode=OneWay}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"{Binding AttendanceScannerSessionPin}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Source=\"{Binding AttendanceScannerQrImage}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("ItemsSource=\"{Binding EligibleBeneficiaries}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("SelectedItem=\"{Binding SelectedEligibleBeneficiary}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("DisplayMemberPath=\"DisplayLabel\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Header=\"Beneficiary ID\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Header=\"Civil Registry ID\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Select a household member to add.", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Header=\"Household\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Header=\"Purok\"", xaml, StringComparison.Ordinal);
     }
 }

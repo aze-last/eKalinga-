@@ -15,8 +15,7 @@ namespace AttendanceShiftingManagement.Models
         public int BeneficiaryStagingId { get; set; }
 
         [Column("household_id")]
-        [Required]
-        public int HouseholdId { get; set; }
+        public int? HouseholdId { get; set; }
 
         [Column("household_member_id")]
         public int? HouseholdMemberId { get; set; }

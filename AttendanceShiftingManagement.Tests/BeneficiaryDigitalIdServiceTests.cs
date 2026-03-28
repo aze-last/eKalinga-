@@ -6,13 +6,11 @@ namespace AttendanceShiftingManagement.Tests;
 public sealed class BeneficiaryDigitalIdServiceTests
 {
     [Fact]
-    public async Task LookupByQrPayloadAsync_ReturnsApprovedBeneficiaryAndAllReleaseHistory()
+    public async Task LookupByQrPayloadAsync_ReturnsApprovedBeneficiaryAndAllReleaseHistory_WithoutHouseholdLink()
     {
         using var context = TestDbContextFactory.CreateContext();
         var admin = SeedAdmin(context);
-        var household = SeedHousehold(context);
-        var member = SeedMember(context, household.Id);
-        var stagingRow = SeedApprovedStaging(context, household.Id, member.Id);
+        var stagingRow = SeedApprovedStaging(context);
         var service = new BeneficiaryDigitalIdService(context);
 
         var digitalId = await service.EnsureIssuedAsync(stagingRow.StagingID, admin.Id);
@@ -46,7 +44,8 @@ public sealed class BeneficiaryDigitalIdServiceTests
 
         Assert.NotNull(lookup);
         Assert.Equal(stagingRow.StagingID, lookup!.BeneficiaryStagingId);
-        Assert.Equal(member.Id, lookup.HouseholdMemberId);
+        Assert.Null(typeof(BeneficiaryDigitalIdLookupResult).GetProperty(nameof(BeneficiaryDigitalIdLookupResult.HouseholdId))!.GetValue(lookup));
+        Assert.Null(typeof(BeneficiaryDigitalIdLookupResult).GetProperty(nameof(BeneficiaryDigitalIdLookupResult.HouseholdMemberId))!.GetValue(lookup));
         Assert.Equal("Elena Rivera", lookup.FullName);
         Assert.Equal(2, lookup.ReleaseHistory.Count);
         Assert.Contains(lookup.ReleaseHistory, entry => entry.SourceModule == BeneficiaryAssistanceSourceModule.AssistanceCase);
@@ -69,40 +68,7 @@ public sealed class BeneficiaryDigitalIdServiceTests
         return user;
     }
 
-    private static Household SeedHousehold(Data.AppDbContext context)
-    {
-        var household = new Household
-        {
-            HouseholdCode = "HH-001",
-            HeadName = "Maria Santos",
-            AddressLine = "Barangay Centro",
-            Purok = "Purok 1",
-            ContactNumber = "09170000001",
-            Status = HouseholdStatus.Active
-        };
-
-        context.Households.Add(household);
-        context.SaveChanges();
-        return household;
-    }
-
-    private static HouseholdMember SeedMember(Data.AppDbContext context, int householdId)
-    {
-        var member = new HouseholdMember
-        {
-            HouseholdId = householdId,
-            FullName = "Elena Rivera",
-            RelationshipToHead = "Self",
-            Occupation = "Laborer",
-            IsCashForWorkEligible = true
-        };
-
-        context.HouseholdMembers.Add(member);
-        context.SaveChanges();
-        return member;
-    }
-
-    private static BeneficiaryStaging SeedApprovedStaging(Data.AppDbContext context, int householdId, int memberId)
+    private static BeneficiaryStaging SeedApprovedStaging(Data.AppDbContext context)
     {
         var row = new BeneficiaryStaging
         {
@@ -112,8 +78,6 @@ public sealed class BeneficiaryDigitalIdServiceTests
             LastName = "Rivera",
             FullName = "Elena Rivera",
             VerificationStatus = VerificationStatus.Approved,
-            LinkedHouseholdId = householdId,
-            LinkedHouseholdMemberId = memberId,
             ImportedAt = DateTime.Now
         };
 

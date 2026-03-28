@@ -150,7 +150,6 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 if (SetProperty(ref _selectedHousehold, value))
                 {
-                    RefreshAvailableHouseholdMembers();
                     RaiseActionCanExecuteChanged();
                 }
             }
@@ -522,8 +521,6 @@ namespace AttendanceShiftingManagement.ViewModels
             var loadCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             _loadCts = loadCts;
 
-            var previouslySelectedHouseholdId = SelectedHousehold?.Id;
-            var previouslySelectedHouseholdMemberId = SelectedHouseholdMember?.Id;
             var normalizedTargetPage = Math.Max(1, targetPage);
 
             IsBusy = true;
@@ -559,12 +556,6 @@ namespace AttendanceShiftingManagement.ViewModels
                     return;
                 }
 
-                await LoadHouseholdsAsync(loadCts.Token);
-                if (loadCts.IsCancellationRequested)
-                {
-                    return;
-                }
-
                 _records.Clear();
                 foreach (var row in result.Rows)
                 {
@@ -580,17 +571,6 @@ namespace AttendanceShiftingManagement.ViewModels
                     ?? _records.FirstOrDefault(row => row.VerificationStatus == VerificationStatus.Pending)
                     ?? _records.FirstOrDefault(row => row.VerificationStatus == VerificationStatus.Verified)
                     ?? _records.FirstOrDefault();
-
-                var preferredHouseholdId = SelectedBeneficiary?.LinkedHouseholdId ?? previouslySelectedHouseholdId;
-                SelectedHousehold = _households.FirstOrDefault(household => household.Id == preferredHouseholdId)
-                    ?? _households.FirstOrDefault();
-
-                var preferredHouseholdMemberId = SelectedBeneficiary?.LinkedHouseholdMemberId ?? previouslySelectedHouseholdMemberId;
-                if (preferredHouseholdMemberId.HasValue)
-                {
-                    SelectedHouseholdMember = _availableHouseholdMembers
-                        .FirstOrDefault(member => member.Id == preferredHouseholdMemberId.Value);
-                }
 
                 if (syncResult != null)
                 {
@@ -643,23 +623,6 @@ namespace AttendanceShiftingManagement.ViewModels
             return CrsBeneficiaryImportService.ImportPendingAsync(activePreset, cancellationToken);
         }
 
-        private async Task LoadHouseholdsAsync(CancellationToken cancellationToken)
-        {
-            await using var context = new AppDbContext();
-            var households = await context.Households
-                .AsNoTracking()
-                .Include(household => household.Members)
-                .OrderBy(household => household.HouseholdCode)
-                .ThenBy(household => household.HeadName)
-                .ToListAsync(cancellationToken);
-
-            _households.Clear();
-            foreach (var household in households)
-            {
-                _households.Add(HouseholdOption.FromEntity(household));
-            }
-        }
-
         private void QueueReloadFromFirstPage()
         {
             if (!_autoRefresh)
@@ -700,7 +663,6 @@ namespace AttendanceShiftingManagement.ViewModels
                 EditableSeniorIdNo = string.Empty;
                 EditableDisabilityType = string.Empty;
                 EditableReviewNotes = string.Empty;
-                SelectedHouseholdMember = null;
                 ResetDigitalIdPreview();
                 return;
             }
@@ -721,60 +683,7 @@ namespace AttendanceShiftingManagement.ViewModels
             EditableDisabilityType = SelectedBeneficiary.DisabilityType;
             EditableReviewNotes = SelectedBeneficiary.ReviewNotes;
 
-            if (SelectedBeneficiary.LinkedHouseholdId.HasValue)
-            {
-                SelectedHousehold = _households.FirstOrDefault(household => household.Id == SelectedBeneficiary.LinkedHouseholdId.Value)
-                    ?? SelectedHousehold
-                    ?? _households.FirstOrDefault();
-            }
-            else if (SelectedHousehold == null)
-            {
-                SelectedHousehold = _households.FirstOrDefault();
-            }
-
-            if (SelectedBeneficiary.LinkedHouseholdMemberId.HasValue)
-            {
-                SelectedHouseholdMember = _availableHouseholdMembers
-                    .FirstOrDefault(member => member.Id == SelectedBeneficiary.LinkedHouseholdMemberId.Value);
-            }
-            else if (SelectedBeneficiary.LinkedHouseholdId != SelectedHousehold?.Id)
-            {
-                SelectedHouseholdMember = null;
-            }
-
             SyncDigitalIdPreviewFromSelection();
-        }
-
-        private void RefreshAvailableHouseholdMembers()
-        {
-            var preferredMemberId = SelectedHouseholdMember?.Id;
-            var selectedBeneficiary = SelectedBeneficiary;
-
-            if (selectedBeneficiary is { LinkedHouseholdMemberId: not null } &&
-                selectedBeneficiary.LinkedHouseholdId == SelectedHousehold?.Id)
-            {
-                preferredMemberId = selectedBeneficiary.LinkedHouseholdMemberId;
-            }
-
-            _availableHouseholdMembers.Clear();
-
-            if (SelectedHousehold != null)
-            {
-                foreach (var member in SelectedHousehold.Members)
-                {
-                    _availableHouseholdMembers.Add(member);
-                }
-            }
-
-            if (preferredMemberId.HasValue)
-            {
-                SelectedHouseholdMember = _availableHouseholdMembers
-                    .FirstOrDefault(member => member.Id == preferredMemberId.Value);
-            }
-            else
-            {
-                SelectedHouseholdMember = null;
-            }
         }
 
         private void SyncDigitalIdPreviewFromSelection()
@@ -936,7 +845,6 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             return !IsBusy
                 && SelectedBeneficiary != null
-                && SelectedHousehold != null
                 && SelectedBeneficiary.VerificationStatus is VerificationStatus.Pending or VerificationStatus.Verified;
         }
 
@@ -1068,17 +976,13 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private async Task ApproveSelectedAsync()
         {
-            if (!CanApproveSelected() || SelectedBeneficiary == null || SelectedHousehold == null)
+            if (!CanApproveSelected() || SelectedBeneficiary == null)
             {
                 return;
             }
 
-            var confirmMessage = SelectedHouseholdMember == null
-                ? $"Approve {SelectedBeneficiary.FullName} into household {SelectedHousehold.HouseholdCode} as a new member?"
-                : $"Approve {SelectedBeneficiary.FullName} and link to {SelectedHouseholdMember.FullName} in household {SelectedHousehold.HouseholdCode}?";
-
             if (MessageBox.Show(
-                    confirmMessage,
+                    $"Approve {SelectedBeneficiary.FullName} as a validated beneficiary?",
                     "Approve Beneficiary",
                     MessageBoxButton.YesNo,
                     MessageBoxImage.Question) != MessageBoxResult.Yes)
@@ -1099,8 +1003,8 @@ namespace AttendanceShiftingManagement.ViewModels
                 var result = await service.ApproveAsync(
                     new BeneficiaryApprovalRequest(
                         stagingId,
-                        SelectedHousehold.Id,
-                        SelectedHouseholdMember?.Id,
+                        HouseholdId: 0,
+                        ExistingHouseholdMemberId: null,
                         NormalizeNullable(EditableReviewNotes),
                         Corrections: new BeneficiaryCorrectionRequest(
                             stagingId,

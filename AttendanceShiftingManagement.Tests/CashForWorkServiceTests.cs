@@ -10,8 +10,7 @@ public sealed class CashForWorkServiceTests
     {
         using var context = TestDbContextFactory.CreateContext();
         var admin = SeedAdmin(context);
-        var household = SeedHousehold(context);
-        var member = SeedMember(context, household.Id);
+        var beneficiary = SeedApprovedBeneficiary(context);
         var auditService = new AuditService(context);
         var service = new CashForWorkService(context, auditService);
 
@@ -24,9 +23,12 @@ public sealed class CashForWorkServiceTests
             null,
             admin.Id);
 
-        service.AddParticipant(cashForWorkEvent.Id, member.Id, admin.Id);
+        service.AddParticipant(cashForWorkEvent.Id, beneficiary.StagingID, admin.Id);
         var participantId = context.CashForWorkParticipants.Single().Id;
         service.SaveManualAttendance(cashForWorkEvent.Id, admin.Id, [participantId]);
+
+        var participant = context.CashForWorkParticipants.Single();
+        Assert.Equal(beneficiary.StagingID, GetBeneficiaryStagingId(participant));
 
         var actions = context.ActivityLogs
             .OrderBy(log => log.Id)
@@ -43,10 +45,9 @@ public sealed class CashForWorkServiceTests
     {
         using var context = TestDbContextFactory.CreateContext();
         var admin = SeedAdmin(context);
-        var household = SeedHousehold(context);
-        var manualMember = SeedMember(context, household.Id, "Pedro Santos");
-        var secondManualMember = SeedMember(context, household.Id, "Ana Santos");
-        var pendingMember = SeedMember(context, household.Id, "Luis Santos");
+        var manualBeneficiary = SeedApprovedBeneficiary(context, 2001, "Pedro Santos");
+        var secondManualBeneficiary = SeedApprovedBeneficiary(context, 2002, "Ana Santos");
+        var pendingBeneficiary = SeedApprovedBeneficiary(context, 2003, "Luis Santos");
         var service = new CashForWorkService(context);
 
         var cashForWorkEvent = service.CreateEvent(
@@ -58,17 +59,17 @@ public sealed class CashForWorkServiceTests
             null,
             admin.Id);
 
-        service.AddParticipant(cashForWorkEvent.Id, manualMember.Id, admin.Id);
-        service.AddParticipant(cashForWorkEvent.Id, secondManualMember.Id, admin.Id);
-        service.AddParticipant(cashForWorkEvent.Id, pendingMember.Id, admin.Id);
+        service.AddParticipant(cashForWorkEvent.Id, manualBeneficiary.StagingID, admin.Id);
+        service.AddParticipant(cashForWorkEvent.Id, secondManualBeneficiary.StagingID, admin.Id);
+        service.AddParticipant(cashForWorkEvent.Id, pendingBeneficiary.StagingID, admin.Id);
 
         var participantIds = context.CashForWorkParticipants
-            .ToDictionary(participant => participant.HouseholdMemberId, participant => participant.Id);
+            .ToDictionary(participant => GetBeneficiaryStagingId(participant), participant => participant.Id);
 
         service.SaveManualAttendance(
             cashForWorkEvent.Id,
             admin.Id,
-            [participantIds[manualMember.Id], participantIds[secondManualMember.Id]]);
+            [participantIds[manualBeneficiary.StagingID], participantIds[secondManualBeneficiary.StagingID]]);
 
         var summary = service.GetReleaseReadySummary(cashForWorkEvent.Id);
 
@@ -79,6 +80,8 @@ public sealed class CashForWorkServiceTests
         Assert.Equal(1, summary.PendingParticipantCount);
         Assert.Equal(2, summary.ReleaseReadyParticipantCount);
         Assert.Equal(2, summary.ManualAttendanceCount);
+        Assert.Contains(summary.ReleaseReadyParticipants, participant => GetStringProperty(participant, "BeneficiaryId") == manualBeneficiary.BeneficiaryId);
+        Assert.Contains(summary.ReleaseReadyParticipants, participant => GetStringProperty(participant, "CivilRegistryId") == secondManualBeneficiary.CivilRegistryId);
     }
 
     [Fact]
@@ -86,8 +89,7 @@ public sealed class CashForWorkServiceTests
     {
         using var context = TestDbContextFactory.CreateContext();
         var admin = SeedAdmin(context);
-        var household = SeedHousehold(context);
-        var member = SeedMember(context, household.Id, "Pedro Santos");
+        var beneficiary = SeedApprovedBeneficiary(context, 3001, "Pedro Santos");
         var service = new CashForWorkService(context);
 
         var cashForWorkEvent = service.CreateEvent(
@@ -99,7 +101,7 @@ public sealed class CashForWorkServiceTests
             null,
             admin.Id);
 
-        service.AddParticipant(cashForWorkEvent.Id, member.Id, admin.Id);
+        service.AddParticipant(cashForWorkEvent.Id, beneficiary.StagingID, admin.Id);
         var participantId = context.CashForWorkParticipants.Single().Id;
 
         Assert.True(service.SaveScannerAttendance(cashForWorkEvent.Id, admin.Id, participantId, "BEN-QR-001"));
@@ -108,6 +110,27 @@ public sealed class CashForWorkServiceTests
         var attendance = Assert.Single(context.CashForWorkAttendances);
         Assert.Equal(AttendanceCaptureSource.ScannerSession, attendance.Source);
         Assert.Equal("BEN-QR-001", attendance.OcrExtractedName);
+    }
+
+    [Fact]
+    public void AddParticipant_RejectsBeneficiariesThatAreNotApproved()
+    {
+        using var context = TestDbContextFactory.CreateContext();
+        var admin = SeedAdmin(context);
+        var beneficiary = SeedApprovedBeneficiary(context, 4001, "Pending Beneficiary", VerificationStatus.Pending);
+        var service = new CashForWorkService(context);
+
+        var cashForWorkEvent = service.CreateEvent(
+            "Barangay Clean-Up",
+            "Hall",
+            DateTime.Today,
+            new TimeSpan(7, 0, 0),
+            new TimeSpan(12, 0, 0),
+            null,
+            admin.Id);
+
+        var ex = Assert.Throws<InvalidOperationException>(() => service.AddParticipant(cashForWorkEvent.Id, beneficiary.StagingID, admin.Id));
+        Assert.Contains("approved", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     private static User SeedAdmin(Data.AppDbContext context)
@@ -126,36 +149,38 @@ public sealed class CashForWorkServiceTests
         return user;
     }
 
-    private static Household SeedHousehold(Data.AppDbContext context)
+    private static BeneficiaryStaging SeedApprovedBeneficiary(
+        Data.AppDbContext context,
+        int stagingId = 1001,
+        string fullName = "Pedro Santos",
+        VerificationStatus verificationStatus = VerificationStatus.Approved)
     {
-        var household = new Household
+        var beneficiary = new BeneficiaryStaging
         {
-            HouseholdCode = "HH-001",
-            HeadName = "Maria Santos",
-            AddressLine = "Barangay Centro",
-            Purok = "Purok 1",
-            ContactNumber = "09170000001",
-            Status = HouseholdStatus.Active
+            StagingID = stagingId,
+            BeneficiaryId = $"BEN-{stagingId:D4}",
+            CivilRegistryId = $"CR-{stagingId:D4}",
+            FullName = fullName,
+            VerificationStatus = verificationStatus,
+            ReviewedAt = verificationStatus == VerificationStatus.Approved ? DateTime.Now : null
         };
 
-        context.Households.Add(household);
+        context.BeneficiaryStaging.Add(beneficiary);
         context.SaveChanges();
-        return household;
+        return beneficiary;
     }
 
-    private static HouseholdMember SeedMember(Data.AppDbContext context, int householdId, string fullName = "Pedro Santos")
+    private static int GetBeneficiaryStagingId(CashForWorkParticipant participant)
     {
-        var member = new HouseholdMember
-        {
-            HouseholdId = householdId,
-            FullName = fullName,
-            RelationshipToHead = "Son",
-            Occupation = "Laborer",
-            IsCashForWorkEligible = true
-        };
+        var property = typeof(CashForWorkParticipant).GetProperty("BeneficiaryStagingId");
+        Assert.NotNull(property);
+        return (int)(property!.GetValue(participant) ?? 0);
+    }
 
-        context.HouseholdMembers.Add(member);
-        context.SaveChanges();
-        return member;
+    private static string? GetStringProperty<T>(T instance, string propertyName)
+    {
+        var property = typeof(T).GetProperty(propertyName);
+        Assert.NotNull(property);
+        return property!.GetValue(instance)?.ToString();
     }
 }

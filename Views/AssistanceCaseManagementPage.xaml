@@ -26,7 +26,7 @@
                                FontSize="26"
                                FontWeight="SemiBold"
                                Foreground="White"/>
-                    <TextBlock Text="Track barangay aid requests, link releases to the shared budget ledger, and demo quickly using validated beneficiaries or registered households."
+                    <TextBlock Text="Track barangay aid requests, link releases to the shared budget ledger, and work directly from approved validated beneficiaries."
                                Margin="0,8,0,0"
                                MaxWidth="760"
                                Foreground="#D6E3FF"
@@ -115,7 +115,7 @@
                             <TextBox Width="280"
                                      Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                                      Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                     materialDesign:HintAssist.Hint="Search request number, applicant, type..."/>
+                                     materialDesign:HintAssist.Hint="Search request number, beneficiary, type..."/>
                         </StackPanel>
                     </DockPanel>
 
@@ -137,8 +137,7 @@
                             <DataGridTextColumn Header="Case No." Binding="{Binding CaseNumber}" Width="140"/>
                             <DataGridTextColumn Header="Type" Binding="{Binding AssistanceType}" Width="160"/>
                             <DataGridTextColumn Header="Release" Binding="{Binding ReleaseKindText}" Width="90"/>
-                            <DataGridTextColumn Header="Household" Binding="{Binding HouseholdLabel}" Width="*"/>
-                            <DataGridTextColumn Header="Applicant" Binding="{Binding ApplicantLabel}" Width="170"/>
+                            <DataGridTextColumn Header="Beneficiary" Binding="{Binding RecipientLabel}" Width="*"/>
                             <DataGridTextColumn Header="Program" Binding="{Binding AyudaProgramLabel}" Width="170"/>
                             <DataGridTextColumn Header="Amount" Binding="{Binding AssistanceAmountText}" Width="120"/>
                             <DataGridTextColumn Header="Priority" Binding="{Binding PriorityText}" Width="90"/>
@@ -209,7 +208,7 @@
 
                             <TextBlock Margin="0,10,0,8"
                                        Foreground="{StaticResource BrandTextSecondaryBrush}"
-                                       Text="Pick either a validated beneficiary for demo/live lookup, or a household/member from the registry."/>
+                                       Text="Select the approved validated beneficiary who should receive this aid request."/>
 
                             <TextBox Margin="0,0,0,10"
                                      Text="{Binding ValidatedBeneficiarySearchText, UpdateSourceTrigger=PropertyChanged}"
@@ -222,20 +221,6 @@
                                       DisplayMemberPath="DisplayLabel"
                                       Style="{StaticResource MaterialDesignOutlinedComboBox}"
                                       materialDesign:HintAssist.Hint="Validated beneficiary"/>
-
-                            <ComboBox Margin="0,12,0,10"
-                                      ItemsSource="{Binding Households}"
-                                      SelectedItem="{Binding SelectedHousehold}"
-                                      DisplayMemberPath="DisplayLabel"
-                                      Style="{StaticResource MaterialDesignOutlinedComboBox}"
-                                      materialDesign:HintAssist.Hint="Household"/>
-
-                            <ComboBox Margin="0,0,0,10"
-                                      ItemsSource="{Binding AvailableHouseholdMembers}"
-                                      SelectedItem="{Binding SelectedHouseholdMember}"
-                                      DisplayMemberPath="DisplayLabel"
-                                      Style="{StaticResource MaterialDesignOutlinedComboBox}"
-                                      materialDesign:HintAssist.Hint="Optional household member"/>
 
                             <TextBox Margin="0,0,0,10"
                                      Text="{Binding EditableAssistanceType, UpdateSourceTrigger=PropertyChanged}"

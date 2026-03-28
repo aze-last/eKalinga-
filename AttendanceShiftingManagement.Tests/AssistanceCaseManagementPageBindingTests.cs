@@ -19,6 +19,11 @@ public sealed class AssistanceCaseManagementPageBindingTests
         Assert.Contains("Text=\"Aid Request\"", xaml, StringComparison.Ordinal);
         Assert.Contains("ItemsSource=\"{Binding ValidatedBeneficiaries}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("SelectedItem=\"{Binding SelectedValidatedBeneficiary}\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("ItemsSource=\"{Binding Households}\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("ItemsSource=\"{Binding AvailableHouseholdMembers}\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Hint=\"Household\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Hint=\"Optional household member\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("household/member from the registry", xaml, StringComparison.Ordinal);
         Assert.Contains("ItemsSource=\"{Binding AyudaPrograms}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("SelectedItem=\"{Binding SelectedAyudaProgram}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("ItemsSource=\"{Binding ReleaseKindOptions}\"", xaml, StringComparison.Ordinal);

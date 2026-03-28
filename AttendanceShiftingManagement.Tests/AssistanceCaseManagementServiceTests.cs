@@ -6,21 +6,19 @@ namespace AttendanceShiftingManagement.Tests;
 public sealed class AssistanceCaseManagementServiceTests
 {
     [Fact]
-    public async Task CreateAsync_CreatesPendingAidRequest_AssignsCaseNumber_AndWritesAuditLog()
+    public async Task CreateAsync_CreatesPendingAidRequestForValidatedBeneficiary_AssignsCaseNumber_AndWritesAuditLog()
     {
         using var context = TestDbContextFactory.CreateContext();
         var admin = SeedAdmin(context);
-        var household = SeedHousehold(context);
-        var member = SeedMember(context, household.Id);
         var service = new AssistanceCaseManagementService(context);
 
         var result = await service.CreateAsync(
             new AssistanceCaseUpsertRequest(
-                household.Id,
-                member.Id,
                 null,
                 null,
-                null,
+                "Ana Ramos",
+                "BEN-ANA-001",
+                "CRS-ANA-001",
                 "Medical assistance",
                 AssistanceCasePriority.High,
                 AssistanceReleaseKind.Cash,
@@ -34,7 +32,11 @@ public sealed class AssistanceCaseManagementServiceTests
         var assistanceCase = Assert.Single(context.AssistanceCases);
         Assert.StartsWith("AR-", assistanceCase.CaseNumber);
         Assert.Equal(AssistanceCaseStatus.Pending, assistanceCase.Status);
-        Assert.Equal(member.Id, assistanceCase.HouseholdMemberId);
+        Assert.Null(assistanceCase.HouseholdId);
+        Assert.Null(assistanceCase.HouseholdMemberId);
+        Assert.Equal("Ana Ramos", assistanceCase.ValidatedBeneficiaryName);
+        Assert.Equal("BEN-ANA-001", assistanceCase.ValidatedBeneficiaryId);
+        Assert.Equal("CRS-ANA-001", assistanceCase.ValidatedCivilRegistryId);
         Assert.Equal("Medical assistance", assistanceCase.AssistanceType);
         Assert.Equal(AssistanceReleaseKind.Cash, assistanceCase.ReleaseKind);
         Assert.Equal(5000m, assistanceCase.RequestedAmount);
@@ -46,19 +48,21 @@ public sealed class AssistanceCaseManagementServiceTests
     }
 
     [Fact]
-    public async Task CreateAsync_WithValidatedBeneficiaryOnly_Succeeds()
+    public async Task CreateAsync_RejectsLegacyHouseholdOnlySelection()
     {
         using var context = TestDbContextFactory.CreateContext();
         var admin = SeedAdmin(context);
+        var household = SeedHousehold(context);
+        var member = SeedMember(context, household.Id);
         var service = new AssistanceCaseManagementService(context);
 
         var result = await service.CreateAsync(
             new AssistanceCaseUpsertRequest(
+                household.Id,
+                member.Id,
                 null,
                 null,
-                "Tessie Flores",
-                "BEN-2026-700016595-1",
-                "CR-12345",
+                null,
                 "Medical assistance",
                 AssistanceCasePriority.Medium,
                 AssistanceReleaseKind.Goods,
@@ -68,33 +72,28 @@ public sealed class AssistanceCaseManagementServiceTests
                 "Demo request from validated beneficiary"),
             admin.Id);
 
-        Assert.True(result.IsSuccess);
-        var assistanceCase = Assert.Single(context.AssistanceCases);
-        Assert.Equal("Tessie Flores", assistanceCase.ValidatedBeneficiaryName);
-        Assert.Equal("BEN-2026-700016595-1", assistanceCase.ValidatedBeneficiaryId);
-        Assert.Equal("CR-12345", assistanceCase.ValidatedCivilRegistryId);
-        Assert.Equal(AssistanceReleaseKind.Goods, assistanceCase.ReleaseKind);
-        Assert.Null(assistanceCase.HouseholdId);
+        Assert.False(result.IsSuccess);
+        Assert.Equal("Select a validated beneficiary before saving this aid request.", result.Message);
+        Assert.Empty(context.AssistanceCases);
     }
 
     [Fact]
-    public async Task UpdateAsync_UpdatesEditableFields_AndWritesAuditLog()
+    public async Task UpdateAsync_RewritesLegacyHouseholdCaseToValidatedBeneficiary_AndWritesAuditLog()
     {
         using var context = TestDbContextFactory.CreateContext();
         var admin = SeedAdmin(context);
         var household = SeedHousehold(context);
-        var member = SeedMember(context, household.Id);
         var assistanceCase = SeedAssistanceCase(context, household.Id, null, admin.Id);
         var service = new AssistanceCaseManagementService(context);
 
         var result = await service.UpdateAsync(
             assistanceCase.Id,
             new AssistanceCaseUpsertRequest(
-                household.Id,
-                member.Id,
                 null,
                 null,
-                null,
+                "Ana Ramos",
+                "BEN-ANA-001",
+                "CRS-ANA-001",
                 "Burial assistance",
                 AssistanceCasePriority.Critical,
                 AssistanceReleaseKind.Goods,
@@ -106,7 +105,11 @@ public sealed class AssistanceCaseManagementServiceTests
 
         Assert.True(result.IsSuccess);
         var updatedCase = Assert.Single(context.AssistanceCases);
-        Assert.Equal(member.Id, updatedCase.HouseholdMemberId);
+        Assert.Null(updatedCase.HouseholdId);
+        Assert.Null(updatedCase.HouseholdMemberId);
+        Assert.Equal("Ana Ramos", updatedCase.ValidatedBeneficiaryName);
+        Assert.Equal("BEN-ANA-001", updatedCase.ValidatedBeneficiaryId);
+        Assert.Equal("CRS-ANA-001", updatedCase.ValidatedCivilRegistryId);
         Assert.Equal("Burial assistance", updatedCase.AssistanceType);
         Assert.Equal(AssistanceCasePriority.Critical, updatedCase.Priority);
         Assert.Equal(AssistanceReleaseKind.Goods, updatedCase.ReleaseKind);

@@ -14,9 +14,11 @@ namespace AttendanceShiftingManagement.Models
         [Required]
         public int EventId { get; set; }
 
+        [Column("beneficiary_staging_id")]
+        public int? BeneficiaryStagingId { get; set; }
+
         [Column("household_member_id")]
-        [Required]
-        public int HouseholdMemberId { get; set; }
+        public int? HouseholdMemberId { get; set; }
 
         [Column("added_by_user_id")]
         [Required]
@@ -28,8 +30,11 @@ namespace AttendanceShiftingManagement.Models
         [ForeignKey(nameof(EventId))]
         public CashForWorkEvent Event { get; set; } = null!;
 
+        [ForeignKey(nameof(BeneficiaryStagingId))]
+        public BeneficiaryStaging? Beneficiary { get; set; }
+
         [ForeignKey(nameof(HouseholdMemberId))]
-        public HouseholdMember HouseholdMember { get; set; } = null!;
+        public HouseholdMember? HouseholdMember { get; set; }
 
         [ForeignKey(nameof(AddedByUserId))]
         public User AddedByUser { get; set; } = null!;

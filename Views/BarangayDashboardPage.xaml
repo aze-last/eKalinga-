@@ -144,25 +144,25 @@
 
                 <materialDesign:Card Style="{StaticResource MetricCardStyle}">
                     <StackPanel>
-                        <TextBlock Text="{Binding ActiveHouseholdCount, StringFormat=N0}" FontSize="28" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}" />
-                        <TextBlock Text="Active households" Margin="0,4,0,0" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}" />
-                        <TextBlock Text="Households currently available in the registry." Margin="0,6,0,0" FontSize="12" Foreground="{StaticResource BrandTextSecondaryBrush}" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding ApprovedBeneficiaryCount, StringFormat=N0}" FontSize="28" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}" />
+                        <TextBlock Text="Approved beneficiaries" Margin="0,4,0,0" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}" />
+                        <TextBlock Text="Beneficiaries cleared for aid and release workflows." Margin="0,6,0,0" FontSize="12" Foreground="{StaticResource BrandTextSecondaryBrush}" TextWrapping="Wrap" />
                     </StackPanel>
                 </materialDesign:Card>
 
                 <materialDesign:Card Style="{StaticResource MetricCardStyle}">
                     <StackPanel>
-                        <TextBlock Text="{Binding RegisteredMemberCount, StringFormat=N0}" FontSize="28" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}" />
-                        <TextBlock Text="Registered members" Margin="0,4,0,0" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}" />
-                        <TextBlock Text="Total members stored in the active database." Margin="0,6,0,0" FontSize="12" Foreground="{StaticResource BrandTextSecondaryBrush}" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding RejectedBeneficiaryCount, StringFormat=N0}" FontSize="28" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}" />
+                        <TextBlock Text="Rejected beneficiaries" Margin="0,4,0,0" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}" />
+                        <TextBlock Text="Beneficiaries declined during review and excluded from active workflows." Margin="0,6,0,0" FontSize="12" Foreground="{StaticResource BrandTextSecondaryBrush}" TextWrapping="Wrap" />
                     </StackPanel>
                 </materialDesign:Card>
 
                 <materialDesign:Card Style="{StaticResource MetricCardStyle}">
                     <StackPanel>
-                        <TextBlock Text="{Binding EligibleWorkerCount, StringFormat=N0}" FontSize="28" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}" />
-                        <TextBlock Text="Eligible workers" Margin="0,4,0,0" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}" />
-                        <TextBlock Text="Members tagged for cash-for-work participation." Margin="0,6,0,0" FontSize="12" Foreground="{StaticResource BrandTextSecondaryBrush}" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding CashForWorkBeneficiaryCount, StringFormat=N0}" FontSize="28" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}" />
+                        <TextBlock Text="Cash-for-work beneficiaries" Margin="0,4,0,0" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}" />
+                        <TextBlock Text="Approved beneficiaries currently available for cash-for-work events." Margin="0,6,0,0" FontSize="12" Foreground="{StaticResource BrandTextSecondaryBrush}" TextWrapping="Wrap" />
                     </StackPanel>
                 </materialDesign:Card>
 

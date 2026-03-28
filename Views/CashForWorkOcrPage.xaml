@@ -133,7 +133,7 @@
 
                     <materialDesign:Card Padding="18" Background="White">
                         <StackPanel>
-                            <TextBlock Text="Approved Participants" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
+                            <TextBlock Text="Approved Beneficiaries" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
                             <TextBlock Text="{Binding AttendanceSummary}" Margin="0,6,0,0" Foreground="{StaticResource BrandTextSecondaryBrush}" TextWrapping="Wrap"/>
 
                             <Grid Margin="0,14,0,0">
@@ -145,9 +145,9 @@
 
                                 <ComboBox Grid.Column="0"
                                           Style="{StaticResource MaterialDesignOutlinedComboBox}"
-                                          ItemsSource="{Binding EligibleMembers}"
-                                          SelectedItem="{Binding SelectedEligibleMember}"
-                                          DisplayMemberPath="FullName"/>
+                                          ItemsSource="{Binding EligibleBeneficiaries}"
+                                          SelectedItem="{Binding SelectedEligibleBeneficiary}"
+                                          DisplayMemberPath="DisplayLabel"/>
 
                                 <Button Grid.Column="2"
                                         Content="Add"
@@ -166,8 +166,8 @@
                                 <DataGrid.Columns>
                                     <DataGridCheckBoxColumn Header="Present" Binding="{Binding IsMarkedPresent}" Width="70"/>
                                     <DataGridTextColumn Header="Name" Binding="{Binding FullName}" Width="*"/>
-                                    <DataGridTextColumn Header="Household" Binding="{Binding HouseholdCode}" Width="110"/>
-                                    <DataGridTextColumn Header="Purok" Binding="{Binding Purok}" Width="90"/>
+                                    <DataGridTextColumn Header="Beneficiary ID" Binding="{Binding BeneficiaryId}" Width="120"/>
+                                    <DataGridTextColumn Header="Civil Registry ID" Binding="{Binding CivilRegistryId}" Width="140"/>
                                 </DataGrid.Columns>
                             </DataGrid>
 
@@ -294,8 +294,8 @@
                                       MinHeight="220">
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="Name" Binding="{Binding FullName}" Width="*"/>
-                                    <DataGridTextColumn Header="Household" Binding="{Binding HouseholdCode}" Width="100"/>
-                                    <DataGridTextColumn Header="Purok" Binding="{Binding Purok}" Width="90"/>
+                                    <DataGridTextColumn Header="Beneficiary ID" Binding="{Binding BeneficiaryId}" Width="120"/>
+                                    <DataGridTextColumn Header="Civil Registry ID" Binding="{Binding CivilRegistryId}" Width="140"/>
                                     <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="90"/>
                                     <DataGridTextColumn Header="Source" Binding="{Binding Source}" Width="90"/>
                                     <DataGridTextColumn Header="Recorded" Binding="{Binding RecordedAt, StringFormat='{}{0:MMM dd, hh:mm tt}'}" Width="150"/>

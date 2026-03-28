@@ -57,67 +57,18 @@ namespace AttendanceShiftingManagement.Services
                 return new BeneficiaryVerificationOperationResult(false, "Only pending or verified records can be approved.");
             }
 
-            var household = await _context.Households
-                .AsNoTracking()
-                .FirstOrDefaultAsync(item => item.Id == request.HouseholdId);
-
-            if (household == null)
-            {
-                return new BeneficiaryVerificationOperationResult(false, "The selected household no longer exists.");
-            }
-
             if (request.Corrections != null)
             {
                 ApplyCorrections(stagingRow, request.Corrections, actedByUserId);
             }
 
             var fullName = BuildDisplayName(stagingRow);
-            HouseholdMember? createdHouseholdMember = null;
-            var linkedHouseholdMemberId = request.ExistingHouseholdMemberId;
-
-            if (linkedHouseholdMemberId.HasValue)
-            {
-                var existingMember = await _context.HouseholdMembers
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(member =>
-                        member.Id == linkedHouseholdMemberId.Value &&
-                        member.HouseholdId == request.HouseholdId);
-
-                if (existingMember == null)
-                {
-                    return new BeneficiaryVerificationOperationResult(false, "The selected household member no longer exists.");
-                }
-            }
-            else
-            {
-                createdHouseholdMember = new HouseholdMember
-                {
-                    HouseholdId = household.Id,
-                    FullName = fullName,
-                    RelationshipToHead = "Imported Beneficiary",
-                    Occupation = "Unspecified",
-                    IsCashForWorkEligible = false,
-                    Notes = BuildApprovalNotes(stagingRow, request.ReviewNotes),
-                    CreatedAt = DateTime.Now,
-                    UpdatedAt = DateTime.Now
-                };
-
-                _context.HouseholdMembers.Add(createdHouseholdMember);
-            }
-
             stagingRow.VerificationStatus = VerificationStatus.Approved;
-            stagingRow.LinkedHouseholdId = request.HouseholdId;
+            stagingRow.LinkedHouseholdId = null;
+            stagingRow.LinkedHouseholdMemberId = null;
             stagingRow.ReviewNotes = NormalizeNullable(request.ReviewNotes);
             stagingRow.ReviewedAt = DateTime.Now;
             stagingRow.ReviewedByUserId = actedByUserId;
-            await _context.SaveChangesAsync();
-
-            if (createdHouseholdMember != null)
-            {
-                linkedHouseholdMemberId = createdHouseholdMember.Id;
-            }
-
-            stagingRow.LinkedHouseholdMemberId = linkedHouseholdMemberId;
             await _context.SaveChangesAsync();
 
             var digitalIdService = new BeneficiaryDigitalIdService(_context, _auditService);
@@ -128,15 +79,11 @@ namespace AttendanceShiftingManagement.Services
                 "BeneficiaryApproved",
                 "BeneficiaryStaging",
                 request.StagingId,
-                linkedHouseholdMemberId.HasValue && createdHouseholdMember == null
-                    ? $"Approved '{fullName}' by linking to existing household member #{linkedHouseholdMemberId.Value} in household '{household.HouseholdCode}'."
-                    : $"Approved '{fullName}' into household '{household.HouseholdCode}' as a new household member.");
+                $"Approved '{fullName}' from the validated beneficiary queue.");
 
             return new BeneficiaryVerificationOperationResult(
                 true,
-                linkedHouseholdMemberId.HasValue && createdHouseholdMember == null
-                    ? $"Approved {fullName} by linking to an existing member in household {household.HouseholdCode}."
-                    : $"Approved {fullName} into household {household.HouseholdCode}.");
+                $"Approved {fullName}.");
         }
 
         public async Task<BeneficiaryVerificationOperationResult> SaveCorrectionsAsync(BeneficiaryCorrectionRequest request, int actedByUserId)
@@ -336,39 +283,6 @@ namespace AttendanceShiftingManagement.Services
             return string.Join(" ", new[] { row.FirstName, row.MiddleName, row.LastName }
                 .Where(value => !string.IsNullOrWhiteSpace(value))
                 .Select(value => value!.Trim()));
-        }
-
-        private static string BuildApprovalNotes(BeneficiaryStaging row, string? reviewNotes)
-        {
-            var notes = new List<string>();
-
-            if (!string.IsNullOrWhiteSpace(row.CivilRegistryId))
-            {
-                notes.Add($"CivilRegistryId: {row.CivilRegistryId}");
-            }
-
-            if (!string.IsNullOrWhiteSpace(row.BeneficiaryId))
-            {
-                notes.Add($"BeneficiaryId: {row.BeneficiaryId}");
-            }
-
-            if (row.IsPwd)
-            {
-                notes.Add("PWD");
-            }
-
-            if (row.IsSenior)
-            {
-                notes.Add("Senior");
-            }
-
-            var normalizedReviewNotes = NormalizeNullable(reviewNotes);
-            if (!string.IsNullOrWhiteSpace(normalizedReviewNotes))
-            {
-                notes.Add($"Review: {normalizedReviewNotes}");
-            }
-
-            return string.Join(" | ", notes);
         }
 
         private static string? NormalizeNullable(string? value)

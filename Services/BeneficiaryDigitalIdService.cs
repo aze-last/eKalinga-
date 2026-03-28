@@ -7,7 +7,7 @@ namespace AttendanceShiftingManagement.Services
 {
     public sealed record BeneficiaryDigitalIdLookupResult(
         int BeneficiaryStagingId,
-        int HouseholdId,
+        int? HouseholdId,
         int? HouseholdMemberId,
         string FullName,
         string? BeneficiaryId,
@@ -47,17 +47,12 @@ namespace AttendanceShiftingManagement.Services
                 throw new InvalidOperationException("Only approved beneficiaries can receive digital IDs.");
             }
 
-            if (!stagingRow.LinkedHouseholdId.HasValue)
-            {
-                throw new InvalidOperationException("Approved beneficiaries must be linked to a household before issuing a digital ID.");
-            }
-
             var existingId = await _context.BeneficiaryDigitalIds
                 .FirstOrDefaultAsync(item => item.BeneficiaryStagingId == stagingId);
 
             if (existingId != null)
             {
-                existingId.HouseholdId = stagingRow.LinkedHouseholdId.Value;
+                existingId.HouseholdId = stagingRow.LinkedHouseholdId;
                 existingId.HouseholdMemberId = stagingRow.LinkedHouseholdMemberId;
                 existingId.IsActive = true;
                 existingId.RevokedAt = null;
@@ -68,7 +63,7 @@ namespace AttendanceShiftingManagement.Services
             var digitalId = new BeneficiaryDigitalId
             {
                 BeneficiaryStagingId = stagingRow.StagingID,
-                HouseholdId = stagingRow.LinkedHouseholdId.Value,
+                HouseholdId = stagingRow.LinkedHouseholdId,
                 HouseholdMemberId = stagingRow.LinkedHouseholdMemberId,
                 CardNumber = $"BID-{stagingRow.StagingID:D6}",
                 QrPayload = BuildQrPayload(stagingRow.StagingID),

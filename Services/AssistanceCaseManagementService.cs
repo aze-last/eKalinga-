@@ -34,10 +34,9 @@ namespace AttendanceShiftingManagement.Services
 
         public async Task<AssistanceCaseOperationResult> CreateAsync(AssistanceCaseUpsertRequest request, int actedByUserId)
         {
+            var validatedBeneficiaryName = NormalizeNullable(request.ValidatedBeneficiaryName);
             var validation = await ValidateReferencesAsync(
-                request.HouseholdId,
-                request.HouseholdMemberId,
-                request.ValidatedBeneficiaryName,
+                validatedBeneficiaryName,
                 request.AyudaProgramId);
             if (validation is not null)
             {
@@ -47,9 +46,9 @@ namespace AttendanceShiftingManagement.Services
             var assistanceCase = new AssistanceCase
             {
                 CaseNumber = await GenerateCaseNumberAsync(),
-                HouseholdId = request.HouseholdId,
-                HouseholdMemberId = request.HouseholdMemberId,
-                ValidatedBeneficiaryName = NormalizeNullable(request.ValidatedBeneficiaryName),
+                HouseholdId = null,
+                HouseholdMemberId = null,
+                ValidatedBeneficiaryName = validatedBeneficiaryName,
                 ValidatedBeneficiaryId = NormalizeNullable(request.ValidatedBeneficiaryId),
                 ValidatedCivilRegistryId = NormalizeNullable(request.ValidatedCivilRegistryId),
                 AssistanceType = NormalizeRequired(request.AssistanceType),
@@ -99,19 +98,18 @@ namespace AttendanceShiftingManagement.Services
                 return new AssistanceCaseOperationResult(false, "Closed or cancelled aid requests can no longer be edited.");
             }
 
+            var validatedBeneficiaryName = NormalizeNullable(request.ValidatedBeneficiaryName);
             var validation = await ValidateReferencesAsync(
-                request.HouseholdId,
-                request.HouseholdMemberId,
-                request.ValidatedBeneficiaryName,
+                validatedBeneficiaryName,
                 request.AyudaProgramId);
             if (validation is not null)
             {
                 return validation;
             }
 
-            assistanceCase.HouseholdId = request.HouseholdId;
-            assistanceCase.HouseholdMemberId = request.HouseholdMemberId;
-            assistanceCase.ValidatedBeneficiaryName = NormalizeNullable(request.ValidatedBeneficiaryName);
+            assistanceCase.HouseholdId = null;
+            assistanceCase.HouseholdMemberId = null;
+            assistanceCase.ValidatedBeneficiaryName = validatedBeneficiaryName;
             assistanceCase.ValidatedBeneficiaryId = NormalizeNullable(request.ValidatedBeneficiaryId);
             assistanceCase.ValidatedCivilRegistryId = NormalizeNullable(request.ValidatedCivilRegistryId);
             assistanceCase.AssistanceType = NormalizeRequired(request.AssistanceType);
@@ -236,42 +234,11 @@ namespace AttendanceShiftingManagement.Services
             return new AssistanceCaseOperationResult(true, $"Deleted aid request {assistanceCase.CaseNumber}.");
         }
 
-        private async Task<AssistanceCaseOperationResult?> ValidateReferencesAsync(int? householdId, int? householdMemberId, string? validatedBeneficiaryName, int? ayudaProgramId)
+        private async Task<AssistanceCaseOperationResult?> ValidateReferencesAsync(string? validatedBeneficiaryName, int? ayudaProgramId)
         {
-            if (!householdId.HasValue && string.IsNullOrWhiteSpace(validatedBeneficiaryName))
+            if (string.IsNullOrWhiteSpace(validatedBeneficiaryName))
             {
-                return new AssistanceCaseOperationResult(false, "Select a registered household/member or a validated beneficiary.");
-            }
-
-            if (!householdId.HasValue)
-            {
-                if (householdMemberId.HasValue)
-                {
-                    return new AssistanceCaseOperationResult(false, "A household member cannot be selected without a household.");
-                }
-            }
-            else
-            {
-                var householdExists = await _context.Households
-                    .AsNoTracking()
-                    .AnyAsync(item => item.Id == householdId.Value);
-
-                if (!householdExists)
-                {
-                    return new AssistanceCaseOperationResult(false, "The selected household no longer exists.");
-                }
-
-                if (householdMemberId.HasValue)
-                {
-                    var memberExists = await _context.HouseholdMembers
-                        .AsNoTracking()
-                        .AnyAsync(item => item.Id == householdMemberId.Value && item.HouseholdId == householdId.Value);
-
-                    if (!memberExists)
-                    {
-                        return new AssistanceCaseOperationResult(false, "The selected household member does not belong to the selected household.");
-                    }
-                }
+                return new AssistanceCaseOperationResult(false, "Select a validated beneficiary before saving this aid request.");
             }
 
             if (!ayudaProgramId.HasValue)

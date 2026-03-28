@@ -5,6 +5,11 @@ using Microsoft.EntityFrameworkCore;
 namespace AttendanceShiftingManagement.Services
 {
     public sealed record CashForWorkReleaseOperationResult(bool IsSuccess, string Message, int? BudgetLedgerEntryId = null);
+    public sealed record CashForWorkEligibleBeneficiary(
+        int BeneficiaryStagingId,
+        string FullName,
+        string? BeneficiaryId,
+        string? CivilRegistryId);
 
     public sealed class CashForWorkService
     {
@@ -26,13 +31,18 @@ namespace AttendanceShiftingManagement.Services
                 .ToList();
         }
 
-        public List<HouseholdMember> GetEligibleMembers()
+        public List<CashForWorkEligibleBeneficiary> GetEligibleBeneficiaries()
         {
-            return _context.HouseholdMembers
+            return _context.BeneficiaryStaging
                 .AsNoTracking()
-                .Include(member => member.Household)
-                .Where(member => member.IsCashForWorkEligible && member.Household.Status == HouseholdStatus.Active)
-                .OrderBy(member => member.FullName)
+                .Where(beneficiary => beneficiary.VerificationStatus == VerificationStatus.Approved)
+                .OrderBy(beneficiary => beneficiary.FullName ?? beneficiary.LastName)
+                .ThenBy(beneficiary => beneficiary.FirstName)
+                .Select(beneficiary => new CashForWorkEligibleBeneficiary(
+                    beneficiary.StagingID,
+                    BuildDisplayName(beneficiary),
+                    NormalizeNullable(beneficiary.BeneficiaryId),
+                    NormalizeNullable(beneficiary.CivilRegistryId)))
                 .ToList();
         }
 
@@ -40,10 +50,10 @@ namespace AttendanceShiftingManagement.Services
         {
             return _context.CashForWorkParticipants
                 .AsNoTracking()
-                .Include(participant => participant.HouseholdMember)
-                .ThenInclude(member => member.Household)
+                .Include(participant => participant.Beneficiary)
                 .Where(participant => participant.EventId == eventId)
-                .OrderBy(participant => participant.HouseholdMember.FullName)
+                .ToList()
+                .OrderBy(participant => BuildParticipantDisplayName(participant))
                 .ToList();
         }
 
@@ -52,10 +62,10 @@ namespace AttendanceShiftingManagement.Services
             return _context.CashForWorkAttendances
                 .AsNoTracking()
                 .Include(attendance => attendance.Participant)
-                .ThenInclude(participant => participant.HouseholdMember)
-                .ThenInclude(member => member.Household)
+                .ThenInclude(participant => participant.Beneficiary)
                 .Include(attendance => attendance.RecordedByUser)
                 .Where(attendance => attendance.Participant.EventId == eventId)
+                .ToList()
                 .OrderByDescending(attendance => attendance.RecordedAt)
                 .ToList();
         }
@@ -76,15 +86,15 @@ namespace AttendanceShiftingManagement.Services
                 .Select(group => group
                     .OrderByDescending(attendance => attendance.RecordedAt)
                     .First())
-                .OrderBy(attendance => attendance.Participant.HouseholdMember.FullName)
+                .OrderBy(attendance => BuildParticipantDisplayName(attendance.Participant))
                 .ToList();
 
             var releaseReadyParticipants = presentAttendance
                 .Select(attendance => new CashForWorkReleaseReadyParticipant(
                     attendance.ParticipantId,
-                    attendance.Participant.HouseholdMember.FullName,
-                    attendance.Participant.HouseholdMember.Household.HouseholdCode,
-                    attendance.Participant.HouseholdMember.Household.Purok,
+                    BuildParticipantDisplayName(attendance.Participant),
+                    NormalizeNullable(attendance.Participant.Beneficiary?.BeneficiaryId),
+                    NormalizeNullable(attendance.Participant.Beneficiary?.CivilRegistryId),
                     attendance.Source,
                     attendance.RecordedAt))
                 .ToList();
@@ -133,32 +143,38 @@ namespace AttendanceShiftingManagement.Services
             return cashForWorkEvent;
         }
 
-        public void AddParticipant(int eventId, int householdMemberId, int addedByUserId)
+        public void AddParticipant(int eventId, int beneficiaryStagingId, int addedByUserId)
         {
+            var beneficiary = _context.BeneficiaryStaging
+                .AsNoTracking()
+                .FirstOrDefault(item => item.StagingID == beneficiaryStagingId)
+                ?? throw new InvalidOperationException("Approved beneficiary could not be found.");
+
+            if (beneficiary.VerificationStatus != VerificationStatus.Approved)
+            {
+                throw new InvalidOperationException("Only approved beneficiaries can be included in this event.");
+            }
+
             var exists = _context.CashForWorkParticipants.Any(participant =>
                 participant.EventId == eventId &&
-                participant.HouseholdMemberId == householdMemberId);
+                participant.BeneficiaryStagingId == beneficiaryStagingId);
 
             if (exists)
             {
-                throw new InvalidOperationException("Member is already included in this event.");
+                throw new InvalidOperationException("Beneficiary is already included in this event.");
             }
 
             _context.CashForWorkParticipants.Add(new CashForWorkParticipant
             {
                 EventId = eventId,
-                HouseholdMemberId = householdMemberId,
+                BeneficiaryStagingId = beneficiaryStagingId,
                 AddedByUserId = addedByUserId,
                 AddedAt = DateTime.Now
             });
 
             _context.SaveChanges();
 
-            var participantName = _context.HouseholdMembers
-                .AsNoTracking()
-                .Where(member => member.Id == householdMemberId)
-                .Select(member => member.FullName)
-                .FirstOrDefault() ?? $"member #{householdMemberId}";
+            var participantName = BuildDisplayName(beneficiary);
 
             var eventTitle = GetEventTitle(eventId);
             _auditService?.LogActivity(
@@ -351,6 +367,35 @@ namespace AttendanceShiftingManagement.Services
                 .Select(attendance => attendance.ParticipantId)
                 .ToHashSet();
         }
+
+        private static string BuildDisplayName(BeneficiaryStaging beneficiary)
+        {
+            if (!string.IsNullOrWhiteSpace(beneficiary.FullName))
+            {
+                return beneficiary.FullName.Trim();
+            }
+
+            return string.Join(
+                " ",
+                new[] { beneficiary.FirstName, beneficiary.MiddleName, beneficiary.LastName }
+                    .Where(value => !string.IsNullOrWhiteSpace(value))
+                    .Select(value => value!.Trim()));
+        }
+
+        private static string BuildParticipantDisplayName(CashForWorkParticipant participant)
+        {
+            if (participant.Beneficiary != null)
+            {
+                return BuildDisplayName(participant.Beneficiary);
+            }
+
+            return $"Beneficiary #{participant.BeneficiaryStagingId?.ToString() ?? "legacy"}";
+        }
+
+        private static string? NormalizeNullable(string? value)
+        {
+            return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+        }
     }
 
     public sealed record CashForWorkReleaseReadySummary(
@@ -369,8 +414,8 @@ namespace AttendanceShiftingManagement.Services
     public sealed record CashForWorkReleaseReadyParticipant(
         int ParticipantId,
         string FullName,
-        string HouseholdCode,
-        string Purok,
+        string? BeneficiaryId,
+        string? CivilRegistryId,
         AttendanceCaptureSource Source,
         DateTime RecordedAt);
 

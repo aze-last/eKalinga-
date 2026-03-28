@@ -144,6 +144,12 @@ namespace AttendanceShiftingManagement.Data
                 "household_id",
                 "ALTER TABLE `assistance_cases` MODIFY COLUMN `household_id` int NULL;");
 
+            EnsureColumnNullable(
+                connection,
+                "beneficiary_digital_ids",
+                "household_id",
+                "ALTER TABLE `beneficiary_digital_ids` MODIFY COLUMN `household_id` int NULL;");
+
             EnsureColumnExists(
                 connection,
                 "assistance_cases",
@@ -269,6 +275,18 @@ namespace AttendanceShiftingManagement.Data
                 "cash_for_work_events",
                 "released_at",
                 "ALTER TABLE `cash_for_work_events` ADD COLUMN `released_at` datetime(6) NULL;");
+
+            EnsureColumnExists(
+                connection,
+                "cash_for_work_participants",
+                "beneficiary_staging_id",
+                "ALTER TABLE `cash_for_work_participants` ADD COLUMN `beneficiary_staging_id` int NULL;");
+
+            EnsureColumnNullable(
+                connection,
+                "cash_for_work_participants",
+                "household_member_id",
+                "ALTER TABLE `cash_for_work_participants` MODIFY COLUMN `household_member_id` int NULL;");
 
             ExecuteNonQuery(
                 connection,
@@ -468,7 +486,7 @@ namespace AttendanceShiftingManagement.Data
                 CREATE TABLE IF NOT EXISTS `beneficiary_digital_ids` (
                     `id` int NOT NULL AUTO_INCREMENT,
                     `beneficiary_staging_id` int NOT NULL,
-                    `household_id` int NOT NULL,
+                    `household_id` int NULL,
                     `household_member_id` int NULL,
                     `card_number` varchar(40) NOT NULL,
                     `qr_payload` varchar(200) NOT NULL,
@@ -641,12 +659,14 @@ namespace AttendanceShiftingManagement.Data
                 CREATE TABLE IF NOT EXISTS `cash_for_work_participants` (
                     `id` int NOT NULL AUTO_INCREMENT,
                     `event_id` int NOT NULL,
-                    `household_member_id` int NOT NULL,
+                    `beneficiary_staging_id` int NULL,
+                    `household_member_id` int NULL,
                     `added_by_user_id` int NOT NULL,
                     `added_at` datetime(6) NOT NULL,
                     PRIMARY KEY (`id`),
-                    UNIQUE KEY `IX_cash_for_work_participants_event_member` (`event_id`, `household_member_id`),
+                    UNIQUE KEY `IX_cash_for_work_participants_event_beneficiary` (`event_id`, `beneficiary_staging_id`),
                     KEY `IX_cash_for_work_participants_added_by_user_id` (`added_by_user_id`),
+                    KEY `IX_cash_for_work_participants_beneficiary_staging_id` (`beneficiary_staging_id`),
                     KEY `IX_cash_for_work_participants_household_member_id` (`household_member_id`)
                 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
                 """,

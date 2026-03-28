@@ -16,9 +16,7 @@ namespace AttendanceShiftingManagement.Services
         public int PendingBeneficiaries { get; init; }
         public int ApprovedBeneficiaries { get; init; }
         public int RejectedBeneficiaries { get; init; }
-        public int ActiveHouseholds { get; init; }
-        public int TotalMembers { get; init; }
-        public int EligibleWorkers { get; init; }
+        public int CashForWorkBeneficiaryCount { get; init; }
         public int OpenCashForWorkEvents { get; init; }
         public int CompletedEventsThisMonth { get; init; }
         public int TodayAttendanceCount { get; init; }
@@ -72,18 +70,6 @@ namespace AttendanceShiftingManagement.Services
             var rejectedBeneficiaries = await context.BeneficiaryStaging
                 .AsNoTracking()
                 .CountAsync(row => row.VerificationStatus == VerificationStatus.Rejected, cancellationToken);
-
-            var activeHouseholds = await context.Households
-                .AsNoTracking()
-                .CountAsync(household => household.Status == HouseholdStatus.Active, cancellationToken);
-
-            var totalMembers = await context.HouseholdMembers
-                .AsNoTracking()
-                .CountAsync(cancellationToken);
-
-            var eligibleWorkers = await context.HouseholdMembers
-                .AsNoTracking()
-                .CountAsync(member => member.IsCashForWorkEligible && member.Household.Status == HouseholdStatus.Active, cancellationToken);
 
             var openCashForWorkEvents = await context.CashForWorkEvents
                 .AsNoTracking()
@@ -149,9 +135,7 @@ namespace AttendanceShiftingManagement.Services
                 PendingBeneficiaries = pendingBeneficiaries,
                 ApprovedBeneficiaries = approvedBeneficiaries,
                 RejectedBeneficiaries = rejectedBeneficiaries,
-                ActiveHouseholds = activeHouseholds,
-                TotalMembers = totalMembers,
-                EligibleWorkers = eligibleWorkers,
+                CashForWorkBeneficiaryCount = approvedBeneficiaries,
                 OpenCashForWorkEvents = openCashForWorkEvents,
                 CompletedEventsThisMonth = completedEventsThisMonth,
                 TodayAttendanceCount = todayAttendanceCount,

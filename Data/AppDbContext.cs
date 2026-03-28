@@ -181,7 +181,7 @@ namespace AttendanceShiftingManagement.Data
                 .HasIndex(entry => new { entry.FeatureSource, entry.SourceRecordId, entry.EntryType });
 
             modelBuilder.Entity<CashForWorkParticipant>()
-                .HasIndex(participant => new { participant.EventId, participant.HouseholdMemberId })
+                .HasIndex(participant => new { participant.EventId, participant.BeneficiaryStagingId })
                 .IsUnique();
 
             modelBuilder.Entity<ScannerSession>()

@@ -251,14 +251,13 @@ namespace AttendanceShiftingManagement.Services
 
             CashForWorkParticipant? participant = null;
             object? distribution = null;
-            if (session.Mode == ScannerSessionMode.Attendance && session.CashForWorkEventId.HasValue && lookup.HouseholdMemberId.HasValue)
+            if (session.Mode == ScannerSessionMode.Attendance && session.CashForWorkEventId.HasValue)
             {
                 participant = db.CashForWorkParticipants
                     .AsNoTracking()
-                    .Include(item => item.HouseholdMember)
                     .FirstOrDefault(item =>
                         item.EventId == session.CashForWorkEventId.Value &&
-                        item.HouseholdMemberId == lookup.HouseholdMemberId.Value);
+                        item.BeneficiaryStagingId == lookup.BeneficiaryStagingId);
             }
 
             if (session.Mode == ScannerSessionMode.Distribution && session.AyudaProgramId.HasValue)
@@ -310,7 +309,6 @@ namespace AttendanceShiftingManagement.Services
                 cardNumber = lookup.CardNumber,
                 photoUrl,
                 beneficiaryStagingId = lookup.BeneficiaryStagingId,
-                householdMemberId = lookup.HouseholdMemberId,
                 participantId = participant?.Id,
                 distribution,
                 releaseHistory = history,
@@ -334,26 +332,59 @@ namespace AttendanceShiftingManagement.Services
 
         private static string ResolveLanAddress()
         {
-            var interfaces = NetworkInterface.GetAllNetworkInterfaces()
+            var preferredAddress = NetworkInterface.GetAllNetworkInterfaces()
                 .Where(item =>
                     item.OperationalStatus == OperationalStatus.Up &&
-                    item.NetworkInterfaceType != NetworkInterfaceType.Loopback);
-
-            foreach (var networkInterface in interfaces)
-            {
-                var ipAddress = networkInterface
-                    .GetIPProperties()
-                    .UnicastAddresses
-                    .Select(item => item.Address)
-                    .FirstOrDefault(address => address.AddressFamily == AddressFamily.InterNetwork);
-
-                if (ipAddress != null)
+                    item.NetworkInterfaceType != NetworkInterfaceType.Loopback)
+                .SelectMany(item =>
                 {
-                    return ipAddress.ToString();
-                }
+                    var properties = item.GetIPProperties();
+                    var hasGateway = properties.GatewayAddresses.Any(gateway =>
+                        gateway.Address.AddressFamily == AddressFamily.InterNetwork &&
+                        gateway.Address.ToString() != "0.0.0.0");
+
+                    return properties.UnicastAddresses
+                        .Where(address => address.Address.AddressFamily == AddressFamily.InterNetwork)
+                        .Select(address => new LanAddressCandidate(
+                            address.Address.ToString(),
+                            item.Name,
+                            item.Description,
+                            item.NetworkInterfaceType,
+                            hasGateway));
+                })
+                .OrderBy(GetLanAddressPriority)
+                .ThenBy(candidate => candidate.Address, StringComparer.Ordinal)
+                .Select(candidate => candidate.Address)
+                .FirstOrDefault();
+
+            return preferredAddress ?? "127.0.0.1";
+        }
+
+        private static int GetLanAddressPriority(LanAddressCandidate candidate)
+        {
+            var score = 0;
+
+            if (candidate.IsAutomaticPrivateAddress)
+            {
+                score += 1000;
             }
 
-            return "127.0.0.1";
+            if (!candidate.HasGateway)
+            {
+                score += 100;
+            }
+
+            if (candidate.IsVirtualLike)
+            {
+                score += 50;
+            }
+
+            if (!candidate.IsPreferredInterfaceType)
+            {
+                score += 10;
+            }
+
+            return score;
         }
 
         private static string GetContentType(string path)
@@ -586,5 +617,44 @@ async function postJson(url, payload) {
         private sealed record ScannerLookupRequest(string SessionToken, string Pin, string QrPayload);
         private sealed record ScannerAttendanceRequest(string SessionToken, string Pin, int ParticipantId, string? QrPayload);
         private sealed record ScannerDistributionClaimRequest(string SessionToken, string Pin, int BeneficiaryStagingId, string? QrPayload, string? Remarks);
+        private sealed record LanAddressCandidate(
+            string Address,
+            string Name,
+            string Description,
+            NetworkInterfaceType InterfaceType,
+            bool HasGateway)
+        {
+            private static readonly string[] VirtualInterfaceKeywords =
+            {
+                "virtual",
+                "hyper-v",
+                "default switch",
+                "virtualbox",
+                "host-only",
+                "vmware",
+                "docker",
+                "wsl",
+                "vpn",
+                "tunnel"
+            };
+
+            public bool IsAutomaticPrivateAddress => Address.StartsWith("169.254.", StringComparison.Ordinal);
+
+            public bool IsPreferredInterfaceType =>
+                InterfaceType == NetworkInterfaceType.Wireless80211 ||
+                InterfaceType == NetworkInterfaceType.Ethernet ||
+                InterfaceType == NetworkInterfaceType.GigabitEthernet ||
+                InterfaceType == NetworkInterfaceType.FastEthernetFx ||
+                InterfaceType == NetworkInterfaceType.FastEthernetT;
+
+            public bool IsVirtualLike
+            {
+                get
+                {
+                    var haystack = $"{Name} {Description}";
+                    return VirtualInterfaceKeywords.Any(keyword => haystack.Contains(keyword, StringComparison.OrdinalIgnoreCase));
+                }
+            }
+        }
     }
 }

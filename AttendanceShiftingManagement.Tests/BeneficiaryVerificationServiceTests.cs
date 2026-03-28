@@ -6,29 +6,27 @@ namespace AttendanceShiftingManagement.Tests;
 public sealed class BeneficiaryVerificationServiceTests
 {
     [Fact]
-    public async Task ApproveAsync_CreatesHouseholdMember_UpdatesStatus_AndWritesAuditLog()
+    public async Task ApproveAsync_UpdatesStatusWithoutCreatingHouseholdLinks_AndWritesAuditLog()
     {
         using var context = TestDbContextFactory.CreateContext();
         var admin = SeedAdmin(context);
-        var household = SeedHousehold(context);
         var stagingRow = SeedStaging(context);
         var service = new BeneficiaryVerificationService(context);
 
         var result = await service.ApproveAsync(
             new BeneficiaryApprovalRequest(
                 stagingRow.StagingID,
-                household.Id,
+                HouseholdId: 0,
                 ExistingHouseholdMemberId: null,
-                ReviewNotes: "Imported into household registry."),
+                ReviewNotes: "Approved from validated queue."),
             admin.Id);
 
         Assert.True(result.IsSuccess);
-        var member = Assert.Single(context.HouseholdMembers);
-        Assert.Equal(household.Id, member.HouseholdId);
+        Assert.Empty(context.HouseholdMembers);
         var staged = context.BeneficiaryStaging.Single();
         Assert.Equal(VerificationStatus.Approved, staged.VerificationStatus);
-        Assert.Equal(household.Id, staged.LinkedHouseholdId);
-        Assert.Equal(member.Id, staged.LinkedHouseholdMemberId);
+        Assert.Null(staged.LinkedHouseholdId);
+        Assert.Null(staged.LinkedHouseholdMemberId);
 
         Assert.Equal(2, context.ActivityLogs.Count());
         Assert.Contains(context.ActivityLogs, log => log.Action == "BeneficiaryApproved" && log.EntityId == stagingRow.StagingID);
@@ -53,7 +51,7 @@ public sealed class BeneficiaryVerificationServiceTests
     }
 
     [Fact]
-    public async Task ApproveAsync_WhenExistingHouseholdMemberIsSelected_LinksWithoutCreatingNewMember()
+    public async Task ApproveAsync_WithLegacyHouseholdArguments_DoesNotCarryHouseholdLinksForward()
     {
         using var context = TestDbContextFactory.CreateContext();
         var admin = SeedAdmin(context);
@@ -75,8 +73,8 @@ public sealed class BeneficiaryVerificationServiceTests
 
         var staged = context.BeneficiaryStaging.Single();
         Assert.Equal(VerificationStatus.Approved, staged.VerificationStatus);
-        Assert.Equal(household.Id, staged.LinkedHouseholdId);
-        Assert.Equal(existingMember.Id, staged.LinkedHouseholdMemberId);
+        Assert.Null(staged.LinkedHouseholdId);
+        Assert.Null(staged.LinkedHouseholdMemberId);
         Assert.Equal(admin.Id, staged.ReviewedByUserId);
         Assert.Equal("Matched to an existing household member.", staged.ReviewNotes);
     }
@@ -86,14 +84,13 @@ public sealed class BeneficiaryVerificationServiceTests
     {
         using var context = TestDbContextFactory.CreateContext();
         var admin = SeedAdmin(context);
-        var household = SeedHousehold(context);
         var stagingRow = SeedStaging(context);
         var service = new BeneficiaryVerificationService(context);
 
         var result = await service.ApproveAsync(
             new BeneficiaryApprovalRequest(
                 stagingRow.StagingID,
-                household.Id,
+                HouseholdId: 0,
                 ExistingHouseholdMemberId: null,
                 ReviewNotes: "Ready for digital ID issuance."),
             admin.Id);
@@ -104,8 +101,10 @@ public sealed class BeneficiaryVerificationServiceTests
         var staged = Assert.Single(context.BeneficiaryStaging);
 
         Assert.Equal(stagingRow.StagingID, digitalId.BeneficiaryStagingId);
-        Assert.Equal(household.Id, digitalId.HouseholdId);
-        Assert.Equal(staged.LinkedHouseholdMemberId, digitalId.HouseholdMemberId);
+        Assert.Null(typeof(BeneficiaryDigitalId).GetProperty(nameof(BeneficiaryDigitalId.HouseholdId))!.GetValue(digitalId));
+        Assert.Null(typeof(BeneficiaryDigitalId).GetProperty(nameof(BeneficiaryDigitalId.HouseholdMemberId))!.GetValue(digitalId));
+        Assert.Null(staged.LinkedHouseholdId);
+        Assert.Null(staged.LinkedHouseholdMemberId);
         Assert.Equal(admin.Id, digitalId.IssuedByUserId);
         Assert.True(digitalId.IsActive);
         Assert.False(string.IsNullOrWhiteSpace(digitalId.CardNumber));
@@ -117,14 +116,13 @@ public sealed class BeneficiaryVerificationServiceTests
     {
         using var context = TestDbContextFactory.CreateContext();
         var admin = SeedAdmin(context);
-        var household = SeedHousehold(context);
         var stagingRow = SeedStaging(context);
         var service = new BeneficiaryVerificationService(context);
 
         var result = await service.ApproveAsync(
             new BeneficiaryApprovalRequest(
                 stagingRow.StagingID,
-                household.Id,
+                HouseholdId: 0,
                 ExistingHouseholdMemberId: null,
                 ReviewNotes: "Approved with corrected details.",
                 Corrections: new BeneficiaryCorrectionRequest(
@@ -154,9 +152,9 @@ public sealed class BeneficiaryVerificationServiceTests
         Assert.Equal("Bien Josef G. Regidor", staged.FullName);
         Assert.Equal("Purok 1, Barangay Centro", staged.Address);
         Assert.Equal(VerificationStatus.Approved, staged.VerificationStatus);
-
-        var member = Assert.Single(context.HouseholdMembers);
-        Assert.Equal("Bien Josef G. Regidor", member.FullName);
+        Assert.Null(staged.LinkedHouseholdId);
+        Assert.Null(staged.LinkedHouseholdMemberId);
+        Assert.Empty(context.HouseholdMembers);
     }
 
     [Fact]

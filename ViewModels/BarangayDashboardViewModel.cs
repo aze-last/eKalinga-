@@ -20,9 +20,9 @@ namespace AttendanceShiftingManagement.ViewModels
         private bool _isBusy;
         private int _masterListCount;
         private int _pendingReviewCount;
-        private int _activeHouseholdCount;
-        private int _registeredMemberCount;
-        private int _eligibleWorkerCount;
+        private int _approvedBeneficiaryCount;
+        private int _rejectedBeneficiaryCount;
+        private int _cashForWorkBeneficiaryCount;
         private int _openEventCount;
         private int _todayAttendanceCount;
         private int _completedEventsThisMonthCount;
@@ -104,22 +104,22 @@ namespace AttendanceShiftingManagement.ViewModels
             private set => SetProperty(ref _pendingReviewCount, value);
         }
 
-        public int ActiveHouseholdCount
+        public int ApprovedBeneficiaryCount
         {
-            get => _activeHouseholdCount;
-            private set => SetProperty(ref _activeHouseholdCount, value);
+            get => _approvedBeneficiaryCount;
+            private set => SetProperty(ref _approvedBeneficiaryCount, value);
         }
 
-        public int RegisteredMemberCount
+        public int RejectedBeneficiaryCount
         {
-            get => _registeredMemberCount;
-            private set => SetProperty(ref _registeredMemberCount, value);
+            get => _rejectedBeneficiaryCount;
+            private set => SetProperty(ref _rejectedBeneficiaryCount, value);
         }
 
-        public int EligibleWorkerCount
+        public int CashForWorkBeneficiaryCount
         {
-            get => _eligibleWorkerCount;
-            private set => SetProperty(ref _eligibleWorkerCount, value);
+            get => _cashForWorkBeneficiaryCount;
+            private set => SetProperty(ref _cashForWorkBeneficiaryCount, value);
         }
 
         public int OpenEventCount
@@ -167,9 +167,9 @@ namespace AttendanceShiftingManagement.ViewModels
 
                 MasterListCount = snapshot.MasterListCount;
                 PendingReviewCount = snapshot.PendingBeneficiaries;
-                ActiveHouseholdCount = snapshot.ActiveHouseholds;
-                RegisteredMemberCount = snapshot.TotalMembers;
-                EligibleWorkerCount = snapshot.EligibleWorkers;
+                ApprovedBeneficiaryCount = snapshot.ApprovedBeneficiaries;
+                RejectedBeneficiaryCount = snapshot.RejectedBeneficiaries;
+                CashForWorkBeneficiaryCount = snapshot.CashForWorkBeneficiaryCount;
                 OpenEventCount = snapshot.OpenCashForWorkEvents;
                 TodayAttendanceCount = snapshot.TodayAttendanceCount;
                 CompletedEventsThisMonthCount = snapshot.CompletedEventsThisMonth;

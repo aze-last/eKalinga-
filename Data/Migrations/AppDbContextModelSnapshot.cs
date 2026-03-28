@@ -879,7 +879,11 @@ namespace AttendanceShiftingManagement.Data.Migrations
                         .HasColumnType("int")
                         .HasColumnName("event_id");
 
-                    b.Property<int>("HouseholdMemberId")
+                    b.Property<int?>("BeneficiaryStagingId")
+                        .HasColumnType("int")
+                        .HasColumnName("beneficiary_staging_id");
+
+                    b.Property<int?>("HouseholdMemberId")
                         .HasColumnType("int")
                         .HasColumnName("household_member_id");
 
@@ -887,9 +891,11 @@ namespace AttendanceShiftingManagement.Data.Migrations
 
                     b.HasIndex("AddedByUserId");
 
+                    b.HasIndex("BeneficiaryStagingId");
+
                     b.HasIndex("HouseholdMemberId");
 
-                    b.HasIndex("EventId", "HouseholdMemberId")
+                    b.HasIndex("EventId", "BeneficiaryStagingId")
                         .IsUnique();
 
                     b.ToTable("cash_for_work_participants");
@@ -1479,13 +1485,17 @@ namespace AttendanceShiftingManagement.Data.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("AttendanceShiftingManagement.Models.BeneficiaryStaging", "Beneficiary")
+                        .WithMany()
+                        .HasForeignKey("BeneficiaryStagingId");
+
                     b.HasOne("AttendanceShiftingManagement.Models.HouseholdMember", "HouseholdMember")
                         .WithMany("CashForWorkParticipants")
-                        .HasForeignKey("HouseholdMemberId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("HouseholdMemberId");
 
                     b.Navigation("AddedByUser");
+
+                    b.Navigation("Beneficiary");
 
                     b.Navigation("Event");
 
