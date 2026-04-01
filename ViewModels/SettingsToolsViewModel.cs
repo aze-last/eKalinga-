@@ -6,9 +6,11 @@ using Microsoft.Win32;
 using MySqlConnector;
 using System.Collections.ObjectModel;
 using System.Data;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Net.Mail;
+using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 
@@ -33,6 +35,14 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly RelayCommand _restoreBackupCommand;
         private readonly RelayCommand _migrateLocalAndRemoteCommand;
         private readonly RelayCommand _saveFeatureRulesCommand;
+        private readonly RelayCommand _testGgmsConnectionCommand;
+        private readonly RelayCommand _saveGgmsSettingsCommand;
+        private readonly RelayCommand _checkForUpdatesCommand;
+        private readonly RelayCommand _downloadUpdateCommand;
+        private readonly RelayCommand _installPendingUpdateCommand;
+        private readonly RelayCommand _remindMeLaterCommand;
+        private readonly RelayCommand _saveUpdatePreferencesCommand;
+        private readonly RelayCommand _openUpdateDownloadPageCommand;
         private readonly RelayCommand _saveSystemProfileCommand;
         private readonly RelayCommand _browseSystemLogoCommand;
         private readonly RelayCommand _removeSystemLogoCommand;
@@ -84,11 +94,37 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _lastDifferentialBackupDisplay = "No differential backup recorded for this preset yet.";
         private string _backupGuidanceMessage = "Incremental and differential backups require an existing full backup for the active preset.";
         private bool _canCreateDeltaBackups;
-        private string _appDatabaseStatusMessage = "Open App Database Settings to switch presets. Use the migrate action here after schema changes so both Local and Hostinger are ready.";
+        private string _appDatabaseStatusMessage = "Open App Database Settings to switch presets. Only Network (LAN) is editable there; Local and Remote stay fixed from the shipped app configuration.";
         private Brush _appDatabaseStatusBrush = CreateBrush("#6B7280");
+        private string _ggmsOfficeCode = string.Empty;
+        private string _ggmsOfficeTable = "tbl_offices";
+        private string _ggmsAllocationTable = "officeallocations";
+        private string _ggmsServer = string.Empty;
+        private string _ggmsPortText = "3306";
+        private string _ggmsDatabase = string.Empty;
+        private string _ggmsUsername = string.Empty;
+        private string _ggmsPassword = string.Empty;
+        private string _ggmsStatusMessage = "Configure the GGMS budget source here. Keep the default table names unless your GGMS schema differs.";
+        private Brush _ggmsStatusBrush = CreateBrush("#6B7280");
         private string _largeAssistanceWarningThresholdText = string.Empty;
         private string _featureRulesStatusMessage = "Set the warning-only threshold used when a beneficiary has already received significant assistance.";
         private Brush _featureRulesStatusBrush = CreateBrush("#6B7280");
+        private string _currentAppVersion = AppVersionService.GetCurrentVersion();
+        private string _latestAvailableVersion = "Not checked yet";
+        private string _updatePublishedAt = string.Empty;
+        private string _updateReleaseNotes = "No update check has run yet.";
+        private string _updateManifestUrl = string.Empty;
+        private string _updateStatusMessage = "Set the public update manifest URL, then check for updates from this screen.";
+        private Brush _updateStatusBrush = CreateBrush("#6B7280");
+        private string _updateDownloadPageUrl = string.Empty;
+        private string _updateInstallerUrl = string.Empty;
+        private string _updateSha256 = string.Empty;
+        private PendingAppUpdate? _pendingAppUpdate;
+        private string _downloadedInstallerLabel = "No downloaded installer is waiting yet.";
+        private double _updateDownloadProgressPercent;
+        private bool _isUpdateDownloadInProgress;
+        private bool _checkForUpdatesOnStartup = true;
+        private bool _isUpdateAvailable;
         private int _masterListRowCount;
         private int _stagingRowCount;
         private bool _isBusy;
@@ -122,11 +158,21 @@ namespace AttendanceShiftingManagement.ViewModels
             _restoreBackupCommand = new RelayCommand(async _ => await ExecuteRestoreBackupAsync(), _ => !IsBusy);
             _migrateLocalAndRemoteCommand = new RelayCommand(async _ => await ExecuteMigrateLocalAndRemoteAsync(), _ => !IsBusy);
             _saveFeatureRulesCommand = new RelayCommand(_ => ExecuteSaveFeatureRules(), _ => !IsBusy);
+            _testGgmsConnectionCommand = new RelayCommand(async _ => await ExecuteTestGgmsConnectionAsync(), _ => !IsBusy);
+            _saveGgmsSettingsCommand = new RelayCommand(_ => ExecuteSaveGgmsSettings(), _ => !IsBusy);
+            _checkForUpdatesCommand = new RelayCommand(async _ => await ExecuteCheckForUpdatesAsync(), _ => !IsBusy);
+            _downloadUpdateCommand = new RelayCommand(async _ => await ExecuteDownloadUpdateAsync(), _ => !IsBusy && CanDownloadUpdate);
+            _installPendingUpdateCommand = new RelayCommand(_ => ExecuteInstallPendingUpdate(), _ => !IsBusy && CanInstallPendingUpdate);
+            _remindMeLaterCommand = new RelayCommand(_ => ExecuteRemindMeLater(), _ => !IsBusy && HasPendingUpdate);
+            _saveUpdatePreferencesCommand = new RelayCommand(_ => ExecuteSaveUpdatePreferences(), _ => !IsBusy);
+            _openUpdateDownloadPageCommand = new RelayCommand(_ => ExecuteOpenUpdateDownloadPage(), _ => !IsBusy && CanOpenUpdateDownloadPage);
 
             LoadSystemProfile();
             LoadCurrentUserAccount();
             LoadImportConnection();
             LoadFeatureRules();
+            LoadGgmsSettings();
+            LoadUpdatePreferences();
             RefreshTargetSummaries();
             _ = RefreshPreviewAsync();
         }
@@ -446,6 +492,66 @@ namespace AttendanceShiftingManagement.ViewModels
             private set => SetProperty(ref _appDatabaseStatusBrush, value);
         }
 
+        public string GgmsOfficeCode
+        {
+            get => _ggmsOfficeCode;
+            set => SetProperty(ref _ggmsOfficeCode, value);
+        }
+
+        public string GgmsOfficeTable
+        {
+            get => _ggmsOfficeTable;
+            set => SetProperty(ref _ggmsOfficeTable, value);
+        }
+
+        public string GgmsAllocationTable
+        {
+            get => _ggmsAllocationTable;
+            set => SetProperty(ref _ggmsAllocationTable, value);
+        }
+
+        public string GgmsServer
+        {
+            get => _ggmsServer;
+            set => SetProperty(ref _ggmsServer, value);
+        }
+
+        public string GgmsPortText
+        {
+            get => _ggmsPortText;
+            set => SetProperty(ref _ggmsPortText, value);
+        }
+
+        public string GgmsDatabase
+        {
+            get => _ggmsDatabase;
+            set => SetProperty(ref _ggmsDatabase, value);
+        }
+
+        public string GgmsUsername
+        {
+            get => _ggmsUsername;
+            set => SetProperty(ref _ggmsUsername, value);
+        }
+
+        public string GgmsPassword
+        {
+            get => _ggmsPassword;
+            set => SetProperty(ref _ggmsPassword, value);
+        }
+
+        public string GgmsStatusMessage
+        {
+            get => _ggmsStatusMessage;
+            private set => SetProperty(ref _ggmsStatusMessage, value);
+        }
+
+        public Brush GgmsStatusBrush
+        {
+            get => _ggmsStatusBrush;
+            private set => SetProperty(ref _ggmsStatusBrush, value);
+        }
+
         public string LargeAssistanceWarningThresholdText
         {
             get => _largeAssistanceWarningThresholdText;
@@ -463,6 +569,116 @@ namespace AttendanceShiftingManagement.ViewModels
             get => _featureRulesStatusBrush;
             private set => SetProperty(ref _featureRulesStatusBrush, value);
         }
+
+        public string CurrentAppVersion
+        {
+            get => _currentAppVersion;
+            private set => SetProperty(ref _currentAppVersion, value);
+        }
+
+        public string LatestAvailableVersion
+        {
+            get => _latestAvailableVersion;
+            private set => SetProperty(ref _latestAvailableVersion, value);
+        }
+
+        public string UpdatePublishedAt
+        {
+            get => _updatePublishedAt;
+            private set => SetProperty(ref _updatePublishedAt, value);
+        }
+
+        public string UpdateReleaseNotes
+        {
+            get => _updateReleaseNotes;
+            private set => SetProperty(ref _updateReleaseNotes, value);
+        }
+
+        public string UpdateManifestUrl
+        {
+            get => _updateManifestUrl;
+            set => SetProperty(ref _updateManifestUrl, value);
+        }
+
+        public string UpdateStatusMessage
+        {
+            get => _updateStatusMessage;
+            private set => SetProperty(ref _updateStatusMessage, value);
+        }
+
+        public Brush UpdateStatusBrush
+        {
+            get => _updateStatusBrush;
+            private set => SetProperty(ref _updateStatusBrush, value);
+        }
+
+        public string DownloadedInstallerLabel
+        {
+            get => _downloadedInstallerLabel;
+            private set => SetProperty(ref _downloadedInstallerLabel, value);
+        }
+
+        public double UpdateDownloadProgressPercent
+        {
+            get => _updateDownloadProgressPercent;
+            private set => SetProperty(ref _updateDownloadProgressPercent, value);
+        }
+
+        public bool IsUpdateDownloadInProgress
+        {
+            get => _isUpdateDownloadInProgress;
+            private set
+            {
+                if (SetProperty(ref _isUpdateDownloadInProgress, value))
+                {
+                    OnPropertyChanged(nameof(ShowUpdateDownloadProgress));
+                }
+            }
+        }
+
+        public bool CheckForUpdatesOnStartup
+        {
+            get => _checkForUpdatesOnStartup;
+            set => SetProperty(ref _checkForUpdatesOnStartup, value);
+        }
+
+        public bool IsUpdateAvailable
+        {
+            get => _isUpdateAvailable;
+            private set
+            {
+                if (SetProperty(ref _isUpdateAvailable, value))
+                {
+                    RaiseUpdateUiStateChanged();
+                }
+            }
+        }
+
+        public bool HasPendingUpdate => _pendingAppUpdate != null;
+        public bool ShowUpdateBanner => HasPendingUpdate || IsUpdateAvailable;
+        public string UpdateBannerTitle => HasPendingUpdate
+            ? "Update Ready to Install"
+            : IsUpdateAvailable
+                ? "Update Available"
+                : string.Empty;
+        public string UpdateBannerMessage => HasPendingUpdate
+            ? $"Version {_pendingAppUpdate!.Version} is downloaded and ready to install."
+            : IsUpdateAvailable
+                ? CanDownloadUpdate
+                    ? $"Version {LatestAvailableVersion} is available to download from Settings."
+                    : $"Version {LatestAvailableVersion} is available. Open the download page until installer metadata is published."
+                : string.Empty;
+        public bool ShowDownloadUpdateActions => IsUpdateAvailable && !HasPendingUpdate;
+        public bool ShowPendingUpdateActions => HasPendingUpdate;
+        public bool ShowUpdateDownloadProgress => IsUpdateDownloadInProgress;
+        public bool CanDownloadUpdate =>
+            !IsBusy
+            && IsUpdateAvailable
+            && !HasPendingUpdate
+            && !string.IsNullOrWhiteSpace(_updateInstallerUrl)
+            && !string.IsNullOrWhiteSpace(_updateSha256);
+        public bool CanInstallPendingUpdate => !IsBusy && HasPendingUpdate;
+        public bool CanOpenUpdateDownloadPage => !string.IsNullOrWhiteSpace(_updateDownloadPageUrl);
 
         public int MasterListRowCount
         {
@@ -500,6 +716,14 @@ namespace AttendanceShiftingManagement.ViewModels
                     _restoreBackupCommand.RaiseCanExecuteChanged();
                     _migrateLocalAndRemoteCommand.RaiseCanExecuteChanged();
                     _saveFeatureRulesCommand.RaiseCanExecuteChanged();
+                    _testGgmsConnectionCommand.RaiseCanExecuteChanged();
+                    _saveGgmsSettingsCommand.RaiseCanExecuteChanged();
+                    _checkForUpdatesCommand.RaiseCanExecuteChanged();
+                    _downloadUpdateCommand.RaiseCanExecuteChanged();
+                    _installPendingUpdateCommand.RaiseCanExecuteChanged();
+                    _remindMeLaterCommand.RaiseCanExecuteChanged();
+                    _saveUpdatePreferencesCommand.RaiseCanExecuteChanged();
+                    _openUpdateDownloadPageCommand.RaiseCanExecuteChanged();
                 }
             }
         }
@@ -521,6 +745,14 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand RestoreBackupCommand => _restoreBackupCommand;
         public ICommand MigrateLocalAndRemoteCommand => _migrateLocalAndRemoteCommand;
         public ICommand SaveFeatureRulesCommand => _saveFeatureRulesCommand;
+        public ICommand TestGgmsConnectionCommand => _testGgmsConnectionCommand;
+        public ICommand SaveGgmsSettingsCommand => _saveGgmsSettingsCommand;
+        public ICommand CheckForUpdatesCommand => _checkForUpdatesCommand;
+        public ICommand DownloadUpdateCommand => _downloadUpdateCommand;
+        public ICommand InstallPendingUpdateCommand => _installPendingUpdateCommand;
+        public ICommand RemindMeLaterCommand => _remindMeLaterCommand;
+        public ICommand SaveUpdatePreferencesCommand => _saveUpdatePreferencesCommand;
+        public ICommand OpenUpdateDownloadPageCommand => _openUpdateDownloadPageCommand;
 
         private void LoadSystemProfile()
         {
@@ -567,6 +799,57 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             var settings = FeatureSettingsService.Load();
             LargeAssistanceWarningThresholdText = settings.LargeAssistanceWarningThreshold.ToString("0.##", CultureInfo.InvariantCulture);
+        }
+
+        private void LoadGgmsSettings()
+        {
+            var settings = BudgetRuntimeOptions.Load();
+            GgmsOfficeCode = settings.AyudaOfficeCode;
+            GgmsOfficeTable = settings.GgmsOfficeTable;
+            GgmsAllocationTable = settings.GgmsAllocationTable;
+            GgmsServer = settings.GgmsConnection.Server;
+            GgmsPortText = settings.GgmsConnection.Port.ToString(CultureInfo.InvariantCulture);
+            GgmsDatabase = settings.GgmsConnection.Database;
+            GgmsUsername = settings.GgmsConnection.Username;
+            GgmsPassword = settings.GgmsConnection.Password;
+        }
+
+        private void LoadUpdatePreferences()
+        {
+            var preferences = AppPreferencesService.Load();
+            CheckForUpdatesOnStartup = preferences.CheckForUpdatesOnStartup;
+            UpdateManifestUrl = preferences.UpdateManifestUrl;
+            LoadPendingUpdate();
+            ApplyUpdateResult(AppUpdateCoordinator.LatestResult, preserveNotCheckedMessage: true);
+
+            if (AppUpdateCoordinator.LatestResult.Status == UpdateCheckStatus.NotChecked
+                && CheckForUpdatesOnStartup
+                && !string.IsNullOrWhiteSpace(UpdateManifestUrl))
+            {
+                _ = ExecuteCheckForUpdatesAsync(backgroundCheckOnly: true);
+            }
+        }
+
+        private void LoadPendingUpdate()
+        {
+            var pending = AppUpdatePackageService.LoadPendingUpdate();
+            if (pending != null && !File.Exists(pending.InstallerPath))
+            {
+                AppUpdatePackageService.ClearPendingUpdate();
+                pending = null;
+            }
+
+            _pendingAppUpdate = pending;
+            DownloadedInstallerLabel = pending == null
+                ? "No downloaded installer is waiting yet."
+                : $"{pending.InstallerFileName} ({pending.Version})";
+
+            if (pending != null)
+            {
+                SetUpdateSuccess($"Version {pending.Version} is downloaded and ready to install.");
+            }
+
+            RaiseUpdateUiStateChanged();
         }
 
         private void ExecuteSaveSystemProfile()
@@ -715,7 +998,7 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             var settings = ConnectionSettingsService.Load();
             var preset = settings.GetPreset(settings.SelectedPreset);
-            var summary = $"{preset.DisplayName}: {preset.Server}:{preset.Port} / {preset.Database}";
+            var summary = ConnectionSettingsService.FormatPresetSummary(preset);
             ActiveTargetSummary = summary;
             BackupTargetSummary = summary;
             BackupPresetName = preset.DisplayName;
@@ -957,7 +1240,7 @@ namespace AttendanceShiftingManagement.ViewModels
             await ExecuteBusyAsync(
                 async () =>
                 {
-                    SetAppDatabaseNeutral("Migrating Local and Remote (Hostinger) app databases...");
+                    SetAppDatabaseNeutral("Migrating Local and Remote app databases...");
 
                     var result = await AppDatabaseMigrationService.MigrateLocalAndRemoteAsync();
                     RefreshTargetSummaries();
@@ -988,6 +1271,220 @@ namespace AttendanceShiftingManagement.ViewModels
 
             LargeAssistanceWarningThresholdText = threshold.ToString("0.##", CultureInfo.InvariantCulture);
             SetFeatureRulesSuccess("Saved the large-assistance warning threshold.");
+        }
+
+        private async Task ExecuteTestGgmsConnectionAsync()
+        {
+            if (!TryBuildGgmsSettings(requireConnectionDetails: true, out var settings, out var validationMessage))
+            {
+                SetGgmsError(validationMessage);
+                return;
+            }
+
+            await ExecuteBusyAsync(
+                async () =>
+                {
+                    SetGgmsNeutral("Testing GGMS budget source connection...");
+                    var result = await ConnectionSettingsService.TestConnectionAsync(settings.GgmsConnection);
+                    if (result.IsSuccess)
+                    {
+                        SetGgmsSuccess(result.Message);
+                    }
+                    else
+                    {
+                        SetGgmsError(result.Message);
+                    }
+                });
+        }
+
+        private void ExecuteSaveGgmsSettings()
+        {
+            if (!TryBuildGgmsSettings(requireConnectionDetails: false, out var settings, out var validationMessage))
+            {
+                SetGgmsError(validationMessage);
+                return;
+            }
+
+            BudgetRuntimeOptions.Save(settings);
+            SetGgmsSuccess("GGMS budget source settings saved.");
+        }
+
+        private async Task ExecuteCheckForUpdatesAsync(bool backgroundCheckOnly = false)
+        {
+            if (backgroundCheckOnly)
+            {
+                var result = await AppUpdateCoordinator.CheckNowAsync(UpdateManifestUrl);
+                ApplyUpdateResult(result, preserveNotCheckedMessage: false);
+                return;
+            }
+
+            await ExecuteBusyAsync(
+                async () =>
+                {
+                    SetUpdateNeutral("Checking for updates...");
+                    var result = await AppUpdateCoordinator.CheckNowAsync(UpdateManifestUrl);
+                    ApplyUpdateResult(result, preserveNotCheckedMessage: false);
+                });
+        }
+
+        private async Task ExecuteDownloadUpdateAsync()
+        {
+            if (!AppUpdateCoordinator.LatestResult.CanDownloadInstaller)
+            {
+                SetUpdateError("The latest update result does not include a downloadable installer yet.");
+                return;
+            }
+
+            PendingAppUpdate? downloadedUpdate = null;
+
+            await ExecuteBusyAsync(
+                async () =>
+                {
+                    IsUpdateDownloadInProgress = true;
+                    UpdateDownloadProgressPercent = 0;
+
+                    try
+                    {
+                        var progress = new Progress<UpdateDownloadProgress>(update =>
+                        {
+                            UpdateDownloadProgressPercent = update.PercentComplete;
+                            if (update.TotalBytes.HasValue && update.TotalBytes.Value > 0)
+                            {
+                                SetUpdateNeutral($"Downloading version {AppUpdateCoordinator.LatestResult.LatestVersion}... {update.PercentComplete:0.#}%");
+                            }
+                            else
+                            {
+                                SetUpdateNeutral($"Downloading version {AppUpdateCoordinator.LatestResult.LatestVersion}...");
+                            }
+                        });
+
+                        downloadedUpdate = await AppUpdatePackageService.DownloadUpdateAsync(
+                            AppUpdateCoordinator.LatestResult,
+                            progress);
+
+                        _pendingAppUpdate = downloadedUpdate;
+                        DownloadedInstallerLabel = $"{downloadedUpdate.InstallerFileName} ({downloadedUpdate.Version})";
+                        SetUpdateSuccess($"Downloaded version {downloadedUpdate.Version} and verified the installer.");
+                        RaiseUpdateUiStateChanged();
+                    }
+                    catch (Exception ex)
+                    {
+                        SetUpdateError($"Unable to download the installer. {ex.Message}");
+                    }
+                    finally
+                    {
+                        IsUpdateDownloadInProgress = false;
+                    }
+                });
+
+            if (downloadedUpdate == null)
+            {
+                return;
+            }
+
+            var choice = MessageBox.Show(
+                $"Version {downloadedUpdate.Version} is ready to install. Install it now?",
+                "Update Ready",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+
+            if (choice == MessageBoxResult.Yes)
+            {
+                ExecuteInstallPendingUpdate(skipConfirmation: true);
+            }
+            else
+            {
+                ExecuteRemindMeLater();
+            }
+        }
+
+        private void ExecuteInstallPendingUpdate(bool skipConfirmation = false)
+        {
+            if (_pendingAppUpdate == null)
+            {
+                SetUpdateError("There is no downloaded installer ready to run.");
+                return;
+            }
+
+            if (!File.Exists(_pendingAppUpdate.InstallerPath))
+            {
+                AppUpdatePackageService.ClearPendingUpdate();
+                _pendingAppUpdate = null;
+                DownloadedInstallerLabel = "No downloaded installer is waiting yet.";
+                RaiseUpdateUiStateChanged();
+                SetUpdateError("The downloaded installer is missing. Download the update again.");
+                return;
+            }
+
+            if (!skipConfirmation)
+            {
+                var confirm = MessageBox.Show(
+                    $"Install version {_pendingAppUpdate.Version} now? The app will close while setup runs and reopen after the upgrade completes.",
+                    "Install Update",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question);
+
+                if (confirm != MessageBoxResult.Yes)
+                {
+                    return;
+                }
+            }
+
+            try
+            {
+                AppUpdatePackageService.LaunchInstaller(_pendingAppUpdate);
+                Application.Current?.Shutdown();
+            }
+            catch (Exception ex)
+            {
+                SetUpdateError($"Unable to start the installer. {ex.Message}");
+            }
+        }
+
+        private void ExecuteRemindMeLater()
+        {
+            if (_pendingAppUpdate == null)
+            {
+                SetUpdateNeutral("No downloaded installer is waiting right now.");
+                return;
+            }
+
+            SetUpdateNeutral($"Version {_pendingAppUpdate.Version} is downloaded. Install it later from Settings > Updates.");
+        }
+
+        private void ExecuteSaveUpdatePreferences()
+        {
+            AppPreferencesService.Save(new AppPreferencesModel
+            {
+                CheckForUpdatesOnStartup = CheckForUpdatesOnStartup,
+                UpdateManifestUrl = UpdateManifestUrl
+            });
+
+            SetUpdateSuccess("Update preferences saved.");
+        }
+
+        private void ExecuteOpenUpdateDownloadPage()
+        {
+            if (string.IsNullOrWhiteSpace(_updateDownloadPageUrl))
+            {
+                SetUpdateError("No release page is available for the current update result.");
+                return;
+            }
+
+            try
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = _updateDownloadPageUrl,
+                    UseShellExecute = true
+                });
+
+                SetUpdateSuccess("Opened the update download page in your browser.");
+            }
+            catch (Exception ex)
+            {
+                SetUpdateError($"Unable to open the update download page. {ex.Message}");
+            }
         }
 
         private static Brush CreateBrush(string colorCode)
@@ -1114,6 +1611,42 @@ namespace AttendanceShiftingManagement.ViewModels
             AppDatabaseStatusBrush = CreateBrush("#991B1B");
         }
 
+        private void SetGgmsNeutral(string message)
+        {
+            GgmsStatusMessage = message;
+            GgmsStatusBrush = CreateBrush("#6B7280");
+        }
+
+        private void SetGgmsSuccess(string message)
+        {
+            GgmsStatusMessage = message;
+            GgmsStatusBrush = CreateBrush("#1A7A4A");
+        }
+
+        private void SetGgmsError(string message)
+        {
+            GgmsStatusMessage = message;
+            GgmsStatusBrush = CreateBrush("#991B1B");
+        }
+
+        private void SetUpdateNeutral(string message)
+        {
+            UpdateStatusMessage = message;
+            UpdateStatusBrush = CreateBrush("#6B7280");
+        }
+
+        private void SetUpdateSuccess(string message)
+        {
+            UpdateStatusMessage = message;
+            UpdateStatusBrush = CreateBrush("#1A7A4A");
+        }
+
+        private void SetUpdateError(string message)
+        {
+            UpdateStatusMessage = message;
+            UpdateStatusBrush = CreateBrush("#991B1B");
+        }
+
         private async Task ExecuteBusyAsync(Func<Task> action)
         {
             if (IsBusy)
@@ -1178,6 +1711,159 @@ namespace AttendanceShiftingManagement.ViewModels
             };
 
             return true;
+        }
+
+        private bool TryBuildGgmsSettings(bool requireConnectionDetails, out BudgetRuntimeOptions settings, out string validationMessage)
+        {
+            settings = new BudgetRuntimeOptions();
+            validationMessage = string.Empty;
+
+            if (!int.TryParse(GgmsPortText, out var port) || port <= 0 || port > 65535)
+            {
+                validationMessage = "Enter a valid GGMS MySQL port between 1 and 65535.";
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(GgmsOfficeTable))
+            {
+                validationMessage = "Enter the GGMS office table name.";
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(GgmsAllocationTable))
+            {
+                validationMessage = "Enter the GGMS allocation table name.";
+                return false;
+            }
+
+            if (requireConnectionDetails)
+            {
+                if (string.IsNullOrWhiteSpace(GgmsServer))
+                {
+                    validationMessage = "Enter the GGMS server or host name.";
+                    return false;
+                }
+
+                if (string.IsNullOrWhiteSpace(GgmsDatabase))
+                {
+                    validationMessage = "Enter the GGMS database name.";
+                    return false;
+                }
+
+                if (string.IsNullOrWhiteSpace(GgmsUsername))
+                {
+                    validationMessage = "Enter the GGMS database username.";
+                    return false;
+                }
+            }
+
+            settings = new BudgetRuntimeOptions
+            {
+                AyudaOfficeCode = GgmsOfficeCode.Trim(),
+                GgmsOfficeTable = GgmsOfficeTable.Trim(),
+                GgmsAllocationTable = GgmsAllocationTable.Trim(),
+                GgmsConnection = new DatabaseConnectionPreset
+                {
+                    DisplayName = "GGMS Budget Source",
+                    Server = GgmsServer.Trim(),
+                    Port = port,
+                    Database = GgmsDatabase.Trim(),
+                    Username = GgmsUsername.Trim(),
+                    Password = GgmsPassword
+                }
+            };
+
+            return true;
+        }
+
+        private void ApplyUpdateResult(UpdateCheckResult result, bool preserveNotCheckedMessage)
+        {
+            CurrentAppVersion = string.IsNullOrWhiteSpace(result.CurrentVersion)
+                ? AppVersionService.GetCurrentVersion()
+                : result.CurrentVersion;
+
+            if (result.Status == UpdateCheckStatus.NotChecked && preserveNotCheckedMessage)
+            {
+                IsUpdateAvailable = false;
+                return;
+            }
+
+            LatestAvailableVersion = string.IsNullOrWhiteSpace(result.LatestVersion)
+                ? "Not checked yet"
+                : result.LatestVersion;
+            UpdatePublishedAt = string.IsNullOrWhiteSpace(result.PublishedAt)
+                ? "Not published yet"
+                : result.PublishedAt;
+            UpdateReleaseNotes = result.Notes.Count == 0
+                ? "No release notes were provided."
+                : string.Join(Environment.NewLine, result.Notes.Select(note => $"- {note}"));
+            _updateDownloadPageUrl = result.ReleasePageUrl ?? string.Empty;
+            _updateInstallerUrl = result.InstallerUrl ?? string.Empty;
+            _updateSha256 = result.Sha256 ?? string.Empty;
+            OnPropertyChanged(nameof(CanOpenUpdateDownloadPage));
+            _openUpdateDownloadPageCommand.RaiseCanExecuteChanged();
+
+            if (_pendingAppUpdate != null
+                && result.Status == UpdateCheckStatus.UpdateAvailable
+                && AppVersionService.TryParseVersion(result.LatestVersion, out var latestParsed)
+                && AppVersionService.TryParseVersion(_pendingAppUpdate.Version, out var pendingParsed)
+                && latestParsed > pendingParsed)
+            {
+                AppUpdatePackageService.ClearPendingUpdate();
+                _pendingAppUpdate = null;
+                DownloadedInstallerLabel = "No downloaded installer is waiting yet.";
+            }
+
+            switch (result.Status)
+            {
+                case UpdateCheckStatus.UpdateAvailable:
+                    IsUpdateAvailable = true;
+                    SetUpdateSuccess(result.Message);
+                    break;
+                case UpdateCheckStatus.UpToDate:
+                    IsUpdateAvailable = false;
+                    SetUpdateSuccess(result.Message);
+                    break;
+                case UpdateCheckStatus.NotConfigured:
+                    IsUpdateAvailable = false;
+                    SetUpdateNeutral(result.Message);
+                    break;
+                case UpdateCheckStatus.Failed:
+                    IsUpdateAvailable = false;
+                    SetUpdateError(result.Message);
+                    break;
+                default:
+                    IsUpdateAvailable = false;
+                    if (!preserveNotCheckedMessage)
+                    {
+                        SetUpdateNeutral(result.Message);
+                    }
+
+                    break;
+            }
+
+            if (_pendingAppUpdate != null)
+            {
+                SetUpdateSuccess($"Version {_pendingAppUpdate.Version} is downloaded and ready to install.");
+            }
+
+            RaiseUpdateUiStateChanged();
+        }
+
+        private void RaiseUpdateUiStateChanged()
+        {
+            OnPropertyChanged(nameof(HasPendingUpdate));
+            OnPropertyChanged(nameof(ShowUpdateBanner));
+            OnPropertyChanged(nameof(UpdateBannerTitle));
+            OnPropertyChanged(nameof(UpdateBannerMessage));
+            OnPropertyChanged(nameof(ShowDownloadUpdateActions));
+            OnPropertyChanged(nameof(ShowPendingUpdateActions));
+            OnPropertyChanged(nameof(CanDownloadUpdate));
+            OnPropertyChanged(nameof(CanInstallPendingUpdate));
+            OnPropertyChanged(nameof(ShowUpdateDownloadProgress));
+            _downloadUpdateCommand.RaiseCanExecuteChanged();
+            _installPendingUpdateCommand.RaiseCanExecuteChanged();
+            _remindMeLaterCommand.RaiseCanExecuteChanged();
         }
 
         private string ResolvePreviewTableName()

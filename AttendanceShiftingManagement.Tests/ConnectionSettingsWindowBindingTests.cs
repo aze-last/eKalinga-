@@ -3,7 +3,7 @@ namespace AttendanceShiftingManagement.Tests;
 public sealed class ConnectionSettingsWindowBindingTests
 {
     [Fact]
-    public void ConnectionSettingsWindow_UsesLanOnlyCredentialEditorBinding()
+    public void ConnectionSettingsWindow_UsesGeneralCredentialEditorBinding()
     {
         var windowPath = Path.GetFullPath(Path.Combine(
             AppContext.BaseDirectory,
@@ -16,7 +16,7 @@ public sealed class ConnectionSettingsWindowBindingTests
 
         var xaml = File.ReadAllText(windowPath);
 
-        Assert.Contains("Visibility=\"{Binding ShowLanCredentialEditor, Converter={StaticResource BooleanToVisibilityConverter}}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Visibility=\"{Binding ShowCredentialEditor, Converter={StaticResource BooleanToVisibilityConverter}}\"", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Text=\"Selection only\"", xaml, StringComparison.Ordinal);
     }
 }

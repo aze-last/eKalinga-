@@ -25,7 +25,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private Brush _statusBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#6B7280"));
         private string _activeConnectionSummary = string.Empty;
         private bool _isBootstrapMode;
-        private string _brandTitle = "Bagong Pilipinas";
+        private string _brandTitle = "Local Government Unit";
         private string _brandSubtitle = "Barangay Ayuda System";
         private string _brandAddress = string.Empty;
         private string _brandInstallSerial = string.Empty;
@@ -239,7 +239,7 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             var settings = ConnectionSettingsService.Load();
             var preset = settings.GetPreset(settings.SelectedPreset);
-            ActiveConnectionSummary = $"{preset.DisplayName}: {preset.Server}:{preset.Port} / {preset.Database}";
+            ActiveConnectionSummary = ConnectionSettingsService.FormatPresetSummary(preset);
         }
 
         public void RefreshStartupState()

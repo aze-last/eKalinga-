@@ -391,15 +391,15 @@
 
                                     <Grid Margin="0,14,0,0">
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="136"/>
                                             <ColumnDefinition Width="16"/>
-                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="136"/>
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
 
                                         <Border Grid.Column="0"
-                                                Width="120"
-                                                Height="120"
+                                                Width="136"
+                                                Height="136"
                                                 Background="#DBEAFE"
                                                 CornerRadius="12"
                                                 BorderBrush="{StaticResource BrandBorderBrush}"
@@ -415,8 +415,8 @@
                                         </Border>
 
                                         <Border Grid.Column="2"
-                                                Width="120"
-                                                Height="120"
+                                                Width="136"
+                                                Height="136"
                                                 Background="White"
                                                 CornerRadius="12"
                                                 BorderBrush="{StaticResource BrandBorderBrush}"
@@ -426,6 +426,10 @@
 
                                         <StackPanel Grid.Column="3" Margin="16,0,0,0">
                                             <TextBlock Text="Printable card-sized ID with QR lookup handle."
+                                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                                       TextWrapping="Wrap"/>
+                                            <TextBlock Text="Preview opens before printing."
+                                                       Margin="0,6,0,0"
                                                        Foreground="{StaticResource BrandTextSecondaryBrush}"
                                                        TextWrapping="Wrap"/>
                                             <Button Content="UPLOAD PHOTO"

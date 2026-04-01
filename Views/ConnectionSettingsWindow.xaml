@@ -222,7 +222,7 @@
                                                          Width="18"
                                                          Height="18"
                                                          Margin="0,0,8,0"/>
-                                <TextBlock Text="HOSTINGER" VerticalAlignment="Center"/>
+                                <TextBlock Text="REMOTE" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
                     </Grid>
@@ -282,7 +282,7 @@
                             </StackPanel>
                         </DockPanel>
 
-                        <StackPanel Visibility="{Binding ShowLanCredentialEditor, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <StackPanel Visibility="{Binding ShowCredentialEditor, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <Grid Margin="0,0,0,12">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="3*"/>

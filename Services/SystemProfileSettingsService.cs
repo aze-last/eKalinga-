@@ -16,7 +16,7 @@ namespace AttendanceShiftingManagement.Services
 
     public sealed class SystemLoginBrandingSnapshot
     {
-        public string Title { get; init; } = "Bagong Pilipinas";
+        public string Title { get; init; } = "Local Government Unit";
         public string Subtitle { get; init; } = "Barangay Ayuda System";
         public string Address { get; init; } = string.Empty;
         public string InstallSerial { get; init; } = string.Empty;
@@ -92,7 +92,7 @@ namespace AttendanceShiftingManagement.Services
 
             return new SystemLoginBrandingSnapshot
             {
-                Title = string.IsNullOrWhiteSpace(settings.Owner) ? "Bagong Pilipinas" : settings.Owner.Trim(),
+                Title = string.IsNullOrWhiteSpace(settings.Owner) ? "Local Government Unit" : settings.Owner.Trim(),
                 Subtitle = string.IsNullOrWhiteSpace(settings.SystemName) ? "Barangay Ayuda System" : settings.SystemName.Trim(),
                 Address = settings.CompanyAddress?.Trim() ?? string.Empty,
                 InstallSerial = settings.InstallSerial,

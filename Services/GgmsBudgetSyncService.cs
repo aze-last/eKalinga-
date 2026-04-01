@@ -20,7 +20,7 @@ namespace AttendanceShiftingManagement.Services
         {
             if (!HasConnectionDetails(_options.GgmsConnection))
             {
-                return new GgmsBudgetSyncResult(false, "GGMS connection settings are incomplete. Update the Budget:GgmsConnection section in appsettings.json.");
+                return new GgmsBudgetSyncResult(false, "GGMS source settings are incomplete. Open Settings and complete the GGMS Budget Source connection details.");
             }
 
             await using var connection = new MySqlConnection(ConnectionSettingsService.BuildConnectionString(_options.GgmsConnection));

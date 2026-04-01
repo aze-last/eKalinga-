@@ -10,6 +10,7 @@ namespace AttendanceShiftingManagement.Data
         {
             var connectionString = context.Database.GetConnectionString()
                 ?? throw new InvalidOperationException("The active database connection string is missing.");
+            var localMigrations = context.Database.GetMigrations().ToArray();
 
             RuntimeSchemaBootstrapper.EnsureDatabaseExists(connectionString);
 
@@ -18,6 +19,9 @@ namespace AttendanceShiftingManagement.Data
 
             var historyTableExists = TableExists(connection, "__EFMigrationsHistory");
             var hasApplicationTables = HasApplicationTables(connection, historyTableExists);
+            var appliedMigrations = historyTableExists
+                ? GetAppliedMigrationIds(connection)
+                : new List<string>();
 
             if (!hasApplicationTables)
             {
@@ -25,10 +29,10 @@ namespace AttendanceShiftingManagement.Data
                 return;
             }
 
-            if (!historyTableExists)
+            if (RequiresLegacyHistoryBaseline(hasApplicationTables, localMigrations, appliedMigrations))
             {
                 RuntimeSchemaBootstrapper.RepairLegacySchema(connectionString);
-                BaselineMigrationsHistory(connection, context);
+                BaselineMigrationsHistory(connection, localMigrations);
             }
 
             ApplyMigrationsAndRepairs(context, connectionString);
@@ -75,10 +79,51 @@ namespace AttendanceShiftingManagement.Data
             return Convert.ToInt32(command.ExecuteScalar()) > 0;
         }
 
-        private static void BaselineMigrationsHistory(MySqlConnection connection, AppDbContext context)
+        internal static bool RequiresLegacyHistoryBaseline(
+            bool hasApplicationTables,
+            IReadOnlyList<string> localMigrations,
+            IReadOnlyCollection<string> appliedMigrations)
         {
-            var latestMigration = context.Database.GetMigrations().LastOrDefault();
-            if (string.IsNullOrWhiteSpace(latestMigration))
+            ArgumentNullException.ThrowIfNull(localMigrations);
+            ArgumentNullException.ThrowIfNull(appliedMigrations);
+
+            if (!hasApplicationTables || localMigrations.Count == 0)
+            {
+                return false;
+            }
+
+            var firstMigration = localMigrations[0];
+            return !appliedMigrations.Contains(firstMigration, StringComparer.Ordinal);
+        }
+
+        private static List<string> GetAppliedMigrationIds(MySqlConnection connection)
+        {
+            using var command = new MySqlCommand(
+                """
+                SELECT `MigrationId`
+                FROM `__EFMigrationsHistory`
+                ORDER BY `MigrationId`;
+                """,
+                connection);
+
+            var appliedMigrations = new List<string>();
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                if (!reader.IsDBNull(0))
+                {
+                    appliedMigrations.Add(reader.GetString(0));
+                }
+            }
+
+            return appliedMigrations;
+        }
+
+        private static void BaselineMigrationsHistory(MySqlConnection connection, IReadOnlyList<string> localMigrations)
+        {
+            ArgumentNullException.ThrowIfNull(localMigrations);
+
+            if (localMigrations.Count == 0)
             {
                 throw new InvalidOperationException("No EF Core migrations were found for startup migration mode.");
             }
@@ -94,21 +139,24 @@ namespace AttendanceShiftingManagement.Data
                 connection);
             createTableCommand.ExecuteNonQuery();
 
-            using var insertCommand = new MySqlCommand(
-                """
-                INSERT INTO `__EFMigrationsHistory` (`MigrationId`, `ProductVersion`)
-                SELECT @migrationId, @productVersion
-                WHERE NOT EXISTS (
-                    SELECT 1
-                    FROM `__EFMigrationsHistory`
-                    WHERE `MigrationId` = @migrationId
-                );
-                """,
-                connection);
+            foreach (var migrationId in localMigrations)
+            {
+                using var insertCommand = new MySqlCommand(
+                    """
+                    INSERT INTO `__EFMigrationsHistory` (`MigrationId`, `ProductVersion`)
+                    SELECT @migrationId, @productVersion
+                    WHERE NOT EXISTS (
+                        SELECT 1
+                        FROM `__EFMigrationsHistory`
+                        WHERE `MigrationId` = @migrationId
+                    );
+                    """,
+                    connection);
 
-            insertCommand.Parameters.AddWithValue("@migrationId", latestMigration);
-            insertCommand.Parameters.AddWithValue("@productVersion", GetProductVersion());
-            insertCommand.ExecuteNonQuery();
+                insertCommand.Parameters.AddWithValue("@migrationId", migrationId);
+                insertCommand.Parameters.AddWithValue("@productVersion", GetProductVersion());
+                insertCommand.ExecuteNonQuery();
+            }
         }
 
         private static string GetProductVersion()

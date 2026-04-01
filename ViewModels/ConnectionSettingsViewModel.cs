@@ -38,6 +38,7 @@ namespace AttendanceShiftingManagement.ViewModels
                     OnPropertyChanged(nameof(IsLocalSelected));
                     OnPropertyChanged(nameof(IsLanSelected));
                     OnPropertyChanged(nameof(IsRemoteSelected));
+                    OnPropertyChanged(nameof(ShowCredentialEditor));
                     OnPropertyChanged(nameof(CanEditSelectedPresetCredentials));
                     OnPropertyChanged(nameof(IsPresetCredentialsReadOnly));
                     OnPropertyChanged(nameof(ShowLanCredentialEditor));
@@ -110,30 +111,32 @@ namespace AttendanceShiftingManagement.ViewModels
         }
 
         public bool IsSelectionOnly => _selectionOnly;
-        public bool ShowCredentialEditor => !IsSelectionOnly;
-        public bool ShowLanCredentialEditor => !IsSelectionOnly && IsLanSelected;
-        public bool ShowFixedPresetNotice => !IsSelectionOnly && !IsLanSelected;
         public bool IsLocalSelected => string.Equals(SelectedPresetKey, LocalPresetKey, StringComparison.OrdinalIgnoreCase);
         public bool IsLanSelected => string.Equals(SelectedPresetKey, LanPresetKey, StringComparison.OrdinalIgnoreCase);
         public bool IsRemoteSelected => string.Equals(SelectedPresetKey, RemotePresetKey, StringComparison.OrdinalIgnoreCase);
-        public bool CanEditSelectedPresetCredentials => ShowCredentialEditor && IsLanSelected;
+        public bool CanEditSelectedPresetCredentials => IsLanSelected || (IsRemoteSelected && !_selectionOnly);
+        public bool ShowCredentialEditor => CanEditSelectedPresetCredentials;
+        public bool ShowLanCredentialEditor => IsLanSelected;
+        public bool ShowFixedPresetNotice => !CanEditSelectedPresetCredentials;
         public bool IsPresetCredentialsReadOnly => !CanEditSelectedPresetCredentials;
         public string CurrentPresetDisplayName => string.IsNullOrWhiteSpace(SelectedPresetKey)
             ? string.Empty
             : _settings.GetPreset(SelectedPresetKey).DisplayName;
         public string HeaderDescription => IsSelectionOnly
-            ? "Choose which app database is active for login, startup, dashboard data, and snapshots. You can test the selected preset here, then edit Network (LAN) credentials later from System Settings."
-            : "Select the active app database here. Local and Hostinger are fixed presets; only Network (LAN) credentials can be updated from this screen.";
+            ? "Choose which app database is active for login, startup, dashboard data, and snapshots. Network (LAN) can be configured here before sign-in so users can point the app to an available LAN server anytime."
+            : "Select the active app database here. Local is fixed by the shipped app configuration, while Network (LAN) and Remote are editable from this screen.";
         public string FooterDescription => IsSelectionOnly
-            ? "Use Test Connection to verify the selected preset, then save to apply it and return to the login form. Database credentials are managed from System Settings."
-            : "Save to apply the active app database. Only Network (LAN) credentials are saved from this screen; Local and Hostinger remain fixed.";
+            ? "Use Test Connection to verify the selected preset. If Network (LAN) is selected, update the host and database fields here, then save to return to the login form."
+            : "Save to apply the active app database. Network (LAN) and Remote credentials are stored in your Windows user profile; Local stays fixed.";
         public string SaveButtonText => IsSelectionOnly ? "SAVE AND CONTINUE" : "SAVE SETTINGS";
         public string PasswordStatusText => string.IsNullOrWhiteSpace(Password) ? "Not configured" : "Configured";
         public string PresetHelpText => IsSelectionOnly
-            ? "Use System Settings after login if you need to update Network (LAN) credentials. Local and Hostinger stay fixed."
+            ? IsLanSelected
+                ? "Network (LAN) is editable before sign-in. Enter the LAN server details here, test the connection, then save and continue."
+                : $"{CurrentPresetDisplayName} is selection-only before sign-in. Switch to Network (LAN) if you need to configure connection details here."
             : CanEditSelectedPresetCredentials
-                ? "Update the Network (LAN) host and database credentials here. This preset is stored in your Windows user profile."
-                : $"{CurrentPresetDisplayName} is fixed by app settings and is read-only here. Switch to Network (LAN) if you need editable connection details.";
+                ? $"Update the {CurrentPresetDisplayName} host and database credentials here. This preset is stored in your Windows user profile."
+                : $"{CurrentPresetDisplayName} is fixed by the shipped app configuration and is read-only here. Select an editable preset if you need editable connection details.";
 
         public ICommand SelectLocalPresetCommand { get; }
         public ICommand SelectLanPresetCommand { get; }
@@ -366,7 +369,7 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 LocalPresetKey => "Local",
                 LanPresetKey => "Network (LAN)",
-                _ => "Remote (Hostinger)"
+                _ => "Remote"
             };
         }
 
@@ -374,12 +377,14 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             if (IsSelectionOnly)
             {
-                return $"{CurrentPresetDisplayName} app database selected. Use System Settings to edit Network (LAN) credentials.";
+                return IsLanSelected
+                    ? "Network (LAN) app database selected. Update the LAN server details here, test the connection, then save and continue."
+                    : $"{CurrentPresetDisplayName} app database selected. Switch to Network (LAN) if you need to edit connection details before sign-in.";
             }
 
             return CanEditSelectedPresetCredentials
-                ? "Network (LAN) is selected. You can update its host and database credentials here."
-                : $"{CurrentPresetDisplayName} is selected. This preset is fixed by app settings; only Network (LAN) can be edited here.";
+                ? $"{CurrentPresetDisplayName} is selected. You can update its host and database credentials here."
+                : $"{CurrentPresetDisplayName} is selected. This preset is fixed by app settings; only Network (LAN) and Remote can be edited here.";
         }
 
         private void SetNeutralStatus(string message)

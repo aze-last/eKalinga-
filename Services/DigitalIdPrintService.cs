@@ -1,3 +1,4 @@
+using AttendanceShiftingManagement.Views;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -17,18 +18,46 @@ namespace AttendanceShiftingManagement.Services
     {
         public bool PrintCard(DigitalIdPrintRequest request)
         {
+            var previewCard = BuildCard(request);
+            PrepareCard(previewCard);
+
+            var previewWindow = new DigitalIdPrintPreviewWindow(previewCard, request.FullName);
+            var owner = ResolveOwnerWindow();
+            if (owner != null)
+            {
+                previewWindow.Owner = owner;
+            }
+
+            if (previewWindow.ShowDialog() != true)
+            {
+                return false;
+            }
+
             var dialog = new PrintDialog();
             if (dialog.ShowDialog() != true)
             {
                 return false;
             }
 
-            var card = BuildCard(request);
+            var printCard = BuildCard(request);
+            PrepareCard(printCard);
+            dialog.PrintVisual(printCard, $"Beneficiary Digital ID - {request.FullName}");
+            return true;
+        }
+
+        private static void PrepareCard(Border card)
+        {
             card.Measure(new Size(324, 204));
             card.Arrange(new Rect(new Size(324, 204)));
             card.UpdateLayout();
-            dialog.PrintVisual(card, $"Beneficiary Digital ID - {request.FullName}");
-            return true;
+        }
+
+        private static Window? ResolveOwnerWindow()
+        {
+            return Application.Current?.Windows
+                .OfType<Window>()
+                .FirstOrDefault(window => window.IsActive)
+                ?? Application.Current?.MainWindow;
         }
 
         private static Border BuildCard(DigitalIdPrintRequest request)
@@ -49,7 +78,8 @@ namespace AttendanceShiftingManagement.Services
                 CornerRadius = new CornerRadius(12),
                 Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#DBEAFE")),
                 BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#1D4ED8")),
-                BorderThickness = new Thickness(1)
+                BorderThickness = new Thickness(1),
+                ClipToBounds = true
             };
 
             photoBorder.Child = request.PhotoImage == null
@@ -61,10 +91,20 @@ namespace AttendanceShiftingManagement.Services
                     FontWeight = FontWeights.SemiBold,
                     Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#1D4ED8"))
                 }
-                : new Image
+                : new Grid
                 {
-                    Source = request.PhotoImage,
-                    Stretch = Stretch.UniformToFill
+                    Background = Brushes.White,
+                    Children =
+                    {
+                        new Image
+                        {
+                            Source = request.PhotoImage,
+                            Stretch = Stretch.Uniform,
+                            HorizontalAlignment = HorizontalAlignment.Center,
+                            VerticalAlignment = VerticalAlignment.Center,
+                            Margin = new Thickness(4)
+                        }
+                    }
                 };
 
             Grid.SetColumn(photoBorder, 0);
@@ -119,8 +159,8 @@ namespace AttendanceShiftingManagement.Services
 
             qrContainer.Children.Add(new Border
             {
-                Width = 74,
-                Height = 74,
+                Width = 88,
+                Height = 88,
                 Background = Brushes.White,
                 BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#CBD5E1")),
                 BorderThickness = new Thickness(1),
@@ -135,9 +175,9 @@ namespace AttendanceShiftingManagement.Services
 
             qrContainer.Children.Add(new TextBlock
             {
-                Margin = new Thickness(10, 0, 0, 0),
+                Margin = new Thickness(8, 0, 0, 0),
                 VerticalAlignment = VerticalAlignment.Center,
-                Text = "Present this ID for\nbeneficiary lookup,\nattendance, and\nrelease verification.",
+                Text = "Show this ID for\nlookup, attendance,\nand release\nverification.",
                 FontSize = 9,
                 Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#475569"))
             });

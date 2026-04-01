@@ -9,7 +9,7 @@ public sealed class AppDatabaseMigrationServiceTests
     {
         var preset = new DatabaseConnectionPreset
         {
-            DisplayName = "Remote (Hostinger)",
+            DisplayName = "Remote",
             Port = 3306,
             Database = "barangay_ayuda_db",
             Username = "root"

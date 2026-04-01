@@ -26,6 +26,39 @@
                        FontSize="13"
                        Foreground="{StaticResource BrandTextSecondaryBrush}"
                        TextWrapping="Wrap" />
+            <Border Margin="0,14,0,0"
+                    Padding="14"
+                    Background="#FFF7D6"
+                    BorderBrush="#F4D27A"
+                    BorderThickness="1"
+                    CornerRadius="10"
+                    Visibility="{Binding ShowUpdateBanner, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <StackPanel>
+                    <TextBlock Text="{Binding UpdateBannerTitle}"
+                               FontWeight="SemiBold"
+                               Foreground="#92400E" />
+                    <TextBlock Text="{Binding UpdateBannerMessage}"
+                               Margin="0,4,0,0"
+                               Foreground="#9A5A00"
+                               TextWrapping="Wrap" />
+                    <WrapPanel Margin="0,10,0,0">
+                        <Button Content="DOWNLOAD UPDATE"
+                                Margin="0,0,10,0"
+                                Style="{StaticResource GoldActionButton}"
+                                Command="{Binding DownloadUpdateCommand}"
+                                Visibility="{Binding ShowDownloadUpdateActions, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                        <Button Content="INSTALL NOW"
+                                Margin="0,0,10,0"
+                                Style="{StaticResource PrimaryActionButton}"
+                                Command="{Binding InstallPendingUpdateCommand}"
+                                Visibility="{Binding ShowPendingUpdateActions, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                        <Button Content="REMIND ME LATER"
+                                Style="{StaticResource SecondaryActionButton}"
+                                Command="{Binding RemindMeLaterCommand}"
+                                Visibility="{Binding ShowPendingUpdateActions, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
         </StackPanel>
 
         <TabControl Grid.Row="1"
@@ -703,7 +736,7 @@
                                        FontSize="15"
                                        FontWeight="SemiBold"
                                        Foreground="{StaticResource BrandMidnightBrush}" />
-                            <TextBlock Text="Choose which preset the app uses for login, startup initialization, dashboard reads, and local snapshots. Local and Hostinger are fixed app presets. Only Network (LAN) credentials can be edited from the database settings window."
+                            <TextBlock Text="Choose which preset the app uses for login, startup initialization, dashboard reads, and local snapshots. Before login, users can switch presets and configure only Network (LAN). Local and Remote stay fixed by the shipped app configuration."
                                        Margin="0,8,0,0"
                                        Foreground="{StaticResource BrandTextSecondaryBrush}"
                                        TextWrapping="Wrap" />
@@ -721,7 +754,7 @@
                                     Padding="14"
                                     CornerRadius="10"
                                     Background="#FFF7D6">
-                                <TextBlock Text="Before login, users can only switch presets. Database credential editing is restricted to this Settings area, and the migrate action below updates both Local and Hostinger after schema changes."
+                                <TextBlock Text="Only Network (LAN) credentials are editable. Local and Remote are fixed by the shipped app configuration, and the migrate action below updates both Local and Remote after schema changes."
                                            Foreground="#9A5A00"
                                            TextWrapping="Wrap" />
                             </Border>
@@ -733,7 +766,7 @@
                                         Style="{StaticResource PrimaryActionButton}"
                                         Click="OpenAppDatabaseSettings_Click" />
                                 <Button Margin="12,0,0,0"
-                                        Content="MIGRATE LOCAL + HOSTINGER NOW"
+                                        Content="MIGRATE LOCAL + REMOTE NOW"
                                         Style="{StaticResource GoldActionButton}"
                                         Command="{Binding MigrateLocalAndRemoteCommand}" />
                             </WrapPanel>
@@ -741,6 +774,195 @@
                             <TextBlock Margin="0,14,0,0"
                                        Text="{Binding AppDatabaseStatusMessage}"
                                        Foreground="{Binding AppDatabaseStatusBrush}"
+                                       TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="GGMS Budget Source">
+                <Grid Margin="0,20,0,0">
+                    <Border Background="White"
+                            BorderBrush="{StaticResource BrandBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="14"
+                            Padding="20">
+                        <StackPanel>
+                            <TextBlock Text="GGMS Budget Source"
+                                       FontSize="15"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrandMidnightBrush}" />
+                            <TextBlock Text="Configure the external GGMS source used by the budget module. Credentials stay outside the shipped installer, and the table names can be changed if your GGMS schema differs."
+                                       Margin="0,8,0,0"
+                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                       TextWrapping="Wrap" />
+
+                            <UniformGrid Margin="0,18,0,0" Columns="3">
+                                <TextBox Margin="0,0,8,0"
+                                         Text="{Binding GgmsOfficeCode, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="Ayuda office code" />
+                                <TextBox Margin="8,0,8,0"
+                                         Text="{Binding GgmsOfficeTable, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="Office table" />
+                                <TextBox Margin="8,0,0,0"
+                                         Text="{Binding GgmsAllocationTable, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="Allocation table" />
+                            </UniformGrid>
+
+                            <Grid Margin="0,12,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="3*" />
+                                    <ColumnDefinition Width="12" />
+                                    <ColumnDefinition Width="1*" />
+                                </Grid.ColumnDefinitions>
+
+                                <TextBox Grid.Column="0"
+                                         Text="{Binding GgmsServer, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="GGMS server / host" />
+                                <TextBox Grid.Column="2"
+                                         Text="{Binding GgmsPortText, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="Port" />
+                            </Grid>
+
+                            <TextBox Margin="0,12,0,0"
+                                     Text="{Binding GgmsDatabase, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     materialDesign:HintAssist.Hint="GGMS database name" />
+
+                            <UniformGrid Margin="0,12,0,0" Columns="2">
+                                <TextBox Margin="0,0,8,0"
+                                         Text="{Binding GgmsUsername, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="GGMS username" />
+                                <TextBox Margin="8,0,0,0"
+                                         Text="{Binding GgmsPassword, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="GGMS password" />
+                            </UniformGrid>
+
+                            <WrapPanel Margin="0,18,0,0">
+                                <Button Content="TEST GGMS CONNECTION"
+                                        Margin="0,0,12,0"
+                                        Style="{StaticResource SecondaryActionButton}"
+                                        Command="{Binding TestGgmsConnectionCommand}" />
+                                <Button Content="SAVE GGMS SETTINGS"
+                                        Style="{StaticResource GoldActionButton}"
+                                        Command="{Binding SaveGgmsSettingsCommand}" />
+                            </WrapPanel>
+
+                            <TextBlock Margin="0,14,0,0"
+                                       Text="{Binding GgmsStatusMessage}"
+                                       Foreground="{Binding GgmsStatusBrush}"
+                                       TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="Updates">
+                <Grid Margin="0,20,0,0">
+                    <Border Background="White"
+                            BorderBrush="{StaticResource BrandBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="14"
+                            Padding="20">
+                        <StackPanel>
+                            <TextBlock Text="App Updates"
+                                       FontSize="15"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrandMidnightBrush}" />
+                            <TextBlock Text="Check the public release manifest for a newer installer. Startup checks stay quiet and only surface here inside Settings."
+                                       Margin="0,8,0,0"
+                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                       TextWrapping="Wrap" />
+
+                            <UniformGrid Margin="0,18,0,0" Columns="2">
+                                <TextBox Margin="0,0,8,0"
+                                         Text="{Binding CurrentAppVersion, Mode=OneWay}"
+                                         IsReadOnly="True"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="Current version" />
+                                <TextBox Margin="8,0,0,0"
+                                         Text="{Binding LatestAvailableVersion, Mode=OneWay}"
+                                         IsReadOnly="True"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="Latest version" />
+                            </UniformGrid>
+
+                            <TextBox Margin="0,12,0,0"
+                                     Text="{Binding UpdatePublishedAt, Mode=OneWay}"
+                                     IsReadOnly="True"
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     materialDesign:HintAssist.Hint="Published at" />
+
+                            <TextBox Margin="0,12,0,0"
+                                     Text="{Binding UpdateManifestUrl, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     materialDesign:HintAssist.Hint="Public version.json URL" />
+
+                            <CheckBox Margin="0,16,0,0"
+                                      Content="Check for updates on startup"
+                                      IsChecked="{Binding CheckForUpdatesOnStartup}" />
+
+                            <TextBox Margin="0,12,0,0"
+                                     Height="120"
+                                     AcceptsReturn="True"
+                                     IsReadOnly="True"
+                                     TextWrapping="Wrap"
+                                     VerticalScrollBarVisibility="Auto"
+                                     Text="{Binding UpdateReleaseNotes, Mode=OneWay}"
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     materialDesign:HintAssist.Hint="Release notes" />
+
+                            <TextBox Margin="0,12,0,0"
+                                     Text="{Binding DownloadedInstallerLabel, Mode=OneWay}"
+                                     IsReadOnly="True"
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     materialDesign:HintAssist.Hint="Downloaded installer" />
+
+                            <ProgressBar Margin="0,12,0,0"
+                                         Height="10"
+                                         Maximum="100"
+                                         Value="{Binding UpdateDownloadProgressPercent, Mode=OneWay}"
+                                         Visibility="{Binding ShowUpdateDownloadProgress, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+                            <WrapPanel Margin="0,18,0,0">
+                                <Button Content="SAVE UPDATE SETTINGS"
+                                        Margin="0,0,12,0"
+                                        Style="{StaticResource SecondaryActionButton}"
+                                        Command="{Binding SaveUpdatePreferencesCommand}" />
+                                <Button Content="CHECK NOW"
+                                        Margin="0,0,12,0"
+                                        Style="{StaticResource GoldActionButton}"
+                                        Command="{Binding CheckForUpdatesCommand}" />
+                                <Button Content="DOWNLOAD UPDATE"
+                                        Margin="0,0,12,0"
+                                        Style="{StaticResource GoldActionButton}"
+                                        Command="{Binding DownloadUpdateCommand}"
+                                        Visibility="{Binding ShowDownloadUpdateActions, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                <Button Content="INSTALL NOW"
+                                        Margin="0,0,12,0"
+                                        Style="{StaticResource PrimaryActionButton}"
+                                        Command="{Binding InstallPendingUpdateCommand}"
+                                        Visibility="{Binding ShowPendingUpdateActions, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                <Button Content="REMIND ME LATER"
+                                        Margin="0,0,12,0"
+                                        Style="{StaticResource SecondaryActionButton}"
+                                        Command="{Binding RemindMeLaterCommand}"
+                                        Visibility="{Binding ShowPendingUpdateActions, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                <Button Content="OPEN DOWNLOAD PAGE"
+                                        Style="{StaticResource PrimaryActionButton}"
+                                        Command="{Binding OpenUpdateDownloadPageCommand}" />
+                            </WrapPanel>
+
+                            <TextBlock Margin="0,14,0,0"
+                                       Text="{Binding UpdateStatusMessage}"
+                                       Foreground="{Binding UpdateStatusBrush}"
                                        TextWrapping="Wrap" />
                         </StackPanel>
                     </Border>

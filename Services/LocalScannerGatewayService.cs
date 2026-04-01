@@ -136,14 +136,21 @@ namespace AttendanceShiftingManagement.Services
                     return Results.Json(new { success = false, message = "Upload or capture a beneficiary QR image first." });
                 }
 
-                await using var stream = image.OpenReadStream();
-                var qrPayload = QrCodeToolkitService.TryDecodePayload(stream);
-                if (string.IsNullOrWhiteSpace(qrPayload))
+                try
                 {
-                    return Results.Json(new { success = false, message = "No readable QR code was found in the uploaded image." });
-                }
+                    await using var stream = image.OpenReadStream();
+                    var qrPayload = QrCodeToolkitService.TryDecodePayload(stream);
+                    if (string.IsNullOrWhiteSpace(qrPayload))
+                    {
+                        return Results.Json(new { success = false, message = "No readable QR code was found in the uploaded image. Move closer, improve lighting, or try live camera scan." });
+                    }
 
-                return await LookupAsync(sessionToken, pin, qrPayload);
+                    return await LookupAsync(sessionToken, pin, qrPayload);
+                }
+                catch
+                {
+                    return Results.Json(new { success = false, message = "The selected image could not be processed. Use a JPG or PNG photo, or try live camera scan." });
+                }
             });
 
             app.MapPost("/api/attendance/mark", async Task<IResult> (ScannerAttendanceRequest request) =>
@@ -418,11 +425,15 @@ namespace AttendanceShiftingManagement.Services
     button { background: #0f766e; color: #fff; border: 0; font-weight: 600; }
     button.alt { background: #1d4ed8; }
     button.warn { background: #92400e; }
+    .action-row { display: flex; gap: 10px; margin-top: 10px; }
+    .action-row button { flex: 1; margin-top: 0; }
     .hidden { display: none; }
+    .helper { margin-top: 10px; font-size: 0.95rem; color: #475569; }
     .status { margin-top: 12px; white-space: pre-wrap; }
     .history { margin-top: 12px; }
     .history-item { padding: 10px 0; border-top: 1px solid #e2e8f0; }
     img.photo { width: 120px; height: 120px; object-fit: cover; border-radius: 18px; border: 1px solid #cbd5e1; }
+    video.preview { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 16px; border: 1px solid #cbd5e1; background: #0f172a; margin-top: 12px; }
     .muted { color: #475569; }
   </style>
 </head>
@@ -438,10 +449,17 @@ namespace AttendanceShiftingManagement.Services
 
   <div class="card hidden" id="scannerCard">
     <h2>Lookup Beneficiary</h2>
+    <video id="cameraPreview" class="preview hidden" playsinline muted></video>
+    <div class="action-row">
+      <button class="alt hidden" id="startLiveScan">Start Live Camera Scan</button>
+      <button class="warn hidden" id="stopLiveScan">Stop Camera</button>
+    </div>
+    <div class="helper" id="cameraSupportMessage">Checking live camera scan support...</div>
     <input id="payload" placeholder="Paste or type the beneficiary QR payload">
     <button class="alt" id="lookupManual">Lookup by QR payload</button>
-    <input id="image" type="file" accept="image/*" capture="environment">
-    <button class="alt" id="lookupImage">Lookup from camera/photo</button>
+    <input id="image" class="hidden" type="file" accept="image/*" capture="environment">
+    <button class="alt" id="lookupImage">Open Camera / Photo</button>
+    <div class="helper">Use live camera scan when available, or tap Open Camera / Photo to capture and upload a beneficiary QR image.</div>
     <div class="status" id="lookupStatus"></div>
   </div>
 
@@ -462,14 +480,30 @@ let lastLookup = null;
 const unlockButton = document.getElementById("unlock");
 const lookupManualButton = document.getElementById("lookupManual");
 const lookupImageButton = document.getElementById("lookupImage");
+const imageInput = document.getElementById("image");
+const startLiveScanButton = document.getElementById("startLiveScan");
+const stopLiveScanButton = document.getElementById("stopLiveScan");
+const cameraPreview = document.getElementById("cameraPreview");
+const cameraSupportMessage = document.getElementById("cameraSupportMessage");
 const markAttendanceButton = document.getElementById("markAttendance");
 const markReceivedButton = document.getElementById("markReceived");
+let barcodeDetector = null;
+let cameraStream = null;
+let cameraScanTimer = 0;
+let isCameraScanning = false;
 
 unlockButton.addEventListener("click", unlockSession);
 lookupManualButton.addEventListener("click", lookupManual);
-lookupImageButton.addEventListener("click", lookupImage);
+lookupImageButton.addEventListener("click", openImageCapture);
+imageInput.addEventListener("change", lookupSelectedImage);
+startLiveScanButton.addEventListener("click", startLiveScan);
+stopLiveScanButton.addEventListener("click", () => stopLiveScan(true));
 markAttendanceButton.addEventListener("click", markAttendance);
 markReceivedButton.addEventListener("click", markReceived);
+document.addEventListener("visibilitychange", handleVisibilityChange);
+window.addEventListener("beforeunload", cleanupCamera);
+
+initializeLiveCameraSupport();
 
 async function unlockSession() {
   const pin = document.getElementById("pin").value.trim();
@@ -487,24 +521,165 @@ async function lookupManual() {
     return;
   }
 
-  const response = await postJson("/api/lookup/manual", { sessionToken, pin: activePin, qrPayload });
-  renderLookupResponse(response);
+  await handleDetectedPayload(qrPayload, false);
 }
 
-async function lookupImage() {
-  const fileInput = document.getElementById("image");
-  if (!fileInput.files.length) {
-    document.getElementById("lookupStatus").textContent = "Capture or select a QR image first.";
+function openImageCapture() {
+  stopLiveScan(false);
+  imageInput.value = "";
+  imageInput.click();
+}
+
+async function lookupSelectedImage() {
+  if (!imageInput.files.length) {
     return;
   }
+
+  document.getElementById("lookupStatus").textContent = "Uploading QR image...";
 
   const data = new FormData();
   data.append("sessionToken", sessionToken);
   data.append("pin", activePin);
-  data.append("image", fileInput.files[0]);
+  data.append("image", imageInput.files[0]);
 
   const response = await fetch("/api/lookup/upload", { method: "POST", body: data }).then(result => result.json());
+  imageInput.value = "";
   renderLookupResponse(response);
+}
+
+async function initializeLiveCameraSupport() {
+  if (!("BarcodeDetector" in window) || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    cameraSupportMessage.textContent = "Live camera scan isn't available in this browser. Use Open Camera / Photo below.";
+    return;
+  }
+
+  try {
+    const supportedFormats = BarcodeDetector.getSupportedFormats
+      ? await BarcodeDetector.getSupportedFormats()
+      : ["qr_code"];
+
+    if (supportedFormats.length && !supportedFormats.includes("qr_code")) {
+      cameraSupportMessage.textContent = "This browser can open the camera, but QR detection isn't supported here. Use Open Camera / Photo below.";
+      return;
+    }
+
+    barcodeDetector = new BarcodeDetector({ formats: ["qr_code"] });
+    startLiveScanButton.classList.remove("hidden");
+    cameraSupportMessage.textContent = "Live camera scan is ready. Unlock the scanner, then point your camera at the beneficiary QR.";
+  } catch (error) {
+    console.error(error);
+    cameraSupportMessage.textContent = "Live camera scan couldn't be prepared on this browser. Use Open Camera / Photo below.";
+  }
+}
+
+async function startLiveScan() {
+  if (!activePin) {
+    document.getElementById("lookupStatus").textContent = "Unlock the scanner with the 6-digit PIN first.";
+    return;
+  }
+
+  if (!barcodeDetector) {
+    document.getElementById("lookupStatus").textContent = "Live camera scan isn't available on this browser. Use Open Camera / Photo below.";
+    return;
+  }
+
+  stopLiveScan(false);
+
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: { ideal: "environment" },
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
+      },
+      audio: false
+    });
+
+    cameraPreview.srcObject = cameraStream;
+    cameraPreview.classList.remove("hidden");
+    await cameraPreview.play();
+
+    isCameraScanning = true;
+    startLiveScanButton.classList.add("hidden");
+    stopLiveScanButton.classList.remove("hidden");
+    cameraSupportMessage.textContent = "Camera is live. Hold the beneficiary QR steady and centered.";
+    document.getElementById("lookupStatus").textContent = "Scanning live camera feed...";
+    scanLiveFrame();
+  } catch (error) {
+    console.error(error);
+    stopLiveScan(false);
+    cameraSupportMessage.textContent = "Camera access was blocked or failed. Use Open Camera / Photo below.";
+    document.getElementById("lookupStatus").textContent = "Live camera scan couldn't start on this phone.";
+  }
+}
+
+async function scanLiveFrame() {
+  if (!isCameraScanning || !barcodeDetector) {
+    return;
+  }
+
+  try {
+    const barcodes = await barcodeDetector.detect(cameraPreview);
+    const match = barcodes.find(code => code.rawValue && code.rawValue.trim());
+    if (match) {
+      await handleDetectedPayload(match.rawValue.trim(), true);
+      return;
+    }
+  } catch (error) {
+    console.error(error);
+  }
+
+  if (isCameraScanning) {
+    cameraScanTimer = window.setTimeout(scanLiveFrame, 220);
+  }
+}
+
+async function handleDetectedPayload(qrPayload, fromCamera) {
+  stopLiveScan(false);
+  document.getElementById("payload").value = qrPayload;
+  document.getElementById("lookupStatus").textContent = fromCamera
+    ? "QR detected. Loading beneficiary..."
+    : "Looking up beneficiary...";
+
+  const response = await postJson("/api/lookup/manual", { sessionToken, pin: activePin, qrPayload });
+  renderLookupResponse(response);
+}
+
+function stopLiveScan(showStoppedMessage) {
+  isCameraScanning = false;
+
+  if (cameraScanTimer) {
+    window.clearTimeout(cameraScanTimer);
+    cameraScanTimer = 0;
+  }
+
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(track => track.stop());
+    cameraStream = null;
+  }
+
+  cameraPreview.pause();
+  cameraPreview.srcObject = null;
+  cameraPreview.classList.add("hidden");
+  stopLiveScanButton.classList.add("hidden");
+
+  if (barcodeDetector) {
+    startLiveScanButton.classList.remove("hidden");
+  }
+
+  if (showStoppedMessage && activePin) {
+    document.getElementById("lookupStatus").textContent = "Live camera scan stopped.";
+  }
+}
+
+function handleVisibilityChange() {
+  if (document.hidden) {
+    stopLiveScan(false);
+  }
+}
+
+function cleanupCamera() {
+  stopLiveScan(false);
 }
 
 async function markAttendance() {

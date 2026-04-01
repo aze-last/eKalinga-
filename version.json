@@ -1,0 +1,12 @@
+{
+    "version":  "1.0.1",
+    "notes":  [
+                  "First release of the guided updater flow.",
+                  "Added in-app installer download, install now, and remind me later support."
+              ],
+    "publishedAt":  "2026-03-28",
+    "releasePageUrl":  "https://github.com/aze-last/BarangayAyudaSys/releases/tag/v1.0.1",
+    "installerFileName":  "BarangayAyudaSystem-Setup-1.0.1.exe",
+    "installerUrl":  "https://github.com/aze-last/BarangayAyudaSys/releases/download/v1.0.1/BarangayAyudaSystem-Setup-1.0.1.exe",
+    "sha256":  "52f52f05871b46c7dbf6fec57fa092fe0b4af675faabeb67184f74f49d840965"
+}

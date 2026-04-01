@@ -109,7 +109,7 @@ public sealed class SystemProfileSettingsServiceTests
                 InstallSerial = "BAS-20260326-Z9X8"
             });
 
-            Assert.Equal("Bagong Pilipinas", fallback.Title);
+            Assert.Equal("Local Government Unit", fallback.Title);
             Assert.Equal("Barangay Ayuda System", fallback.Subtitle);
             Assert.Equal(string.Empty, fallback.Address);
             Assert.Equal("BAS-20260326-Z9X8", fallback.InstallSerial);

@@ -699,7 +699,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 ? $"Issued on {SelectedBeneficiary.DigitalIdIssuedAt.Value:MMMM dd, yyyy hh:mm tt}"
                 : "Digital ID issued.";
             DigitalIdPhotoImage = BuildImage(SelectedBeneficiary.DigitalIdPhotoPath);
-            DigitalIdQrImage = QrCodeToolkitService.GenerateQrImage(SelectedBeneficiary.DigitalIdQrPayload, 10);
+            DigitalIdQrImage = QrCodeToolkitService.GenerateQrImage(SelectedBeneficiary.DigitalIdQrPayload, 14);
 
             LookupScannerSessionUrl = string.Empty;
             LookupScannerSessionPin = string.Empty;

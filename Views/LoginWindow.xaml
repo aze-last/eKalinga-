@@ -118,7 +118,7 @@
                         </StackPanel>
                     </Grid>
 
-                    <TextBlock Text="Manage local household records, staged beneficiaries, cash-for-work operations, and synced municipal tables from one admin portal."
+                    <TextBlock Text="Manage local records, staged beneficiaries, cash-for-work operations, and synced municipal tables from one admin portal."
                                Margin="0,18,0,0"
                                MaxWidth="520"
                                FontSize="14"
@@ -181,7 +181,7 @@
                 </StackPanel>
 
                 <TextBlock Grid.Row="2"
-                           Text="App database settings are available before sign-in so you can choose Local, Network LAN, or Hostinger. Network LAN credentials are managed later from System Settings."
+                           Text="App database settings are available before sign-in so you can choose Local, Network LAN, or Remote. Network (LAN) can also be configured there anytime before login."
                            Foreground="#C9D7FF"
                            FontSize="12"
                            TextWrapping="Wrap" />
@@ -328,7 +328,7 @@
                 </Grid>
 
                 <TextBlock Grid.Row="2"
-                           Text="Use App Database if you need to switch between Local, Network LAN, and Hostinger before logging in. Network LAN credentials are configured later from System Settings."
+                           Text="Use App Database if you need to switch between Local, Network LAN, and Remote before logging in. If you choose Network (LAN), you can configure its connection details there before sign-in."
                            Foreground="{StaticResource BrandTextSecondaryBrush}"
                            FontSize="12"
                            TextWrapping="Wrap" />

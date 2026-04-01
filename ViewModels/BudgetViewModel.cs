@@ -16,7 +16,6 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly User _currentUser;
         private readonly AppDbContext _context;
         private readonly BudgetManagementService _budgetService;
-        private readonly GgmsBudgetSyncService _ggmsBudgetSyncService;
         private readonly RelayCommand _refreshCommand;
         private readonly RelayCommand _syncGovernmentBudgetCommand;
         private readonly RelayCommand _recordDonationCommand;
@@ -33,8 +32,8 @@ namespace AttendanceShiftingManagement.ViewModels
         private decimal _releasedTotal;
         private decimal _governmentAllocated;
         private decimal _governmentSpentReference;
-        private string _governmentOfficeCode = "OFF-2026-0006";
-        private string _governmentOfficeName = "Ayuda";
+        private string _governmentOfficeCode = "Not configured";
+        private string _governmentOfficeName = "Not configured";
         private string _latestGovernmentSyncLabel = "No government sync yet.";
         private PrivateDonationDonorType _selectedDonorType = PrivateDonationDonorType.Person;
         private DonationProofType _selectedProofType = DonationProofType.Cash;
@@ -72,7 +71,6 @@ namespace AttendanceShiftingManagement.ViewModels
             _currentUser = currentUser;
             _context = new AppDbContext();
             _budgetService = new BudgetManagementService(_context);
-            _ggmsBudgetSyncService = new GgmsBudgetSyncService();
             DonorTypes = new ObservableCollection<PrivateDonationDonorType>(Enum.GetValues<PrivateDonationDonorType>());
             ProofTypes = new ObservableCollection<DonationProofType>(Enum.GetValues<DonationProofType>());
             ProgramTypes = new ObservableCollection<AyudaProgramType>(Enum.GetValues<AyudaProgramType>());
@@ -439,8 +437,8 @@ namespace AttendanceShiftingManagement.ViewModels
             ReleasedTotal = overview.ReleasedTotal;
             GovernmentAllocated = overview.GovernmentAllocated;
             GovernmentSpentReference = overview.GovernmentSpentReference;
-            GovernmentOfficeCode = overview.OfficeCode ?? "OFF-2026-0006";
-            GovernmentOfficeName = overview.OfficeName ?? "Ayuda";
+            GovernmentOfficeCode = string.IsNullOrWhiteSpace(overview.OfficeCode) ? "Not configured" : overview.OfficeCode;
+            GovernmentOfficeName = string.IsNullOrWhiteSpace(overview.OfficeName) ? "Not configured" : overview.OfficeName;
             LatestGovernmentSyncLabel = overview.LastGovernmentSyncAt.HasValue
                 ? $"Last GGMS sync: {overview.LastGovernmentSyncAt:MMM dd, yyyy hh:mm tt}"
                 : "No government sync yet.";
@@ -492,7 +490,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
             try
             {
-                var result = await _ggmsBudgetSyncService.SyncAyudaBudgetAsync(_context, _currentUser.Id);
+                var result = await new GgmsBudgetSyncService().SyncAyudaBudgetAsync(_context, _currentUser.Id);
                 if (!result.IsSuccess)
                 {
                     SetErrorStatus(result.Message);

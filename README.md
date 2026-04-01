@@ -1,4 +1,4 @@
-# Barangay Ayuda System
+# BarangayAyudaSys
 
 WPF + EF Core + MySQL application for barangay ayuda operations.
 

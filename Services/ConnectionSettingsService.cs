@@ -53,7 +53,8 @@ namespace AttendanceShiftingManagement.Services
 
         private static readonly HashSet<string> RuntimeEditablePresetKeys = new(StringComparer.OrdinalIgnoreCase)
         {
-            LanPresetKey
+            LanPresetKey,
+            RemotePresetKey
         };
 
         private static readonly JsonSerializerOptions JsonOptions = new()
@@ -177,6 +178,29 @@ namespace AttendanceShiftingManagement.Services
             }
         }
 
+        public static bool IsPresetConfigured(DatabaseConnectionPreset preset)
+        {
+            ArgumentNullException.ThrowIfNull(preset);
+
+            return !string.IsNullOrWhiteSpace(preset.Server)
+                && preset.Port > 0
+                && !string.IsNullOrWhiteSpace(preset.Database)
+                && !string.IsNullOrWhiteSpace(preset.Username);
+        }
+
+        public static string FormatPresetSummary(DatabaseConnectionPreset preset)
+        {
+            ArgumentNullException.ThrowIfNull(preset);
+
+            var displayName = string.IsNullOrWhiteSpace(preset.DisplayName)
+                ? "Database preset"
+                : preset.DisplayName.Trim();
+
+            return IsPresetConfigured(preset)
+                ? $"{displayName}: {preset.Server}:{preset.Port} / {preset.Database}"
+                : $"{displayName}: not configured yet.";
+        }
+
         public static string BuildConnectionString(DatabaseConnectionPreset preset)
         {
             var builder = new MySqlConnectionStringBuilder
@@ -262,7 +286,7 @@ namespace AttendanceShiftingManagement.Services
             {
                 settings.Presets[RemotePresetKey] = new DatabaseConnectionPreset
                 {
-                    DisplayName = "Remote (Hostinger)",
+                    DisplayName = "Remote",
                     Server = string.Empty,
                     Port = 3306,
                     Database = string.Empty,
