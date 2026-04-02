@@ -1,7 +1,7 @@
 <Window x:Class="AttendanceShiftingManagement.Views.DigitalIdPrintPreviewWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Barangay Ayuda System - Digital ID Preview"
+        Title="eKalinga+ - Digital ID Preview"
         Height="720"
         Width="760"
         MinHeight="620"

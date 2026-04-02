@@ -10,6 +10,115 @@
         WindowStartupLocation="CenterOwner"
         Background="{StaticResource BrandSurfaceBrush}">
 
+    <Window.Resources>
+        <Style x:Key="ProtectedSettingsContentGridStyle" TargetType="Grid">
+            <Setter Property="IsEnabled" Value="True" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsSensitiveSettingsLocked}" Value="True">
+                    <Setter Property="IsEnabled" Value="False" />
+                    <Setter Property="Effect">
+                        <Setter.Value>
+                            <BlurEffect Radius="10" />
+                        </Setter.Value>
+                    </Setter>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <DataTemplate x:Key="ProtectedSettingsOtpOverlayTemplate">
+            <Grid Background="#70FFFFFF">
+                <Border MaxWidth="560"
+                        Margin="24"
+                        Padding="22"
+                        CornerRadius="18"
+                        BorderBrush="{StaticResource BrandBorderBrush}"
+                        BorderThickness="1"
+                        Background="White"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <Border Width="42"
+                                    Height="42"
+                                    CornerRadius="21"
+                                    Background="#EEF4FF"
+                                    VerticalAlignment="Top">
+                                <materialDesign:PackIcon Kind="ShieldLockOutline"
+                                                         Width="22"
+                                                         Height="22"
+                                                         Foreground="{StaticResource BrandMidnightBrush}"
+                                                         HorizontalAlignment="Center"
+                                                         VerticalAlignment="Center" />
+                            </Border>
+
+                            <StackPanel Margin="12,0,0,0">
+                                <TextBlock Text="Protected settings"
+                                           FontSize="16"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource BrandMidnightBrush}" />
+                                <TextBlock Margin="0,6,0,0"
+                                           Text="{Binding SensitiveSettingsOtpPromptText}"
+                                           Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
+                        </StackPanel>
+
+                        <Border Margin="0,16,0,0"
+                                Padding="12"
+                                Background="{StaticResource BrandSurfaceBrush}"
+                                BorderBrush="{StaticResource BrandBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="12">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="EmailOutline"
+                                                         Width="18"
+                                                         Height="18"
+                                                         Foreground="{StaticResource BrandMidnightBrush}" />
+                                <TextBlock Margin="8,0,0,0"
+                                           Text="{Binding OfficialEmailMask}"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource BrandMidnightBrush}" />
+                            </StackPanel>
+                        </Border>
+
+                        <WrapPanel Margin="0,16,0,0">
+                            <Button Content="SEND OTP"
+                                    Style="{StaticResource SecondaryActionButton}"
+                                    Command="{Binding SendSensitiveSettingsOtpCommand}" />
+                            <Button Margin="10,0,0,0"
+                                    Content="{Binding SensitiveSettingsOtpResendButtonText}"
+                                    Style="{StaticResource MaterialDesignOutlinedButton}"
+                                    Command="{Binding ResendSensitiveSettingsOtpCommand}" />
+                        </WrapPanel>
+
+                        <Grid Margin="0,16,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="12" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <TextBox Grid.Column="0"
+                                     Text="{Binding SensitiveSettingsOtpCode, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     materialDesign:HintAssist.Hint="Enter 6-digit OTP" />
+                            <Button Grid.Column="2"
+                                    MinWidth="132"
+                                    Content="VERIFY OTP"
+                                    Style="{StaticResource PrimaryActionButton}"
+                                    Command="{Binding VerifySensitiveSettingsOtpCommand}" />
+                        </Grid>
+
+                        <TextBlock Margin="0,14,0,0"
+                                   Text="{Binding SensitiveSettingsOtpStatusMessage}"
+                                   Foreground="{Binding SensitiveSettingsOtpStatusBrush}"
+                                   TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </DataTemplate>
+    </Window.Resources>
+
     <Grid Margin="24">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -214,6 +323,94 @@
                                 </Grid>
                             </Border>
 
+                            <Border Margin="0,18,0,0"
+                                    Padding="16"
+                                    Background="{StaticResource BrandSurfaceBrush}"
+                                    BorderBrush="{StaticResource BrandBorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="12">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="16" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <Border Grid.Column="0"
+                                            Width="108"
+                                            Height="108"
+                                            CornerRadius="16"
+                                            Background="#FFF3E0">
+                                        <Grid>
+                                            <Border Width="60"
+                                                    Height="60"
+                                                    CornerRadius="12"
+                                                    Background="#FB8C00"
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding HasSystemLoginBackground}" Value="True">
+                                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <materialDesign:PackIcon Kind="ImageOutline"
+                                                                         Width="30"
+                                                                         Height="30"
+                                                                         Foreground="White"
+                                                                         HorizontalAlignment="Center"
+                                                                         VerticalAlignment="Center" />
+                                            </Border>
+
+                                            <Image Source="{Binding SystemLoginBackgroundImage}"
+                                                   Stretch="UniformToFill"
+                                                   Margin="0">
+                                                <Image.Style>
+                                                    <Style TargetType="Image">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding HasSystemLoginBackground}" Value="True">
+                                                                <Setter Property="Visibility" Value="Visible" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Image.Style>
+                                            </Image>
+                                        </Grid>
+                                    </Border>
+
+                                    <StackPanel Grid.Column="2"
+                                                VerticalAlignment="Center">
+                                        <TextBlock Text="Login Panel Background"
+                                                   FontSize="12"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{StaticResource BrandMidnightBrush}" />
+                                        <TextBlock Text="{Binding SystemLoginBackgroundFileLabel}"
+                                                   Margin="0,6,0,0"
+                                                   Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                                   TextWrapping="Wrap" />
+                                        <TextBlock Text="This image appears behind the login glass panels on the sign-in screen."
+                                                   Margin="0,8,0,0"
+                                                   Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                                   TextWrapping="Wrap" />
+
+                                        <StackPanel Margin="0,14,0,0"
+                                                    Orientation="Horizontal">
+                                            <Button Content="UPLOAD BACKGROUND"
+                                                    Style="{StaticResource SecondaryActionButton}"
+                                                    Command="{Binding BrowseSystemLoginBackgroundCommand}" />
+                                            <Button Content="REMOVE BACKGROUND"
+                                                    Margin="10,0,0,0"
+                                                    Style="{StaticResource MaterialDesignOutlinedButton}"
+                                                    Command="{Binding RemoveSystemLoginBackgroundCommand}" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
                             <Button Margin="0,18,0,0"
                                     Width="220"
                                     HorizontalAlignment="Left"
@@ -335,6 +532,76 @@
                                     Style="{StaticResource GoldActionButton}"
                                     Click="ChangePassword_Click" />
 
+                            <Border Margin="0,16,0,0"
+                                    Padding="16"
+                                    Background="{StaticResource BrandSurfaceBrush}"
+                                    BorderBrush="{StaticResource BrandBorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="12"
+                                    Visibility="{Binding ShowPasswordChangeOtpPanel, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <StackPanel>
+                                    <TextBlock Text="Password Change Verification"
+                                               FontSize="12"
+                                               FontWeight="SemiBold"
+                                               Foreground="{StaticResource BrandMidnightBrush}" />
+                                    <TextBlock Margin="0,8,0,0"
+                                               Text="{Binding PasswordChangeOtpPromptText}"
+                                               Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                               TextWrapping="Wrap" />
+
+                                    <Border Margin="0,14,0,0"
+                                            Padding="12"
+                                            Background="White"
+                                            BorderBrush="{StaticResource BrandBorderBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="12">
+                                        <StackPanel Orientation="Horizontal">
+                                            <materialDesign:PackIcon Kind="EmailOutline"
+                                                                     Width="18"
+                                                                     Height="18"
+                                                                     Foreground="{StaticResource BrandMidnightBrush}" />
+                                            <TextBlock Margin="8,0,0,0"
+                                                       Text="{Binding OfficialEmailMask}"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{StaticResource BrandMidnightBrush}" />
+                                        </StackPanel>
+                                    </Border>
+
+                                    <WrapPanel Margin="0,16,0,0">
+                                        <Button Content="SEND OTP"
+                                                Style="{StaticResource SecondaryActionButton}"
+                                                Command="{Binding SendPasswordChangeOtpCommand}" />
+                                        <Button Margin="10,0,0,0"
+                                                Content="{Binding PasswordChangeOtpResendButtonText}"
+                                                Style="{StaticResource MaterialDesignOutlinedButton}"
+                                                Command="{Binding ResendPasswordChangeOtpCommand}" />
+                                    </WrapPanel>
+
+                                    <Grid Margin="0,16,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="12" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <TextBox Grid.Column="0"
+                                                 Text="{Binding PasswordChangeOtpCode, UpdateSourceTrigger=PropertyChanged}"
+                                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                                 materialDesign:HintAssist.Hint="Enter 6-digit OTP" />
+                                        <Button Grid.Column="2"
+                                                MinWidth="132"
+                                                Content="VERIFY OTP"
+                                                Style="{StaticResource PrimaryActionButton}"
+                                                Command="{Binding VerifyPasswordChangeOtpCommand}" />
+                                    </Grid>
+
+                                    <TextBlock Margin="0,14,0,0"
+                                               Text="{Binding PasswordChangeOtpStatusMessage}"
+                                               Foreground="{Binding PasswordChangeOtpStatusBrush}"
+                                               TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+
                             <TextBlock Margin="0,14,0,0"
                                        Text="{Binding SecurityStatusMessage}"
                                        Foreground="{Binding SecurityStatusBrush}"
@@ -346,6 +613,7 @@
 
             <TabItem Header="Remote Snapshot">
                 <Grid Margin="0,20,0,0">
+                    <Grid Style="{StaticResource ProtectedSettingsContentGridStyle}">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
@@ -589,6 +857,12 @@
                                       MinHeight="300" />
                         </Grid>
                     </Border>
+
+                    </Grid>
+                    <ContentControl Panel.ZIndex="10"
+                                    Content="{Binding}"
+                                    ContentTemplate="{StaticResource ProtectedSettingsOtpOverlayTemplate}"
+                                    Visibility="{Binding IsSensitiveSettingsLocked, Converter={StaticResource BooleanToVisibilityConverter}}" />
                 </Grid>
             </TabItem>
 
@@ -726,6 +1000,7 @@
 
             <TabItem Header="App Database">
                 <Grid Margin="0,20,0,0">
+                    <Grid Style="{StaticResource ProtectedSettingsContentGridStyle}">
                     <Border Background="White"
                             BorderBrush="{StaticResource BrandBorderBrush}"
                             BorderThickness="1"
@@ -777,11 +1052,18 @@
                                        TextWrapping="Wrap" />
                         </StackPanel>
                     </Border>
+
+                    </Grid>
+                    <ContentControl Panel.ZIndex="10"
+                                    Content="{Binding}"
+                                    ContentTemplate="{StaticResource ProtectedSettingsOtpOverlayTemplate}"
+                                    Visibility="{Binding IsSensitiveSettingsLocked, Converter={StaticResource BooleanToVisibilityConverter}}" />
                 </Grid>
             </TabItem>
 
             <TabItem Header="GGMS Budget Source">
                 <Grid Margin="0,20,0,0">
+                    <Grid Style="{StaticResource ProtectedSettingsContentGridStyle}">
                     <Border Background="White"
                             BorderBrush="{StaticResource BrandBorderBrush}"
                             BorderThickness="1"
@@ -861,6 +1143,12 @@
                                        TextWrapping="Wrap" />
                         </StackPanel>
                     </Border>
+
+                    </Grid>
+                    <ContentControl Panel.ZIndex="10"
+                                    Content="{Binding}"
+                                    ContentTemplate="{StaticResource ProtectedSettingsOtpOverlayTemplate}"
+                                    Visibility="{Binding IsSensitiveSettingsLocked, Converter={StaticResource BooleanToVisibilityConverter}}" />
                 </Grid>
             </TabItem>
 

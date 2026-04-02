@@ -34,6 +34,66 @@
             <SolidColorBrush x:Key="BrandTextSecondaryBrush" Color="#6B7280" />
             <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
 
+            <!-- Local fallback style keys so the app and designer do not depend on
+                 toolkit-specific keyed resources being present in every environment. -->
+            <Style x:Key="MaterialDesignFlatButton"
+                   TargetType="Button"
+                   BasedOn="{StaticResource {x:Type Button}}">
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="Foreground" Value="{StaticResource BrandMidnightBrush}" />
+                <Setter Property="Padding" Value="14,8" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="Height" Value="40" />
+                <Setter Property="FontSize" Value="13" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="HorizontalContentAlignment" Value="Center" />
+                <Setter Property="VerticalContentAlignment" Value="Center" />
+            </Style>
+
+            <Style x:Key="MaterialDesignOutlinedButton"
+                   TargetType="Button"
+                   BasedOn="{StaticResource MaterialDesignFlatButton}">
+                <Setter Property="Background" Value="White" />
+                <Setter Property="BorderBrush" Value="{StaticResource BrandBorderBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+            </Style>
+
+            <Style x:Key="MaterialDesignOutlinedTextBox"
+                   TargetType="TextBox"
+                   BasedOn="{StaticResource {x:Type TextBox}}">
+                <Setter Property="Background" Value="White" />
+                <Setter Property="BorderBrush" Value="{StaticResource BrandBorderBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="Foreground" Value="{StaticResource BrandMidnightBrush}" />
+                <Setter Property="Padding" Value="12,10" />
+                <Setter Property="Height" Value="44" />
+                <Setter Property="VerticalContentAlignment" Value="Center" />
+                <Setter Property="FontSize" Value="13" />
+            </Style>
+
+            <Style x:Key="MaterialDesignOutlinedPasswordBox"
+                   TargetType="PasswordBox"
+                   BasedOn="{StaticResource {x:Type PasswordBox}}">
+                <Setter Property="Background" Value="White" />
+                <Setter Property="BorderBrush" Value="{StaticResource BrandBorderBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="Foreground" Value="{StaticResource BrandMidnightBrush}" />
+                <Setter Property="Padding" Value="12,10" />
+                <Setter Property="Height" Value="44" />
+                <Setter Property="FontSize" Value="13" />
+            </Style>
+
+            <Style x:Key="MaterialDesignToolToggleButton"
+                   TargetType="ToggleButton"
+                   BasedOn="{StaticResource {x:Type ToggleButton}}">
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="BorderBrush" Value="Transparent" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="Foreground" Value="{StaticResource BrandTextSecondaryBrush}" />
+                <Setter Property="Padding" Value="0" />
+                <Setter Property="Cursor" Value="Hand" />
+            </Style>
+
             <Style x:Key="MaterialDesignHeadline5TextBlock" TargetType="TextBlock">
                 <Setter Property="FontSize" Value="20" />
                 <Setter Property="FontWeight" Value="SemiBold" />

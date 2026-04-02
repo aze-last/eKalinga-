@@ -16,7 +16,7 @@ using System.Windows.Media;
 
 namespace AttendanceShiftingManagement.ViewModels
 {
-    public sealed class SettingsToolsViewModel : ObservableObject
+    public sealed partial class SettingsToolsViewModel : ObservableObject, IDisposable
     {
         private const string MasterListTableName = "val_beneficiaries";
         private const string StagingTableName = "BeneficiaryStaging";
@@ -46,6 +46,8 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly RelayCommand _saveSystemProfileCommand;
         private readonly RelayCommand _browseSystemLogoCommand;
         private readonly RelayCommand _removeSystemLogoCommand;
+        private readonly RelayCommand _browseSystemLoginBackgroundCommand;
+        private readonly RelayCommand _removeSystemLoginBackgroundCommand;
         private readonly RelayCommand _saveAccountCommand;
         private readonly RelayCommand _changePasswordCommand;
         private readonly User? _currentUser;
@@ -58,8 +60,11 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _systemContactNumber = string.Empty;
         private string _systemLogoPath = string.Empty;
         private string _savedSystemLogoPath = string.Empty;
+        private string _systemLoginBackgroundPath = string.Empty;
+        private string _savedSystemLoginBackgroundPath = string.Empty;
         private string _systemInstallSerial = string.Empty;
         private ImageSource? _systemLogoImage;
+        private ImageSource? _systemLoginBackgroundImage;
         private string _systemProfileStatusMessage = "Set the app-wide system identity and keep the company serial number matched to the active database.";
         private Brush _systemProfileStatusBrush = CreateBrush("#6B7280");
         private string _accountFullName = string.Empty;
@@ -144,8 +149,10 @@ namespace AttendanceShiftingManagement.ViewModels
             _saveSystemProfileCommand = new RelayCommand(_ => ExecuteSaveSystemProfile(), _ => !IsBusy);
             _browseSystemLogoCommand = new RelayCommand(_ => ExecuteBrowseSystemLogo(), _ => !IsBusy);
             _removeSystemLogoCommand = new RelayCommand(_ => ExecuteRemoveSystemLogo(), _ => !IsBusy && CanRemoveSystemLogo);
+            _browseSystemLoginBackgroundCommand = new RelayCommand(_ => ExecuteBrowseSystemLoginBackground(), _ => !IsBusy);
+            _removeSystemLoginBackgroundCommand = new RelayCommand(_ => ExecuteRemoveSystemLoginBackground(), _ => !IsBusy && CanRemoveSystemLoginBackground);
             _saveAccountCommand = new RelayCommand(_ => ExecuteSaveAccount(), _ => !IsBusy && HasCurrentUser);
-            _changePasswordCommand = new RelayCommand(_ => ExecuteChangePassword(), _ => !IsBusy && HasCurrentUser);
+            _changePasswordCommand = new RelayCommand(async _ => await HandleChangePasswordAsync(), _ => !IsBusy && HasCurrentUser);
             _testConnectionCommand = new RelayCommand(async _ => await ExecuteTestConnectionAsync(), _ => !IsBusy);
             _saveImportConnectionCommand = new RelayCommand(_ => ExecuteSaveImportConnection(), _ => !IsBusy);
             _snapshotMasterListCommand = new RelayCommand(async _ => await ExecuteSnapshotMasterListAsync(), _ => !IsBusy);
@@ -166,6 +173,7 @@ namespace AttendanceShiftingManagement.ViewModels
             _remindMeLaterCommand = new RelayCommand(_ => ExecuteRemindMeLater(), _ => !IsBusy && HasPendingUpdate);
             _saveUpdatePreferencesCommand = new RelayCommand(_ => ExecuteSaveUpdatePreferences(), _ => !IsBusy);
             _openUpdateDownloadPageCommand = new RelayCommand(_ => ExecuteOpenUpdateDownloadPage(), _ => !IsBusy && CanOpenUpdateDownloadPage);
+            InitializeOtpState();
 
             LoadSystemProfile();
             LoadCurrentUserAccount();
@@ -204,7 +212,13 @@ namespace AttendanceShiftingManagement.ViewModels
         public string SystemEmail
         {
             get => _systemEmail;
-            set => SetProperty(ref _systemEmail, value);
+            set
+            {
+                if (SetProperty(ref _systemEmail, value))
+                {
+                    HandleSystemEmailChanged();
+                }
+            }
         }
 
         public string SystemContactNumber
@@ -250,6 +264,38 @@ namespace AttendanceShiftingManagement.ViewModels
         public string SystemLogoFileLabel => string.IsNullOrWhiteSpace(SystemLogoPath)
             ? "Using the default login logo."
             : Path.GetFileName(SystemLogoPath);
+
+        public string SystemLoginBackgroundPath
+        {
+            get => _systemLoginBackgroundPath;
+            private set
+            {
+                if (SetProperty(ref _systemLoginBackgroundPath, value))
+                {
+                    OnPropertyChanged(nameof(SystemLoginBackgroundFileLabel));
+                    OnPropertyChanged(nameof(CanRemoveSystemLoginBackground));
+                    _removeSystemLoginBackgroundCommand?.RaiseCanExecuteChanged();
+                }
+            }
+        }
+
+        public ImageSource? SystemLoginBackgroundImage
+        {
+            get => _systemLoginBackgroundImage;
+            private set
+            {
+                if (SetProperty(ref _systemLoginBackgroundImage, value))
+                {
+                    OnPropertyChanged(nameof(HasSystemLoginBackground));
+                }
+            }
+        }
+
+        public bool HasSystemLoginBackground => SystemLoginBackgroundImage != null;
+        public bool CanRemoveSystemLoginBackground => !string.IsNullOrWhiteSpace(SystemLoginBackgroundPath);
+        public string SystemLoginBackgroundFileLabel => string.IsNullOrWhiteSpace(SystemLoginBackgroundPath)
+            ? "Using the default login background."
+            : Path.GetFileName(SystemLoginBackgroundPath);
 
         public string SystemProfileStatusMessage
         {
@@ -702,6 +748,8 @@ namespace AttendanceShiftingManagement.ViewModels
                     _saveSystemProfileCommand.RaiseCanExecuteChanged();
                     _browseSystemLogoCommand.RaiseCanExecuteChanged();
                     _removeSystemLogoCommand.RaiseCanExecuteChanged();
+                    _browseSystemLoginBackgroundCommand.RaiseCanExecuteChanged();
+                    _removeSystemLoginBackgroundCommand.RaiseCanExecuteChanged();
                     _saveAccountCommand.RaiseCanExecuteChanged();
                     _changePasswordCommand.RaiseCanExecuteChanged();
                     _testConnectionCommand.RaiseCanExecuteChanged();
@@ -724,6 +772,7 @@ namespace AttendanceShiftingManagement.ViewModels
                     _remindMeLaterCommand.RaiseCanExecuteChanged();
                     _saveUpdatePreferencesCommand.RaiseCanExecuteChanged();
                     _openUpdateDownloadPageCommand.RaiseCanExecuteChanged();
+                    OnBusyStateChangedForOtp();
                 }
             }
         }
@@ -731,6 +780,8 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand SaveSystemProfileCommand => _saveSystemProfileCommand;
         public ICommand BrowseSystemLogoCommand => _browseSystemLogoCommand;
         public ICommand RemoveSystemLogoCommand => _removeSystemLogoCommand;
+        public ICommand BrowseSystemLoginBackgroundCommand => _browseSystemLoginBackgroundCommand;
+        public ICommand RemoveSystemLoginBackgroundCommand => _removeSystemLoginBackgroundCommand;
         public ICommand SaveAccountCommand => _saveAccountCommand;
         public ICommand ChangePasswordCommand => _changePasswordCommand;
         public ICommand TestConnectionCommand => _testConnectionCommand;
@@ -764,8 +815,11 @@ namespace AttendanceShiftingManagement.ViewModels
             SystemContactNumber = settings.ContactNumber;
             SystemLogoPath = settings.LogoPath;
             _savedSystemLogoPath = settings.LogoPath;
+            SystemLoginBackgroundPath = settings.LoginBackgroundPath;
+            _savedSystemLoginBackgroundPath = settings.LoginBackgroundPath;
             SystemInstallSerial = settings.InstallSerial;
             RefreshSystemLogoPreview();
+            RefreshSystemLoginBackgroundPreview();
         }
 
         private void LoadCurrentUserAccount()
@@ -860,6 +914,7 @@ namespace AttendanceShiftingManagement.ViewModels
             var email = SystemEmail.Trim();
             var contactNumber = SystemContactNumber.Trim();
             var logoPath = SystemLogoPath.Trim();
+            var loginBackgroundPath = SystemLoginBackgroundPath.Trim();
 
             if (string.IsNullOrWhiteSpace(systemName))
             {
@@ -881,6 +936,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 Email = email,
                 ContactNumber = contactNumber,
                 LogoPath = logoPath,
+                LoginBackgroundPath = loginBackgroundPath,
                 InstallSerial = SystemInstallSerial
             });
 
@@ -888,6 +944,12 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 SystemProfileSettingsService.RemoveStoredLogo(_savedSystemLogoPath);
                 _savedSystemLogoPath = logoPath;
+            }
+
+            if (!string.Equals(_savedSystemLoginBackgroundPath, loginBackgroundPath, StringComparison.OrdinalIgnoreCase))
+            {
+                SystemProfileSettingsService.RemoveStoredLogo(_savedSystemLoginBackgroundPath);
+                _savedSystemLoginBackgroundPath = loginBackgroundPath;
             }
 
             SystemName = systemName;
@@ -935,6 +997,45 @@ namespace AttendanceShiftingManagement.ViewModels
             SystemLogoPath = string.Empty;
             RefreshSystemLogoPreview();
             SetSystemProfileSuccess("Custom logo removed. Save system profile to restore the default logo.");
+        }
+
+        private void ExecuteBrowseSystemLoginBackground()
+        {
+            var dialog = new OpenFileDialog
+            {
+                Filter = "Image Files (*.png;*.jpg;*.jpeg;*.bmp;*.ico)|*.png;*.jpg;*.jpeg;*.bmp;*.ico",
+                CheckFileExists = true
+            };
+
+            if (dialog.ShowDialog() != true)
+            {
+                return;
+            }
+
+            try
+            {
+                var disposableWorkingBackgroundPath = GetDisposableWorkingLoginBackgroundPath();
+                SystemLoginBackgroundPath = SystemProfileSettingsService.CopyBackgroundToBrandingFolder(dialog.FileName, disposableWorkingBackgroundPath);
+                RefreshSystemLoginBackgroundPreview();
+                SetSystemProfileSuccess("Background selected. Save system profile to apply the updated branding.");
+            }
+            catch (Exception ex)
+            {
+                SetSystemProfileError($"Unable to use the selected background. {ex.Message}");
+            }
+        }
+
+        private void ExecuteRemoveSystemLoginBackground()
+        {
+            var disposableWorkingBackgroundPath = GetDisposableWorkingLoginBackgroundPath();
+            if (!string.IsNullOrWhiteSpace(disposableWorkingBackgroundPath))
+            {
+                SystemProfileSettingsService.RemoveStoredLogo(disposableWorkingBackgroundPath);
+            }
+
+            SystemLoginBackgroundPath = string.Empty;
+            RefreshSystemLoginBackgroundPreview();
+            SetSystemProfileSuccess("Custom background removed. Save system profile to restore the default background.");
         }
 
         private void ExecuteSaveAccount()
@@ -1575,6 +1676,12 @@ namespace AttendanceShiftingManagement.ViewModels
             SecurityStatusBrush = CreateBrush("#1A7A4A");
         }
 
+        private void SetSecurityNeutral(string message)
+        {
+            SecurityStatusMessage = message;
+            SecurityStatusBrush = CreateBrush("#6B7280");
+        }
+
         private void SetSecurityError(string message)
         {
             SecurityStatusMessage = message;
@@ -1950,6 +2057,23 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 return false;
             }
+        }
+
+        private void RefreshSystemLoginBackgroundPreview()
+        {
+            SystemLoginBackgroundImage = LocalImageLoader.Load(SystemLoginBackgroundPath);
+        }
+
+        private string? GetDisposableWorkingLoginBackgroundPath()
+        {
+            if (string.IsNullOrWhiteSpace(SystemLoginBackgroundPath))
+            {
+                return null;
+            }
+
+            return string.Equals(SystemLoginBackgroundPath, _savedSystemLoginBackgroundPath, StringComparison.OrdinalIgnoreCase)
+                ? null
+                : SystemLoginBackgroundPath;
         }
     }
 }

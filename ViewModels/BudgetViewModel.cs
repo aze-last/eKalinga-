@@ -20,6 +20,10 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly RelayCommand _syncGovernmentBudgetCommand;
         private readonly RelayCommand _recordDonationCommand;
         private readonly RelayCommand _createProgramCommand;
+        private readonly RelayCommand _openDonationPanelCommand;
+        private readonly RelayCommand _closeDonationPanelCommand;
+        private readonly RelayCommand _openProgramPanelCommand;
+        private readonly RelayCommand _closeProgramPanelCommand;
         private readonly RelayCommand _openSeminarPanelCommand;
         private readonly RelayCommand _closeSeminarPanelCommand;
         private readonly RelayCommand _createSeminarCommand;
@@ -63,6 +67,8 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _seminarGoodsDescription = string.Empty;
         private string _seminarAgenda = string.Empty;
         private DateTime? _seminarDate = DateTime.Today;
+        private bool _isDonationPanelOpen;
+        private bool _isProgramPanelOpen;
         private bool _isSeminarPanelOpen;
         private bool _isBusy;
 
@@ -83,6 +89,10 @@ namespace AttendanceShiftingManagement.ViewModels
             _syncGovernmentBudgetCommand = new RelayCommand(async _ => await SyncGovernmentBudgetAsync(), _ => !IsBusy);
             _recordDonationCommand = new RelayCommand(async _ => await RecordDonationAsync(), _ => !IsBusy);
             _createProgramCommand = new RelayCommand(async _ => await CreateProgramAsync(), _ => !IsBusy);
+            _openDonationPanelCommand = new RelayCommand(_ => OpenDonationPanel(), _ => !IsBusy && !IsDonationPanelOpen);
+            _closeDonationPanelCommand = new RelayCommand(_ => CloseDonationPanel(), _ => IsDonationPanelOpen);
+            _openProgramPanelCommand = new RelayCommand(_ => OpenProgramPanel(), _ => !IsBusy && !IsProgramPanelOpen);
+            _closeProgramPanelCommand = new RelayCommand(_ => CloseProgramPanel(), _ => IsProgramPanelOpen);
             _openSeminarPanelCommand = new RelayCommand(_ => OpenSeminarPanel(), _ => !IsBusy && !IsSeminarPanelOpen);
             _closeSeminarPanelCommand = new RelayCommand(_ => CloseSeminarPanel(), _ => IsSeminarPanelOpen);
             _createSeminarCommand = new RelayCommand(async _ => await CreateSeminarAsync(), _ => !IsBusy);
@@ -103,6 +113,10 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand SyncGovernmentBudgetCommand => _syncGovernmentBudgetCommand;
         public ICommand RecordDonationCommand => _recordDonationCommand;
         public ICommand CreateProgramCommand => _createProgramCommand;
+        public ICommand OpenDonationPanelCommand => _openDonationPanelCommand;
+        public ICommand CloseDonationPanelCommand => _closeDonationPanelCommand;
+        public ICommand OpenProgramPanelCommand => _openProgramPanelCommand;
+        public ICommand CloseProgramPanelCommand => _closeProgramPanelCommand;
         public ICommand OpenSeminarPanelCommand => _openSeminarPanelCommand;
         public ICommand CloseSeminarPanelCommand => _closeSeminarPanelCommand;
         public ICommand CreateSeminarCommand => _createSeminarCommand;
@@ -119,6 +133,10 @@ namespace AttendanceShiftingManagement.ViewModels
                     _syncGovernmentBudgetCommand.RaiseCanExecuteChanged();
                     _recordDonationCommand.RaiseCanExecuteChanged();
                     _createProgramCommand.RaiseCanExecuteChanged();
+                    _openDonationPanelCommand.RaiseCanExecuteChanged();
+                    _closeDonationPanelCommand.RaiseCanExecuteChanged();
+                    _openProgramPanelCommand.RaiseCanExecuteChanged();
+                    _closeProgramPanelCommand.RaiseCanExecuteChanged();
                     _openSeminarPanelCommand.RaiseCanExecuteChanged();
                     _closeSeminarPanelCommand.RaiseCanExecuteChanged();
                     _createSeminarCommand.RaiseCanExecuteChanged();
@@ -367,6 +385,34 @@ namespace AttendanceShiftingManagement.ViewModels
             set => SetProperty(ref _seminarDate, value);
         }
 
+        public bool IsDonationPanelOpen
+        {
+            get => _isDonationPanelOpen;
+            private set
+            {
+                if (SetProperty(ref _isDonationPanelOpen, value))
+                {
+                    OnPropertyChanged(nameof(IsAnySetupPanelOpen));
+                    _openDonationPanelCommand.RaiseCanExecuteChanged();
+                    _closeDonationPanelCommand.RaiseCanExecuteChanged();
+                }
+            }
+        }
+
+        public bool IsProgramPanelOpen
+        {
+            get => _isProgramPanelOpen;
+            private set
+            {
+                if (SetProperty(ref _isProgramPanelOpen, value))
+                {
+                    OnPropertyChanged(nameof(IsAnySetupPanelOpen));
+                    _openProgramPanelCommand.RaiseCanExecuteChanged();
+                    _closeProgramPanelCommand.RaiseCanExecuteChanged();
+                }
+            }
+        }
+
         public bool IsSeminarPanelOpen
         {
             get => _isSeminarPanelOpen;
@@ -374,14 +420,14 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 if (SetProperty(ref _isSeminarPanelOpen, value))
                 {
-                    OnPropertyChanged(nameof(SeminarPanelVisibility));
+                    OnPropertyChanged(nameof(IsAnySetupPanelOpen));
                     _openSeminarPanelCommand.RaiseCanExecuteChanged();
                     _closeSeminarPanelCommand.RaiseCanExecuteChanged();
                 }
             }
         }
 
-        public Visibility SeminarPanelVisibility => IsSeminarPanelOpen ? Visibility.Visible : Visibility.Collapsed;
+        public bool IsAnySetupPanelOpen => IsDonationPanelOpen || IsProgramPanelOpen || IsSeminarPanelOpen;
 
         public Visibility SeminarAmountVisibility => SelectedSeminarSupportKind == AssistanceReleaseKind.Cash
             ? Visibility.Visible
@@ -548,6 +594,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 }
 
                 ResetDonationForm();
+                CloseDonationPanel();
                 await LoadOverviewAsync();
                 await LoadDonationsAsync();
                 await LoadLedgerAsync();
@@ -609,6 +656,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 }
 
                 ResetProgramForm();
+                CloseProgramPanel();
                 await LoadProgramsAsync();
                 SetSuccessStatus(result.Message);
             }
@@ -712,11 +760,51 @@ namespace AttendanceShiftingManagement.ViewModels
                 return;
             }
 
+            CloseAllSetupPanels();
             IsSeminarPanelOpen = true;
         }
 
         private void CloseSeminarPanel()
         {
+            IsSeminarPanelOpen = false;
+        }
+
+        private void OpenDonationPanel()
+        {
+            if (IsBusy)
+            {
+                return;
+            }
+
+            CloseAllSetupPanels();
+            IsDonationPanelOpen = true;
+        }
+
+        private void CloseDonationPanel()
+        {
+            IsDonationPanelOpen = false;
+        }
+
+        private void OpenProgramPanel()
+        {
+            if (IsBusy)
+            {
+                return;
+            }
+
+            CloseAllSetupPanels();
+            IsProgramPanelOpen = true;
+        }
+
+        private void CloseProgramPanel()
+        {
+            IsProgramPanelOpen = false;
+        }
+
+        private void CloseAllSetupPanels()
+        {
+            IsDonationPanelOpen = false;
+            IsProgramPanelOpen = false;
             IsSeminarPanelOpen = false;
         }
 

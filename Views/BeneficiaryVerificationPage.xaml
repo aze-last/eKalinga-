@@ -224,6 +224,67 @@
             </materialDesign:Card>
 
             <materialDesign:Card Grid.Column="2" Padding="16" Background="White">
+                <StackPanel>
+                    <TextBlock Text="Registry Review"
+                               FontSize="15"
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource BrandMidnightBrush}"/>
+                    <TextBlock Text="Keep the approval queue visible by default. Open the review panel only when you need to correct staged details, approve or reject a beneficiary, print the digital ID, or create the lookup scanner session."
+                               Margin="0,6,0,0"
+                               Foreground="{StaticResource BrandTextSecondaryBrush}"
+                               TextWrapping="Wrap"/>
+
+                    <Border Margin="0,14,0,0"
+                            Padding="16"
+                            CornerRadius="10"
+                            Background="#EEF4FF"
+                            BorderBrush="{StaticResource BrandBorderBrush}"
+                            BorderThickness="1">
+                        <StackPanel>
+                            <TextBlock Text="{Binding SelectedBeneficiary.FullName, TargetNullValue=Select a staged beneficiary}"
+                                       FontSize="18"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrandMidnightBrush}"
+                                       TextWrapping="Wrap"/>
+                            <TextBlock Text="{Binding SelectedBeneficiary.BeneficiaryId, StringFormat='Beneficiary ID: {0}', TargetNullValue=Beneficiary ID: --}"
+                                       Margin="0,6,0,0"
+                                       Foreground="{StaticResource BrandTextSecondaryBrush}"/>
+                            <TextBlock Text="{Binding SelectedBeneficiary.CivilRegistryId, StringFormat='Civil Registry ID: {0}', TargetNullValue=Civil Registry ID: --}"
+                                       Margin="0,4,0,0"
+                                       Foreground="{StaticResource BrandTextSecondaryBrush}"/>
+                            <TextBlock Text="{Binding SelectedBeneficiary.StatusText, StringFormat='Checklist Status: {0}', TargetNullValue=Checklist Status: --}"
+                                       Margin="0,4,0,0"
+                                       Foreground="{StaticResource BrandTextSecondaryBrush}"/>
+                            <TextBlock Text="{Binding SelectedBeneficiary.LinkSummary, TargetNullValue=Not linked to a registry record yet}"
+                                       Margin="0,4,0,0"
+                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                       TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Button Content="OPEN REVIEW PANEL"
+                            Margin="0,14,0,0"
+                            Height="42"
+                            Style="{StaticResource GoldActionButton}"
+                            Command="{Binding OpenReviewPanelCommand}"/>
+                </StackPanel>
+            </materialDesign:Card>
+
+            <Border Grid.ColumnSpan="3"
+                    Panel.ZIndex="19"
+                    Background="#660F172A"
+                    CornerRadius="20"
+                    Visibility="{Binding IsReviewPanelOpen, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+
+            <materialDesign:Card Grid.ColumnSpan="3"
+                                 Panel.ZIndex="20"
+                                 Width="720"
+                                 Margin="24"
+                                 Padding="16"
+                                 HorizontalAlignment="Right"
+                                 VerticalAlignment="Stretch"
+                                 Background="White"
+                                 Visibility="{Binding IsReviewPanelOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -231,10 +292,17 @@
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <TextBlock Text="Registry Checklist"
-                               FontSize="15"
-                               FontWeight="SemiBold"
-                               Foreground="{StaticResource BrandMidnightBrush}"/>
+                    <DockPanel>
+                        <TextBlock Text="Registry Checklist"
+                                   FontSize="15"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource BrandMidnightBrush}"/>
+                        <Button DockPanel.Dock="Right"
+                                Content="CLOSE"
+                                Height="36"
+                                Style="{StaticResource SecondaryActionButton}"
+                                Command="{Binding CloseReviewPanelCommand}"/>
+                    </DockPanel>
 
                     <Border Grid.Row="1"
                             Margin="0,12,0,14"

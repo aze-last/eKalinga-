@@ -14,6 +14,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly AuthService _authService;
         private readonly RelayCommand _loginCommand;
         private readonly RelayCommand _createInitialAdminCommand;
+        private readonly RelayCommand _toggleShowPasswordCommand;
         private string _usernameOrEmail = string.Empty;
         private string _password = string.Empty;
         private string _bootstrapFullName = "Barangay Administrator";
@@ -26,11 +27,13 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _activeConnectionSummary = string.Empty;
         private bool _isBootstrapMode;
         private string _brandTitle = "Local Government Unit";
-        private string _brandSubtitle = "Barangay Ayuda System";
+        private string _brandSubtitle = "eKalinga+";
         private string _brandAddress = string.Empty;
         private string _brandInstallSerial = string.Empty;
         private ImageSource? _brandLogoImage;
+        private ImageSource? _brandBackgroundImage;
         private bool _isCompanySerialAccessValid = true;
+        private bool _isShowingPassword;
 
         public string UsernameOrEmail
         {
@@ -188,6 +191,26 @@ namespace AttendanceShiftingManagement.ViewModels
 
         public bool HasCustomBrandLogo => BrandLogoImage != null;
 
+        public ImageSource? BrandBackgroundImage
+        {
+            get => _brandBackgroundImage;
+            private set
+            {
+                if (SetProperty(ref _brandBackgroundImage, value))
+                {
+                    OnPropertyChanged(nameof(HasBrandBackgroundImage));
+                }
+            }
+        }
+
+        public bool HasBrandBackgroundImage => BrandBackgroundImage != null;
+
+        public bool IsShowingPassword
+        {
+            get => _isShowingPassword;
+            set => SetProperty(ref _isShowingPassword, value);
+        }
+
         public bool IsBootstrapMode
         {
             get => _isBootstrapMode;
@@ -218,6 +241,7 @@ namespace AttendanceShiftingManagement.ViewModels
             _authService = new AuthService();
             _loginCommand = new RelayCommand(ExecuteLogin, CanExecuteLogin);
             _createInitialAdminCommand = new RelayCommand(ExecuteCreateInitialAdmin, CanCreateInitialAdmin);
+            _toggleShowPasswordCommand = new RelayCommand(ExecuteToggleShowPassword);
             RefreshBranding();
             RefreshConnectionSummary();
             RefreshStartupState();
@@ -233,6 +257,7 @@ namespace AttendanceShiftingManagement.ViewModels
             BrandAddress = branding.Address;
             BrandInstallSerial = branding.InstallSerial;
             BrandLogoImage = LocalImageLoader.Load(branding.LogoPath);
+            BrandBackgroundImage = LocalImageLoader.Load(branding.LoginBackgroundPath);
         }
 
         public void RefreshConnectionSummary()
@@ -302,6 +327,11 @@ namespace AttendanceShiftingManagement.ViewModels
                    !string.IsNullOrWhiteSpace(BootstrapEmail) &&
                    !string.IsNullOrWhiteSpace(BootstrapPassword) &&
                    !string.IsNullOrWhiteSpace(BootstrapConfirmPassword);
+        }
+
+        private void ExecuteToggleShowPassword(object? parameter)
+        {
+            IsShowingPassword = !IsShowingPassword;
         }
 
         private void ExecuteLogin(object? parameter)

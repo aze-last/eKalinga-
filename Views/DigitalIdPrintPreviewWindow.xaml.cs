@@ -9,7 +9,7 @@ namespace AttendanceShiftingManagement.Views
         {
             InitializeComponent();
             WindowBrandingService.ApplyWindowIcon(this);
-            Title = $"Barangay Ayuda System - {fullName} Preview";
+            Title = $"eKalinga+ - {fullName} Preview";
             PreviewHost.Content = previewCard;
         }
 

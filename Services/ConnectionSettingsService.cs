@@ -53,8 +53,7 @@ namespace AttendanceShiftingManagement.Services
 
         private static readonly HashSet<string> RuntimeEditablePresetKeys = new(StringComparer.OrdinalIgnoreCase)
         {
-            LanPresetKey,
-            RemotePresetKey
+            LanPresetKey
         };
 
         private static readonly JsonSerializerOptions JsonOptions = new()

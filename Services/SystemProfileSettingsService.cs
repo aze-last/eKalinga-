@@ -5,23 +5,35 @@ namespace AttendanceShiftingManagement.Services
 {
     public sealed class SystemProfileSettingsModel
     {
-        public string SystemName { get; set; } = "Barangay Ayuda System";
+        public const string DefaultLogoUri = "pack://application:,,,/Images/96f88319-f1f4-46df-b780-691795d4e49e.png";
+        public const string DefaultLoginBackgroundUri = "pack://application:,,,/Images/Gemini_Generated_Image_n4mhn0n4mhn0n4mh.png";
+
+        public string SystemName { get; set; } = "eKalinga+";
         public string Owner { get; set; } = string.Empty;
         public string CompanyAddress { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public string ContactNumber { get; set; } = string.Empty;
-        public string LogoPath { get; set; } = string.Empty;
+        public string LogoPath { get; set; } = DefaultLogoUri;
+        public string LoginBackgroundPath { get; set; } = DefaultLoginBackgroundUri;
         public string InstallSerial { get; set; } = string.Empty;
     }
 
     public sealed class SystemLoginBrandingSnapshot
     {
         public string Title { get; init; } = "Local Government Unit";
-        public string Subtitle { get; init; } = "Barangay Ayuda System";
+        public string Subtitle { get; init; } = "eKalinga+";
         public string Address { get; init; } = string.Empty;
         public string InstallSerial { get; init; } = string.Empty;
         public string LogoPath { get; init; } = string.Empty;
-        public bool HasCustomLogo => !string.IsNullOrWhiteSpace(LogoPath) && File.Exists(LogoPath);
+        public string LoginBackgroundPath { get; init; } = string.Empty;
+        public bool HasCustomLogo => IsAvailableAsset(LogoPath);
+        public bool HasCustomBackground => IsAvailableAsset(LoginBackgroundPath);
+
+        private static bool IsAvailableAsset(string? path)
+        {
+            return !string.IsNullOrWhiteSpace(path)
+                && (path.StartsWith("pack://", StringComparison.OrdinalIgnoreCase) || File.Exists(path));
+        }
     }
 
     public static class SystemProfileSettingsService
@@ -93,10 +105,11 @@ namespace AttendanceShiftingManagement.Services
             return new SystemLoginBrandingSnapshot
             {
                 Title = string.IsNullOrWhiteSpace(settings.Owner) ? "Local Government Unit" : settings.Owner.Trim(),
-                Subtitle = string.IsNullOrWhiteSpace(settings.SystemName) ? "Barangay Ayuda System" : settings.SystemName.Trim(),
+                Subtitle = string.IsNullOrWhiteSpace(settings.SystemName) ? "eKalinga+" : settings.SystemName.Trim(),
                 Address = settings.CompanyAddress?.Trim() ?? string.Empty,
                 InstallSerial = settings.InstallSerial,
-                LogoPath = settings.LogoPath?.Trim() ?? string.Empty
+                LogoPath = settings.LogoPath?.Trim() ?? string.Empty,
+                LoginBackgroundPath = settings.LoginBackgroundPath?.Trim() ?? string.Empty
             };
         }
 
@@ -127,6 +140,38 @@ namespace AttendanceShiftingManagement.Services
                 && !string.Equals(existingLogoPath, destinationPath, StringComparison.OrdinalIgnoreCase))
             {
                 RemoveStoredLogo(existingLogoPath);
+            }
+
+            return destinationPath;
+        }
+
+        public static string CopyBackgroundToBrandingFolder(string sourcePath, string? existingBackgroundPath = null)
+        {
+            return CopyBackgroundToBrandingFolder(sourcePath, GetBrandingDirectory(), existingBackgroundPath);
+        }
+
+        public static string CopyBackgroundToBrandingFolder(string sourcePath, string brandingDirectory, string? existingBackgroundPath)
+        {
+            if (string.IsNullOrWhiteSpace(sourcePath))
+            {
+                throw new ArgumentException("A source background path is required.", nameof(sourcePath));
+            }
+
+            if (!File.Exists(sourcePath))
+            {
+                throw new FileNotFoundException("The selected background file could not be found.", sourcePath);
+            }
+
+            Directory.CreateDirectory(brandingDirectory);
+            var extension = Path.GetExtension(sourcePath);
+            var destinationPath = Path.Combine(brandingDirectory, $"system-bg-{Guid.NewGuid():N}{extension}");
+
+            File.Copy(sourcePath, destinationPath, overwrite: true);
+
+            if (!string.IsNullOrWhiteSpace(existingBackgroundPath)
+                && !string.Equals(existingBackgroundPath, destinationPath, StringComparison.OrdinalIgnoreCase))
+            {
+                RemoveStoredLogo(existingBackgroundPath);
             }
 
             return destinationPath;
@@ -170,6 +215,9 @@ namespace AttendanceShiftingManagement.Services
 
         private static SystemProfileSettingsModel EnsureInstallSerial(SystemProfileSettingsModel settings)
         {
+            settings.LogoPath = NormalizeAssetPath(settings.LogoPath, "96f88319-f1f4-46df-b780-691795d4e49e.png", SystemProfileSettingsModel.DefaultLogoUri);
+            settings.LoginBackgroundPath = NormalizeAssetPath(settings.LoginBackgroundPath, "Gemini_Generated_Image_n4mhn0n4mhn0n4mh.png", SystemProfileSettingsModel.DefaultLoginBackgroundUri);
+
             if (!string.IsNullOrWhiteSpace(settings.InstallSerial))
             {
                 return settings;
@@ -190,6 +238,34 @@ namespace AttendanceShiftingManagement.Services
             }
 
             return $"BAS-{timestamp:yyyyMMdd}-{new string(suffix)}";
+        }
+
+        private static string NormalizeAssetPath(string? currentPath, string defaultFileName, string defaultUri)
+        {
+            if (string.IsNullOrWhiteSpace(currentPath))
+            {
+                return defaultUri;
+            }
+
+            if (LooksLikePackUri(currentPath))
+            {
+                return currentPath.Trim();
+            }
+
+            if (File.Exists(currentPath))
+            {
+                return currentPath.Trim();
+            }
+
+            var fileName = Path.GetFileName(currentPath.Trim());
+            return string.Equals(fileName, defaultFileName, StringComparison.OrdinalIgnoreCase)
+                ? defaultUri
+                : currentPath.Trim();
+        }
+
+        private static bool LooksLikePackUri(string path)
+        {
+            return path.StartsWith("pack://", StringComparison.OrdinalIgnoreCase);
         }
     }
 }

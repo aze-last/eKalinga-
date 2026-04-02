@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         mc:Ignorable="d"
-        Title="Barangay Ayuda System"
+        Title="eKalinga+"
         WindowState="Maximized"
         Background="{StaticResource BrandSurfaceBrush}"
         FontFamily="Segoe UI"
@@ -116,7 +116,7 @@
                 </Grid.RowDefinitions>
 
                 <StackPanel Grid.Row="0">
-                    <TextBlock Text="Barangay Ayuda System"
+                    <TextBlock Text="eKalinga+"
                                FontSize="14"
                                FontWeight="SemiBold"
                                Foreground="White" />

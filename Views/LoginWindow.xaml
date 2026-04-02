@@ -2,337 +2,505 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
-        Title="Barangay Ayuda System"
-        Height="720"
-        Width="1180"
-        MinHeight="680"
-        MinWidth="1080"
+        Title="eKalinga+"
+        Height="760"
+        Width="1280"
+        MinHeight="700"
+        MinWidth="1040"
         WindowStartupLocation="CenterScreen"
-        Background="{StaticResource BrandSurfaceBrush}"
+        Background="#091322"
         FontFamily="Segoe UI"
-        Icon="/Images/municipal-house.ico">
+        Icon="/Images/municipal-house.ico"
+        TextOptions.TextFormattingMode="Display">
 
-    <Grid Margin="28">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="1.2*" />
-            <ColumnDefinition Width="24" />
-            <ColumnDefinition Width="0.9*" />
-        </Grid.ColumnDefinitions>
+    <Window.Resources>
+        <Style x:Key="LoginPasswordBox" TargetType="PasswordBox" BasedOn="{StaticResource MaterialDesignOutlinedPasswordBox}">
+            <Setter Property="Visibility" Value="Visible" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsShowingPassword}" Value="True">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
 
-        <Border Grid.Column="0"
-                CornerRadius="18"
-                Background="{StaticResource BrandMidnightBrush}"
-                Padding="36">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
+        <Style x:Key="LoginShowPasswordTextBox" TargetType="TextBox" BasedOn="{StaticResource MaterialDesignOutlinedTextBox}">
+            <Setter Property="Visibility" Value="Collapsed" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsShowingPassword}" Value="True">
+                    <Setter Property="Visibility" Value="Visible" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
 
-                <StackPanel>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="20" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
+    <Grid>
+        <Image Source="{Binding BrandBackgroundImage}"
+               Stretch="UniformToFill" />
 
-                        <Border Grid.Column="0"
-                                Width="104"
-                                Height="104"
-                                CornerRadius="18"
-                                Background="#1F4BA5"
-                                HorizontalAlignment="Left">
-                            <Grid>
-                                <Border Width="58"
-                                        Height="58"
-                                        CornerRadius="12"
-                                        Background="#2A5BC0"
-                                        HorizontalAlignment="Center"
-                                        VerticalAlignment="Center">
-                                    <Border.Style>
-                                        <Style TargetType="Border">
-                                            <Setter Property="Visibility" Value="Visible" />
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding HasCustomBrandLogo}" Value="True">
+        <Grid>
+            <Rectangle Fill="#5C091322" />
+            <Rectangle Fill="#381E3A5F" />
+        </Grid>
+
+        <Grid Margin="44">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1.28*" />
+                <ColumnDefinition Width="28" />
+                <ColumnDefinition Width="0.92*"
+                                  MinWidth="380"
+                                  MaxWidth="430" />
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0"
+                    CornerRadius="34"
+                    BorderBrush="#66FFFFFF"
+                    BorderThickness="1"
+                    Background="#1FFFFFFF"
+                    Padding="0">
+                <Grid>
+                    <Rectangle RadiusX="34"
+                               RadiusY="34">
+                        <Rectangle.Fill>
+                            <ImageBrush ImageSource="{Binding BrandBackgroundImage}"
+                                        Stretch="UniformToFill" />
+                        </Rectangle.Fill>
+                        <Rectangle.Effect>
+                            <BlurEffect Radius="26" />
+                        </Rectangle.Effect>
+                    </Rectangle>
+
+                    <Rectangle RadiusX="34"
+                               RadiusY="34"
+                               Fill="#8C0D2B6E" />
+
+                    <Grid Margin="38">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <Grid Grid.Row="1"
+                              Margin="0,30,0,30"
+                              VerticalAlignment="Center">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <Viewbox MaxWidth="292"
+                                     MaxHeight="212"
+                                     Stretch="Uniform"
+                                     StretchDirection="DownOnly"
+                                     HorizontalAlignment="Center"
+                                     VerticalAlignment="Center">
+                                <Border Width="292"
+                                        Height="212"
+                                        Background="#1BFFFFFF"
+                                        CornerRadius="30"
+                                        BorderBrush="#40FFFFFF"
+                                        BorderThickness="1"
+                                        ClipToBounds="True">
+                                    <Grid Margin="26">
+                                        <Border Width="92"
+                                                Height="92"
+                                                CornerRadius="24"
+                                                Background="#26FFFFFF"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding HasCustomBrandLogo}" Value="True">
+                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <materialDesign:PackIcon Kind="HandshakeOutline"
+                                                                     Width="40"
+                                                                     Height="40"
+                                                                     Foreground="{StaticResource BrandYellowBrush}"
+                                                                     HorizontalAlignment="Center"
+                                                                     VerticalAlignment="Center" />
+                                        </Border>
+
+                                        <Image Source="{Binding BrandLogoImage}"
+                                               MaxWidth="182"
+                                               MaxHeight="134"
+                                               Stretch="Uniform"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               SnapsToDevicePixels="True"
+                                               RenderOptions.BitmapScalingMode="Fant">
+                                            <Image.Style>
+                                                <Style TargetType="Image">
                                                     <Setter Property="Visibility" Value="Collapsed" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Border.Style>
-                                    <materialDesign:PackIcon Kind="TownHall"
-                                                             Width="30"
-                                                             Height="30"
-                                                             Foreground="{StaticResource BrandYellowBrush}"
-                                                             HorizontalAlignment="Center"
-                                                             VerticalAlignment="Center" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding HasCustomBrandLogo}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Image.Style>
+                                        </Image>
+                                    </Grid>
+                                </Border>
+                            </Viewbox>
+
+                            <StackPanel Grid.Row="1"
+                                        Margin="0,28,0,0"
+                                        MaxWidth="560">
+                                <TextBlock Text="{Binding BrandSubtitle}"
+                                           FontSize="38"
+                                           FontWeight="Bold"
+                                           Foreground="White"
+                                           TextWrapping="Wrap" />
+                                <TextBlock Margin="0,10,0,0"
+                                           Text="Centralized aid operations with validated beneficiary workflows, budget tracking, and field-ready login branding."
+                                           FontSize="15"
+                                           Foreground="#E8EEF9"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
+
+                            <WrapPanel Grid.Row="2"
+                                       Margin="0,24,0,0">
+                                <Border Margin="0,0,12,12"
+                                        Padding="12,8"
+                                        CornerRadius="12"
+                                        Background="#20000000">
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="DatabaseSyncOutline"
+                                                                 Width="16"
+                                                                 Height="16"
+                                                                 Foreground="{StaticResource BrandYellowBrush}" />
+                                        <TextBlock Margin="8,0,0,0"
+                                                   Text="Live app database switching"
+                                                   Foreground="White" />
+                                    </StackPanel>
                                 </Border>
 
-                                <Image Source="{Binding BrandLogoImage}"
-                                       Stretch="Uniform"
-                                       Margin="10">
-                                    <Image.Style>
-                                        <Style TargetType="Image">
-                                            <Setter Property="Visibility" Value="Collapsed" />
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding HasCustomBrandLogo}" Value="True">
-                                                    <Setter Property="Visibility" Value="Visible" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Image.Style>
-                                </Image>
+                                <Border Margin="0,0,12,12"
+                                        Padding="12,8"
+                                        CornerRadius="12"
+                                        Background="#20000000">
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="CardAccountDetailsOutline"
+                                                                 Width="16"
+                                                                 Height="16"
+                                                                 Foreground="{StaticResource BrandYellowBrush}" />
+                                        <TextBlock Margin="8,0,0,0"
+                                                   Text="Digital ID and beneficiary lookup"
+                                                   Foreground="White" />
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Margin="0,0,12,12"
+                                        Padding="12,8"
+                                        CornerRadius="12"
+                                        Background="#20000000">
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="WalletOutline"
+                                                                 Width="16"
+                                                                 Height="16"
+                                                                 Foreground="{StaticResource BrandYellowBrush}" />
+                                        <TextBlock Margin="8,0,0,0"
+                                                   Text="Aid request and budget release flow"
+                                                   Foreground="White" />
+                                    </StackPanel>
+                                </Border>
+                            </WrapPanel>
+                        </Grid>
+
+                        <Border Grid.Row="2"
+                                CornerRadius="26"
+                                BorderBrush="#59FFFFFF"
+                                BorderThickness="1"
+                                Background="#18FFFFFF">
+                            <Grid Margin="0">
+                                <Rectangle RadiusX="26"
+                                           RadiusY="26">
+                                    <Rectangle.Fill>
+                                        <ImageBrush ImageSource="{Binding BrandBackgroundImage}"
+                                                    Stretch="UniformToFill" />
+                                    </Rectangle.Fill>
+                                    <Rectangle.Effect>
+                                        <BlurEffect Radius="22" />
+                                    </Rectangle.Effect>
+                                </Rectangle>
+
+                                <Rectangle RadiusX="26"
+                                           RadiusY="26"
+                                           Fill="#59FFFFFF" />
+
+                                <Grid Margin="24">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock Text="System Identity"
+                                               FontSize="11"
+                                               FontWeight="SemiBold"
+                                               Foreground="#334155" />
+
+                                    <TextBlock Grid.Row="1"
+                                               Margin="0,10,0,0"
+                                               Text="{Binding BrandSubtitle}"
+                                               FontSize="28"
+                                               FontWeight="Bold"
+                                               Foreground="{StaticResource BrandMidnightBrush}"
+                                               TextWrapping="Wrap" />
+
+                                    <StackPanel Grid.Row="2"
+                                                Margin="0,16,0,0">
+                                        <TextBlock Text="Owner / Office"
+                                                   FontSize="11"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="#475569" />
+                                        <TextBlock Margin="0,4,0,0"
+                                                   Text="{Binding BrandTitle}"
+                                                   FontSize="16"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="#0F172A"
+                                                   TextWrapping="Wrap" />
+
+                                        <TextBlock Margin="0,14,0,0"
+                                                   Text="Company Serial"
+                                                   FontSize="11"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="#475569" />
+                                        <TextBlock Margin="0,4,0,0"
+                                                   Text="{Binding BrandInstallSerialLabel}"
+                                                   FontSize="14"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="#0F172A"
+                                                   TextWrapping="Wrap" />
+                                    </StackPanel>
+
+                                    <TextBlock Grid.Row="3"
+                                               Margin="0,16,0,0"
+                                               Text="{Binding BrandAddress}"
+                                               FontSize="13"
+                                               Foreground="#334155"
+                                               TextWrapping="Wrap"
+                                               Visibility="{Binding HasBrandAddress, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                </Grid>
                             </Grid>
                         </Border>
-
-                        <StackPanel Grid.Column="2"
-                                    VerticalAlignment="Center">
-                            <TextBlock Text="{Binding BrandTitle}"
-                                       FontSize="28"
-                                       FontWeight="SemiBold"
-                                       Foreground="White"
-                                       TextWrapping="Wrap" />
-                            <TextBlock Text="{Binding BrandSubtitle}"
-                                       Margin="0,6,0,0"
-                                       FontSize="16"
-                                       Foreground="{StaticResource BrandYellowBrush}"
-                                       TextWrapping="Wrap" />
-                            <TextBlock Text="{Binding BrandAddress}"
-                                       Margin="0,10,0,0"
-                                       MaxWidth="360"
-                                       FontSize="13"
-                                       Foreground="#D7E3FF"
-                                       TextWrapping="Wrap"
-                                       Visibility="{Binding HasBrandAddress, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                            <Border Margin="0,14,0,0"
-                                    Padding="10,6"
-                                    CornerRadius="10"
-                                    Background="#163A87"
-                                    HorizontalAlignment="Left">
-                                <TextBlock Text="{Binding BrandInstallSerialLabel}"
-                                           FontSize="12"
-                                           FontWeight="SemiBold"
-                                           Foreground="#D7E3FF" />
-                            </Border>
-                        </StackPanel>
                     </Grid>
-
-                    <TextBlock Text="Manage local records, staged beneficiaries, cash-for-work operations, and synced municipal tables from one admin portal."
-                               Margin="0,18,0,0"
-                               MaxWidth="520"
-                               FontSize="14"
-                               Foreground="#D7E3FF"
-                               TextWrapping="Wrap" />
-                </StackPanel>
-
-                <StackPanel Grid.Row="1"
-                            VerticalAlignment="Center">
-                    <WrapPanel Margin="0,0,0,18">
-                        <Border Margin="0,0,12,12"
-                                Padding="12,8"
-                                CornerRadius="10"
-                                Background="#1F4BA5">
-                            <StackPanel Orientation="Horizontal">
-                                <materialDesign:PackIcon Kind="DatabaseSync"
-                                                         Width="18"
-                                                         Height="18"
-                                                         Foreground="{StaticResource BrandYellowBrush}" />
-                                <TextBlock Margin="8,0,0,0"
-                                           Text="Load municipal tables into local storage"
-                                           Foreground="White" />
-                            </StackPanel>
-                        </Border>
-                        <Border Margin="0,0,12,12"
-                                Padding="12,8"
-                                CornerRadius="10"
-                                Background="#123980">
-                            <StackPanel Orientation="Horizontal">
-                                <materialDesign:PackIcon Kind="AccountGroup"
-                                                         Width="18"
-                                                         Height="18"
-                                                         Foreground="{StaticResource BrandYellowBrush}" />
-                                <TextBlock Margin="8,0,0,0"
-                                           Text="Review households and beneficiaries"
-                                           Foreground="White" />
-                            </StackPanel>
-                        </Border>
-                    </WrapPanel>
-
-                    <Border Padding="20"
-                            CornerRadius="14"
-                            Background="#163A87">
-                        <StackPanel>
-                            <TextBlock Text="Security note"
-                                       FontSize="11"
-                                       FontWeight="SemiBold"
-                                       Foreground="#C9D7FF" />
-                            <TextBlock Text="No default admin password is shipped with this build."
-                                       Margin="0,8,0,0"
-                                       FontSize="16"
-                                       FontWeight="SemiBold"
-                                       Foreground="White" />
-                            <TextBlock Text="If the selected database has no admin yet, the right panel switches to first-run setup."
-                                       Margin="0,4,0,0"
-                                       FontSize="14"
-                                       Foreground="{StaticResource BrandYellowBrush}" />
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
-
-                <TextBlock Grid.Row="2"
-                           Text="App database settings are available before sign-in so you can choose Local, Network LAN, or Remote. Network (LAN) can also be configured there anytime before login."
-                           Foreground="#C9D7FF"
-                           FontSize="12"
-                           TextWrapping="Wrap" />
-            </Grid>
-        </Border>
-
-        <Border Grid.Column="2"
-                CornerRadius="18"
-                Background="White"
-                Padding="36">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
-
-                <DockPanel>
-                    <StackPanel>
-                        <TextBlock Text="{Binding FormTitle}"
-                                   FontSize="28"
-                                   FontWeight="SemiBold"
-                                   Foreground="{StaticResource BrandMidnightBrush}" />
-                        <TextBlock Text="{Binding FormSubtitle}"
-                                   Margin="0,6,0,0"
-                                   Foreground="{StaticResource BrandTextSecondaryBrush}" />
-                    </StackPanel>
-
-                    <Button DockPanel.Dock="Right"
-                            Height="40"
-                            Padding="16,0"
-                            Style="{StaticResource SecondaryActionButton}"
-                            Click="OpenConnectionSettings_Click">
-                        <StackPanel Orientation="Horizontal">
-                            <materialDesign:PackIcon Kind="DatabaseCog"
-                                                     Width="18"
-                                                     Height="18"
-                                                     Margin="0,0,8,0" />
-                            <TextBlock Text="App Database"
-                                       VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Button>
-                </DockPanel>
-
-                <Grid Grid.Row="1"
-                      VerticalAlignment="Center">
-                    <StackPanel Visibility="{Binding IsLoginMode, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <Border Padding="14"
-                                Background="{StaticResource BrandSurfaceBrush}"
-                                BorderBrush="{StaticResource BrandBorderBrush}"
-                                BorderThickness="1"
-                                CornerRadius="10">
-                            <StackPanel>
-                                <TextBlock Text="Active database"
-                                           FontSize="11"
-                                           FontWeight="SemiBold"
-                                           Foreground="{StaticResource BrandMidnightBrush}" />
-                                <TextBlock Text="{Binding ActiveConnectionSummary}"
-                                           Margin="0,6,0,0"
-                                           FontSize="12"
-                                           Foreground="{StaticResource BrandTextSecondaryBrush}"
-                                           TextWrapping="Wrap" />
-                            </StackPanel>
-                        </Border>
-
-                        <TextBox Margin="0,22,0,12"
-                                 Text="{Binding UsernameOrEmail, UpdateSourceTrigger=PropertyChanged}"
-                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                 materialDesign:HintAssist.Hint="Username or email" />
-
-                        <PasswordBox x:Name="PasswordBox"
-                                     Margin="0,0,0,12"
-                                     Style="{StaticResource MaterialDesignOutlinedPasswordBox}"
-                                     materialDesign:HintAssist.Hint="Password"
-                                     PasswordChanged="PasswordBox_PasswordChanged" />
-
-                        <TextBlock Text="{Binding StatusMessage}"
-                                   Margin="0,4,0,0"
-                                   Foreground="{Binding StatusBrush}"
-                                   TextWrapping="Wrap" />
-
-                        <Button Content="SIGN IN"
-                                Margin="0,22,0,0"
-                                Height="46"
-                                Style="{StaticResource PrimaryActionButton}"
-                                Command="{Binding LoginCommand}" />
-                    </StackPanel>
-
-                    <StackPanel Visibility="{Binding IsBootstrapMode, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <Border Padding="14"
-                                Background="{StaticResource BrandSurfaceBrush}"
-                                BorderBrush="{StaticResource BrandBorderBrush}"
-                                BorderThickness="1"
-                                CornerRadius="10">
-                            <StackPanel>
-                                <TextBlock Text="Active database"
-                                           FontSize="11"
-                                           FontWeight="SemiBold"
-                                           Foreground="{StaticResource BrandMidnightBrush}" />
-                                <TextBlock Text="{Binding ActiveConnectionSummary}"
-                                           Margin="0,6,0,0"
-                                           FontSize="12"
-                                           Foreground="{StaticResource BrandTextSecondaryBrush}"
-                                           TextWrapping="Wrap" />
-                            </StackPanel>
-                        </Border>
-
-                        <TextBox Margin="0,22,0,12"
-                                 Text="{Binding BootstrapFullName, UpdateSourceTrigger=PropertyChanged}"
-                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                 materialDesign:HintAssist.Hint="Admin full name" />
-
-                        <TextBox Margin="0,0,0,12"
-                                 Text="{Binding BootstrapUsername, UpdateSourceTrigger=PropertyChanged}"
-                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                 materialDesign:HintAssist.Hint="Admin username" />
-
-                        <TextBox Margin="0,0,0,12"
-                                 Text="{Binding BootstrapEmail, UpdateSourceTrigger=PropertyChanged}"
-                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                 materialDesign:HintAssist.Hint="Admin email" />
-
-                        <PasswordBox Margin="0,0,0,12"
-                                     Style="{StaticResource MaterialDesignOutlinedPasswordBox}"
-                                     materialDesign:HintAssist.Hint="Admin password"
-                                     PasswordChanged="BootstrapPasswordBox_PasswordChanged" />
-
-                        <PasswordBox Margin="0,0,0,12"
-                                     Style="{StaticResource MaterialDesignOutlinedPasswordBox}"
-                                     materialDesign:HintAssist.Hint="Confirm admin password"
-                                     PasswordChanged="BootstrapConfirmPasswordBox_PasswordChanged" />
-
-                        <TextBlock Text="{Binding StatusMessage}"
-                                   Margin="0,4,0,0"
-                                   Foreground="{Binding StatusBrush}"
-                                   TextWrapping="Wrap" />
-
-                        <Button Content="CREATE INITIAL ADMIN"
-                                Margin="0,22,0,0"
-                                Height="46"
-                                Style="{StaticResource PrimaryActionButton}"
-                                Command="{Binding CreateInitialAdminCommand}" />
-                    </StackPanel>
                 </Grid>
+            </Border>
 
-                <TextBlock Grid.Row="2"
-                           Text="Use App Database if you need to switch between Local, Network LAN, and Remote before logging in. If you choose Network (LAN), you can configure its connection details there before sign-in."
-                           Foreground="{StaticResource BrandTextSecondaryBrush}"
-                           FontSize="12"
-                           TextWrapping="Wrap" />
-            </Grid>
-        </Border>
+            <Border Grid.Column="2"
+                    VerticalAlignment="Center"
+                    CornerRadius="32"
+                    BorderBrush="#85FFFFFF"
+                    BorderThickness="1"
+                    Background="#24FFFFFF">
+                <Grid>
+                    <Rectangle RadiusX="32"
+                               RadiusY="32">
+                        <Rectangle.Fill>
+                            <ImageBrush ImageSource="{Binding BrandBackgroundImage}"
+                                        Stretch="UniformToFill" />
+                        </Rectangle.Fill>
+                        <Rectangle.Effect>
+                            <BlurEffect Radius="24" />
+                        </Rectangle.Effect>
+                    </Rectangle>
+
+                    <Rectangle RadiusX="32"
+                               RadiusY="32"
+                               Fill="#EAF4F8FB" />
+
+                    <Grid Margin="38"
+                          Validation.ErrorTemplate="{x:Null}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <StackPanel>
+                            <TextBlock Text="{Binding FormTitle}"
+                                       FontSize="30"
+                                       FontWeight="Bold"
+                                       Foreground="{StaticResource BrandMidnightBrush}" />
+                            <TextBlock Text="{Binding FormSubtitle}"
+                                       Margin="0,8,0,0"
+                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                       TextWrapping="Wrap" />
+                        </StackPanel>
+
+                        <Grid Grid.Row="1"
+                              Margin="0,28,0,24"
+                              VerticalAlignment="Center">
+                            <StackPanel Visibility="{Binding IsLoginMode, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <Border Padding="14"
+                                        Background="#CCFFFFFF"
+                                        BorderBrush="{StaticResource BrandBorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="14">
+                                    <StackPanel>
+                                        <TextBlock Text="Active database"
+                                                   FontSize="11"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{StaticResource BrandMidnightBrush}" />
+                                        <TextBlock Text="{Binding ActiveConnectionSummary}"
+                                                   Margin="0,6,0,0"
+                                                   FontSize="12"
+                                                   Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                                   TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Border>
+
+                                <TextBox Margin="0,22,0,12"
+                                         Text="{Binding UsernameOrEmail, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="Username or email" />
+
+                                <Grid Margin="0,0,0,12">
+                                    <TextBox Text="{Binding Password, UpdateSourceTrigger=PropertyChanged}"
+                                             Style="{StaticResource LoginShowPasswordTextBox}"
+                                             materialDesign:HintAssist.Hint="Password" />
+
+                                    <PasswordBox x:Name="PasswordBox"
+                                                 Style="{StaticResource LoginPasswordBox}"
+                                                 materialDesign:HintAssist.Hint="Password"
+                                                 PasswordChanged="PasswordBox_PasswordChanged" />
+
+                                    <ToggleButton HorizontalAlignment="Right"
+                                                  Margin="0,0,8,0"
+                                                  Height="32"
+                                                  Width="32"
+                                                  VerticalAlignment="Center"
+                                                  IsChecked="{Binding IsShowingPassword, Mode=OneWay}"
+                                                  Click="TogglePasswordVisibility_Click"
+                                                  Style="{StaticResource MaterialDesignToolToggleButton}">
+                                        <materialDesign:PackIcon Kind="EyeOutline" />
+                                    </ToggleButton>
+                                </Grid>
+
+                                <TextBlock Text="{Binding StatusMessage}"
+                                           Margin="0,4,0,0"
+                                           Foreground="{Binding StatusBrush}"
+                                           TextWrapping="Wrap" />
+
+                                <Grid Margin="0,22,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="12" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <Button Grid.Column="0"
+                                            Content="SIGN IN"
+                                            Height="46"
+                                            Style="{StaticResource PrimaryActionButton}"
+                                            Command="{Binding LoginCommand}" />
+
+                                    <Button Grid.Column="2"
+                                            Height="46"
+                                            ToolTip="App Database"
+                                            Padding="16,0"
+                                            Style="{DynamicResource SecondaryActionButton}"
+                                            Click="OpenConnectionSettings_Click">
+                                        <materialDesign:PackIcon Kind="DatabaseCog"
+                                                                 Width="20"
+                                                                 Height="20" />
+                                    </Button>
+                                </Grid>
+                            </StackPanel>
+
+                            <StackPanel Visibility="{Binding IsBootstrapMode, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <Border Padding="14"
+                                        Background="#CCFFFFFF"
+                                        BorderBrush="{StaticResource BrandBorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="14">
+                                    <StackPanel>
+                                        <TextBlock Text="Active database"
+                                                   FontSize="11"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{StaticResource BrandMidnightBrush}" />
+                                        <TextBlock Text="{Binding ActiveConnectionSummary}"
+                                                   Margin="0,6,0,0"
+                                                   FontSize="12"
+                                                   Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                                   TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Border>
+
+                                <TextBox Margin="0,22,0,12"
+                                         Text="{Binding BootstrapFullName, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="Admin full name" />
+
+                                <TextBox Margin="0,0,0,12"
+                                         Text="{Binding BootstrapUsername, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="Admin username" />
+
+                                <TextBox Margin="0,0,0,12"
+                                         Text="{Binding BootstrapEmail, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="Admin email" />
+
+                                <PasswordBox Margin="0,0,0,12"
+                                             Style="{StaticResource MaterialDesignOutlinedPasswordBox}"
+                                             materialDesign:HintAssist.Hint="Admin password"
+                                             PasswordChanged="BootstrapPasswordBox_PasswordChanged" />
+
+                                <PasswordBox Margin="0,0,0,12"
+                                             Style="{StaticResource MaterialDesignOutlinedPasswordBox}"
+                                             materialDesign:HintAssist.Hint="Confirm admin password"
+                                             PasswordChanged="BootstrapConfirmPasswordBox_PasswordChanged" />
+
+                                <TextBlock Text="{Binding StatusMessage}"
+                                           Margin="0,4,0,0"
+                                           Foreground="{Binding StatusBrush}"
+                                           TextWrapping="Wrap" />
+
+                                <Grid Margin="0,22,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="12" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <Button Grid.Column="0"
+                                            Content="CREATE INITIAL ADMIN"
+                                            Height="46"
+                                            Style="{StaticResource PrimaryActionButton}"
+                                            Command="{Binding CreateInitialAdminCommand}" />
+
+                                    <Button Grid.Column="2"
+                                            Height="46"
+                                            ToolTip="App Database"
+                                            Padding="16,0"
+                                            Style="{DynamicResource SecondaryActionButton}"
+                                            Click="OpenConnectionSettings_Click">
+                                        <materialDesign:PackIcon Kind="DatabaseCog"
+                                                                 Width="20"
+                                                                 Height="20" />
+                                    </Button>
+                                </Grid>
+                            </StackPanel>
+                        </Grid>
+
+                        <TextBlock Grid.Row="2"
+                                   Text="Use the database button beside the primary action to switch Local, Network, or Remote before logging in."
+                                   Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                   FontSize="12"
+                                   TextWrapping="Wrap" />
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
     </Grid>
 </Window>
