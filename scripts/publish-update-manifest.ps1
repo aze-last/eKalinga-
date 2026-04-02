@@ -130,7 +130,8 @@ if ($computedSha256 -ne ([string]$manifest.sha256).Trim().ToLowerInvariant()) {
 }
 
 if ([string]::IsNullOrWhiteSpace($PublicRepoPath)) {
-    $PublicRepoPath = $projectRoot
+    $repoRootParent = Split-Path (Split-Path $projectRoot -Parent) -Parent
+    $PublicRepoPath = [System.IO.Path]::GetFullPath((Join-Path $repoRootParent "BarangayAyudaSys-public"))
 }
 
 if (-not (Test-Path -LiteralPath $PublicRepoPath)) {

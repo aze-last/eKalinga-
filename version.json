@@ -5,8 +5,8 @@
     "Cleaned record-management pages so forms open in panels while the lists stay visible."
   ],
   "publishedAt": "2026-04-02",
-  "releasePageUrl": "https://github.com/aze-last/Ayuda-Maangement-System/releases/tag/v1.0.2",
+  "releasePageUrl": "https://github.com/aze-last/BarangayAyudaSys/releases/tag/v1.0.2",
   "installerFileName": "eKalingaPlus-Setup-1.0.2.exe",
-  "installerUrl": "https://github.com/aze-last/Ayuda-Maangement-System/releases/download/v1.0.2/eKalingaPlus-Setup-1.0.2.exe",
-  "sha256": "1420a4c06e0af1be6cbe7c9357793c41db1e94f34797076d06c5e6831729b442"
+  "installerUrl": "https://github.com/aze-last/BarangayAyudaSys/releases/download/v1.0.2/eKalingaPlus-Setup-1.0.2.exe",
+  "sha256": "da320f6e30408ab04b3114f12b5f36bff85888b8345cfc7e7aca1bd93ab9506e"
 }
