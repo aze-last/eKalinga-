@@ -4,19 +4,70 @@ using AttendanceShiftingManagement.ViewModels;
 using System;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Threading;
 
 namespace AttendanceShiftingManagement.Views
 {
+    public enum SettingsWindowSection
+    {
+        SystemProfile = 0,
+        DatabaseBackup = 1,
+        AppDatabase = 2,
+        GgmsBudgetSource = 3,
+        Updates = 4,
+        FeatureRules = 5
+    }
+
     public partial class SettingsWindow : Window
     {
+        private readonly SettingsWindowSection _initialSection;
+        private readonly bool _checkForUpdatesOnOpen;
+
         private SettingsToolsViewModel ViewModel => (SettingsToolsViewModel)DataContext;
 
-        public SettingsWindow(User? currentUser = null)
+        public SettingsWindow(
+            User? currentUser = null,
+            SettingsWindowSection initialSection = SettingsWindowSection.SystemProfile,
+            bool checkForUpdatesOnOpen = false)
         {
             InitializeComponent();
+            _initialSection = initialSection;
+            _checkForUpdatesOnOpen = checkForUpdatesOnOpen;
             DataContext = new SettingsToolsViewModel(currentUser);
             ViewModel.AdvancedLoadTablesRequested += OpenAdvancedLoadTables;
+            Loaded += SettingsWindow_Loaded;
             WindowBrandingService.ApplyWindowIcon(this);
+        }
+
+        private async void SettingsWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            Loaded -= SettingsWindow_Loaded;
+            SelectInitialSection();
+
+            if (_initialSection != SettingsWindowSection.Updates || !_checkForUpdatesOnOpen)
+            {
+                return;
+            }
+
+            await Dispatcher.InvokeAsync(
+                () =>
+                {
+                    if (ViewModel.CheckForUpdatesCommand.CanExecute(null))
+                    {
+                        ViewModel.CheckForUpdatesCommand.Execute(null);
+                    }
+                },
+                DispatcherPriority.Background);
+        }
+
+        private void SelectInitialSection()
+        {
+            if (SettingsTabs == null)
+            {
+                return;
+            }
+
+            SettingsTabs.SelectedIndex = (int)_initialSection;
         }
 
         private void OpenAdvancedLoadTables()
