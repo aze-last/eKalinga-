@@ -97,6 +97,25 @@
             </Style.Triggers>
         </Style>
 
+        <Style x:Key="SidebarUtilityButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource MaterialDesignFlatButton}">
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Padding" Value="12,8" />
+            <Setter Property="Margin" Value="0,12,0,12" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="materialDesign:ButtonAssist.CornerRadius" Value="8" />
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Foreground" Value="{StaticResource BrandYellowBrush}" />
+                    <Setter Property="Background" Value="#1FFFFFFF" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
     </Window.Resources>
 
     <Grid>
@@ -112,6 +131,7 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
@@ -177,7 +197,15 @@
 
                 </StackPanel>
 
-                <Border Grid.Row="2"
+                <Button Grid.Row="2"
+                        Style="{StaticResource SidebarUtilityButtonStyle}"
+                        Click="CheckForUpdate_Click"
+                        ToolTip="Open the Updates tab and run an update check now.">
+                    <TextBlock Text="Check for Update"
+                               VerticalAlignment="Center" />
+                </Button>
+
+                <Border Grid.Row="3"
                         Margin="0,20,0,0"
                         Padding="12"
                         CornerRadius="10"
