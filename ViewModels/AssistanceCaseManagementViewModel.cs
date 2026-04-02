@@ -29,6 +29,8 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly RelayCommand _rejectCommand;
         private readonly RelayCommand _cancelCommand;
         private readonly RelayCommand _deleteCommand;
+        private readonly RelayCommand _openCasePanelCommand;
+        private readonly RelayCommand _closeCasePanelCommand;
         private ICollectionView _casesView;
         private AssistanceCaseListItem? _selectedCase;
         private AssistanceAyudaProgramOption? _selectedAyudaProgram;
@@ -52,6 +54,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private DateTime _requestedOnDate = DateTime.Today;
         private DateTime? _scheduledReleaseDate;
         private string _editableSummary = string.Empty;
+        private bool _isCasePanelOpen;
 
         public AssistanceCaseManagementViewModel(User currentUser)
         {
@@ -73,7 +76,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
             _casesView = CollectionViewSource.GetDefaultView(_cases);
             _refreshCommand = new RelayCommand(async _ => await LoadAsync(), _ => !IsBusy);
-            _newCaseCommand = new RelayCommand(_ => BeginNewCase(), _ => !IsBusy);
+            _newCaseCommand = new RelayCommand(_ => BeginNewCaseAndOpen(), _ => !IsBusy);
             _saveCaseCommand = new RelayCommand(async _ => await SaveCaseAsync(), _ => CanSaveCase());
             _markUnderReviewCommand = new RelayCommand(async _ => await ChangeStatusAsync(AssistanceCaseStatus.UnderReview, "under review"), _ => CanChangeStatus(AssistanceCaseStatus.UnderReview));
             _approveCommand = new RelayCommand(async _ => await ChangeStatusAsync(AssistanceCaseStatus.Approved, "approved"), _ => CanChangeStatus(AssistanceCaseStatus.Approved));
@@ -82,6 +85,8 @@ namespace AttendanceShiftingManagement.ViewModels
             _rejectCommand = new RelayCommand(async _ => await ChangeStatusAsync(AssistanceCaseStatus.Rejected, "rejected"), _ => CanChangeStatus(AssistanceCaseStatus.Rejected));
             _cancelCommand = new RelayCommand(async _ => await ChangeStatusAsync(AssistanceCaseStatus.Cancelled, "cancelled"), _ => CanChangeStatus(AssistanceCaseStatus.Cancelled));
             _deleteCommand = new RelayCommand(async _ => await DeleteCaseAsync(), _ => CanDeleteCase());
+            _openCasePanelCommand = new RelayCommand(_ => OpenCasePanel(), _ => CanOpenCasePanel());
+            _closeCasePanelCommand = new RelayCommand(_ => CloseCasePanel(), _ => IsCasePanelOpen);
 
             ApplyFilter();
             _ = LoadAsync();
@@ -298,6 +303,19 @@ namespace AttendanceShiftingManagement.ViewModels
             set => SetProperty(ref _editableSummary, value);
         }
 
+        public bool IsCasePanelOpen
+        {
+            get => _isCasePanelOpen;
+            private set
+            {
+                if (SetProperty(ref _isCasePanelOpen, value))
+                {
+                    _openCasePanelCommand.RaiseCanExecuteChanged();
+                    _closeCasePanelCommand.RaiseCanExecuteChanged();
+                }
+            }
+        }
+
         public string ApplicantSummary =>
             SelectedValidatedBeneficiary?.DisplayLabel
             ?? "Select a validated beneficiary";
@@ -314,6 +332,8 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand RejectCommand => _rejectCommand;
         public ICommand CancelCommand => _cancelCommand;
         public ICommand DeleteCommand => _deleteCommand;
+        public ICommand OpenCasePanelCommand => _openCasePanelCommand;
+        public ICommand CloseCasePanelCommand => _closeCasePanelCommand;
 
         private async Task LoadAsync()
         {
@@ -478,6 +498,12 @@ namespace AttendanceShiftingManagement.ViewModels
             SelectedAyudaProgram = null;
             RaiseCommandStates();
             OnPropertyChanged(nameof(ApplicantSummary));
+        }
+
+        private void BeginNewCaseAndOpen()
+        {
+            BeginNewCase();
+            OpenCasePanel();
         }
 
         private void SyncEditorFromSelection()
@@ -698,6 +724,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 }
 
                 await LoadCoreAsync(null);
+                CloseCasePanel();
                 SetSuccessStatus(result.Message);
             }
             catch (Exception ex)
@@ -774,6 +801,8 @@ namespace AttendanceShiftingManagement.ViewModels
             _rejectCommand.RaiseCanExecuteChanged();
             _cancelCommand.RaiseCanExecuteChanged();
             _deleteCommand.RaiseCanExecuteChanged();
+            _openCasePanelCommand.RaiseCanExecuteChanged();
+            _closeCasePanelCommand.RaiseCanExecuteChanged();
         }
 
         private void ClearLoadedState()
@@ -787,7 +816,28 @@ namespace AttendanceShiftingManagement.ViewModels
             ApprovedCount = 0;
             ReleasedCount = 0;
             ClosedCount = 0;
+            IsCasePanelOpen = false;
             BeginNewCase();
+        }
+
+        private bool CanOpenCasePanel()
+        {
+            return !IsBusy && !IsCasePanelOpen;
+        }
+
+        private void OpenCasePanel()
+        {
+            if (!CanOpenCasePanel())
+            {
+                return;
+            }
+
+            IsCasePanelOpen = true;
+        }
+
+        private void CloseCasePanel()
+        {
+            IsCasePanelOpen = false;
         }
 
         private static bool TryParseAmount(string text, out decimal? amount, out string errorMessage)

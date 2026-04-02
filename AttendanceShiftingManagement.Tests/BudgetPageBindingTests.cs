@@ -29,7 +29,12 @@ public sealed class BudgetPageBindingTests
         Assert.Contains("Text=\"{Binding SeminarTitle, UpdateSourceTrigger=PropertyChanged}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"{Binding SeminarCredentials, UpdateSourceTrigger=PropertyChanged}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"{Binding SeminarAgenda, UpdateSourceTrigger=PropertyChanged}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Visibility=\"{Binding SeminarPanelVisibility}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding OpenDonationPanelCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding CloseDonationPanelCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding OpenProgramPanelCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding CloseProgramPanelCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Visibility=\"{Binding IsAnySetupPanelOpen, Converter={StaticResource BooleanToVisibilityConverter}}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Visibility=\"{Binding IsSeminarPanelOpen, Converter={StaticResource BooleanToVisibilityConverter}}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"{Binding ProgramAssistanceType, UpdateSourceTrigger=PropertyChanged}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"{Binding ProgramUnitAmountText, UpdateSourceTrigger=PropertyChanged}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"{Binding ProgramItemDescription, UpdateSourceTrigger=PropertyChanged}\"", xaml, StringComparison.Ordinal);

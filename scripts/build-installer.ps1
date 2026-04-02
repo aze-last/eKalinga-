@@ -119,6 +119,48 @@ function Get-AppVersion {
     return $sanitizedVersion
 }
 
+function Get-FileSha256 {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path
+    )
+
+    return (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant()
+}
+
+function Write-UpdateManifestTemplate {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$InstallerPath,
+        [Parameter(Mandatory = $true)]
+        [string]$Version,
+        [Parameter(Mandatory = $true)]
+        [string]$OutputDirectory
+    )
+
+    $installerFileName = Split-Path -Path $InstallerPath -Leaf
+    $sha256 = Get-FileSha256 -Path $InstallerPath
+    $publishedAt = (Get-Date).ToString("yyyy-MM-dd")
+    $manifestPath = Join-Path $OutputDirectory "version.json"
+
+    $manifest = [ordered]@{
+        version           = $Version
+        notes             = @(
+            "Replace this note with your release summary."
+        )
+        publishedAt       = $publishedAt
+        releasePageUrl    = "https://github.com/<your-account>/<your-repo>/releases/tag/v$Version"
+        installerFileName = $installerFileName
+        installerUrl      = "https://github.com/<your-account>/<your-repo>/releases/download/v$Version/$installerFileName"
+        sha256            = $sha256
+    }
+
+    $manifestJson = $manifest | ConvertTo-Json -Depth 4
+    Set-Content -LiteralPath $manifestPath -Value $manifestJson
+
+    return $manifestPath
+}
+
 if (-not (Test-Path -LiteralPath $projectPath)) {
     throw "Project file not found: $projectPath"
 }
@@ -197,3 +239,9 @@ if (-not $installer) {
 Write-Host ""
 Write-Host "Installer ready:"
 Write-Host $installer.FullName
+
+$manifestPath = Write-UpdateManifestTemplate -InstallerPath $installer.FullName -Version $appVersion -OutputDirectory $outputDir
+
+Write-Host ""
+Write-Host "Update manifest template ready:"
+Write-Host $manifestPath

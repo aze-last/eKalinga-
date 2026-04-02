@@ -157,6 +157,65 @@
             </materialDesign:Card>
 
             <materialDesign:Card Grid.Column="2" Padding="16" Background="White">
+                <StackPanel>
+                    <TextBlock Text="Aid Request Panel"
+                               FontSize="15"
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource BrandMidnightBrush}"/>
+                    <TextBlock Text="Keep the aid request list visible by default. Open the request panel only when you need to create a new request, edit the selected record, or change its status."
+                               Margin="0,6,0,0"
+                               Foreground="{StaticResource BrandTextSecondaryBrush}"
+                               TextWrapping="Wrap"/>
+
+                    <Border Margin="0,14,0,0"
+                            Padding="16"
+                            CornerRadius="10"
+                            Background="#EEF4FF"
+                            BorderBrush="{StaticResource BrandBorderBrush}"
+                            BorderThickness="1">
+                        <StackPanel>
+                            <TextBlock Text="{Binding EditableCaseNumber}"
+                                       FontSize="18"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrandMidnightBrush}"/>
+                            <TextBlock Text="{Binding ApplicantSummary}"
+                                       Margin="0,6,0,0"
+                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                       TextWrapping="Wrap"/>
+                            <TextBlock Text="{Binding SelectedCase.AmountsSummary, TargetNullValue=Amount: --}"
+                                       Margin="0,4,0,0"
+                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                       TextWrapping="Wrap"/>
+                            <TextBlock Text="{Binding ReleaseKindSummary}"
+                                       Margin="0,4,0,0"
+                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                       TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Button Content="OPEN REQUEST PANEL"
+                            Margin="0,14,0,0"
+                            Height="42"
+                            Style="{StaticResource GoldActionButton}"
+                            Command="{Binding OpenCasePanelCommand}"/>
+                </StackPanel>
+            </materialDesign:Card>
+
+            <Border Grid.ColumnSpan="3"
+                    Panel.ZIndex="19"
+                    Background="#660F172A"
+                    CornerRadius="20"
+                    Visibility="{Binding IsCasePanelOpen, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+
+            <materialDesign:Card Grid.ColumnSpan="3"
+                                 Panel.ZIndex="20"
+                                 Width="700"
+                                 Margin="24"
+                                 Padding="16"
+                                 HorizontalAlignment="Right"
+                                 VerticalAlignment="Stretch"
+                                 Background="White"
+                                 Visibility="{Binding IsCasePanelOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -164,10 +223,17 @@
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <TextBlock Text="Aid Request Detail"
-                               FontSize="15"
-                               FontWeight="SemiBold"
-                               Foreground="{StaticResource BrandMidnightBrush}"/>
+                    <DockPanel>
+                        <TextBlock Text="Aid Request Detail"
+                                   FontSize="15"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource BrandMidnightBrush}"/>
+                        <Button DockPanel.Dock="Right"
+                                Content="CLOSE PANEL"
+                                Height="36"
+                                Style="{StaticResource SecondaryActionButton}"
+                                Command="{Binding CloseCasePanelCommand}"/>
+                    </DockPanel>
 
                     <Border Grid.Row="1"
                             Margin="0,12,0,14"

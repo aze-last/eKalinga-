@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
+using System.Text.RegularExpressions;
 
 namespace AttendanceShiftingManagement.Services
 {
@@ -41,6 +42,37 @@ namespace AttendanceShiftingManagement.Services
                 .FirstOrDefault();
 
             return string.IsNullOrWhiteSpace(sanitized) ? null : sanitized;
+        }
+
+        internal static bool TryParseVersion(string? rawVersion, out Version version)
+        {
+            version = new Version(0, 0);
+
+            var sanitized = SanitizeVersion(rawVersion);
+            if (string.IsNullOrWhiteSpace(sanitized))
+            {
+                return false;
+            }
+
+            if (Version.TryParse(sanitized, out var parsedVersion) && parsedVersion != null)
+            {
+                version = parsedVersion;
+                return true;
+            }
+
+            var normalized = Regex.Replace(sanitized, @"[^0-9\.]", string.Empty);
+            if (string.IsNullOrWhiteSpace(normalized))
+            {
+                return false;
+            }
+
+            if (Version.TryParse($"{normalized}.0", out parsedVersion) && parsedVersion != null)
+            {
+                version = parsedVersion;
+                return true;
+            }
+
+            return false;
         }
     }
 }

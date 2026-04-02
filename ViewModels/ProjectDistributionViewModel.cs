@@ -14,6 +14,8 @@ namespace AttendanceShiftingManagement.ViewModels
     public sealed class ProjectDistributionViewModel : ObservableObject
     {
         private readonly User _currentUser;
+        private readonly RelayCommand _openDistributionPanelCommand;
+        private readonly RelayCommand _closeDistributionPanelCommand;
         private AyudaProgram? _selectedProgram;
         private BeneficiaryStaging? _selectedApprovedBeneficiary;
         private string _statusMessage = "Select a project/program first, then attach approved beneficiaries.";
@@ -23,12 +25,15 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _distributionScannerSessionPin = string.Empty;
         private string _distributionScannerSessionExpiresAtText = string.Empty;
         private BitmapSource? _distributionScannerQrImage;
+        private bool _isDistributionPanelOpen;
         private bool _isBusy;
 
         public ProjectDistributionViewModel(User currentUser)
         {
             _currentUser = currentUser;
 
+            _openDistributionPanelCommand = new RelayCommand(_ => OpenDistributionPanel(), _ => !IsBusy && !IsDistributionPanelOpen);
+            _closeDistributionPanelCommand = new RelayCommand(_ => CloseDistributionPanel(), _ => IsDistributionPanelOpen);
             RefreshCommand = new RelayCommand(async _ => await LoadAsync(), _ => !IsBusy);
             AddBeneficiaryToProjectCommand = new RelayCommand(async _ => await AddBeneficiaryAsync(), _ => !IsBusy);
             CreateDistributionScannerSessionCommand = new RelayCommand(async _ => await CreateDistributionScannerSessionAsync(), _ => !IsBusy);
@@ -41,6 +46,8 @@ namespace AttendanceShiftingManagement.ViewModels
         public ObservableCollection<AyudaProjectBeneficiary> ProjectBeneficiaries { get; } = new();
         public ObservableCollection<AyudaProjectClaim> ProjectClaims { get; } = new();
 
+        public ICommand OpenDistributionPanelCommand => _openDistributionPanelCommand;
+        public ICommand CloseDistributionPanelCommand => _closeDistributionPanelCommand;
         public ICommand RefreshCommand { get; }
         public ICommand AddBeneficiaryToProjectCommand { get; }
         public ICommand CreateDistributionScannerSessionCommand { get; }
@@ -114,6 +121,19 @@ namespace AttendanceShiftingManagement.ViewModels
             private set => SetProperty(ref _distributionScannerQrImage, value);
         }
 
+        public bool IsDistributionPanelOpen
+        {
+            get => _isDistributionPanelOpen;
+            private set
+            {
+                if (SetProperty(ref _isDistributionPanelOpen, value))
+                {
+                    _openDistributionPanelCommand.RaiseCanExecuteChanged();
+                    _closeDistributionPanelCommand.RaiseCanExecuteChanged();
+                }
+            }
+        }
+
         public bool IsBusy
         {
             get => _isBusy;
@@ -125,6 +145,9 @@ namespace AttendanceShiftingManagement.ViewModels
                     {
                         refresh.RaiseCanExecuteChanged();
                     }
+
+                    _openDistributionPanelCommand.RaiseCanExecuteChanged();
+                    _closeDistributionPanelCommand.RaiseCanExecuteChanged();
 
                     if (AddBeneficiaryToProjectCommand is RelayCommand add)
                     {
@@ -303,6 +326,21 @@ namespace AttendanceShiftingManagement.ViewModels
                 SetErrorStatus($"Unable to start the distribution scanner session: {ex.Message}");
                 MessageBox.Show(ex.Message, "Scanner Session Failed", MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+
+        private void OpenDistributionPanel()
+        {
+            if (IsBusy)
+            {
+                return;
+            }
+
+            IsDistributionPanelOpen = true;
+        }
+
+        private void CloseDistributionPanel()
+        {
+            IsDistributionPanelOpen = false;
         }
 
         private void SetNeutralStatus(string message)

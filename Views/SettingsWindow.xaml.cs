@@ -1,6 +1,7 @@
 using AttendanceShiftingManagement.Models;
 using AttendanceShiftingManagement.Services;
 using AttendanceShiftingManagement.ViewModels;
+using System;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -31,6 +32,11 @@ namespace AttendanceShiftingManagement.Views
 
         private void OpenAppDatabaseSettings_Click(object sender, RoutedEventArgs e)
         {
+            if (!ViewModel.IsSensitiveSettingsUnlocked)
+            {
+                return;
+            }
+
             var window = new ConnectionSettingsWindow(selectionOnly: false)
             {
                 Owner = this
@@ -64,14 +70,9 @@ namespace AttendanceShiftingManagement.Views
             }
         }
 
-        private void ChangePassword_Click(object sender, RoutedEventArgs e)
+        private async void ChangePassword_Click(object sender, RoutedEventArgs e)
         {
-            if (!ViewModel.ChangePasswordCommand.CanExecute(null))
-            {
-                return;
-            }
-
-            ViewModel.ChangePasswordCommand.Execute(null);
+            await ViewModel.HandleChangePasswordAsync();
             if (!ViewModel.LastPasswordChangeSucceeded)
             {
                 return;
@@ -91,6 +92,16 @@ namespace AttendanceShiftingManagement.Views
             {
                 confirmPasswordBox.Clear();
             }
+        }
+
+        protected override void OnClosed(EventArgs e)
+        {
+            if (DataContext is IDisposable disposable)
+            {
+                disposable.Dispose();
+            }
+
+            base.OnClosed(e);
         }
     }
 }

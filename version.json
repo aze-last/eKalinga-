@@ -1,0 +1,12 @@
+{
+  "version": "1.0.2",
+  "notes": [
+    "Aligned the updater channel to the Ayuda-Maangement-System repository.",
+    "Cleaned record-management pages so forms open in panels while the lists stay visible."
+  ],
+  "publishedAt": "2026-04-02",
+  "releasePageUrl": "https://github.com/aze-last/BarangayAyudaSys/releases/tag/v1.0.2",
+  "installerFileName": "eKalingaPlus-Setup-1.0.2.exe",
+  "installerUrl": "https://github.com/aze-last/BarangayAyudaSys/releases/download/v1.0.2/eKalingaPlus-Setup-1.0.2.exe",
+  "sha256": "da320f6e30408ab04b3114f12b5f36bff85888b8345cfc7e7aca1bd93ab9506e"
+}

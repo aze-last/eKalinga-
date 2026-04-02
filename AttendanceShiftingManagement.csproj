@@ -6,14 +6,14 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
-    <Version>1.0.0</Version>
-    <AssemblyVersion>1.0.0.0</AssemblyVersion>
-    <FileVersion>1.0.0.0</FileVersion>
-    <InformationalVersion>1.0.0</InformationalVersion>
+    <Version>1.0.2</Version>
+    <AssemblyVersion>1.0.2.0</AssemblyVersion>
+    <FileVersion>1.0.2.0</FileVersion>
+    <InformationalVersion>1.0.2</InformationalVersion>
     <ApplicationIcon>Images\municipal-house.ico</ApplicationIcon>
-    <AssemblyTitle>Barangay Ayuda System</AssemblyTitle>
-    <Product>Barangay Ayuda System</Product>
-    <Description>Barangay Ayuda System desktop application.</Description>
+    <AssemblyTitle>eKalinga+</AssemblyTitle>
+    <Product>eKalinga+</Product>
+    <Description>eKalinga+ desktop application.</Description>
   </PropertyGroup>
 
   <ItemGroup>

@@ -12,6 +12,10 @@ namespace AttendanceShiftingManagement.Views
         public LoginWindow()
         {
             InitializeComponent();
+
+            if (System.ComponentModel.DesignerProperties.GetIsInDesignMode(this))
+                return;
+
             DataContext = new LoginViewModel();
             WindowBrandingService.ApplyWindowIcon(this);
         }
@@ -21,6 +25,16 @@ namespace AttendanceShiftingManagement.Views
             if (sender is PasswordBox passwordBox)
             {
                 ViewModel.Password = passwordBox.Password;
+            }
+        }
+
+        private void TogglePasswordVisibility_Click(object sender, RoutedEventArgs e)
+        {
+            ViewModel.IsShowingPassword = !ViewModel.IsShowingPassword;
+
+            if (!ViewModel.IsShowingPassword)
+            {
+                PasswordBox.Password = ViewModel.Password;
             }
         }
 

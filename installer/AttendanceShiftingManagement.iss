@@ -1,5 +1,5 @@
-#define MyAppName "Barangay Ayuda System"
-#define MyAppPublisher "Barangay Ayuda System"
+#define MyAppName "eKalinga+"
+#define MyAppPublisher "eKalinga+"
 
 #ifndef MyAppVersion
   #define MyAppVersion "1.0.0.0"
@@ -32,7 +32,7 @@ DisableProgramGroupPage=yes
 UninstallDisplayIcon={app}\{#MyAppExeName}
 SetupIconFile={#MyProjectDir}\Images\municipal-house.ico
 OutputDir={#MyOutputDir}
-OutputBaseFilename=BarangayAyudaSystem-Setup-{#MyAppVersion}
+OutputBaseFilename=eKalingaPlus-Setup-{#MyAppVersion}
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
@@ -57,4 +57,4 @@ Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\{#MyAppExeName}"; Description: "Launch {#MyAppName}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#MyAppExeName}"; Flags: nowait skipifsilent

@@ -8,19 +8,42 @@ namespace AttendanceShiftingManagement.Helpers
     {
         public static ImageSource? Load(string? path)
         {
-            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+            if (string.IsNullOrWhiteSpace(path))
             {
                 return null;
             }
 
-            using var stream = File.OpenRead(path);
-            var image = new BitmapImage();
-            image.BeginInit();
-            image.CacheOption = BitmapCacheOption.OnLoad;
-            image.StreamSource = stream;
-            image.EndInit();
-            image.Freeze();
-            return image;
+            if (File.Exists(path))
+            {
+                using var stream = File.OpenRead(path);
+                var fileImage = new BitmapImage();
+                fileImage.BeginInit();
+                fileImage.CacheOption = BitmapCacheOption.OnLoad;
+                fileImage.StreamSource = stream;
+                fileImage.EndInit();
+                fileImage.Freeze();
+                return fileImage;
+            }
+
+            if (!Uri.TryCreate(path, UriKind.Absolute, out var uri))
+            {
+                return null;
+            }
+
+            try
+            {
+                var uriImage = new BitmapImage();
+                uriImage.BeginInit();
+                uriImage.CacheOption = BitmapCacheOption.OnLoad;
+                uriImage.UriSource = uri;
+                uriImage.EndInit();
+                uriImage.Freeze();
+                return uriImage;
+            }
+            catch
+            {
+                return null;
+            }
         }
     }
 }

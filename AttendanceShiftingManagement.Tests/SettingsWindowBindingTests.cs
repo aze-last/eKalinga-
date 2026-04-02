@@ -21,5 +21,52 @@ public sealed class SettingsWindowBindingTests
         Assert.Contains("Header=\"GGMS Budget Source\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Header=\"Updates\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding CheckForUpdatesCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding DownloadUpdateCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding InstallPendingUpdateCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding RemindMeLaterCommand}\"", xaml, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SettingsWindow_UsesOneWayBindings_ForReadOnlyUpdateDisplayFields()
+    {
+        var windowPath = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..",
+            "..",
+            "..",
+            "..",
+            "Views",
+            "SettingsWindow.xaml"));
+
+        var xaml = File.ReadAllText(windowPath);
+
+        Assert.Contains("Text=\"{Binding CurrentAppVersion, Mode=OneWay}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding LatestAvailableVersion, Mode=OneWay}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding UpdatePublishedAt, Mode=OneWay}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding UpdateReleaseNotes, Mode=OneWay}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding DownloadedInstallerLabel, Mode=OneWay}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Value=\"{Binding UpdateDownloadProgressPercent, Mode=OneWay}\"", xaml, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SettingsWindow_ExposesOtpProtectionBindings_ForProtectedSettingsAndPasswordChange()
+    {
+        var windowPath = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..",
+            "..",
+            "..",
+            "..",
+            "Views",
+            "SettingsWindow.xaml"));
+
+        var xaml = File.ReadAllText(windowPath);
+
+        Assert.Contains("ContentTemplate=\"{StaticResource ProtectedSettingsOtpOverlayTemplate}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding SendSensitiveSettingsOtpCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding VerifySensitiveSettingsOtpCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding SendPasswordChangeOtpCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding VerifyPasswordChangeOtpCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Visibility=\"{Binding ShowPasswordChangeOtpPanel, Converter={StaticResource BooleanToVisibilityConverter}}\"", xaml, StringComparison.Ordinal);
     }
 }

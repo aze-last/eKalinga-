@@ -15,12 +15,13 @@ public sealed class SystemProfileSettingsServiceTests
         {
             var settings = SystemProfileSettingsService.Load(runtimePath);
 
-            Assert.Equal("Barangay Ayuda System", settings.SystemName);
+            Assert.Equal("eKalinga+", settings.SystemName);
             Assert.Equal(string.Empty, settings.Owner);
             Assert.Equal(string.Empty, settings.CompanyAddress);
             Assert.Equal(string.Empty, settings.Email);
             Assert.Equal(string.Empty, settings.ContactNumber);
-            Assert.Equal(string.Empty, settings.LogoPath);
+            Assert.Equal(SystemProfileSettingsModel.DefaultLogoUri, settings.LogoPath);
+            Assert.Equal(SystemProfileSettingsModel.DefaultLoginBackgroundUri, settings.LoginBackgroundPath);
             Assert.Matches(@"^BAS-\d{8}-[A-Z0-9]{4}$", settings.InstallSerial);
             Assert.True(File.Exists(runtimePath));
 
@@ -110,11 +111,13 @@ public sealed class SystemProfileSettingsServiceTests
             });
 
             Assert.Equal("Local Government Unit", fallback.Title);
-            Assert.Equal("Barangay Ayuda System", fallback.Subtitle);
+            Assert.Equal("eKalinga+", fallback.Subtitle);
             Assert.Equal(string.Empty, fallback.Address);
             Assert.Equal("BAS-20260326-Z9X8", fallback.InstallSerial);
-            Assert.False(fallback.HasCustomLogo);
-            Assert.Equal(string.Empty, fallback.LogoPath);
+            Assert.True(fallback.HasCustomLogo);
+            Assert.Equal(SystemProfileSettingsModel.DefaultLogoUri, fallback.LogoPath);
+            Assert.True(fallback.HasCustomBackground);
+            Assert.Equal(SystemProfileSettingsModel.DefaultLoginBackgroundUri, fallback.LoginBackgroundPath);
         }
         finally
         {

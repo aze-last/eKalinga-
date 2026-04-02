@@ -19,6 +19,8 @@ namespace AttendanceShiftingManagement.Services
         public string PublishedAt { get; set; } = string.Empty;
         public string ReleasePageUrl { get; set; } = string.Empty;
         public string InstallerFileName { get; set; } = string.Empty;
+        public string InstallerUrl { get; set; } = string.Empty;
+        public string Sha256 { get; set; } = string.Empty;
     }
 
     public sealed class UpdateCheckResult
@@ -29,9 +31,15 @@ namespace AttendanceShiftingManagement.Services
         public string PublishedAt { get; init; } = string.Empty;
         public string ReleasePageUrl { get; init; } = string.Empty;
         public string InstallerFileName { get; init; } = string.Empty;
+        public string InstallerUrl { get; init; } = string.Empty;
+        public string Sha256 { get; init; } = string.Empty;
         public IReadOnlyList<string> Notes { get; init; } = Array.Empty<string>();
         public string Message { get; init; } = string.Empty;
         public bool IsUpdateAvailable => Status == UpdateCheckStatus.UpdateAvailable;
+        public bool CanDownloadInstaller =>
+            IsUpdateAvailable
+            && !string.IsNullOrWhiteSpace(InstallerUrl)
+            && !string.IsNullOrWhiteSpace(Sha256);
     }
 
     public static class UpdateCheckService
@@ -49,6 +57,15 @@ namespace AttendanceShiftingManagement.Services
         public static async Task<UpdateCheckResult> CheckForUpdatesAsync(string manifestUrl, CancellationToken cancellationToken = default)
         {
             var currentVersion = AppVersionService.GetCurrentVersion();
+            return await CheckForUpdatesAsync(manifestUrl, HttpClient, currentVersion, cancellationToken);
+        }
+
+        internal static async Task<UpdateCheckResult> CheckForUpdatesAsync(
+            string manifestUrl,
+            HttpClient httpClient,
+            string currentVersion,
+            CancellationToken cancellationToken = default)
+        {
             if (string.IsNullOrWhiteSpace(manifestUrl))
             {
                 return new UpdateCheckResult
@@ -64,7 +81,7 @@ namespace AttendanceShiftingManagement.Services
                 using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 timeoutSource.CancelAfter(TimeSpan.FromSeconds(5));
 
-                var manifestJson = await HttpClient.GetStringAsync(manifestUrl.Trim(), timeoutSource.Token);
+                var manifestJson = await httpClient.GetStringAsync(manifestUrl.Trim(), timeoutSource.Token);
                 var manifest = JsonSerializer.Deserialize<UpdateManifest>(manifestJson, JsonOptions);
                 if (manifest == null)
                 {
@@ -77,7 +94,8 @@ namespace AttendanceShiftingManagement.Services
                 }
 
                 var latestVersion = AppVersionService.SanitizeVersion(manifest.Version);
-                if (!TryParseVersion(currentVersion, out var currentParsed) || !TryParseVersion(latestVersion, out var latestParsed))
+                if (!AppVersionService.TryParseVersion(currentVersion, out var currentParsed)
+                    || !AppVersionService.TryParseVersion(latestVersion, out var latestParsed))
                 {
                     return new UpdateCheckResult
                     {
@@ -100,6 +118,8 @@ namespace AttendanceShiftingManagement.Services
                     PublishedAt = manifest.PublishedAt?.Trim() ?? string.Empty,
                     ReleasePageUrl = manifest.ReleasePageUrl?.Trim() ?? string.Empty,
                     InstallerFileName = manifest.InstallerFileName?.Trim() ?? string.Empty,
+                    InstallerUrl = manifest.InstallerUrl?.Trim() ?? string.Empty,
+                    Sha256 = manifest.Sha256?.Trim() ?? string.Empty,
                     Notes = manifest.Notes?.Where(note => !string.IsNullOrWhiteSpace(note)).Select(note => note.Trim()).ToArray() ?? Array.Empty<string>(),
                     Message = status == UpdateCheckStatus.UpdateAvailable
                         ? $"Version {latestVersion} is available."
@@ -124,29 +144,6 @@ namespace AttendanceShiftingManagement.Services
                     Message = $"Unable to check for updates right now. {ex.Message}"
                 };
             }
-        }
-
-        private static bool TryParseVersion(string? versionText, out Version version)
-        {
-            version = new Version(0, 0);
-            if (string.IsNullOrWhiteSpace(versionText))
-            {
-                return false;
-            }
-
-            if (Version.TryParse(versionText, out var parsedVersion) && parsedVersion != null)
-            {
-                version = parsedVersion;
-                return true;
-            }
-
-            if (Version.TryParse($"{versionText}.0", out parsedVersion) && parsedVersion != null)
-            {
-                version = parsedVersion;
-                return true;
-            }
-
-            return false;
         }
     }
 }

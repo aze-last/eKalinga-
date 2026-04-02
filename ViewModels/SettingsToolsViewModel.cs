@@ -10,12 +10,13 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Net.Mail;
+using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 
 namespace AttendanceShiftingManagement.ViewModels
 {
-    public sealed class SettingsToolsViewModel : ObservableObject
+    public sealed partial class SettingsToolsViewModel : ObservableObject, IDisposable
     {
         private const string MasterListTableName = "val_beneficiaries";
         private const string StagingTableName = "BeneficiaryStaging";
@@ -37,11 +38,16 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly RelayCommand _testGgmsConnectionCommand;
         private readonly RelayCommand _saveGgmsSettingsCommand;
         private readonly RelayCommand _checkForUpdatesCommand;
+        private readonly RelayCommand _downloadUpdateCommand;
+        private readonly RelayCommand _installPendingUpdateCommand;
+        private readonly RelayCommand _remindMeLaterCommand;
         private readonly RelayCommand _saveUpdatePreferencesCommand;
         private readonly RelayCommand _openUpdateDownloadPageCommand;
         private readonly RelayCommand _saveSystemProfileCommand;
         private readonly RelayCommand _browseSystemLogoCommand;
         private readonly RelayCommand _removeSystemLogoCommand;
+        private readonly RelayCommand _browseSystemLoginBackgroundCommand;
+        private readonly RelayCommand _removeSystemLoginBackgroundCommand;
         private readonly RelayCommand _saveAccountCommand;
         private readonly RelayCommand _changePasswordCommand;
         private readonly User? _currentUser;
@@ -54,8 +60,11 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _systemContactNumber = string.Empty;
         private string _systemLogoPath = string.Empty;
         private string _savedSystemLogoPath = string.Empty;
+        private string _systemLoginBackgroundPath = string.Empty;
+        private string _savedSystemLoginBackgroundPath = string.Empty;
         private string _systemInstallSerial = string.Empty;
         private ImageSource? _systemLogoImage;
+        private ImageSource? _systemLoginBackgroundImage;
         private string _systemProfileStatusMessage = "Set the app-wide system identity and keep the company serial number matched to the active database.";
         private Brush _systemProfileStatusBrush = CreateBrush("#6B7280");
         private string _accountFullName = string.Empty;
@@ -90,7 +99,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _lastDifferentialBackupDisplay = "No differential backup recorded for this preset yet.";
         private string _backupGuidanceMessage = "Incremental and differential backups require an existing full backup for the active preset.";
         private bool _canCreateDeltaBackups;
-        private string _appDatabaseStatusMessage = "Open App Database Settings to switch presets. Use the migrate action here after schema changes so both Local and Remote are ready.";
+        private string _appDatabaseStatusMessage = "Open App Database Settings to switch presets. Only Network (LAN) is editable there; Local and Remote stay fixed from the shipped app configuration.";
         private Brush _appDatabaseStatusBrush = CreateBrush("#6B7280");
         private string _ggmsOfficeCode = string.Empty;
         private string _ggmsOfficeTable = "tbl_offices";
@@ -113,6 +122,12 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _updateStatusMessage = "Set the public update manifest URL, then check for updates from this screen.";
         private Brush _updateStatusBrush = CreateBrush("#6B7280");
         private string _updateDownloadPageUrl = string.Empty;
+        private string _updateInstallerUrl = string.Empty;
+        private string _updateSha256 = string.Empty;
+        private PendingAppUpdate? _pendingAppUpdate;
+        private string _downloadedInstallerLabel = "No downloaded installer is waiting yet.";
+        private double _updateDownloadProgressPercent;
+        private bool _isUpdateDownloadInProgress;
         private bool _checkForUpdatesOnStartup = true;
         private bool _isUpdateAvailable;
         private int _masterListRowCount;
@@ -134,8 +149,10 @@ namespace AttendanceShiftingManagement.ViewModels
             _saveSystemProfileCommand = new RelayCommand(_ => ExecuteSaveSystemProfile(), _ => !IsBusy);
             _browseSystemLogoCommand = new RelayCommand(_ => ExecuteBrowseSystemLogo(), _ => !IsBusy);
             _removeSystemLogoCommand = new RelayCommand(_ => ExecuteRemoveSystemLogo(), _ => !IsBusy && CanRemoveSystemLogo);
+            _browseSystemLoginBackgroundCommand = new RelayCommand(_ => ExecuteBrowseSystemLoginBackground(), _ => !IsBusy);
+            _removeSystemLoginBackgroundCommand = new RelayCommand(_ => ExecuteRemoveSystemLoginBackground(), _ => !IsBusy && CanRemoveSystemLoginBackground);
             _saveAccountCommand = new RelayCommand(_ => ExecuteSaveAccount(), _ => !IsBusy && HasCurrentUser);
-            _changePasswordCommand = new RelayCommand(_ => ExecuteChangePassword(), _ => !IsBusy && HasCurrentUser);
+            _changePasswordCommand = new RelayCommand(async _ => await HandleChangePasswordAsync(), _ => !IsBusy && HasCurrentUser);
             _testConnectionCommand = new RelayCommand(async _ => await ExecuteTestConnectionAsync(), _ => !IsBusy);
             _saveImportConnectionCommand = new RelayCommand(_ => ExecuteSaveImportConnection(), _ => !IsBusy);
             _snapshotMasterListCommand = new RelayCommand(async _ => await ExecuteSnapshotMasterListAsync(), _ => !IsBusy);
@@ -151,8 +168,12 @@ namespace AttendanceShiftingManagement.ViewModels
             _testGgmsConnectionCommand = new RelayCommand(async _ => await ExecuteTestGgmsConnectionAsync(), _ => !IsBusy);
             _saveGgmsSettingsCommand = new RelayCommand(_ => ExecuteSaveGgmsSettings(), _ => !IsBusy);
             _checkForUpdatesCommand = new RelayCommand(async _ => await ExecuteCheckForUpdatesAsync(), _ => !IsBusy);
+            _downloadUpdateCommand = new RelayCommand(async _ => await ExecuteDownloadUpdateAsync(), _ => !IsBusy && CanDownloadUpdate);
+            _installPendingUpdateCommand = new RelayCommand(_ => ExecuteInstallPendingUpdate(), _ => !IsBusy && CanInstallPendingUpdate);
+            _remindMeLaterCommand = new RelayCommand(_ => ExecuteRemindMeLater(), _ => !IsBusy && HasPendingUpdate);
             _saveUpdatePreferencesCommand = new RelayCommand(_ => ExecuteSaveUpdatePreferences(), _ => !IsBusy);
             _openUpdateDownloadPageCommand = new RelayCommand(_ => ExecuteOpenUpdateDownloadPage(), _ => !IsBusy && CanOpenUpdateDownloadPage);
+            InitializeOtpState();
 
             LoadSystemProfile();
             LoadCurrentUserAccount();
@@ -191,7 +212,13 @@ namespace AttendanceShiftingManagement.ViewModels
         public string SystemEmail
         {
             get => _systemEmail;
-            set => SetProperty(ref _systemEmail, value);
+            set
+            {
+                if (SetProperty(ref _systemEmail, value))
+                {
+                    HandleSystemEmailChanged();
+                }
+            }
         }
 
         public string SystemContactNumber
@@ -237,6 +264,38 @@ namespace AttendanceShiftingManagement.ViewModels
         public string SystemLogoFileLabel => string.IsNullOrWhiteSpace(SystemLogoPath)
             ? "Using the default login logo."
             : Path.GetFileName(SystemLogoPath);
+
+        public string SystemLoginBackgroundPath
+        {
+            get => _systemLoginBackgroundPath;
+            private set
+            {
+                if (SetProperty(ref _systemLoginBackgroundPath, value))
+                {
+                    OnPropertyChanged(nameof(SystemLoginBackgroundFileLabel));
+                    OnPropertyChanged(nameof(CanRemoveSystemLoginBackground));
+                    _removeSystemLoginBackgroundCommand?.RaiseCanExecuteChanged();
+                }
+            }
+        }
+
+        public ImageSource? SystemLoginBackgroundImage
+        {
+            get => _systemLoginBackgroundImage;
+            private set
+            {
+                if (SetProperty(ref _systemLoginBackgroundImage, value))
+                {
+                    OnPropertyChanged(nameof(HasSystemLoginBackground));
+                }
+            }
+        }
+
+        public bool HasSystemLoginBackground => SystemLoginBackgroundImage != null;
+        public bool CanRemoveSystemLoginBackground => !string.IsNullOrWhiteSpace(SystemLoginBackgroundPath);
+        public string SystemLoginBackgroundFileLabel => string.IsNullOrWhiteSpace(SystemLoginBackgroundPath)
+            ? "Using the default login background."
+            : Path.GetFileName(SystemLoginBackgroundPath);
 
         public string SystemProfileStatusMessage
         {
@@ -599,6 +658,30 @@ namespace AttendanceShiftingManagement.ViewModels
             private set => SetProperty(ref _updateStatusBrush, value);
         }
 
+        public string DownloadedInstallerLabel
+        {
+            get => _downloadedInstallerLabel;
+            private set => SetProperty(ref _downloadedInstallerLabel, value);
+        }
+
+        public double UpdateDownloadProgressPercent
+        {
+            get => _updateDownloadProgressPercent;
+            private set => SetProperty(ref _updateDownloadProgressPercent, value);
+        }
+
+        public bool IsUpdateDownloadInProgress
+        {
+            get => _isUpdateDownloadInProgress;
+            private set
+            {
+                if (SetProperty(ref _isUpdateDownloadInProgress, value))
+                {
+                    OnPropertyChanged(nameof(ShowUpdateDownloadProgress));
+                }
+            }
+        }
+
         public bool CheckForUpdatesOnStartup
         {
             get => _checkForUpdatesOnStartup;
@@ -612,16 +695,35 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 if (SetProperty(ref _isUpdateAvailable, value))
                 {
-                    OnPropertyChanged(nameof(ShowUpdateBanner));
-                    OnPropertyChanged(nameof(UpdateBannerMessage));
+                    RaiseUpdateUiStateChanged();
                 }
             }
         }
 
-        public bool ShowUpdateBanner => IsUpdateAvailable;
-        public string UpdateBannerMessage => IsUpdateAvailable
-            ? $"Update available: version {LatestAvailableVersion}."
-            : string.Empty;
+        public bool HasPendingUpdate => _pendingAppUpdate != null;
+        public bool ShowUpdateBanner => HasPendingUpdate || IsUpdateAvailable;
+        public string UpdateBannerTitle => HasPendingUpdate
+            ? "Update Ready to Install"
+            : IsUpdateAvailable
+                ? "Update Available"
+                : string.Empty;
+        public string UpdateBannerMessage => HasPendingUpdate
+            ? $"Version {_pendingAppUpdate!.Version} is downloaded and ready to install."
+            : IsUpdateAvailable
+                ? CanDownloadUpdate
+                    ? $"Version {LatestAvailableVersion} is available to download from Settings."
+                    : $"Version {LatestAvailableVersion} is available. Open the download page until installer metadata is published."
+                : string.Empty;
+        public bool ShowDownloadUpdateActions => IsUpdateAvailable && !HasPendingUpdate;
+        public bool ShowPendingUpdateActions => HasPendingUpdate;
+        public bool ShowUpdateDownloadProgress => IsUpdateDownloadInProgress;
+        public bool CanDownloadUpdate =>
+            !IsBusy
+            && IsUpdateAvailable
+            && !HasPendingUpdate
+            && !string.IsNullOrWhiteSpace(_updateInstallerUrl)
+            && !string.IsNullOrWhiteSpace(_updateSha256);
+        public bool CanInstallPendingUpdate => !IsBusy && HasPendingUpdate;
         public bool CanOpenUpdateDownloadPage => !string.IsNullOrWhiteSpace(_updateDownloadPageUrl);
 
         public int MasterListRowCount
@@ -646,6 +748,8 @@ namespace AttendanceShiftingManagement.ViewModels
                     _saveSystemProfileCommand.RaiseCanExecuteChanged();
                     _browseSystemLogoCommand.RaiseCanExecuteChanged();
                     _removeSystemLogoCommand.RaiseCanExecuteChanged();
+                    _browseSystemLoginBackgroundCommand.RaiseCanExecuteChanged();
+                    _removeSystemLoginBackgroundCommand.RaiseCanExecuteChanged();
                     _saveAccountCommand.RaiseCanExecuteChanged();
                     _changePasswordCommand.RaiseCanExecuteChanged();
                     _testConnectionCommand.RaiseCanExecuteChanged();
@@ -663,8 +767,12 @@ namespace AttendanceShiftingManagement.ViewModels
                     _testGgmsConnectionCommand.RaiseCanExecuteChanged();
                     _saveGgmsSettingsCommand.RaiseCanExecuteChanged();
                     _checkForUpdatesCommand.RaiseCanExecuteChanged();
+                    _downloadUpdateCommand.RaiseCanExecuteChanged();
+                    _installPendingUpdateCommand.RaiseCanExecuteChanged();
+                    _remindMeLaterCommand.RaiseCanExecuteChanged();
                     _saveUpdatePreferencesCommand.RaiseCanExecuteChanged();
                     _openUpdateDownloadPageCommand.RaiseCanExecuteChanged();
+                    OnBusyStateChangedForOtp();
                 }
             }
         }
@@ -672,6 +780,8 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand SaveSystemProfileCommand => _saveSystemProfileCommand;
         public ICommand BrowseSystemLogoCommand => _browseSystemLogoCommand;
         public ICommand RemoveSystemLogoCommand => _removeSystemLogoCommand;
+        public ICommand BrowseSystemLoginBackgroundCommand => _browseSystemLoginBackgroundCommand;
+        public ICommand RemoveSystemLoginBackgroundCommand => _removeSystemLoginBackgroundCommand;
         public ICommand SaveAccountCommand => _saveAccountCommand;
         public ICommand ChangePasswordCommand => _changePasswordCommand;
         public ICommand TestConnectionCommand => _testConnectionCommand;
@@ -689,6 +799,9 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand TestGgmsConnectionCommand => _testGgmsConnectionCommand;
         public ICommand SaveGgmsSettingsCommand => _saveGgmsSettingsCommand;
         public ICommand CheckForUpdatesCommand => _checkForUpdatesCommand;
+        public ICommand DownloadUpdateCommand => _downloadUpdateCommand;
+        public ICommand InstallPendingUpdateCommand => _installPendingUpdateCommand;
+        public ICommand RemindMeLaterCommand => _remindMeLaterCommand;
         public ICommand SaveUpdatePreferencesCommand => _saveUpdatePreferencesCommand;
         public ICommand OpenUpdateDownloadPageCommand => _openUpdateDownloadPageCommand;
 
@@ -702,8 +815,11 @@ namespace AttendanceShiftingManagement.ViewModels
             SystemContactNumber = settings.ContactNumber;
             SystemLogoPath = settings.LogoPath;
             _savedSystemLogoPath = settings.LogoPath;
+            SystemLoginBackgroundPath = settings.LoginBackgroundPath;
+            _savedSystemLoginBackgroundPath = settings.LoginBackgroundPath;
             SystemInstallSerial = settings.InstallSerial;
             RefreshSystemLogoPreview();
+            RefreshSystemLoginBackgroundPreview();
         }
 
         private void LoadCurrentUserAccount()
@@ -757,6 +873,7 @@ namespace AttendanceShiftingManagement.ViewModels
             var preferences = AppPreferencesService.Load();
             CheckForUpdatesOnStartup = preferences.CheckForUpdatesOnStartup;
             UpdateManifestUrl = preferences.UpdateManifestUrl;
+            LoadPendingUpdate();
             ApplyUpdateResult(AppUpdateCoordinator.LatestResult, preserveNotCheckedMessage: true);
 
             if (AppUpdateCoordinator.LatestResult.Status == UpdateCheckStatus.NotChecked
@@ -767,6 +884,28 @@ namespace AttendanceShiftingManagement.ViewModels
             }
         }
 
+        private void LoadPendingUpdate()
+        {
+            var pending = AppUpdatePackageService.LoadPendingUpdate();
+            if (pending != null && !File.Exists(pending.InstallerPath))
+            {
+                AppUpdatePackageService.ClearPendingUpdate();
+                pending = null;
+            }
+
+            _pendingAppUpdate = pending;
+            DownloadedInstallerLabel = pending == null
+                ? "No downloaded installer is waiting yet."
+                : $"{pending.InstallerFileName} ({pending.Version})";
+
+            if (pending != null)
+            {
+                SetUpdateSuccess($"Version {pending.Version} is downloaded and ready to install.");
+            }
+
+            RaiseUpdateUiStateChanged();
+        }
+
         private void ExecuteSaveSystemProfile()
         {
             var systemName = SystemName.Trim();
@@ -775,6 +914,7 @@ namespace AttendanceShiftingManagement.ViewModels
             var email = SystemEmail.Trim();
             var contactNumber = SystemContactNumber.Trim();
             var logoPath = SystemLogoPath.Trim();
+            var loginBackgroundPath = SystemLoginBackgroundPath.Trim();
 
             if (string.IsNullOrWhiteSpace(systemName))
             {
@@ -796,6 +936,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 Email = email,
                 ContactNumber = contactNumber,
                 LogoPath = logoPath,
+                LoginBackgroundPath = loginBackgroundPath,
                 InstallSerial = SystemInstallSerial
             });
 
@@ -803,6 +944,12 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 SystemProfileSettingsService.RemoveStoredLogo(_savedSystemLogoPath);
                 _savedSystemLogoPath = logoPath;
+            }
+
+            if (!string.Equals(_savedSystemLoginBackgroundPath, loginBackgroundPath, StringComparison.OrdinalIgnoreCase))
+            {
+                SystemProfileSettingsService.RemoveStoredLogo(_savedSystemLoginBackgroundPath);
+                _savedSystemLoginBackgroundPath = loginBackgroundPath;
             }
 
             SystemName = systemName;
@@ -850,6 +997,45 @@ namespace AttendanceShiftingManagement.ViewModels
             SystemLogoPath = string.Empty;
             RefreshSystemLogoPreview();
             SetSystemProfileSuccess("Custom logo removed. Save system profile to restore the default logo.");
+        }
+
+        private void ExecuteBrowseSystemLoginBackground()
+        {
+            var dialog = new OpenFileDialog
+            {
+                Filter = "Image Files (*.png;*.jpg;*.jpeg;*.bmp;*.ico)|*.png;*.jpg;*.jpeg;*.bmp;*.ico",
+                CheckFileExists = true
+            };
+
+            if (dialog.ShowDialog() != true)
+            {
+                return;
+            }
+
+            try
+            {
+                var disposableWorkingBackgroundPath = GetDisposableWorkingLoginBackgroundPath();
+                SystemLoginBackgroundPath = SystemProfileSettingsService.CopyBackgroundToBrandingFolder(dialog.FileName, disposableWorkingBackgroundPath);
+                RefreshSystemLoginBackgroundPreview();
+                SetSystemProfileSuccess("Background selected. Save system profile to apply the updated branding.");
+            }
+            catch (Exception ex)
+            {
+                SetSystemProfileError($"Unable to use the selected background. {ex.Message}");
+            }
+        }
+
+        private void ExecuteRemoveSystemLoginBackground()
+        {
+            var disposableWorkingBackgroundPath = GetDisposableWorkingLoginBackgroundPath();
+            if (!string.IsNullOrWhiteSpace(disposableWorkingBackgroundPath))
+            {
+                SystemProfileSettingsService.RemoveStoredLogo(disposableWorkingBackgroundPath);
+            }
+
+            SystemLoginBackgroundPath = string.Empty;
+            RefreshSystemLoginBackgroundPreview();
+            SetSystemProfileSuccess("Custom background removed. Save system profile to restore the default background.");
         }
 
         private void ExecuteSaveAccount()
@@ -1242,6 +1428,131 @@ namespace AttendanceShiftingManagement.ViewModels
                 });
         }
 
+        private async Task ExecuteDownloadUpdateAsync()
+        {
+            if (!AppUpdateCoordinator.LatestResult.CanDownloadInstaller)
+            {
+                SetUpdateError("The latest update result does not include a downloadable installer yet.");
+                return;
+            }
+
+            PendingAppUpdate? downloadedUpdate = null;
+
+            await ExecuteBusyAsync(
+                async () =>
+                {
+                    IsUpdateDownloadInProgress = true;
+                    UpdateDownloadProgressPercent = 0;
+
+                    try
+                    {
+                        var progress = new Progress<UpdateDownloadProgress>(update =>
+                        {
+                            UpdateDownloadProgressPercent = update.PercentComplete;
+                            if (update.TotalBytes.HasValue && update.TotalBytes.Value > 0)
+                            {
+                                SetUpdateNeutral($"Downloading version {AppUpdateCoordinator.LatestResult.LatestVersion}... {update.PercentComplete:0.#}%");
+                            }
+                            else
+                            {
+                                SetUpdateNeutral($"Downloading version {AppUpdateCoordinator.LatestResult.LatestVersion}...");
+                            }
+                        });
+
+                        downloadedUpdate = await AppUpdatePackageService.DownloadUpdateAsync(
+                            AppUpdateCoordinator.LatestResult,
+                            progress);
+
+                        _pendingAppUpdate = downloadedUpdate;
+                        DownloadedInstallerLabel = $"{downloadedUpdate.InstallerFileName} ({downloadedUpdate.Version})";
+                        SetUpdateSuccess($"Downloaded version {downloadedUpdate.Version} and verified the installer.");
+                        RaiseUpdateUiStateChanged();
+                    }
+                    catch (Exception ex)
+                    {
+                        SetUpdateError($"Unable to download the installer. {ex.Message}");
+                    }
+                    finally
+                    {
+                        IsUpdateDownloadInProgress = false;
+                    }
+                });
+
+            if (downloadedUpdate == null)
+            {
+                return;
+            }
+
+            var choice = MessageBox.Show(
+                $"Version {downloadedUpdate.Version} is ready to install. Install it now?",
+                "Update Ready",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+
+            if (choice == MessageBoxResult.Yes)
+            {
+                ExecuteInstallPendingUpdate(skipConfirmation: true);
+            }
+            else
+            {
+                ExecuteRemindMeLater();
+            }
+        }
+
+        private void ExecuteInstallPendingUpdate(bool skipConfirmation = false)
+        {
+            if (_pendingAppUpdate == null)
+            {
+                SetUpdateError("There is no downloaded installer ready to run.");
+                return;
+            }
+
+            if (!File.Exists(_pendingAppUpdate.InstallerPath))
+            {
+                AppUpdatePackageService.ClearPendingUpdate();
+                _pendingAppUpdate = null;
+                DownloadedInstallerLabel = "No downloaded installer is waiting yet.";
+                RaiseUpdateUiStateChanged();
+                SetUpdateError("The downloaded installer is missing. Download the update again.");
+                return;
+            }
+
+            if (!skipConfirmation)
+            {
+                var confirm = MessageBox.Show(
+                    $"Install version {_pendingAppUpdate.Version} now? The app will close while setup runs and reopen after the upgrade completes.",
+                    "Install Update",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question);
+
+                if (confirm != MessageBoxResult.Yes)
+                {
+                    return;
+                }
+            }
+
+            try
+            {
+                AppUpdatePackageService.LaunchInstaller(_pendingAppUpdate);
+                Application.Current?.Shutdown();
+            }
+            catch (Exception ex)
+            {
+                SetUpdateError($"Unable to start the installer. {ex.Message}");
+            }
+        }
+
+        private void ExecuteRemindMeLater()
+        {
+            if (_pendingAppUpdate == null)
+            {
+                SetUpdateNeutral("No downloaded installer is waiting right now.");
+                return;
+            }
+
+            SetUpdateNeutral($"Version {_pendingAppUpdate.Version} is downloaded. Install it later from Settings > Updates.");
+        }
+
         private void ExecuteSaveUpdatePreferences()
         {
             AppPreferencesService.Save(new AppPreferencesModel
@@ -1363,6 +1674,12 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             SecurityStatusMessage = message;
             SecurityStatusBrush = CreateBrush("#1A7A4A");
+        }
+
+        private void SetSecurityNeutral(string message)
+        {
+            SecurityStatusMessage = message;
+            SecurityStatusBrush = CreateBrush("#6B7280");
         }
 
         private void SetSecurityError(string message)
@@ -1588,8 +1905,21 @@ namespace AttendanceShiftingManagement.ViewModels
                 ? "No release notes were provided."
                 : string.Join(Environment.NewLine, result.Notes.Select(note => $"- {note}"));
             _updateDownloadPageUrl = result.ReleasePageUrl ?? string.Empty;
+            _updateInstallerUrl = result.InstallerUrl ?? string.Empty;
+            _updateSha256 = result.Sha256 ?? string.Empty;
             OnPropertyChanged(nameof(CanOpenUpdateDownloadPage));
             _openUpdateDownloadPageCommand.RaiseCanExecuteChanged();
+
+            if (_pendingAppUpdate != null
+                && result.Status == UpdateCheckStatus.UpdateAvailable
+                && AppVersionService.TryParseVersion(result.LatestVersion, out var latestParsed)
+                && AppVersionService.TryParseVersion(_pendingAppUpdate.Version, out var pendingParsed)
+                && latestParsed > pendingParsed)
+            {
+                AppUpdatePackageService.ClearPendingUpdate();
+                _pendingAppUpdate = null;
+                DownloadedInstallerLabel = "No downloaded installer is waiting yet.";
+            }
 
             switch (result.Status)
             {
@@ -1618,6 +1948,29 @@ namespace AttendanceShiftingManagement.ViewModels
 
                     break;
             }
+
+            if (_pendingAppUpdate != null)
+            {
+                SetUpdateSuccess($"Version {_pendingAppUpdate.Version} is downloaded and ready to install.");
+            }
+
+            RaiseUpdateUiStateChanged();
+        }
+
+        private void RaiseUpdateUiStateChanged()
+        {
+            OnPropertyChanged(nameof(HasPendingUpdate));
+            OnPropertyChanged(nameof(ShowUpdateBanner));
+            OnPropertyChanged(nameof(UpdateBannerTitle));
+            OnPropertyChanged(nameof(UpdateBannerMessage));
+            OnPropertyChanged(nameof(ShowDownloadUpdateActions));
+            OnPropertyChanged(nameof(ShowPendingUpdateActions));
+            OnPropertyChanged(nameof(CanDownloadUpdate));
+            OnPropertyChanged(nameof(CanInstallPendingUpdate));
+            OnPropertyChanged(nameof(ShowUpdateDownloadProgress));
+            _downloadUpdateCommand.RaiseCanExecuteChanged();
+            _installPendingUpdateCommand.RaiseCanExecuteChanged();
+            _remindMeLaterCommand.RaiseCanExecuteChanged();
         }
 
         private string ResolvePreviewTableName()
@@ -1704,6 +2057,23 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 return false;
             }
+        }
+
+        private void RefreshSystemLoginBackgroundPreview()
+        {
+            SystemLoginBackgroundImage = LocalImageLoader.Load(SystemLoginBackgroundPath);
+        }
+
+        private string? GetDisposableWorkingLoginBackgroundPath()
+        {
+            if (string.IsNullOrWhiteSpace(SystemLoginBackgroundPath))
+            {
+                return null;
+            }
+
+            return string.Equals(SystemLoginBackgroundPath, _savedSystemLoginBackgroundPath, StringComparison.OrdinalIgnoreCase)
+                ? null
+                : SystemLoginBackgroundPath;
         }
     }
 }

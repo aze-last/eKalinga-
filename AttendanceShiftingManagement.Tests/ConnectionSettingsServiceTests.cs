@@ -5,7 +5,7 @@ namespace AttendanceShiftingManagement.Tests;
 public sealed class ConnectionSettingsServiceTests
 {
     [Fact]
-    public void SaveAndLoad_WithRuntimeFile_EncryptsPasswordAtRest()
+    public void SaveAndLoad_WithRuntimeFile_PersistsOnlyLanOverrides()
     {
         var tempDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(tempDirectory);
@@ -13,22 +13,30 @@ public sealed class ConnectionSettingsServiceTests
 
         try
         {
+            var defaults = ConnectionSettingsService.Load(runtimePath);
             var settings = new ConnectionSettingsModel
             {
-                SelectedPreset = "Local",
+                SelectedPreset = "Lan",
                 Presets = new Dictionary<string, DatabaseConnectionPreset>(StringComparer.OrdinalIgnoreCase)
                 {
                     ["Local"] = new()
                     {
                         DisplayName = "Local",
-                        Server = "127.0.0.1",
-                        Port = 3306,
-                        Database = "attendance_shifting_db",
-                        Username = "root",
-                        Password = "plain-text-password"
+                        Server = "10.55.55.55",
+                        Port = 3310,
+                        Database = "should_not_persist_local",
+                        Username = "blocked-local",
+                        Password = "blocked-local-password"
                     },
                     ["Remote"] = new()
-                    ,
+                    {
+                        DisplayName = "Remote",
+                        Server = "10.66.66.66",
+                        Port = 3311,
+                        Database = "should_not_persist_remote",
+                        Username = "blocked-remote",
+                        Password = "blocked-remote-password"
+                    },
                     ["Lan"] = new()
                     {
                         DisplayName = "Network (LAN)",
@@ -45,10 +53,19 @@ public sealed class ConnectionSettingsServiceTests
 
             var persistedJson = File.ReadAllText(runtimePath);
             Assert.DoesNotContain("plain-text-password", persistedJson, StringComparison.Ordinal);
+            Assert.DoesNotContain("blocked-local-password", persistedJson, StringComparison.Ordinal);
+            Assert.DoesNotContain("blocked-remote-password", persistedJson, StringComparison.Ordinal);
+            Assert.DoesNotContain("blocked-local", persistedJson, StringComparison.Ordinal);
+            Assert.DoesNotContain("blocked-remote", persistedJson, StringComparison.Ordinal);
 
             var loaded = ConnectionSettingsService.Load(runtimePath);
-            Assert.Equal("plain-text-password", loaded.GetPreset("Local").Password);
+            Assert.Equal("Lan", loaded.SelectedPreset);
+            Assert.Equal(defaults.GetPreset("Local").Server, loaded.GetPreset("Local").Server);
+            Assert.Equal(defaults.GetPreset("Remote").Server, loaded.GetPreset("Remote").Server);
+            Assert.Equal(defaults.GetPreset("Local").Password, loaded.GetPreset("Local").Password);
+            Assert.Equal(defaults.GetPreset("Remote").Password, loaded.GetPreset("Remote").Password);
             Assert.Equal("plain-text-password", loaded.GetPreset("Lan").Password);
+            Assert.Equal("192.168.1.20", loaded.GetPreset("Lan").Server);
         }
         finally
         {
@@ -60,7 +77,7 @@ public sealed class ConnectionSettingsServiceTests
     }
 
     [Fact]
-    public void Load_WithRuntimeOverrides_LoadsAllEditablePresets()
+    public void Load_WithRuntimeOverrides_LoadsOnlyLanPresetAndKeepsFixedPresetsFromDefaults()
     {
         var tempDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(tempDirectory);
@@ -68,6 +85,7 @@ public sealed class ConnectionSettingsServiceTests
 
         try
         {
+            var defaults = ConnectionSettingsService.Load(runtimePath);
             var settings = new ConnectionSettingsModel
             {
                 SelectedPreset = "Lan",
@@ -107,11 +125,11 @@ public sealed class ConnectionSettingsServiceTests
 
             var loaded = ConnectionSettingsService.Load(runtimePath);
             Assert.Equal("Lan", loaded.SelectedPreset);
-            Assert.Equal("10.55.55.55", loaded.GetPreset("Local").Server);
-            Assert.Equal("10.66.66.66", loaded.GetPreset("Remote").Server);
+            Assert.Equal(defaults.GetPreset("Local").Server, loaded.GetPreset("Local").Server);
+            Assert.Equal(defaults.GetPreset("Remote").Server, loaded.GetPreset("Remote").Server);
             Assert.Equal("192.168.1.77", loaded.GetPreset("Lan").Server);
-            Assert.Equal("blocked-local-password", loaded.GetPreset("Local").Password);
-            Assert.Equal("blocked-remote-password", loaded.GetPreset("Remote").Password);
+            Assert.Equal(defaults.GetPreset("Local").Password, loaded.GetPreset("Local").Password);
+            Assert.Equal(defaults.GetPreset("Remote").Password, loaded.GetPreset("Remote").Password);
             Assert.Equal("lan-password", loaded.GetPreset("Lan").Password);
         }
         finally

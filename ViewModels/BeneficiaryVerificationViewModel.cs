@@ -31,6 +31,8 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly RelayCommand _markDuplicateCommand;
         private readonly RelayCommand _markInactiveCommand;
         private readonly RelayCommand _rejectCommand;
+        private readonly RelayCommand _openReviewPanelCommand;
+        private readonly RelayCommand _closeReviewPanelCommand;
         private readonly RelayCommand _uploadDigitalIdPhotoCommand;
         private readonly RelayCommand _printDigitalIdCommand;
         private readonly RelayCommand _createLookupScannerSessionCommand;
@@ -78,6 +80,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _lookupScannerSessionPin = string.Empty;
         private string _lookupScannerSessionExpiresAtText = string.Empty;
         private BitmapSource? _lookupScannerQrImage;
+        private bool _isReviewPanelOpen;
 
         public BeneficiaryVerificationViewModel(User currentUser)
             : this(currentUser, new BeneficiaryVerificationQueueService(), autoLoad: true, autoRefresh: true)
@@ -106,6 +109,8 @@ namespace AttendanceShiftingManagement.ViewModels
             _markDuplicateCommand = new RelayCommand(async _ => await MarkDuplicateSelectedAsync(), _ => CanMarkDuplicateSelected());
             _markInactiveCommand = new RelayCommand(async _ => await MarkInactiveSelectedAsync(), _ => CanMarkInactiveSelected());
             _rejectCommand = new RelayCommand(async _ => await RejectSelectedAsync(), _ => CanRejectSelected());
+            _openReviewPanelCommand = new RelayCommand(_ => OpenReviewPanel(), _ => CanOpenReviewPanel());
+            _closeReviewPanelCommand = new RelayCommand(_ => CloseReviewPanel(), _ => IsReviewPanelOpen);
             _uploadDigitalIdPhotoCommand = new RelayCommand(async _ => await UploadDigitalIdPhotoAsync(), _ => CanUseDigitalId());
             _printDigitalIdCommand = new RelayCommand(async _ => await PrintDigitalIdAsync(), _ => CanUseDigitalId());
             _createLookupScannerSessionCommand = new RelayCommand(async _ => await CreateLookupScannerSessionAsync(), _ => CanCreateLookupScannerSession());
@@ -468,6 +473,19 @@ namespace AttendanceShiftingManagement.ViewModels
             private set => SetProperty(ref _lookupScannerQrImage, value);
         }
 
+        public bool IsReviewPanelOpen
+        {
+            get => _isReviewPanelOpen;
+            private set
+            {
+                if (SetProperty(ref _isReviewPanelOpen, value))
+                {
+                    _openReviewPanelCommand.RaiseCanExecuteChanged();
+                    _closeReviewPanelCommand.RaiseCanExecuteChanged();
+                }
+            }
+        }
+
         public ICommand RefreshCommand => _refreshCommand;
         public ICommand PreviousPageCommand => _previousPageCommand;
         public ICommand NextPageCommand => _nextPageCommand;
@@ -477,6 +495,8 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand MarkDuplicateCommand => _markDuplicateCommand;
         public ICommand MarkInactiveCommand => _markInactiveCommand;
         public ICommand RejectCommand => _rejectCommand;
+        public ICommand OpenReviewPanelCommand => _openReviewPanelCommand;
+        public ICommand CloseReviewPanelCommand => _closeReviewPanelCommand;
         public ICommand UploadDigitalIdPhotoCommand => _uploadDigitalIdPhotoCommand;
         public ICommand PrintDigitalIdCommand => _printDigitalIdCommand;
         public ICommand CreateLookupScannerSessionCommand => _createLookupScannerSessionCommand;
@@ -699,7 +719,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 ? $"Issued on {SelectedBeneficiary.DigitalIdIssuedAt.Value:MMMM dd, yyyy hh:mm tt}"
                 : "Digital ID issued.";
             DigitalIdPhotoImage = BuildImage(SelectedBeneficiary.DigitalIdPhotoPath);
-            DigitalIdQrImage = QrCodeToolkitService.GenerateQrImage(SelectedBeneficiary.DigitalIdQrPayload, 10);
+            DigitalIdQrImage = QrCodeToolkitService.GenerateQrImage(SelectedBeneficiary.DigitalIdQrPayload, 14);
 
             LookupScannerSessionUrl = string.Empty;
             LookupScannerSessionPin = string.Empty;
@@ -1156,6 +1176,8 @@ namespace AttendanceShiftingManagement.ViewModels
             _markDuplicateCommand.RaiseCanExecuteChanged();
             _markInactiveCommand.RaiseCanExecuteChanged();
             _rejectCommand.RaiseCanExecuteChanged();
+            _openReviewPanelCommand.RaiseCanExecuteChanged();
+            _closeReviewPanelCommand.RaiseCanExecuteChanged();
             _uploadDigitalIdPhotoCommand.RaiseCanExecuteChanged();
             _printDigitalIdCommand.RaiseCanExecuteChanged();
             _createLookupScannerSessionCommand.RaiseCanExecuteChanged();
@@ -1167,6 +1189,7 @@ namespace AttendanceShiftingManagement.ViewModels
             _households.Clear();
             _availableHouseholdMembers.Clear();
             RecordsView = CollectionViewSource.GetDefaultView(_records);
+            IsReviewPanelOpen = false;
             SelectedBeneficiary = null;
             SelectedHousehold = null;
             SelectedHouseholdMember = null;
@@ -1245,6 +1268,26 @@ namespace AttendanceShiftingManagement.ViewModels
         private static string? NormalizeNullable(string? value)
         {
             return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+        }
+
+        private bool CanOpenReviewPanel()
+        {
+            return !IsBusy && SelectedBeneficiary != null && !IsReviewPanelOpen;
+        }
+
+        private void OpenReviewPanel()
+        {
+            if (!CanOpenReviewPanel())
+            {
+                return;
+            }
+
+            IsReviewPanelOpen = true;
+        }
+
+        private void CloseReviewPanel()
+        {
+            IsReviewPanelOpen = false;
         }
 
     }

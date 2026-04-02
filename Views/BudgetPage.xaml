@@ -96,80 +96,35 @@
                     <materialDesign:Card Padding="18" Background="White">
                         <StackPanel>
                             <TextBlock Text="Private Donation Entry" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
+                            <TextBlock Text="Keep the donation records visible by default. Open the panel only when you need to record a new private donation or attach supporting proof."
+                                       Margin="0,6,0,0"
+                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                       TextWrapping="Wrap"/>
 
-                            <UniformGrid Margin="0,14,0,0" Columns="2">
-                                <ComboBox Margin="0,0,8,0"
-                                          ItemsSource="{Binding DonorTypes}"
-                                          SelectedItem="{Binding SelectedDonorType}"
-                                          Style="{StaticResource MaterialDesignOutlinedComboBox}"
-                                          materialDesign:HintAssist.Hint="Donor type"/>
-                                <ComboBox Margin="8,0,0,0"
-                                          ItemsSource="{Binding ProofTypes}"
-                                          SelectedItem="{Binding SelectedProofType}"
-                                          Style="{StaticResource MaterialDesignOutlinedComboBox}"
-                                          materialDesign:HintAssist.Hint="Proof type"/>
-                            </UniformGrid>
+                            <Border Margin="0,14,0,0"
+                                    Padding="16"
+                                    CornerRadius="12"
+                                    Background="#EEF4FF"
+                                    BorderBrush="{StaticResource BrandBorderBrush}"
+                                    BorderThickness="1">
+                                <StackPanel>
+                                    <TextBlock Text="Private donations list stays visible on the right."
+                                               FontSize="16"
+                                               FontWeight="SemiBold"
+                                               Foreground="{StaticResource BrandMidnightBrush}"
+                                               TextWrapping="Wrap"/>
+                                    <TextBlock Text="Use the panel for donor details, amount, proof reference, optional file upload, and remarks."
+                                               Margin="0,6,0,0"
+                                               Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                               TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Border>
 
-                            <TextBox Margin="0,12,0,0"
-                                     Text="{Binding DonorName, UpdateSourceTrigger=PropertyChanged}"
-                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                     materialDesign:HintAssist.Hint="Donor name"/>
-
-                            <UniformGrid Margin="0,12,0,0" Columns="2">
-                                <TextBox Margin="0,0,8,0"
-                                         Text="{Binding DonationAmountText, UpdateSourceTrigger=PropertyChanged}"
-                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                         materialDesign:HintAssist.Hint="Amount"/>
-                                <DatePicker Margin="8,0,0,0"
-                                            SelectedDate="{Binding DonationDateReceived}"
-                                            materialDesign:HintAssist.Hint="Date received"/>
-                            </UniformGrid>
-
-                            <UniformGrid Margin="0,12,0,0" Columns="2">
-                                <TextBox Margin="0,0,8,0"
-                                         Text="{Binding DonationReferenceNumber, UpdateSourceTrigger=PropertyChanged}"
-                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                         materialDesign:HintAssist.Hint="Reference number"/>
-                                <TextBox Margin="8,0,0,0"
-                                         Text="{Binding ProofReferenceNumber, UpdateSourceTrigger=PropertyChanged}"
-                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                         materialDesign:HintAssist.Hint="Proof reference"/>
-                            </UniformGrid>
-
-                            <Grid Margin="0,12,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="12"/>
-                                    <ColumnDefinition Width="150"/>
-                                </Grid.ColumnDefinitions>
-
-                                <TextBox Grid.Column="0"
-                                         IsReadOnly="True"
-                                         Text="{Binding ProofFilePath}"
-                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                         materialDesign:HintAssist.Hint="Optional proof file"/>
-
-                                <Button Grid.Column="2"
-                                        Content="Browse Proof"
-                                        Height="42"
-                                        Style="{StaticResource SecondaryActionButton}"
-                                        Command="{Binding BrowseProofCommand}"/>
-                            </Grid>
-
-                            <TextBox Margin="0,12,0,0"
-                                     Height="80"
-                                     AcceptsReturn="True"
-                                     TextWrapping="Wrap"
-                                     VerticalScrollBarVisibility="Auto"
-                                     Text="{Binding DonationRemarks, UpdateSourceTrigger=PropertyChanged}"
-                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                     materialDesign:HintAssist.Hint="Remarks / liquidation notes"/>
-
-                            <Button Content="Record Private Donation"
+                            <Button Content="OPEN DONATION PANEL"
                                     Margin="0,14,0,0"
                                     Height="42"
-                                    Style="{StaticResource PrimaryActionButton}"
-                                    Command="{Binding RecordDonationCommand}"/>
+                                    Style="{StaticResource GoldActionButton}"
+                                    Command="{Binding OpenDonationPanelCommand}"/>
                         </StackPanel>
                     </materialDesign:Card>
                 </StackPanel>
@@ -232,75 +187,29 @@
                                        Margin="0,6,0,0"
                                        Foreground="{StaticResource BrandTextSecondaryBrush}"
                                        TextWrapping="Wrap"/>
+                            <Border Margin="0,14,0,0"
+                                    Padding="16"
+                                    CornerRadius="12"
+                                    Background="#EEF4FF"
+                                    BorderBrush="{StaticResource BrandBorderBrush}"
+                                    BorderThickness="1">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Programs.Count, StringFormat='Active programs listed below: {0}'}"
+                                               FontSize="16"
+                                               FontWeight="SemiBold"
+                                               Foreground="{StaticResource BrandMidnightBrush}"/>
+                                    <TextBlock Text="Open the setup panel only when you need to encode a new program, event, or project for later distribution work."
+                                               Margin="0,6,0,0"
+                                               Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                               TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Border>
 
-                            <UniformGrid Margin="0,14,0,0" Columns="2">
-                                <TextBox Margin="0,0,8,0"
-                                         Text="{Binding ProgramCode, UpdateSourceTrigger=PropertyChanged}"
-                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                         materialDesign:HintAssist.Hint="Program code"/>
-                                <ComboBox Margin="8,0,0,0"
-                                          ItemsSource="{Binding ProgramTypes}"
-                                          SelectedItem="{Binding SelectedProgramType}"
-                                          Style="{StaticResource MaterialDesignOutlinedComboBox}"
-                                          materialDesign:HintAssist.Hint="Program type"/>
-                            </UniformGrid>
-
-                            <TextBox Margin="0,12,0,0"
-                                     Text="{Binding ProgramName, UpdateSourceTrigger=PropertyChanged}"
-                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                     materialDesign:HintAssist.Hint="Program / event name"/>
-
-                            <UniformGrid Margin="0,12,0,0" Columns="2">
-                                <TextBox Margin="0,0,8,0"
-                                         Text="{Binding ProgramAssistanceType, UpdateSourceTrigger=PropertyChanged}"
-                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                         materialDesign:HintAssist.Hint="Assistance type"/>
-                                <TextBox Margin="8,0,0,0"
-                                         Text="{Binding ProgramUnitAmountText, UpdateSourceTrigger=PropertyChanged}"
-                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                         materialDesign:HintAssist.Hint="Unit amount"/>
-                            </UniformGrid>
-
-                            <TextBox Margin="0,12,0,0"
-                                     Text="{Binding ProgramItemDescription, UpdateSourceTrigger=PropertyChanged}"
-                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                     materialDesign:HintAssist.Hint="Item description / package details"/>
-
-                            <UniformGrid Margin="0,12,0,0" Columns="2">
-                                <DatePicker Margin="0,0,8,0"
-                                            SelectedDate="{Binding ProgramStartDate}"
-                                            materialDesign:HintAssist.Hint="Optional start date"/>
-                                <DatePicker Margin="8,0,0,0"
-                                            SelectedDate="{Binding ProgramEndDate}"
-                                            materialDesign:HintAssist.Hint="Optional end date"/>
-                            </UniformGrid>
-
-                            <UniformGrid Margin="0,12,0,0" Columns="2">
-                                <TextBox Margin="0,0,8,0"
-                                         Text="{Binding ProgramBudgetCapText, UpdateSourceTrigger=PropertyChanged}"
-                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                         materialDesign:HintAssist.Hint="Project budget cap"/>
-                                <ComboBox Margin="8,0,0,0"
-                                          ItemsSource="{Binding ProgramDistributionStatuses}"
-                                          SelectedItem="{Binding SelectedProgramDistributionStatus}"
-                                          Style="{StaticResource MaterialDesignOutlinedComboBox}"
-                                          materialDesign:HintAssist.Hint="Distribution status"/>
-                            </UniformGrid>
-
-                            <TextBox Margin="0,12,0,0"
-                                     Height="80"
-                                     AcceptsReturn="True"
-                                     TextWrapping="Wrap"
-                                     VerticalScrollBarVisibility="Auto"
-                                     Text="{Binding ProgramDescription, UpdateSourceTrigger=PropertyChanged}"
-                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                     materialDesign:HintAssist.Hint="Description"/>
-
-                            <Button Content="Create Program"
+                            <Button Content="OPEN PROGRAM PANEL"
                                     Margin="0,14,0,0"
                                     Height="42"
                                     Style="{StaticResource GoldActionButton}"
-                                    Command="{Binding CreateProgramCommand}"/>
+                                    Command="{Binding OpenProgramPanelCommand}"/>
 
                             <DataGrid Margin="0,14,0,0"
                                       ItemsSource="{Binding Programs}"
@@ -370,11 +279,120 @@
                 </StackPanel>
             </materialDesign:Card>
 
-            <Border Grid.RowSpan="4"
-                    Panel.ZIndex="19"
-                    Background="#660F172A"
-                    CornerRadius="20"
-                    Visibility="{Binding SeminarPanelVisibility}"/>
+            <materialDesign:Card Grid.RowSpan="4"
+                                 Panel.ZIndex="20"
+                                 Width="720"
+                                 Margin="0,24,0,24"
+                                 Padding="18"
+                                 HorizontalAlignment="Right"
+                                 VerticalAlignment="Stretch"
+                                 Background="White"
+                                 Visibility="{Binding IsDonationPanelOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <DockPanel>
+                        <StackPanel>
+                            <TextBlock Text="Private Donation Panel"
+                                       FontSize="18"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrandMidnightBrush}"/>
+                            <TextBlock Margin="0,4,0,0"
+                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                       Text="Record the donor type, amount, date received, proof details, optional supporting file, and remarks here."
+                                       TextWrapping="Wrap"/>
+                        </StackPanel>
+
+                        <Button DockPanel.Dock="Right"
+                                Content="CLOSE"
+                                Height="36"
+                                Style="{StaticResource SecondaryActionButton}"
+                                Command="{Binding CloseDonationPanelCommand}"/>
+                    </DockPanel>
+
+                    <ScrollViewer Grid.Row="1"
+                                  Margin="0,16,0,0"
+                                  VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <UniformGrid Columns="2">
+                                <ComboBox Margin="0,0,8,10"
+                                          ItemsSource="{Binding DonorTypes}"
+                                          SelectedItem="{Binding SelectedDonorType}"
+                                          Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                          materialDesign:HintAssist.Hint="Donor type"/>
+                                <ComboBox Margin="8,0,0,10"
+                                          ItemsSource="{Binding ProofTypes}"
+                                          SelectedItem="{Binding SelectedProofType}"
+                                          Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                          materialDesign:HintAssist.Hint="Proof type"/>
+                            </UniformGrid>
+
+                            <TextBox Margin="0,0,0,10"
+                                     Text="{Binding DonorName, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     materialDesign:HintAssist.Hint="Donor name"/>
+
+                            <UniformGrid Columns="2">
+                                <TextBox Margin="0,0,8,10"
+                                         Text="{Binding DonationAmountText, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="Amount"/>
+                                <DatePicker Margin="8,0,0,10"
+                                            SelectedDate="{Binding DonationDateReceived}"
+                                            materialDesign:HintAssist.Hint="Date received"/>
+                            </UniformGrid>
+
+                            <UniformGrid Columns="2">
+                                <TextBox Margin="0,0,8,10"
+                                         Text="{Binding DonationReferenceNumber, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="Reference number"/>
+                                <TextBox Margin="8,0,0,10"
+                                         Text="{Binding ProofReferenceNumber, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="Proof reference"/>
+                            </UniformGrid>
+
+                            <Grid Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="150"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBox Grid.Column="0"
+                                         IsReadOnly="True"
+                                         Text="{Binding ProofFilePath}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="Optional proof file"/>
+
+                                <Button Grid.Column="2"
+                                        Content="Browse Proof"
+                                        Height="42"
+                                        Style="{StaticResource SecondaryActionButton}"
+                                        Command="{Binding BrowseProofCommand}"/>
+                            </Grid>
+
+                            <TextBox Height="100"
+                                     AcceptsReturn="True"
+                                     TextWrapping="Wrap"
+                                     VerticalScrollBarVisibility="Auto"
+                                     Text="{Binding DonationRemarks, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     materialDesign:HintAssist.Hint="Remarks / liquidation notes"/>
+
+                            <Button Content="RECORD PRIVATE DONATION"
+                                    Margin="0,14,0,0"
+                                    Height="42"
+                                    Style="{StaticResource GoldActionButton}"
+                                    Command="{Binding RecordDonationCommand}"/>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </materialDesign:Card>
 
             <materialDesign:Card Grid.RowSpan="4"
                                  Panel.ZIndex="20"
@@ -384,7 +402,123 @@
                                  HorizontalAlignment="Right"
                                  VerticalAlignment="Stretch"
                                  Background="White"
-                                 Visibility="{Binding SeminarPanelVisibility}">
+                                 Visibility="{Binding IsProgramPanelOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <DockPanel>
+                        <StackPanel>
+                            <TextBlock Text="Program Setup Panel"
+                                       FontSize="18"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrandMidnightBrush}"/>
+                            <TextBlock Margin="0,4,0,0"
+                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                       Text="Create the project, define the assistance item or amount, keep dates optional, and save the program here before it moves to distribution."
+                                       TextWrapping="Wrap"/>
+                        </StackPanel>
+
+                        <Button DockPanel.Dock="Right"
+                                Content="CLOSE"
+                                Height="36"
+                                Style="{StaticResource SecondaryActionButton}"
+                                Command="{Binding CloseProgramPanelCommand}"/>
+                    </DockPanel>
+
+                    <ScrollViewer Grid.Row="1"
+                                  Margin="0,16,0,0"
+                                  VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <UniformGrid Columns="2">
+                                <TextBox Margin="0,0,8,10"
+                                         Text="{Binding ProgramCode, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="Program code"/>
+                                <ComboBox Margin="8,0,0,10"
+                                          ItemsSource="{Binding ProgramTypes}"
+                                          SelectedItem="{Binding SelectedProgramType}"
+                                          Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                          materialDesign:HintAssist.Hint="Program type"/>
+                            </UniformGrid>
+
+                            <TextBox Margin="0,0,0,10"
+                                     Text="{Binding ProgramName, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     materialDesign:HintAssist.Hint="Program / event name"/>
+
+                            <UniformGrid Columns="2">
+                                <TextBox Margin="0,0,8,10"
+                                         Text="{Binding ProgramAssistanceType, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="Assistance type"/>
+                                <TextBox Margin="8,0,0,10"
+                                         Text="{Binding ProgramUnitAmountText, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="Unit amount"/>
+                            </UniformGrid>
+
+                            <TextBox Margin="0,0,0,10"
+                                     Text="{Binding ProgramItemDescription, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     materialDesign:HintAssist.Hint="Item description / package details"/>
+
+                            <UniformGrid Columns="2">
+                                <DatePicker Margin="0,0,8,10"
+                                            SelectedDate="{Binding ProgramStartDate}"
+                                            materialDesign:HintAssist.Hint="Optional start date"/>
+                                <DatePicker Margin="8,0,0,10"
+                                            SelectedDate="{Binding ProgramEndDate}"
+                                            materialDesign:HintAssist.Hint="Optional end date"/>
+                            </UniformGrid>
+
+                            <UniformGrid Columns="2">
+                                <TextBox Margin="0,0,8,10"
+                                         Text="{Binding ProgramBudgetCapText, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="Project budget cap"/>
+                                <ComboBox Margin="8,0,0,10"
+                                          ItemsSource="{Binding ProgramDistributionStatuses}"
+                                          SelectedItem="{Binding SelectedProgramDistributionStatus}"
+                                          Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                          materialDesign:HintAssist.Hint="Distribution status"/>
+                            </UniformGrid>
+
+                            <TextBox Height="100"
+                                     AcceptsReturn="True"
+                                     TextWrapping="Wrap"
+                                     VerticalScrollBarVisibility="Auto"
+                                     Text="{Binding ProgramDescription, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     materialDesign:HintAssist.Hint="Description"/>
+
+                            <Button Content="CREATE PROGRAM"
+                                    Margin="0,14,0,0"
+                                    Height="42"
+                                    Style="{StaticResource GoldActionButton}"
+                                    Command="{Binding CreateProgramCommand}"/>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </materialDesign:Card>
+
+            <Border Grid.RowSpan="4"
+                    Panel.ZIndex="19"
+                    Background="#660F172A"
+                    CornerRadius="20"
+                    Visibility="{Binding IsAnySetupPanelOpen, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+
+            <materialDesign:Card Grid.RowSpan="4"
+                                 Panel.ZIndex="20"
+                                 Width="720"
+                                 Margin="0,24,0,24"
+                                 Padding="18"
+                                 HorizontalAlignment="Right"
+                                 VerticalAlignment="Stretch"
+                                 Background="White"
+                                 Visibility="{Binding IsSeminarPanelOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
