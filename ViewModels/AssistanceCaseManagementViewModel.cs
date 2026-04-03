@@ -3,9 +3,11 @@ using AttendanceShiftingManagement.Helpers;
 using AttendanceShiftingManagement.Models;
 using AttendanceShiftingManagement.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Win32;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Globalization;
+using System.IO;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Input;
@@ -29,6 +31,12 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly RelayCommand _rejectCommand;
         private readonly RelayCommand _cancelCommand;
         private readonly RelayCommand _deleteCommand;
+        private readonly RelayCommand _showAllCasesCommand;
+        private readonly RelayCommand _showPendingCasesCommand;
+        private readonly RelayCommand _showApprovedCasesCommand;
+        private readonly RelayCommand _showReleasedCasesCommand;
+        private readonly RelayCommand _selectCaseCommand;
+        private readonly RelayCommand _exportCasesCommand;
         private readonly RelayCommand _openCasePanelCommand;
         private readonly RelayCommand _closeCasePanelCommand;
         private ICollectionView _casesView;
@@ -43,6 +51,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private Brush _statusBrush = CreateBrush("#6B7280");
         private int _totalCases;
         private int _pendingCount;
+        private int _underReviewCount;
         private int _approvedCount;
         private int _releasedCount;
         private int _closedCount;
@@ -85,7 +94,13 @@ namespace AttendanceShiftingManagement.ViewModels
             _rejectCommand = new RelayCommand(async _ => await ChangeStatusAsync(AssistanceCaseStatus.Rejected, "rejected"), _ => CanChangeStatus(AssistanceCaseStatus.Rejected));
             _cancelCommand = new RelayCommand(async _ => await ChangeStatusAsync(AssistanceCaseStatus.Cancelled, "cancelled"), _ => CanChangeStatus(AssistanceCaseStatus.Cancelled));
             _deleteCommand = new RelayCommand(async _ => await DeleteCaseAsync(), _ => CanDeleteCase());
-            _openCasePanelCommand = new RelayCommand(_ => OpenCasePanel(), _ => CanOpenCasePanel());
+            _showAllCasesCommand = new RelayCommand(_ => SetStatusFilter("All"), _ => !IsBusy);
+            _showPendingCasesCommand = new RelayCommand(_ => SetStatusFilter("Pending"), _ => !IsBusy);
+            _showApprovedCasesCommand = new RelayCommand(_ => SetStatusFilter("Approved"), _ => !IsBusy);
+            _showReleasedCasesCommand = new RelayCommand(_ => SetStatusFilter("Released"), _ => !IsBusy);
+            _selectCaseCommand = new RelayCommand(parameter => SelectCase(parameter as AssistanceCaseListItem), _ => !IsBusy);
+            _exportCasesCommand = new RelayCommand(_ => ExportCases(), _ => CanExportCases());
+            _openCasePanelCommand = new RelayCommand(parameter => OpenCasePanel(parameter as AssistanceCaseListItem), _ => CanOpenCasePanel());
             _closeCasePanelCommand = new RelayCommand(_ => CloseCasePanel(), _ => IsCasePanelOpen);
 
             ApplyFilter();
@@ -219,6 +234,12 @@ namespace AttendanceShiftingManagement.ViewModels
             private set => SetProperty(ref _pendingCount, value);
         }
 
+        public int UnderReviewCount
+        {
+            get => _underReviewCount;
+            private set => SetProperty(ref _underReviewCount, value);
+        }
+
         public int ApprovedCount
         {
             get => _approvedCount;
@@ -332,6 +353,12 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand RejectCommand => _rejectCommand;
         public ICommand CancelCommand => _cancelCommand;
         public ICommand DeleteCommand => _deleteCommand;
+        public ICommand ShowAllCasesCommand => _showAllCasesCommand;
+        public ICommand ShowPendingCasesCommand => _showPendingCasesCommand;
+        public ICommand ShowApprovedCasesCommand => _showApprovedCasesCommand;
+        public ICommand ShowReleasedCasesCommand => _showReleasedCasesCommand;
+        public ICommand SelectCaseCommand => _selectCaseCommand;
+        public ICommand ExportCasesCommand => _exportCasesCommand;
         public ICommand OpenCasePanelCommand => _openCasePanelCommand;
         public ICommand CloseCasePanelCommand => _closeCasePanelCommand;
 
@@ -447,7 +474,8 @@ namespace AttendanceShiftingManagement.ViewModels
         private void UpdateCounts()
         {
             TotalCases = _cases.Count;
-            PendingCount = _cases.Count(item => item.Status is AssistanceCaseStatus.Pending or AssistanceCaseStatus.UnderReview);
+            PendingCount = _cases.Count(item => item.Status == AssistanceCaseStatus.Pending);
+            UnderReviewCount = _cases.Count(item => item.Status == AssistanceCaseStatus.UnderReview);
             ApprovedCount = _cases.Count(item => item.Status == AssistanceCaseStatus.Approved);
             ReleasedCount = _cases.Count(item => item.Status == AssistanceCaseStatus.Released);
             ClosedCount = _cases.Count(item => item.Status is AssistanceCaseStatus.Closed or AssistanceCaseStatus.Rejected or AssistanceCaseStatus.Cancelled);
@@ -481,6 +509,7 @@ namespace AttendanceShiftingManagement.ViewModels
             };
 
             CasesView.Refresh();
+            _exportCasesCommand.RaiseCanExecuteChanged();
         }
 
         private void BeginNewCase()
@@ -801,8 +830,24 @@ namespace AttendanceShiftingManagement.ViewModels
             _rejectCommand.RaiseCanExecuteChanged();
             _cancelCommand.RaiseCanExecuteChanged();
             _deleteCommand.RaiseCanExecuteChanged();
+            _showAllCasesCommand.RaiseCanExecuteChanged();
+            _showPendingCasesCommand.RaiseCanExecuteChanged();
+            _showApprovedCasesCommand.RaiseCanExecuteChanged();
+            _showReleasedCasesCommand.RaiseCanExecuteChanged();
+            _selectCaseCommand.RaiseCanExecuteChanged();
+            _exportCasesCommand.RaiseCanExecuteChanged();
             _openCasePanelCommand.RaiseCanExecuteChanged();
             _closeCasePanelCommand.RaiseCanExecuteChanged();
+        }
+
+        private void SetStatusFilter(string filter)
+        {
+            if (IsBusy)
+            {
+                return;
+            }
+
+            SelectedStatusFilter = filter;
         }
 
         private void ClearLoadedState()
@@ -813,6 +858,7 @@ namespace AttendanceShiftingManagement.ViewModels
             CasesView = CollectionViewSource.GetDefaultView(_cases);
             TotalCases = 0;
             PendingCount = 0;
+            UnderReviewCount = 0;
             ApprovedCount = 0;
             ReleasedCount = 0;
             ClosedCount = 0;
@@ -825,14 +871,78 @@ namespace AttendanceShiftingManagement.ViewModels
             return !IsBusy && !IsCasePanelOpen;
         }
 
-        private void OpenCasePanel()
+        private void OpenCasePanel(AssistanceCaseListItem? caseItem = null)
         {
+            if (caseItem != null)
+            {
+                SelectedCase = caseItem;
+            }
+
             if (!CanOpenCasePanel())
             {
                 return;
             }
 
             IsCasePanelOpen = true;
+        }
+
+        private void SelectCase(AssistanceCaseListItem? caseItem)
+        {
+            if (IsBusy || caseItem == null)
+            {
+                return;
+            }
+
+            SelectedCase = caseItem;
+        }
+
+        private bool CanExportCases()
+        {
+            return !IsBusy
+                && CasesView != null
+                && CasesView.Cast<object>().Any();
+        }
+
+        private void ExportCases()
+        {
+            if (!CanExportCases())
+            {
+                return;
+            }
+
+            var saveFileDialog = new SaveFileDialog
+            {
+                Filter = "CSV files (*.csv)|*.csv|All files (*.*)|*.*",
+                FileName = $"aid-requests-{DateTime.Now:yyyyMMdd-HHmmss}.csv",
+                DefaultExt = ".csv"
+            };
+
+            if (saveFileDialog.ShowDialog() != true)
+            {
+                return;
+            }
+
+            var rows = CasesView.Cast<AssistanceCaseListItem>().ToList();
+            var lines = new List<string>
+            {
+                "Case Number,Status,Priority,Assistance Type,Release Kind,Beneficiary,Program,Amount,Requested On,Scheduled Release,Summary"
+            };
+
+            lines.AddRange(rows.Select(item => string.Join(",",
+                EscapeCsv(item.CaseNumber),
+                EscapeCsv(item.StatusText),
+                EscapeCsv(item.PriorityText),
+                EscapeCsv(item.AssistanceType),
+                EscapeCsv(item.ReleaseKindText),
+                EscapeCsv(item.RecipientLabel),
+                EscapeCsv(item.AyudaProgramLabel),
+                EscapeCsv(item.AssistanceAmountText),
+                EscapeCsv(item.RequestedOn.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)),
+                EscapeCsv(item.ScheduledReleaseDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? string.Empty),
+                EscapeCsv(item.Summary))));
+
+            File.WriteAllLines(saveFileDialog.FileName, lines);
+            SetSuccessStatus($"Exported {rows.Count:N0} aid request(s) to {Path.GetFileName(saveFileDialog.FileName)}.");
         }
 
         private void CloseCasePanel()
@@ -864,6 +974,16 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             return !string.IsNullOrWhiteSpace(source)
                 && source.Contains(searchText, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string EscapeCsv(string value)
+        {
+            if (value.Contains('"'))
+            {
+                value = value.Replace("\"", "\"\"");
+            }
+
+            return $"\"{value}\"";
         }
 
         private void SetNeutralStatus(string message)

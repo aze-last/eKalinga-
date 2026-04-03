@@ -4,8 +4,11 @@ using AttendanceShiftingManagement.Models;
 using AttendanceShiftingManagement.Services;
 using Microsoft.Win32;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Globalization;
+using System.IO;
 using System.Windows;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 
@@ -13,6 +16,7 @@ namespace AttendanceShiftingManagement.ViewModels
 {
     public sealed class BudgetViewModel : ObservableObject
     {
+        private const string AllLedgerSourceFilter = "All Sources";
         private readonly User _currentUser;
         private readonly AppDbContext _context;
         private readonly BudgetManagementService _budgetService;
@@ -27,7 +31,9 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly RelayCommand _openSeminarPanelCommand;
         private readonly RelayCommand _closeSeminarPanelCommand;
         private readonly RelayCommand _createSeminarCommand;
+        private readonly RelayCommand _closeLedgerHistoryCardCommand;
         private readonly RelayCommand _browseProofCommand;
+        private readonly RelayCommand _exportLedgerCommand;
         private string _statusMessage = "Loading budget controls...";
         private Brush _statusBrush = Brushes.DimGray;
         private decimal _combinedAvailable;
@@ -71,6 +77,10 @@ namespace AttendanceShiftingManagement.ViewModels
         private bool _isProgramPanelOpen;
         private bool _isSeminarPanelOpen;
         private bool _isBusy;
+        private ICollectionView _ledgerEntriesView;
+        private BudgetLedgerEntryListItem? _selectedLedgerEntry;
+        private string _ledgerSearchText = string.Empty;
+        private string _selectedLedgerSourceFilter = AllLedgerSourceFilter;
 
         public BudgetViewModel(User currentUser)
         {
@@ -85,6 +95,9 @@ namespace AttendanceShiftingManagement.ViewModels
             Programs = new ObservableCollection<AyudaProgram>();
             Donations = new ObservableCollection<PrivateDonation>();
             LedgerEntries = new ObservableCollection<BudgetLedgerEntryListItem>();
+            LedgerSourceFilters = new ObservableCollection<string> { AllLedgerSourceFilter };
+            _ledgerEntriesView = CollectionViewSource.GetDefaultView(LedgerEntries);
+            _ledgerEntriesView.Filter = FilterLedgerEntry;
             _refreshCommand = new RelayCommand(async _ => await LoadAsync(), _ => !IsBusy);
             _syncGovernmentBudgetCommand = new RelayCommand(async _ => await SyncGovernmentBudgetAsync(), _ => !IsBusy);
             _recordDonationCommand = new RelayCommand(async _ => await RecordDonationAsync(), _ => !IsBusy);
@@ -96,7 +109,9 @@ namespace AttendanceShiftingManagement.ViewModels
             _openSeminarPanelCommand = new RelayCommand(_ => OpenSeminarPanel(), _ => !IsBusy && !IsSeminarPanelOpen);
             _closeSeminarPanelCommand = new RelayCommand(_ => CloseSeminarPanel(), _ => IsSeminarPanelOpen);
             _createSeminarCommand = new RelayCommand(async _ => await CreateSeminarAsync(), _ => !IsBusy);
+            _closeLedgerHistoryCardCommand = new RelayCommand(_ => CloseLedgerHistoryCard(), _ => SelectedLedgerEntry != null);
             _browseProofCommand = new RelayCommand(_ => BrowseProof());
+            _exportLedgerCommand = new RelayCommand(async _ => await ExportLedgerAsync(), _ => !IsBusy && LedgerEntriesView.Cast<object>().Any());
             _ = LoadAsync();
         }
 
@@ -108,6 +123,7 @@ namespace AttendanceShiftingManagement.ViewModels
         public ObservableCollection<AyudaProgram> Programs { get; }
         public ObservableCollection<PrivateDonation> Donations { get; }
         public ObservableCollection<BudgetLedgerEntryListItem> LedgerEntries { get; }
+        public ObservableCollection<string> LedgerSourceFilters { get; }
 
         public ICommand RefreshCommand => _refreshCommand;
         public ICommand SyncGovernmentBudgetCommand => _syncGovernmentBudgetCommand;
@@ -120,7 +136,9 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand OpenSeminarPanelCommand => _openSeminarPanelCommand;
         public ICommand CloseSeminarPanelCommand => _closeSeminarPanelCommand;
         public ICommand CreateSeminarCommand => _createSeminarCommand;
+        public ICommand CloseLedgerHistoryCardCommand => _closeLedgerHistoryCardCommand;
         public ICommand BrowseProofCommand => _browseProofCommand;
+        public ICommand ExportLedgerCommand => _exportLedgerCommand;
 
         public bool IsBusy
         {
@@ -140,6 +158,7 @@ namespace AttendanceShiftingManagement.ViewModels
                     _openSeminarPanelCommand.RaiseCanExecuteChanged();
                     _closeSeminarPanelCommand.RaiseCanExecuteChanged();
                     _createSeminarCommand.RaiseCanExecuteChanged();
+                    _exportLedgerCommand.RaiseCanExecuteChanged();
                 }
             }
         }
@@ -208,6 +227,51 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             get => _latestGovernmentSyncLabel;
             private set => SetProperty(ref _latestGovernmentSyncLabel, value);
+        }
+
+        public ICollectionView LedgerEntriesView
+        {
+            get => _ledgerEntriesView;
+            private set => SetProperty(ref _ledgerEntriesView, value);
+        }
+
+        public BudgetLedgerEntryListItem? SelectedLedgerEntry
+        {
+            get => _selectedLedgerEntry;
+            set
+            {
+                if (SetProperty(ref _selectedLedgerEntry, value))
+                {
+                    OnPropertyChanged(nameof(IsLedgerHistoryCardOpen));
+                    _closeLedgerHistoryCardCommand.RaiseCanExecuteChanged();
+                }
+            }
+        }
+
+        public bool IsLedgerHistoryCardOpen => SelectedLedgerEntry != null;
+
+        public string LedgerSearchText
+        {
+            get => _ledgerSearchText;
+            set
+            {
+                if (SetProperty(ref _ledgerSearchText, value))
+                {
+                    RefreshLedgerFilters();
+                }
+            }
+        }
+
+        public string SelectedLedgerSourceFilter
+        {
+            get => _selectedLedgerSourceFilter;
+            set
+            {
+                if (SetProperty(ref _selectedLedgerSourceFilter, value))
+                {
+                    RefreshLedgerFilters();
+                }
+            }
         }
 
         public PrivateDonationDonorType SelectedDonorType
@@ -522,6 +586,10 @@ namespace AttendanceShiftingManagement.ViewModels
                     Remarks = entry.Remarks ?? string.Empty
                 });
             }
+
+            SelectedLedgerEntry = null;
+            RefreshLedgerSourceFilters();
+            RefreshLedgerFilters();
         }
 
         private async Task SyncGovernmentBudgetAsync()
@@ -808,6 +876,11 @@ namespace AttendanceShiftingManagement.ViewModels
             IsSeminarPanelOpen = false;
         }
 
+        private void CloseLedgerHistoryCard()
+        {
+            SelectedLedgerEntry = null;
+        }
+
         private void BrowseProof()
         {
             var dialog = new OpenFileDialog
@@ -819,6 +892,68 @@ namespace AttendanceShiftingManagement.ViewModels
             if (dialog.ShowDialog() == true)
             {
                 ProofFilePath = dialog.FileName;
+            }
+        }
+
+        private async Task ExportLedgerAsync()
+        {
+            if (IsBusy)
+            {
+                return;
+            }
+
+            var rows = LedgerEntriesView.Cast<BudgetLedgerEntryListItem>().ToList();
+            if (rows.Count == 0)
+            {
+                SetErrorStatus("No ledger rows are available to export.");
+                return;
+            }
+
+            var dialog = new SaveFileDialog
+            {
+                Filter = "CSV Files (*.csv)|*.csv",
+                AddExtension = true,
+                DefaultExt = ".csv",
+                FileName = $"budget_ledger_{DateTime.Now:yyyyMMdd_HHmmss}.csv"
+            };
+
+            if (dialog.ShowDialog() != true)
+            {
+                return;
+            }
+
+            IsBusy = true;
+            SetNeutralStatus("Exporting budget ledger...");
+
+            try
+            {
+                var lines = new List<string>(rows.Count + 1)
+                {
+                    "Date,Entry,Source,Release,Program,Recipients,Total,Government,Private,Remarks"
+                };
+
+                lines.AddRange(rows.Select(row => string.Join(",",
+                    EscapeCsv(row.EntryDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)),
+                    EscapeCsv(row.EntryType),
+                    EscapeCsv(row.FeatureSource),
+                    EscapeCsv(row.ReleaseKind),
+                    EscapeCsv(row.ProgramName),
+                    EscapeCsv(row.RecipientCount.ToString(CultureInfo.InvariantCulture)),
+                    EscapeCsv(row.TotalAmount.ToString("0.00", CultureInfo.InvariantCulture)),
+                    EscapeCsv(row.GovernmentPortion.ToString("0.00", CultureInfo.InvariantCulture)),
+                    EscapeCsv(row.PrivatePortion.ToString("0.00", CultureInfo.InvariantCulture)),
+                    EscapeCsv(row.Remarks))));
+
+                await File.WriteAllLinesAsync(dialog.FileName, lines);
+                SetSuccessStatus($"Budget ledger exported to {dialog.FileName}");
+            }
+            catch (Exception ex)
+            {
+                SetErrorStatus($"Unable to export budget ledger: {ex.Message}");
+            }
+            finally
+            {
+                IsBusy = false;
             }
         }
 
@@ -914,6 +1049,70 @@ namespace AttendanceShiftingManagement.ViewModels
             return false;
         }
 
+        private void RefreshLedgerFilters()
+        {
+            LedgerEntriesView.Refresh();
+            _exportLedgerCommand.RaiseCanExecuteChanged();
+        }
+
+        private void RefreshLedgerSourceFilters()
+        {
+            var selectedFilter = SelectedLedgerSourceFilter;
+            var availableFilters = LedgerEntries
+                .Select(entry => entry.FeatureSource)
+                .Where(filter => !string.IsNullOrWhiteSpace(filter))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(filter => filter, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            LedgerSourceFilters.Clear();
+            LedgerSourceFilters.Add(AllLedgerSourceFilter);
+
+            foreach (var filter in availableFilters)
+            {
+                LedgerSourceFilters.Add(filter);
+            }
+
+            if (!LedgerSourceFilters.Any(filter => string.Equals(filter, selectedFilter, StringComparison.OrdinalIgnoreCase)))
+            {
+                SelectedLedgerSourceFilter = AllLedgerSourceFilter;
+            }
+        }
+
+        private bool FilterLedgerEntry(object item)
+        {
+            if (item is not BudgetLedgerEntryListItem entry)
+            {
+                return false;
+            }
+
+            if (!string.IsNullOrWhiteSpace(SelectedLedgerSourceFilter) &&
+                !string.Equals(SelectedLedgerSourceFilter, AllLedgerSourceFilter, StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(entry.FeatureSource, SelectedLedgerSourceFilter, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(LedgerSearchText))
+            {
+                return true;
+            }
+
+            var searchText = LedgerSearchText.Trim();
+            return ContainsFilterText(entry.EntryType, searchText)
+                || ContainsFilterText(entry.FeatureSource, searchText)
+                || ContainsFilterText(entry.ReleaseKind, searchText)
+                || ContainsFilterText(entry.ProgramName, searchText)
+                || ContainsFilterText(entry.Remarks, searchText)
+                || ContainsFilterText(entry.EntryDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), searchText);
+        }
+
+        private static bool ContainsFilterText(string? source, string searchText)
+        {
+            return !string.IsNullOrWhiteSpace(source)
+                && source.Contains(searchText, StringComparison.OrdinalIgnoreCase);
+        }
+
         private string BuildSeminarDescription()
         {
             var sections = new List<string>();
@@ -931,6 +1130,17 @@ namespace AttendanceShiftingManagement.ViewModels
         private static string? NormalizeNullable(string? value)
         {
             return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+        }
+
+        private static string EscapeCsv(string? value)
+        {
+            var normalized = value ?? string.Empty;
+            if (normalized.Contains(',') || normalized.Contains('"') || normalized.Contains('\r') || normalized.Contains('\n'))
+            {
+                return $"\"{normalized.Replace("\"", "\"\"", StringComparison.Ordinal)}\"";
+            }
+
+            return normalized;
         }
     }
 

@@ -11,89 +11,114 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0"
-                Padding="24"
-                CornerRadius="18"
-                Background="{StaticResource BrandMidnightBrush}">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
+        <materialDesign:Card Grid.Row="0"
+                             Padding="20"
+                             Background="White">
+            <DockPanel LastChildFill="False">
+                <TextBlock Text="Aid Request"
+                           FontSize="28"
+                           FontWeight="SemiBold"
+                           Foreground="{StaticResource BrandMidnightBrush}"
+                           VerticalAlignment="Center"/>
 
-                <StackPanel>
-                    <TextBlock Text="Aid Request"
-                               FontSize="26"
-                               FontWeight="SemiBold"
-                               Foreground="White"/>
-                    <TextBlock Text="Track barangay aid requests, link releases to the shared budget ledger, and work directly from approved validated beneficiaries."
-                               Margin="0,8,0,0"
-                               MaxWidth="760"
-                               Foreground="#D6E3FF"
-                               TextWrapping="Wrap"/>
-                </StackPanel>
-
-                <WrapPanel Grid.Column="1"
-                           HorizontalAlignment="Right"
-                           VerticalAlignment="Top">
+                <WrapPanel DockPanel.Dock="Right"
+                           VerticalAlignment="Center">
                     <Button Content="NEW REQUEST"
                             Command="{Binding NewCaseCommand}"
-                            Style="{StaticResource SecondaryActionButton}"
+                            Style="{StaticResource GoldActionButton}"
                             Height="40"
                             Margin="0,0,12,0"/>
                     <Button Content="REFRESH"
                             Command="{Binding RefreshCommand}"
-                            Style="{StaticResource GoldActionButton}"
+                            Style="{StaticResource SecondaryActionButton}"
                             Height="40"/>
                 </WrapPanel>
-            </Grid>
-        </Border>
+            </DockPanel>
+        </materialDesign:Card>
 
-        <WrapPanel Grid.Row="1" Margin="0,18,0,18">
-            <materialDesign:Card Width="160" Margin="8" Background="{StaticResource BrandMidnightBrush}" Padding="16" BorderThickness="0">
+        <UniformGrid Grid.Row="1"
+                     Margin="0,18,0,18"
+                     Columns="5">
+            <materialDesign:Card Margin="0,0,12,0"
+                                 Padding="16"
+                                 Background="White">
                 <StackPanel>
-                    <TextBlock Text="{Binding TotalCases, StringFormat=N0}" FontSize="28" FontWeight="Medium" Foreground="White"/>
-                    <TextBlock Text="TOTAL REQUESTS" Foreground="#A5B4FC" FontSize="9"/>
+                    <TextBlock Text="{Binding TotalCases, StringFormat=N0}"
+                               FontSize="28"
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource BrandMidnightBrush}"/>
+                    <TextBlock Text="TOTAL REQUESTS"
+                               FontSize="10"
+                               Foreground="{StaticResource BrandTextSecondaryBrush}"/>
                 </StackPanel>
             </materialDesign:Card>
 
-            <materialDesign:Card Width="160" Margin="8" Background="{StaticResource BrandYellowBrush}" Padding="16" BorderThickness="0">
+            <materialDesign:Card Margin="0,0,12,0"
+                                 Padding="16"
+                                 Background="White">
                 <StackPanel>
-                    <TextBlock Text="{Binding PendingCount, StringFormat=N0}" FontSize="28" FontWeight="Medium" Foreground="{StaticResource BrandGoldTextBrush}"/>
-                    <TextBlock Text="PENDING / REVIEW" Foreground="#7A5A00" FontSize="9"/>
+                    <TextBlock Text="{Binding PendingCount, StringFormat=N0}"
+                               FontSize="28"
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource BrandMidnightBrush}"/>
+                    <TextBlock Text="PENDING"
+                               FontSize="10"
+                               Foreground="{StaticResource BrandTextSecondaryBrush}"/>
                 </StackPanel>
             </materialDesign:Card>
 
-            <materialDesign:Card Width="160" Margin="8" Background="{StaticResource BrandSuccessBrush}" Padding="16" BorderThickness="0">
+            <materialDesign:Card Margin="0,0,12,0"
+                                 Padding="16"
+                                 Background="White">
                 <StackPanel>
-                    <TextBlock Text="{Binding ApprovedCount, StringFormat=N0}" FontSize="28" FontWeight="Medium" Foreground="White"/>
-                    <TextBlock Text="APPROVED" Foreground="#CFECD8" FontSize="9"/>
+                    <TextBlock Text="{Binding UnderReviewCount, StringFormat=N0}"
+                               FontSize="28"
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource BrandMidnightBrush}"/>
+                    <TextBlock Text="UNDER REVIEW"
+                               FontSize="10"
+                               Foreground="{StaticResource BrandTextSecondaryBrush}"/>
                 </StackPanel>
             </materialDesign:Card>
 
-            <materialDesign:Card Width="160" Margin="8" Background="#0F766E" Padding="16" BorderThickness="0">
+            <materialDesign:Card Margin="0,0,12,0"
+                                 Padding="16"
+                                 Background="White">
                 <StackPanel>
-                    <TextBlock Text="{Binding ReleasedCount, StringFormat=N0}" FontSize="28" FontWeight="Medium" Foreground="White"/>
-                    <TextBlock Text="RELEASED" Foreground="#CCFBF1" FontSize="9"/>
+                    <TextBlock Text="{Binding ApprovedCount, StringFormat=N0}"
+                               FontSize="28"
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource BrandMidnightBrush}"/>
+                    <TextBlock Text="APPROVED"
+                               FontSize="10"
+                               Foreground="{StaticResource BrandTextSecondaryBrush}"/>
                 </StackPanel>
             </materialDesign:Card>
 
-            <materialDesign:Card Width="160" Margin="8" Background="#4B5563" Padding="16" BorderThickness="0">
+            <materialDesign:Card Padding="16"
+                                 Background="White">
                 <StackPanel>
-                    <TextBlock Text="{Binding ClosedCount, StringFormat=N0}" FontSize="28" FontWeight="Medium" Foreground="White"/>
-                    <TextBlock Text="CLOSED / ENDED" Foreground="#E5E7EB" FontSize="9"/>
+                    <TextBlock Text="{Binding ReleasedCount, StringFormat=N0}"
+                               FontSize="28"
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource BrandMidnightBrush}"/>
+                    <TextBlock Text="RELEASED"
+                               FontSize="10"
+                               Foreground="{StaticResource BrandTextSecondaryBrush}"/>
                 </StackPanel>
             </materialDesign:Card>
-        </WrapPanel>
+        </UniformGrid>
 
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="3*"/>
-                <ColumnDefinition Width="16"/>
-                <ColumnDefinition Width="2*"/>
+                <ColumnDefinition Width="1.7*"/>
+                <ColumnDefinition Width="18"/>
+                <ColumnDefinition Width="1*"/>
             </Grid.ColumnDefinitions>
 
-            <materialDesign:Card Grid.Column="0" Padding="16" Background="White">
+            <materialDesign:Card Grid.Column="0"
+                                 Padding="18"
+                                 Background="White">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -101,30 +126,64 @@
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <DockPanel Grid.Row="0" Margin="0,0,0,14">
+                    <DockPanel Grid.Row="0"
+                               LastChildFill="False">
                         <TextBlock Text="Aid Requests"
-                                   FontSize="15"
+                                   FontSize="18"
                                    FontWeight="SemiBold"
-                                   Foreground="{StaticResource BrandMidnightBrush}"/>
-                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                            <ComboBox Width="170"
-                                      Margin="0,0,12,0"
-                                      ItemsSource="{Binding StatusFilters}"
-                                      SelectedItem="{Binding SelectedStatusFilter}"
-                                      Style="{StaticResource MaterialDesignOutlinedComboBox}"/>
-                            <TextBox Width="280"
-                                     Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                     materialDesign:HintAssist.Hint="Search request number, beneficiary, type..."/>
-                        </StackPanel>
+                                   Foreground="{StaticResource BrandMidnightBrush}"
+                                   VerticalAlignment="Center"/>
+
+                        <WrapPanel DockPanel.Dock="Right">
+                            <Button Content="ALL"
+                                    Command="{Binding ShowAllCasesCommand}"
+                                    Height="34"
+                                    Margin="0,0,8,0"
+                                    Style="{StaticResource GoldActionButton}"/>
+                            <Button Content="PENDING"
+                                    Command="{Binding ShowPendingCasesCommand}"
+                                    Height="34"
+                                    Margin="0,0,8,0"
+                                    Style="{StaticResource SecondaryActionButton}"/>
+                            <Button Content="APPROVED"
+                                    Command="{Binding ShowApprovedCasesCommand}"
+                                    Height="34"
+                                    Margin="0,0,8,0"
+                                    Style="{StaticResource SecondaryActionButton}"/>
+                            <Button Content="RELEASED"
+                                    Command="{Binding ShowReleasedCasesCommand}"
+                                    Height="34"
+                                    Style="{StaticResource SecondaryActionButton}"/>
+                        </WrapPanel>
                     </DockPanel>
 
-                    <TextBlock Grid.Row="1"
-                               Margin="0,0,0,14"
-                               FontWeight="SemiBold"
-                               Foreground="{Binding StatusBrush}"
-                               Text="{Binding StatusMessage}"
-                               TextWrapping="Wrap"/>
+                    <Grid Grid.Row="1"
+                          Margin="0,16,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="220"/>
+                            <ColumnDefinition Width="12"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="12"/>
+                            <ColumnDefinition Width="160"/>
+                        </Grid.ColumnDefinitions>
+
+                        <ComboBox Grid.Column="0"
+                                  ItemsSource="{Binding StatusFilters}"
+                                  SelectedItem="{Binding SelectedStatusFilter}"
+                                  Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                  materialDesign:HintAssist.Hint="Status filter"/>
+
+                        <TextBox Grid.Column="2"
+                                 Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                 materialDesign:HintAssist.Hint="Search request number, beneficiary, type, or program"/>
+
+                        <Button Grid.Column="4"
+                                Content="EXPORT"
+                                Height="42"
+                                Style="{StaticResource SecondaryActionButton}"
+                                Command="{Binding ExportCasesCommand}"/>
+                    </Grid>
 
                     <DataGrid Grid.Row="2"
                               ItemsSource="{Binding CasesView}"
@@ -132,74 +191,132 @@
                               AutoGenerateColumns="False"
                               CanUserAddRows="False"
                               CanUserDeleteRows="False"
-                              IsReadOnly="True">
+                              IsReadOnly="True"
+                              HeadersVisibility="Column"
+                              GridLinesVisibility="Horizontal"
+                              RowHeaderWidth="0"
+                              ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                              ScrollViewer.VerticalScrollBarVisibility="Auto">
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="Case No." Binding="{Binding CaseNumber}" Width="140"/>
-                            <DataGridTextColumn Header="Type" Binding="{Binding AssistanceType}" Width="160"/>
-                            <DataGridTextColumn Header="Release" Binding="{Binding ReleaseKindText}" Width="90"/>
-                            <DataGridTextColumn Header="Beneficiary" Binding="{Binding RecipientLabel}" Width="*"/>
-                            <DataGridTextColumn Header="Program" Binding="{Binding AyudaProgramLabel}" Width="170"/>
-                            <DataGridTextColumn Header="Amount" Binding="{Binding AssistanceAmountText}" Width="120"/>
-                            <DataGridTextColumn Header="Priority" Binding="{Binding PriorityText}" Width="90"/>
-                            <DataGridTemplateColumn Header="Status" Width="110">
+                            <DataGridTextColumn Header="Case No."
+                                                Binding="{Binding CaseNumber}"
+                                                Width="140"/>
+                            <DataGridTextColumn Header="Type"
+                                                Binding="{Binding AssistanceType}"
+                                                Width="150"/>
+                            <DataGridTextColumn Header="Release"
+                                                Binding="{Binding ReleaseKindText}"
+                                                Width="90"/>
+                            <DataGridTextColumn Header="Beneficiary"
+                                                Binding="{Binding RecipientLabel}"
+                                                Width="220"/>
+                            <DataGridTextColumn Header="Program"
+                                                Binding="{Binding AyudaProgramLabel}"
+                                                Width="170"/>
+                            <DataGridTextColumn Header="Amount"
+                                                Binding="{Binding AssistanceAmountText}"
+                                                Width="120"/>
+                            <DataGridTextColumn Header="Priority"
+                                                Binding="{Binding PriorityText}"
+                                                Width="90"/>
+                            <DataGridTemplateColumn Header="Status"
+                                                    Width="120">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <Border Background="{Binding StatusBrush}" CornerRadius="12" Padding="8,4" HorizontalAlignment="Center">
-                                            <TextBlock Text="{Binding StatusText}" Foreground="{Binding StatusTextBrush}" FontWeight="SemiBold"/>
+                                        <Border Background="{Binding StatusBrush}"
+                                                CornerRadius="12"
+                                                Padding="10,4"
+                                                HorizontalAlignment="Center">
+                                            <TextBlock Text="{Binding StatusText}"
+                                                       Foreground="{Binding StatusTextBrush}"
+                                                       FontWeight="SemiBold"/>
                                         </Border>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
-                            <DataGridTextColumn Header="Requested On" Binding="{Binding RequestedOn, StringFormat='{}{0:yyyy-MM-dd}'}" Width="110"/>
+                            <DataGridTextColumn Header="Requested"
+                                                Binding="{Binding RequestedOn, StringFormat='{}{0:yyyy-MM-dd}'}"
+                                                Width="110"/>
                         </DataGrid.Columns>
                     </DataGrid>
                 </Grid>
             </materialDesign:Card>
 
-            <materialDesign:Card Grid.Column="2" Padding="16" Background="White">
-                <StackPanel>
-                    <TextBlock Text="Aid Request Panel"
-                               FontSize="15"
-                               FontWeight="SemiBold"
-                               Foreground="{StaticResource BrandMidnightBrush}"/>
-                    <TextBlock Text="Keep the aid request list visible by default. Open the request panel only when you need to create a new request, edit the selected record, or change its status."
-                               Margin="0,6,0,0"
-                               Foreground="{StaticResource BrandTextSecondaryBrush}"
-                               TextWrapping="Wrap"/>
+            <StackPanel Grid.Column="2">
+                <materialDesign:Card Padding="18"
+                                     Margin="0,0,0,16"
+                                     Background="White">
+                    <StackPanel>
+                        <TextBlock Text="Actions"
+                                   FontSize="18"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource BrandMidnightBrush}"/>
 
-                    <Border Margin="0,14,0,0"
-                            Padding="16"
-                            CornerRadius="10"
-                            Background="#EEF4FF"
-                            BorderBrush="{StaticResource BrandBorderBrush}"
-                            BorderThickness="1">
-                        <StackPanel>
-                            <TextBlock Text="{Binding EditableCaseNumber}"
-                                       FontSize="18"
+                        <Button Content="NEW REQUEST"
+                                Margin="0,16,0,0"
+                                Height="42"
+                                Style="{StaticResource GoldActionButton}"
+                                Command="{Binding NewCaseCommand}"/>
+
+                        <Button Content="OPEN REQUEST PANEL"
+                                Margin="0,12,0,0"
+                                Height="42"
+                                Style="{StaticResource SecondaryActionButton}"
+                                Command="{Binding OpenCasePanelCommand}"/>
+                    </StackPanel>
+                </materialDesign:Card>
+
+                <materialDesign:Card Padding="18"
+                                     Margin="0,0,0,16"
+                                     Background="White">
+                    <StackPanel>
+                        <TextBlock Text="Selected Request"
+                                   FontSize="18"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource BrandMidnightBrush}"/>
+
+                        <Border Margin="0,16,0,0"
+                                Padding="16"
+                                CornerRadius="16"
+                                Background="#F8FAFC"
+                                BorderBrush="{StaticResource BrandBorderBrush}"
+                                BorderThickness="1">
+                            <StackPanel>
+                                <TextBlock Text="{Binding EditableCaseNumber}"
+                                           FontSize="18"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource BrandMidnightBrush}"/>
+                                <TextBlock Text="{Binding ApplicantSummary}"
+                                           Margin="0,10,0,0"
+                                           Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                           TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding SelectedCase.AmountsSummary, TargetNullValue=Amount: --, FallbackValue=Amount: --}"
+                                           Margin="0,6,0,0"
+                                           Foreground="{StaticResource BrandTextSecondaryBrush}"/>
+                                <TextBlock Text="{Binding ReleaseKindSummary}"
+                                           Margin="0,6,0,0"
+                                           Foreground="{StaticResource BrandTextSecondaryBrush}"/>
+                                <TextBlock Text="{Binding SelectedCase.AyudaProgramLabel, StringFormat=Program: {0}, TargetNullValue=Program: --, FallbackValue=Program: --}"
+                                           Margin="0,6,0,0"
+                                           Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Margin="0,16,0,0"
+                                Padding="14"
+                                CornerRadius="16"
+                                Background="#F8FAFC"
+                                BorderBrush="{StaticResource BrandBorderBrush}"
+                                BorderThickness="1">
+                            <TextBlock Text="{Binding StatusMessage}"
+                                       Foreground="{Binding StatusBrush}"
                                        FontWeight="SemiBold"
-                                       Foreground="{StaticResource BrandMidnightBrush}"/>
-                            <TextBlock Text="{Binding ApplicantSummary}"
-                                       Margin="0,6,0,0"
-                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
                                        TextWrapping="Wrap"/>
-                            <TextBlock Text="{Binding SelectedCase.AmountsSummary, TargetNullValue=Amount: --}"
-                                       Margin="0,4,0,0"
-                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
-                                       TextWrapping="Wrap"/>
-                            <TextBlock Text="{Binding ReleaseKindSummary}"
-                                       Margin="0,4,0,0"
-                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
-                                       TextWrapping="Wrap"/>
-                        </StackPanel>
-                    </Border>
-
-                    <Button Content="OPEN REQUEST PANEL"
-                            Margin="0,14,0,0"
-                            Height="42"
-                            Style="{StaticResource GoldActionButton}"
-                            Command="{Binding OpenCasePanelCommand}"/>
-                </StackPanel>
-            </materialDesign:Card>
+                        </Border>
+                    </StackPanel>
+                </materialDesign:Card>
+            </StackPanel>
 
             <Border Grid.ColumnSpan="3"
                     Panel.ZIndex="19"
@@ -223,23 +340,29 @@
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <DockPanel>
-                        <TextBlock Text="Aid Request Detail"
-                                   FontSize="15"
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Text="Request Panel"
+                                   FontSize="18"
                                    FontWeight="SemiBold"
                                    Foreground="{StaticResource BrandMidnightBrush}"/>
-                        <Button DockPanel.Dock="Right"
+
+                        <Button Grid.Column="1"
                                 Content="CLOSE PANEL"
                                 Height="36"
                                 Style="{StaticResource SecondaryActionButton}"
                                 Command="{Binding CloseCasePanelCommand}"/>
-                    </DockPanel>
+                    </Grid>
 
                     <Border Grid.Row="1"
                             Margin="0,12,0,14"
                             Padding="16"
                             CornerRadius="10"
-                            Background="#EEF4FF"
+                            Background="#F8FAFC"
                             BorderBrush="{StaticResource BrandBorderBrush}"
                             BorderThickness="1">
                         <StackPanel>
@@ -251,7 +374,7 @@
                                        Margin="0,6,0,0"
                                        Foreground="{StaticResource BrandTextSecondaryBrush}"
                                        TextWrapping="Wrap"/>
-                            <TextBlock Text="{Binding SelectedCase.AmountsSummary, TargetNullValue=Amount: --}"
+                            <TextBlock Text="{Binding SelectedCase.AmountsSummary, TargetNullValue=Amount: --, FallbackValue=Amount: --}"
                                        Margin="0,4,0,0"
                                        Foreground="{StaticResource BrandTextSecondaryBrush}"
                                        TextWrapping="Wrap"/>
@@ -259,27 +382,16 @@
                                        Margin="0,4,0,0"
                                        Foreground="{StaticResource BrandTextSecondaryBrush}"
                                        TextWrapping="Wrap"/>
-                            <TextBlock Text="Budget is recorded only when the request is released as cash or goods."
-                                       Margin="0,4,0,0"
-                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
-                                       TextWrapping="Wrap"/>
                         </StackPanel>
                     </Border>
 
-                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+                    <ScrollViewer Grid.Row="2"
+                                  VerticalScrollBarVisibility="Auto">
                         <StackPanel>
-                            <TextBlock Text="Aid Request Setup"
-                                       FontWeight="SemiBold"
-                                       Foreground="{StaticResource BrandMidnightBrush}"/>
-
-                            <TextBlock Margin="0,10,0,8"
-                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
-                                       Text="Select the approved validated beneficiary who should receive this aid request."/>
-
                             <TextBox Margin="0,0,0,10"
                                      Text="{Binding ValidatedBeneficiarySearchText, UpdateSourceTrigger=PropertyChanged}"
                                      Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                     materialDesign:HintAssist.Hint="Search validated beneficiary by name, beneficiary ID, or civil registry ID"/>
+                                     materialDesign:HintAssist.Hint="Search validated beneficiary"/>
 
                             <ComboBox Margin="0,0,0,10"
                                       ItemsSource="{Binding ValidatedBeneficiaries}"
@@ -304,7 +416,7 @@
                                       SelectedItem="{Binding SelectedAyudaProgram}"
                                       DisplayMemberPath="DisplayLabel"
                                       Style="{StaticResource MaterialDesignOutlinedComboBox}"
-                                      materialDesign:HintAssist.Hint="Ayuda program / event"/>
+                                      materialDesign:HintAssist.Hint="Ayuda program"/>
 
                             <ComboBox Margin="0,0,0,10"
                                       ItemsSource="{Binding PriorityOptions}"
@@ -317,10 +429,11 @@
                                      Style="{StaticResource MaterialDesignOutlinedTextBox}"
                                      materialDesign:HintAssist.Hint="Assistance amount"/>
 
-                            <UniformGrid Columns="2" Margin="0,0,0,10">
+                            <UniformGrid Columns="2"
+                                         Margin="0,0,0,10">
                                 <DatePicker Margin="0,0,8,0"
                                             SelectedDate="{Binding RequestedOnDate}"
-                                            materialDesign:HintAssist.Hint="Requested on"/>
+                                            materialDesign:HintAssist.Hint="Requested date"/>
                                 <DatePicker Margin="8,0,0,0"
                                             SelectedDate="{Binding ScheduledReleaseDate}"
                                             materialDesign:HintAssist.Hint="Scheduled release"/>
@@ -331,72 +444,49 @@
                                      Style="{StaticResource MaterialDesignOutlinedTextBox}"
                                      materialDesign:HintAssist.Hint="Summary"/>
 
-                            <WrapPanel Margin="0,4,0,0">
+                            <UniformGrid Columns="2"
+                                         Margin="0,6,0,0">
                                 <Button Content="SAVE REQUEST"
                                         Command="{Binding SaveCaseCommand}"
-                                        Style="{StaticResource MaterialDesignRaisedButton}"
-                                        Background="{StaticResource BrandMidnightBrush}"
-                                        Foreground="White"
-                                        Height="38"
-                                        Margin="0,0,10,10"
-                                        Padding="18,0"/>
+                                        Margin="0,0,8,8"
+                                        Height="40"
+                                        Style="{StaticResource GoldActionButton}"/>
                                 <Button Content="DELETE"
                                         Command="{Binding DeleteCommand}"
-                                        Style="{StaticResource MaterialDesignRaisedButton}"
-                                        Background="{StaticResource BrandRedBrush}"
-                                        Foreground="White"
-                                        Height="38"
-                                        Margin="0,0,10,10"
-                                        Padding="18,0"/>
+                                        Margin="8,0,0,8"
+                                        Height="40"
+                                        Style="{StaticResource SecondaryActionButton}"/>
                                 <Button Content="UNDER REVIEW"
                                         Command="{Binding MarkUnderReviewCommand}"
-                                        Style="{StaticResource MaterialDesignRaisedButton}"
-                                        Background="#2563EB"
-                                        Foreground="White"
-                                        Height="38"
-                                        Margin="0,0,10,10"
-                                        Padding="18,0"/>
+                                        Margin="0,0,8,8"
+                                        Height="40"
+                                        Style="{StaticResource SecondaryActionButton}"/>
                                 <Button Content="APPROVE"
                                         Command="{Binding ApproveCommand}"
-                                        Style="{StaticResource MaterialDesignRaisedButton}"
-                                        Background="{StaticResource BrandSuccessBrush}"
-                                        Foreground="White"
-                                        Height="38"
-                                        Margin="0,0,10,10"
-                                        Padding="18,0"/>
+                                        Margin="8,0,0,8"
+                                        Height="40"
+                                        Style="{StaticResource SecondaryActionButton}"/>
                                 <Button Content="RELEASE"
                                         Command="{Binding ReleaseCommand}"
-                                        Style="{StaticResource MaterialDesignRaisedButton}"
-                                        Background="#0F766E"
-                                        Foreground="White"
-                                        Height="38"
-                                        Margin="0,0,10,10"
-                                        Padding="18,0"/>
+                                        Margin="0,0,8,8"
+                                        Height="40"
+                                        Style="{StaticResource SecondaryActionButton}"/>
                                 <Button Content="CLOSE"
                                         Command="{Binding CloseCommand}"
-                                        Style="{StaticResource MaterialDesignRaisedButton}"
-                                        Background="#4B5563"
-                                        Foreground="White"
-                                        Height="38"
-                                        Margin="0,0,10,10"
-                                        Padding="18,0"/>
+                                        Margin="8,0,0,8"
+                                        Height="40"
+                                        Style="{StaticResource SecondaryActionButton}"/>
                                 <Button Content="REJECT"
                                         Command="{Binding RejectCommand}"
-                                        Style="{StaticResource MaterialDesignRaisedButton}"
-                                        Background="{StaticResource BrandRedBrush}"
-                                        Foreground="White"
-                                        Height="38"
-                                        Margin="0,0,10,10"
-                                        Padding="18,0"/>
+                                        Margin="0,0,8,0"
+                                        Height="40"
+                                        Style="{StaticResource SecondaryActionButton}"/>
                                 <Button Content="CANCEL"
                                         Command="{Binding CancelCommand}"
-                                        Style="{StaticResource MaterialDesignRaisedButton}"
-                                        Background="#7C3AED"
-                                        Foreground="White"
-                                        Height="38"
-                                        Margin="0,0,10,10"
-                                        Padding="18,0"/>
-                            </WrapPanel>
+                                        Margin="8,0,0,0"
+                                        Height="40"
+                                        Style="{StaticResource SecondaryActionButton}"/>
+                            </UniformGrid>
                         </StackPanel>
                     </ScrollViewer>
                 </Grid>

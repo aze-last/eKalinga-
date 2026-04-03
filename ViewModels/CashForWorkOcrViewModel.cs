@@ -3,9 +3,13 @@ using AttendanceShiftingManagement.Helpers;
 using AttendanceShiftingManagement.Models;
 using AttendanceShiftingManagement.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Win32;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Globalization;
+using System.IO;
 using System.Windows;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -14,16 +18,18 @@ namespace AttendanceShiftingManagement.ViewModels
 {
     public sealed class CashForWorkOcrViewModel : ObservableObject
     {
+        private const string AllAttendanceSourceFilter = "All Sources";
         private readonly User _currentUser;
         private readonly AppDbContext _context;
         private readonly AuditService _auditService;
         private readonly CashForWorkService _cashForWorkService;
+        private readonly RelayCommand _exportAttendanceCommand;
 
         private CashForWorkEvent? _selectedEvent;
         private AyudaProgram? _selectedAyudaProgram;
         private CashForWorkEligibleBeneficiaryOption? _selectedEligibleBeneficiary;
-        private string _eventTitle = "Barangay Clean-Up Drive";
-        private string _eventLocation = "Barangay Hall Grounds";
+        private string _eventTitle = string.Empty;
+        private string _eventLocation = string.Empty;
         private string _eventNotes = string.Empty;
         private DateTime _eventDate = DateTime.Today;
         private string _eventStartTime = "07:00";
@@ -43,6 +49,9 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _attendanceScannerSessionPin = string.Empty;
         private string _attendanceScannerSessionExpiresAtText = string.Empty;
         private BitmapSource? _attendanceScannerQrImage;
+        private ICollectionView _savedAttendanceRowsView;
+        private string _attendanceSearchText = string.Empty;
+        private string _selectedAttendanceSourceFilter = AllAttendanceSourceFilter;
 
         public CashForWorkOcrViewModel(User currentUser)
         {
@@ -56,6 +65,13 @@ namespace AttendanceShiftingManagement.ViewModels
             SaveManualAttendanceCommand = new RelayCommand(_ => ExecuteSaveManualAttendance());
             ReleaseBudgetCommand = new RelayCommand(async _ => await ExecuteReleaseBudgetAsync());
             CreateAttendanceScannerSessionCommand = new RelayCommand(async _ => await ExecuteCreateAttendanceScannerSessionAsync());
+            _exportAttendanceCommand = new RelayCommand(
+                async _ => await ExecuteExportAttendanceAsync(),
+                _ => _savedAttendanceRowsView != null && _savedAttendanceRowsView.Cast<object>().Any());
+
+            AttendanceSourceFilters = new ObservableCollection<string> { AllAttendanceSourceFilter };
+            _savedAttendanceRowsView = CollectionViewSource.GetDefaultView(SavedAttendanceRows);
+            _savedAttendanceRowsView.Filter = FilterSavedAttendanceRow;
 
             LoadAyudaPrograms();
             LoadEvents();
@@ -67,12 +83,14 @@ namespace AttendanceShiftingManagement.ViewModels
         public ObservableCollection<CashForWorkEligibleBeneficiaryOption> EligibleBeneficiaries { get; } = new();
         public ObservableCollection<CashForWorkParticipantListItem> Participants { get; } = new();
         public ObservableCollection<CashForWorkSavedAttendanceRow> SavedAttendanceRows { get; } = new();
+        public ObservableCollection<string> AttendanceSourceFilters { get; }
 
         public ICommand CreateEventCommand { get; }
         public ICommand AddParticipantCommand { get; }
         public ICommand SaveManualAttendanceCommand { get; }
         public ICommand ReleaseBudgetCommand { get; }
         public ICommand CreateAttendanceScannerSessionCommand { get; }
+        public ICommand ExportAttendanceCommand => _exportAttendanceCommand;
 
         public CashForWorkEvent? SelectedEvent
         {
@@ -94,6 +112,8 @@ namespace AttendanceShiftingManagement.ViewModels
                     StatusMessage = value == null
                         ? "Create or select a cash-for-work event to begin."
                         : $"Loaded event: {value.Title}";
+                    OnPropertyChanged(nameof(EventDateDisplay));
+                    OnPropertyChanged(nameof(EventTimeRangeDisplay));
                 }
             }
         }
@@ -236,6 +256,36 @@ namespace AttendanceShiftingManagement.ViewModels
             set => SetProperty(ref _attendanceScannerQrImage, value);
         }
 
+        public string AttendanceSearchText
+        {
+            get => _attendanceSearchText;
+            set
+            {
+                if (SetProperty(ref _attendanceSearchText, value))
+                {
+                    RefreshAttendanceFilters();
+                }
+            }
+        }
+
+        public string SelectedAttendanceSourceFilter
+        {
+            get => _selectedAttendanceSourceFilter;
+            set
+            {
+                if (SetProperty(ref _selectedAttendanceSourceFilter, value))
+                {
+                    RefreshAttendanceFilters();
+                }
+            }
+        }
+
+        public string? EventDateDisplay => SelectedEvent?.EventDate.ToString("MMM dd, yyyy", CultureInfo.CurrentCulture);
+
+        public string? EventTimeRangeDisplay => SelectedEvent == null
+            ? null
+            : $"{DateTime.Today.Add(SelectedEvent.StartTime):hh:mm tt} - {DateTime.Today.Add(SelectedEvent.EndTime):hh:mm tt}";
+
         private void LoadEvents()
         {
             var selectedEventId = SelectedEvent?.Id;
@@ -299,6 +349,8 @@ namespace AttendanceShiftingManagement.ViewModels
             SavedAttendanceRows.Clear();
             if (SelectedEvent == null)
             {
+                RefreshAttendanceSourceFilters();
+                RefreshAttendanceFilters();
                 ResetReleaseSummary();
                 return;
             }
@@ -326,6 +378,8 @@ namespace AttendanceShiftingManagement.ViewModels
                 });
             }
 
+            RefreshAttendanceSourceFilters();
+            RefreshAttendanceFilters();
             UpdateAttendanceSummary();
             LoadReleaseSummary();
         }
@@ -546,6 +600,111 @@ namespace AttendanceShiftingManagement.ViewModels
             }
         }
 
+        private async Task ExecuteExportAttendanceAsync()
+        {
+            var rows = _savedAttendanceRowsView.Cast<CashForWorkSavedAttendanceRow>().ToList();
+            if (rows.Count == 0)
+            {
+                StatusMessage = "No attendance rows are available to export.";
+                return;
+            }
+
+            var dialog = new SaveFileDialog
+            {
+                Filter = "CSV Files (*.csv)|*.csv",
+                AddExtension = true,
+                DefaultExt = ".csv",
+                FileName = $"cash_for_work_attendance_{DateTime.Now:yyyyMMdd_HHmmss}.csv"
+            };
+
+            if (dialog.ShowDialog() != true)
+            {
+                return;
+            }
+
+            try
+            {
+                var lines = new List<string>(rows.Count + 1)
+                {
+                    "Name,Beneficiary ID,Civil Registry ID,Status,Source,Recorded"
+                };
+
+                lines.AddRange(rows.Select(row => string.Join(",",
+                    EscapeCsv(row.FullName),
+                    EscapeCsv(row.BeneficiaryId),
+                    EscapeCsv(row.CivilRegistryId),
+                    EscapeCsv(row.Status),
+                    EscapeCsv(row.Source),
+                    EscapeCsv(row.RecordedAt.ToString("yyyy-MM-dd hh:mm tt", CultureInfo.InvariantCulture)))));
+
+                await File.WriteAllLinesAsync(dialog.FileName, lines);
+                StatusMessage = $"Attendance export saved to {dialog.FileName}";
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Unable to export attendance: {ex.Message}";
+                MessageBox.Show(ex.Message, "Export Failed", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void RefreshAttendanceFilters()
+        {
+            _savedAttendanceRowsView.Refresh();
+            _exportAttendanceCommand.RaiseCanExecuteChanged();
+        }
+
+        private void RefreshAttendanceSourceFilters()
+        {
+            var selectedFilter = SelectedAttendanceSourceFilter;
+            var sourceFilters = SavedAttendanceRows
+                .Select(row => row.Source)
+                .Where(source => !string.IsNullOrWhiteSpace(source))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(source => source, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            AttendanceSourceFilters.Clear();
+            AttendanceSourceFilters.Add(AllAttendanceSourceFilter);
+
+            foreach (var source in sourceFilters)
+            {
+                AttendanceSourceFilters.Add(source);
+            }
+
+            if (!AttendanceSourceFilters.Any(source => string.Equals(source, selectedFilter, StringComparison.OrdinalIgnoreCase)))
+            {
+                SelectedAttendanceSourceFilter = AllAttendanceSourceFilter;
+            }
+        }
+
+        private bool FilterSavedAttendanceRow(object item)
+        {
+            if (item is not CashForWorkSavedAttendanceRow row)
+            {
+                return false;
+            }
+
+            if (!string.IsNullOrWhiteSpace(SelectedAttendanceSourceFilter) &&
+                !string.Equals(SelectedAttendanceSourceFilter, AllAttendanceSourceFilter, StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(row.Source, SelectedAttendanceSourceFilter, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(AttendanceSearchText))
+            {
+                return true;
+            }
+
+            var searchText = AttendanceSearchText.Trim();
+            return ContainsFilterText(row.FullName, searchText)
+                || ContainsFilterText(row.BeneficiaryId, searchText)
+                || ContainsFilterText(row.CivilRegistryId, searchText)
+                || ContainsFilterText(row.Status, searchText)
+                || ContainsFilterText(row.Source, searchText)
+                || ContainsFilterText(row.RecordedAt.ToString("MMM dd, hh:mm tt", CultureInfo.InvariantCulture), searchText);
+        }
+
         private static bool TryParseAmount(string text, out decimal amount)
         {
             amount = 0m;
@@ -594,6 +753,23 @@ namespace AttendanceShiftingManagement.ViewModels
         private static string? NormalizeNullable(string? value)
         {
             return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+        }
+
+        private static bool ContainsFilterText(string? source, string searchText)
+        {
+            return !string.IsNullOrWhiteSpace(source)
+                && source.Contains(searchText, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string EscapeCsv(string? value)
+        {
+            var normalized = value ?? string.Empty;
+            if (normalized.Contains(',') || normalized.Contains('"') || normalized.Contains('\r') || normalized.Contains('\n'))
+            {
+                return $"\"{normalized.Replace("\"", "\"\"", StringComparison.Ordinal)}\"";
+            }
+
+            return normalized;
         }
     }
 

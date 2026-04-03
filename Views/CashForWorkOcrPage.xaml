@@ -13,294 +13,415 @@
         <Grid Margin="24">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
-            <materialDesign:Card Grid.Row="0" Margin="0,0,0,20" Padding="20" Background="White">
-                <StackPanel>
-                    <TextBlock Text="Cash-for-Work Operations" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
-                    <TextBlock Text="Create work events, assign approved participants, record attendance manually or through the phone scanner, and release cash-for-work budgets."
-                               Margin="0,6,0,0"
-                               Foreground="{StaticResource BrandTextSecondaryBrush}"
-                               TextWrapping="Wrap"/>
-                </StackPanel>
+            <materialDesign:Card Grid.Row="0"
+                                 Margin="0,0,0,18"
+                                 Padding="20"
+                                 Background="White">
+                <DockPanel LastChildFill="False">
+                    <StackPanel DockPanel.Dock="Left">
+                        <TextBlock Text="Cash-for-Work Operations"
+                                   FontSize="22"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource BrandMidnightBrush}"/>
+                        <TextBlock Text="{Binding StatusMessage}"
+                                   Margin="0,10,0,0"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource BrandMidnightBrush}"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
+
+                    <WrapPanel DockPanel.Dock="Right"
+                               VerticalAlignment="Center">
+                        <Button Content="NEW EVENT"
+                                Margin="0,0,12,0"
+                                Height="40"
+                                Style="{StaticResource GoldActionButton}"
+                                Click="CreateEvent_Click"/>
+                        <Button Content="NEW SCANNER SESSION"
+                                Margin="0,0,12,0"
+                                Height="40"
+                                Style="{StaticResource SecondaryActionButton}"
+                                Command="{Binding CreateAttendanceScannerSessionCommand}"/>
+                        <Button Content="RELEASE BUDGET"
+                                Height="40"
+                                Style="{StaticResource SecondaryActionButton}"
+                                Command="{Binding ReleaseBudgetCommand}"/>
+                    </WrapPanel>
+                </DockPanel>
             </materialDesign:Card>
 
-            <Grid Grid.Row="1">
+            <UniformGrid Grid.Row="1"
+                         Margin="0,0,0,18"
+                         Columns="4">
+                <materialDesign:Card Margin="0,0,12,0"
+                                     Padding="16"
+                                     Background="#EEF4FF">
+                    <StackPanel>
+                        <TextBlock Text="{Binding ApprovedParticipantCount, StringFormat=N0}"
+                                   FontSize="26"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource BrandMidnightBrush}"/>
+                        <TextBlock Text="APPROVED"
+                                   FontSize="10"
+                                   Foreground="{StaticResource BrandTextSecondaryBrush}"/>
+                    </StackPanel>
+                </materialDesign:Card>
+
+                <materialDesign:Card Margin="0,0,12,0"
+                                     Padding="16"
+                                     Background="#ECFDF5">
+                    <StackPanel>
+                        <TextBlock Text="{Binding PresentParticipantCount, StringFormat=N0}"
+                                   FontSize="26"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource BrandSuccessBrush}"/>
+                        <TextBlock Text="PRESENT"
+                                   FontSize="10"
+                                   Foreground="{StaticResource BrandTextSecondaryBrush}"/>
+                    </StackPanel>
+                </materialDesign:Card>
+
+                <materialDesign:Card Margin="0,0,12,0"
+                                     Padding="16"
+                                     Background="#FEF3C7">
+                    <StackPanel>
+                        <TextBlock Text="{Binding PendingParticipantCount, StringFormat=N0}"
+                                   FontSize="26"
+                                   FontWeight="SemiBold"
+                                   Foreground="#92400E"/>
+                        <TextBlock Text="PENDING"
+                                   FontSize="10"
+                                   Foreground="{StaticResource BrandTextSecondaryBrush}"/>
+                    </StackPanel>
+                </materialDesign:Card>
+
+                <materialDesign:Card Padding="16"
+                                     Background="#F3F4F6">
+                    <StackPanel>
+                        <TextBlock Text="{Binding ManualAttendanceCount, StringFormat=N0}"
+                                   FontSize="26"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource BrandMidnightBrush}"/>
+                        <TextBlock Text="MANUAL"
+                                   FontSize="10"
+                                   Foreground="{StaticResource BrandTextSecondaryBrush}"/>
+                    </StackPanel>
+                </materialDesign:Card>
+            </UniformGrid>
+
+            <Grid Grid.Row="2">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="420"/>
-                    <ColumnDefinition Width="16"/>
-                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="1.75*"/>
+                    <ColumnDefinition Width="18"/>
+                    <ColumnDefinition Width="1*"/>
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Grid.Column="0">
-                    <materialDesign:Card Padding="18" Margin="0,0,0,16" Background="White">
+                    <materialDesign:Card Padding="18"
+                                         Background="White">
                         <StackPanel>
-                            <TextBlock Text="Create Event" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
-                            <TextBox Margin="0,14,0,0"
-                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                     materialDesign:HintAssist.Hint="Event Title"
-                                     Text="{Binding EventTitle, UpdateSourceTrigger=PropertyChanged}"/>
-                            <TextBox Margin="0,12,0,0"
-                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                     materialDesign:HintAssist.Hint="Location / Site"
-                                     Text="{Binding EventLocation, UpdateSourceTrigger=PropertyChanged}"/>
-                            <DatePicker Margin="0,12,0,0" SelectedDate="{Binding EventDate}"/>
+                            <DockPanel LastChildFill="False">
+                                <TextBlock Text="Attendance Records"
+                                           FontSize="16"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource BrandMidnightBrush}"/>
 
-                            <Grid Margin="0,12,0,0">
+                                <WrapPanel DockPanel.Dock="Right">
+                                    <Button Content="ALL"
+                                            Height="34"
+                                            Margin="0,0,8,0"
+                                            Style="{StaticResource GoldActionButton}"/>
+                                    <Button Content="PRESENT"
+                                            Height="34"
+                                            Margin="0,0,8,0"
+                                            Style="{StaticResource SecondaryActionButton}"/>
+                                    <Button Content="PENDING"
+                                            Height="34"
+                                            Margin="0,0,8,0"
+                                            Style="{StaticResource SecondaryActionButton}"/>
+                                    <Button Content="MANUAL"
+                                            Height="34"
+                                            Style="{StaticResource SecondaryActionButton}"/>
+                                </WrapPanel>
+                            </DockPanel>
+
+                            <Grid Margin="0,16,0,0">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="12"/>
-                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="14"/>
+                                    <ColumnDefinition Width="220"/>
+                                    <ColumnDefinition Width="14"/>
+                                    <ColumnDefinition Width="150"/>
                                 </Grid.ColumnDefinitions>
 
                                 <TextBox Grid.Column="0"
+                                         Text="{Binding AttendanceSearchText, UpdateSourceTrigger=PropertyChanged}"
                                          Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                         materialDesign:HintAssist.Hint="Start (HH:mm)"
-                                         Text="{Binding EventStartTime, UpdateSourceTrigger=PropertyChanged}"/>
+                                         materialDesign:HintAssist.Hint="Search beneficiary, source, or record"/>
 
-                                <TextBox Grid.Column="2"
-                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                         materialDesign:HintAssist.Hint="End (HH:mm)"
-                                         Text="{Binding EventEndTime, UpdateSourceTrigger=PropertyChanged}"/>
+                                <ComboBox Grid.Column="2"
+                                          ItemsSource="{Binding AttendanceSourceFilters}"
+                                          SelectedItem="{Binding SelectedAttendanceSourceFilter}"
+                                          Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                          materialDesign:HintAssist.Hint="Source filter"/>
+
+                                <Button Grid.Column="4"
+                                        Content="EXPORT"
+                                        Height="42"
+                                        Style="{StaticResource SecondaryActionButton}"
+                                        Command="{Binding ExportAttendanceCommand}"/>
                             </Grid>
 
-                            <TextBox Margin="0,12,0,0"
-                                     Height="70"
-                                     AcceptsReturn="True"
-                                     TextWrapping="Wrap"
-                                     VerticalScrollBarVisibility="Auto"
-                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                     materialDesign:HintAssist.Hint="Notes"
-                                     Text="{Binding EventNotes, UpdateSourceTrigger=PropertyChanged}"/>
-
-                            <Button Content="Create Cash-for-Work Event"
-                                    Margin="0,14,0,0"
-                                    Height="42"
-                                    Style="{StaticResource PrimaryActionButton}"
-                                    Command="{Binding CreateEventCommand}"/>
+                            <DataGrid Margin="0,16,0,0"
+                                      ItemsSource="{Binding SavedAttendanceRows}"
+                                      AutoGenerateColumns="False"
+                                      CanUserAddRows="False"
+                                      CanUserDeleteRows="False"
+                                      IsReadOnly="True"
+                                      MinHeight="420"
+                                      HeadersVisibility="Column"
+                                      GridLinesVisibility="Horizontal"
+                                      RowHeaderWidth="0">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Name"
+                                                        Binding="{Binding FullName}"
+                                                        Width="*"/>
+                                    <DataGridTextColumn Header="Beneficiary ID"
+                                                        Binding="{Binding BeneficiaryId}"
+                                                        Width="120"/>
+                                    <DataGridTextColumn Header="Civil Registry ID"
+                                                        Binding="{Binding CivilRegistryId}"
+                                                        Width="140"/>
+                                    <DataGridTextColumn Header="Status"
+                                                        Binding="{Binding Status}"
+                                                        Width="90"/>
+                                    <DataGridTextColumn Header="Source"
+                                                        Binding="{Binding Source}"
+                                                        Width="100"/>
+                                    <DataGridTextColumn Header="Recorded"
+                                                        Binding="{Binding RecordedAt, StringFormat='{}{0:MMM dd, hh:mm tt}'}"
+                                                        Width="150"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
                         </StackPanel>
                     </materialDesign:Card>
 
-                    <materialDesign:Card Padding="18" Margin="0,0,0,16" Background="White">
+                    <materialDesign:Card Margin="0,18,0,0"
+                                         Padding="18"
+                                         Background="White">
                         <StackPanel>
-                            <TextBlock Text="Select Event" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
-                            <ComboBox Margin="0,14,0,0"
-                                      Style="{StaticResource MaterialDesignOutlinedComboBox}"
-                                      ItemsSource="{Binding Events}"
-                                      SelectedItem="{Binding SelectedEvent}"
-                                      DisplayMemberPath="Title"/>
-                        </StackPanel>
-                    </materialDesign:Card>
+                            <DockPanel>
+                                <TextBlock Text="Manual Attendance"
+                                           FontSize="16"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource BrandMidnightBrush}"/>
 
-                    <materialDesign:Card Padding="18" Margin="0,0,0,16" Background="White">
-                        <StackPanel>
-                            <TextBlock Text="Phone Scanner Session" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
-                            <TextBlock Text="Create a temporary QR session plus 6-digit PIN for the employee phone scanner."
-                                       Margin="0,6,0,0"
-                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
-                                       TextWrapping="Wrap"/>
-                            <Button Content="Create Attendance Scanner Session"
-                                    Margin="0,14,0,0"
-                                    Height="42"
-                                    Style="{StaticResource GoldActionButton}"
-                                    Command="{Binding CreateAttendanceScannerSessionCommand}"/>
-                            <TextBox Margin="0,12,0,0"
-                                     IsReadOnly="True"
-                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                     materialDesign:HintAssist.Hint="Scanner URL"
-                                     Text="{Binding AttendanceScannerSessionUrl, Mode=OneWay}"/>
-                            <TextBlock Margin="0,10,0,0"
-                                       Text="{Binding AttendanceScannerSessionPin}"
-                                       FontSize="24"
-                                       FontWeight="Bold"
-                                       Foreground="{StaticResource BrandMidnightBrush}"/>
-                            <TextBlock Margin="0,4,0,0"
-                                       Text="{Binding AttendanceScannerSessionExpiresAtText}"
-                                       Foreground="{StaticResource BrandTextSecondaryBrush}"/>
-                            <Border Margin="0,14,0,0"
-                                    Width="180"
-                                    Height="180"
-                                    HorizontalAlignment="Left"
-                                    Background="White"
-                                    BorderBrush="{StaticResource BrandBorderBrush}"
-                                    BorderThickness="1"
-                                    CornerRadius="12">
-                                <Image Source="{Binding AttendanceScannerQrImage}" Stretch="Uniform"/>
-                            </Border>
-                        </StackPanel>
-                    </materialDesign:Card>
+                                <Button DockPanel.Dock="Right"
+                                        Content="SAVE MANUAL ATTENDANCE"
+                                        Height="40"
+                                        Style="{StaticResource PrimaryActionButton}"
+                                        Command="{Binding SaveManualAttendanceCommand}"/>
+                            </DockPanel>
 
-                    <materialDesign:Card Padding="18" Background="White">
-                        <StackPanel>
-                            <TextBlock Text="Approved Beneficiaries" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
-                            <TextBlock Text="{Binding AttendanceSummary}" Margin="0,6,0,0" Foreground="{StaticResource BrandTextSecondaryBrush}" TextWrapping="Wrap"/>
-
-                            <Grid Margin="0,14,0,0">
+                            <Grid Margin="0,16,0,0">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="12"/>
-                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="100"/>
                                 </Grid.ColumnDefinitions>
 
                                 <ComboBox Grid.Column="0"
                                           Style="{StaticResource MaterialDesignOutlinedComboBox}"
                                           ItemsSource="{Binding EligibleBeneficiaries}"
                                           SelectedItem="{Binding SelectedEligibleBeneficiary}"
-                                          DisplayMemberPath="DisplayLabel"/>
+                                          DisplayMemberPath="DisplayLabel"
+                                          materialDesign:HintAssist.Hint="Select approved beneficiary"/>
 
                                 <Button Grid.Column="2"
-                                        Content="Add"
-                                        Width="100"
+                                        Content="ADD"
                                         Height="42"
-                                        Style="{StaticResource GoldActionButton}"
+                                        Style="{StaticResource SecondaryActionButton}"
                                         Command="{Binding AddParticipantCommand}"/>
                             </Grid>
 
-                            <DataGrid Margin="0,14,0,0"
+                            <DataGrid Margin="0,16,0,0"
                                       ItemsSource="{Binding Participants}"
                                       AutoGenerateColumns="False"
                                       CanUserAddRows="False"
-                                      Height="250"
-                                      HeadersVisibility="Column">
+                                      HeadersVisibility="Column"
+                                      GridLinesVisibility="Horizontal"
+                                      RowHeaderWidth="0"
+                                      MinHeight="240">
                                 <DataGrid.Columns>
-                                    <DataGridCheckBoxColumn Header="Present" Binding="{Binding IsMarkedPresent}" Width="70"/>
-                                    <DataGridTextColumn Header="Name" Binding="{Binding FullName}" Width="*"/>
-                                    <DataGridTextColumn Header="Beneficiary ID" Binding="{Binding BeneficiaryId}" Width="120"/>
-                                    <DataGridTextColumn Header="Civil Registry ID" Binding="{Binding CivilRegistryId}" Width="140"/>
+                                    <DataGridCheckBoxColumn Header="Present"
+                                                            Binding="{Binding IsMarkedPresent}"
+                                                            Width="80"/>
+                                    <DataGridTextColumn Header="Name"
+                                                        Binding="{Binding FullName}"
+                                                        Width="*"/>
+                                    <DataGridTextColumn Header="Beneficiary ID"
+                                                        Binding="{Binding BeneficiaryId}"
+                                                        Width="130"/>
+                                    <DataGridTextColumn Header="Civil Registry ID"
+                                                        Binding="{Binding CivilRegistryId}"
+                                                        Width="150"/>
                                 </DataGrid.Columns>
                             </DataGrid>
-
-                            <Button Content="Save Manual Attendance"
-                                    Margin="0,14,0,0"
-                                    Height="42"
-                                    Style="{StaticResource PrimaryActionButton}"
-                                    Command="{Binding SaveManualAttendanceCommand}"/>
                         </StackPanel>
                     </materialDesign:Card>
                 </StackPanel>
 
                 <StackPanel Grid.Column="2">
-                    <materialDesign:Card Padding="18" Margin="0,0,0,16" Background="White">
+                    <materialDesign:Card Padding="18"
+                                         Margin="0,0,0,16"
+                                         Background="White">
                         <StackPanel>
-                            <TextBlock Text="Operation Status" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
-                            <TextBlock Text="Current workflow and release updates appear here."
-                                       Margin="0,6,0,0"
-                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
-                                       TextWrapping="Wrap"/>
+                            <TextBlock Text="Actions"
+                                       FontSize="16"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrandMidnightBrush}"/>
 
-                            <Border Margin="0,14,0,0"
-                                    Padding="12"
-                                    CornerRadius="8"
-                                    Background="{StaticResource BrandSurfaceBrush}"
-                                    BorderThickness="1"
-                                    BorderBrush="{StaticResource BrandBorderBrush}">
-                                <TextBlock Text="{Binding StatusMessage}"
-                                           Foreground="{StaticResource BrandMidnightBrush}"
-                                           TextWrapping="Wrap"/>
-                            </Border>
+                            <Button Content="NEW EVENT"
+                                    Margin="0,16,0,0"
+                                    Height="42"
+                                    Style="{StaticResource GoldActionButton}"
+                                    Click="CreateEvent_Click"/>
+
+                            <Button Content="NEW SCANNER SESSION"
+                                    Margin="0,12,0,0"
+                                    Height="42"
+                                    Style="{StaticResource SecondaryActionButton}"
+                                    Command="{Binding CreateAttendanceScannerSessionCommand}"/>
+
+                            <Button Content="RELEASE BUDGET"
+                                    Margin="0,12,0,0"
+                                    Height="42"
+                                    Style="{StaticResource SecondaryActionButton}"
+                                    Command="{Binding ReleaseBudgetCommand}"/>
                         </StackPanel>
                     </materialDesign:Card>
 
-                    <materialDesign:Card Padding="18" Background="White">
+                    <materialDesign:Card Padding="18"
+                                         Margin="0,0,0,16"
+                                         Background="White">
                         <StackPanel>
-                            <TextBlock Text="Release-ready Summary" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
-                            <TextBlock Text="{Binding ReleaseSummaryEventLabel}"
-                                       Margin="0,6,0,0"
-                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
-                                       TextWrapping="Wrap"/>
+                            <DockPanel>
+                                <TextBlock Text="Events"
+                                           FontSize="16"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource BrandMidnightBrush}"/>
+                                <Button DockPanel.Dock="Right"
+                                        Content="VIEW ALL"
+                                        Height="34"
+                                        Style="{StaticResource SecondaryActionButton}"/>
+                            </DockPanel>
+
+                            <ListBox Margin="0,16,0,0"
+                                     ItemsSource="{Binding Events}"
+                                     SelectedItem="{Binding SelectedEvent}"
+                                     BorderThickness="0"
+                                     Background="Transparent">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Margin="0,0,0,10"
+                                                Padding="14"
+                                                CornerRadius="12"
+                                                Background="#F8FAFC"
+                                                BorderBrush="{StaticResource BrandBorderBrush}"
+                                                BorderThickness="1">
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Title}"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="{StaticResource BrandMidnightBrush}"
+                                                           TextWrapping="Wrap"/>
+                                                <TextBlock Text="{Binding Location}"
+                                                           Margin="0,4,0,0"
+                                                           Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                                           TextWrapping="Wrap"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </StackPanel>
+                    </materialDesign:Card>
+
+                    <materialDesign:Card Padding="18"
+                                         Margin="0,0,0,16"
+                                         Background="White">
+                        <StackPanel>
+                            <TextBlock Text="Scanner Session"
+                                       FontSize="16"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrandMidnightBrush}"/>
+
+                            <TextBox Margin="0,16,0,0"
+                                     IsReadOnly="True"
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     materialDesign:HintAssist.Hint="Scanner URL"
+                                     Text="{Binding AttendanceScannerSessionUrl, Mode=OneWay}"/>
 
                             <Border Margin="0,12,0,0"
-                                    Padding="12"
-                                    CornerRadius="8"
-                                    Background="{StaticResource BrandSurfaceBrush}"
-                                    BorderBrush="{StaticResource BrandBorderBrush}"
-                                    BorderThickness="1">
-                                <StackPanel>
-                                    <TextBlock Text="{Binding ReleaseSummaryStatusText}"
-                                               FontWeight="SemiBold"
-                                               Foreground="{Binding ReleaseSummaryStatusBrush}"/>
-                                    <TextBlock Text="{Binding ReleaseSummaryDetail}"
-                                               Margin="0,6,0,0"
-                                               Foreground="{StaticResource BrandTextSecondaryBrush}"
-                                               TextWrapping="Wrap"/>
-                                </StackPanel>
+                                    Padding="16"
+                                    CornerRadius="12"
+                                    Background="#F8FAFC">
+                                <TextBlock Text="{Binding AttendanceScannerSessionPin}"
+                                           HorizontalAlignment="Center"
+                                           FontSize="28"
+                                           FontWeight="Bold"
+                                           Foreground="{StaticResource BrandMidnightBrush}"/>
                             </Border>
 
-                            <UniformGrid Margin="0,14,0,0" Columns="4">
-                                <Border Margin="0,0,8,0" Padding="10" CornerRadius="8" Background="#EEF4FF">
-                                    <StackPanel>
-                                        <TextBlock Text="{Binding ApprovedParticipantCount, StringFormat=N0}" FontSize="22" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
-                                        <TextBlock Text="APPROVED" FontSize="10" Foreground="{StaticResource BrandTextSecondaryBrush}"/>
-                                    </StackPanel>
-                                </Border>
-                                <Border Margin="0,0,8,0" Padding="10" CornerRadius="8" Background="#ECFDF5">
-                                    <StackPanel>
-                                        <TextBlock Text="{Binding PresentParticipantCount, StringFormat=N0}" FontSize="22" FontWeight="SemiBold" Foreground="{StaticResource BrandSuccessBrush}"/>
-                                        <TextBlock Text="PRESENT" FontSize="10" Foreground="{StaticResource BrandTextSecondaryBrush}"/>
-                                    </StackPanel>
-                                </Border>
-                                <Border Margin="0,0,8,0" Padding="10" CornerRadius="8" Background="#FEF3C7">
-                                    <StackPanel>
-                                        <TextBlock Text="{Binding PendingParticipantCount, StringFormat=N0}" FontSize="22" FontWeight="SemiBold" Foreground="#92400E"/>
-                                        <TextBlock Text="PENDING" FontSize="10" Foreground="{StaticResource BrandTextSecondaryBrush}"/>
-                                    </StackPanel>
-                                </Border>
-                                <Border Margin="0,0,8,0" Padding="10" CornerRadius="8" Background="#F3F4F6">
-                                    <StackPanel>
-                                        <TextBlock Text="{Binding ManualAttendanceCount, StringFormat=N0}" FontSize="22" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
-                                        <TextBlock Text="MANUAL" FontSize="10" Foreground="{StaticResource BrandTextSecondaryBrush}"/>
-                                    </StackPanel>
-                                </Border>
-                            </UniformGrid>
-
-                            <Grid Margin="0,14,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="12"/>
-                                    <ColumnDefinition Width="180"/>
-                                    <ColumnDefinition Width="12"/>
-                                    <ColumnDefinition Width="180"/>
-                                </Grid.ColumnDefinitions>
-
-                                <ComboBox Grid.Column="0"
-                                          ItemsSource="{Binding AyudaPrograms}"
-                                          SelectedItem="{Binding SelectedAyudaProgram}"
-                                          DisplayMemberPath="ProgramName"
-                                          Style="{StaticResource MaterialDesignOutlinedComboBox}"
-                                          materialDesign:HintAssist.Hint="Ayuda program / event"/>
-
-                                <TextBox Grid.Column="2"
-                                         Text="{Binding ReleaseAmountText, UpdateSourceTrigger=PropertyChanged}"
-                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                         materialDesign:HintAssist.Hint="Release amount"/>
-
-                                <Button Grid.Column="4"
-                                        Content="Release C4W Budget"
-                                        Height="42"
-                                        Style="{StaticResource GoldActionButton}"
-                                        Command="{Binding ReleaseBudgetCommand}"/>
-                            </Grid>
+                            <Border Margin="0,12,0,0"
+                                    Padding="14"
+                                    CornerRadius="12"
+                                    Background="White"
+                                    BorderBrush="{StaticResource BrandBorderBrush}"
+                                    BorderThickness="1">
+                                <Viewbox Stretch="Uniform">
+                                    <Border Width="180"
+                                            Height="180"
+                                            Background="#F8FAFC"
+                                            BorderBrush="{StaticResource BrandBorderBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="12">
+                                        <Image Source="{Binding AttendanceScannerQrImage}"
+                                               Stretch="Uniform"/>
+                                    </Border>
+                                </Viewbox>
+                            </Border>
                         </StackPanel>
                     </materialDesign:Card>
 
-                    <materialDesign:Card Padding="18" Margin="0,16,0,0" Background="White">
+                    <materialDesign:Card Padding="18"
+                                         Background="White">
                         <StackPanel>
-                            <TextBlock Text="Release-ready Attendance Records" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource BrandMidnightBrush}"/>
-                            <DataGrid Margin="0,14,0,0"
-                                      ItemsSource="{Binding SavedAttendanceRows}"
-                                      AutoGenerateColumns="False"
-                                      CanUserAddRows="False"
-                                      MinHeight="220">
-                                <DataGrid.Columns>
-                                    <DataGridTextColumn Header="Name" Binding="{Binding FullName}" Width="*"/>
-                                    <DataGridTextColumn Header="Beneficiary ID" Binding="{Binding BeneficiaryId}" Width="120"/>
-                                    <DataGridTextColumn Header="Civil Registry ID" Binding="{Binding CivilRegistryId}" Width="140"/>
-                                    <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="90"/>
-                                    <DataGridTextColumn Header="Source" Binding="{Binding Source}" Width="90"/>
-                                    <DataGridTextColumn Header="Recorded" Binding="{Binding RecordedAt, StringFormat='{}{0:MMM dd, hh:mm tt}'}" Width="150"/>
-                                </DataGrid.Columns>
-                            </DataGrid>
+                            <TextBlock Text="Release"
+                                       FontSize="16"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrandMidnightBrush}"/>
+
+                            <ComboBox Margin="0,16,0,0"
+                                      ItemsSource="{Binding AyudaPrograms}"
+                                      SelectedItem="{Binding SelectedAyudaProgram}"
+                                      DisplayMemberPath="ProgramName"
+                                      Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                      materialDesign:HintAssist.Hint="Ayuda program / event"/>
+
+                            <TextBox Margin="0,12,0,0"
+                                     Text="{Binding ReleaseAmountText, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     materialDesign:HintAssist.Hint="Release amount"/>
+
+                            <Button Content="RELEASE BUDGET"
+                                    Margin="0,14,0,0"
+                                    Height="42"
+                                    Style="{StaticResource GoldActionButton}"
+                                    Command="{Binding ReleaseBudgetCommand}"/>
                         </StackPanel>
                     </materialDesign:Card>
                 </StackPanel>

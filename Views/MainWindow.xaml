@@ -15,14 +15,14 @@
         <Style x:Key="SidebarButtonBaseStyle"
                TargetType="Button"
                BasedOn="{StaticResource MaterialDesignFlatButton}">
-            <Setter Property="Foreground" Value="#B8C7E8" />
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="HorizontalContentAlignment" Value="Left" />
-            <Setter Property="Padding" Value="14,10" />
-            <Setter Property="Margin" Value="0,0,0,8" />
-            <Setter Property="FontSize" Value="13" />
-            <Setter Property="FontWeight" Value="Normal" />
-            <Setter Property="materialDesign:ButtonAssist.CornerRadius" Value="6" />
+            <Setter Property="Foreground" Value="#E6E8FF"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Padding" Value="14,10"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="Normal"/>
+            <Setter Property="materialDesign:ButtonAssist.CornerRadius" Value="14"/>
         </Style>
 
         <Style x:Key="DashboardSidebarButtonStyle"
@@ -30,9 +30,9 @@
                BasedOn="{StaticResource SidebarButtonBaseStyle}">
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsDashboardSelected}" Value="True">
-                    <Setter Property="Foreground" Value="{StaticResource BrandYellowBrush}" />
-                    <Setter Property="Background" Value="#26F9C231" />
-                    <Setter Property="FontWeight" Value="SemiBold" />
+                    <Setter Property="Foreground" Value="White"/>
+                    <Setter Property="Background" Value="#4338CA"/>
+                    <Setter Property="FontWeight" Value="SemiBold"/>
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -42,9 +42,9 @@
                BasedOn="{StaticResource SidebarButtonBaseStyle}">
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsCashForWorkSelected}" Value="True">
-                    <Setter Property="Foreground" Value="{StaticResource BrandYellowBrush}" />
-                    <Setter Property="Background" Value="#26F9C231" />
-                    <Setter Property="FontWeight" Value="SemiBold" />
+                    <Setter Property="Foreground" Value="White"/>
+                    <Setter Property="Background" Value="#4338CA"/>
+                    <Setter Property="FontWeight" Value="SemiBold"/>
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -54,9 +54,9 @@
                BasedOn="{StaticResource SidebarButtonBaseStyle}">
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsBudgetSelected}" Value="True">
-                    <Setter Property="Foreground" Value="{StaticResource BrandYellowBrush}" />
-                    <Setter Property="Background" Value="#26F9C231" />
-                    <Setter Property="FontWeight" Value="SemiBold" />
+                    <Setter Property="Foreground" Value="White"/>
+                    <Setter Property="Background" Value="#4338CA"/>
+                    <Setter Property="FontWeight" Value="SemiBold"/>
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -66,9 +66,9 @@
                BasedOn="{StaticResource SidebarButtonBaseStyle}">
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsDistributionSelected}" Value="True">
-                    <Setter Property="Foreground" Value="{StaticResource BrandYellowBrush}" />
-                    <Setter Property="Background" Value="#26F9C231" />
-                    <Setter Property="FontWeight" Value="SemiBold" />
+                    <Setter Property="Foreground" Value="White"/>
+                    <Setter Property="Background" Value="#4338CA"/>
+                    <Setter Property="FontWeight" Value="SemiBold"/>
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -78,9 +78,9 @@
                BasedOn="{StaticResource SidebarButtonBaseStyle}">
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsMasterListSelected}" Value="True">
-                    <Setter Property="Foreground" Value="{StaticResource BrandYellowBrush}" />
-                    <Setter Property="Background" Value="#26F9C231" />
-                    <Setter Property="FontWeight" Value="SemiBold" />
+                    <Setter Property="Foreground" Value="White"/>
+                    <Setter Property="Background" Value="#4338CA"/>
+                    <Setter Property="FontWeight" Value="SemiBold"/>
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -90,9 +90,9 @@
                BasedOn="{StaticResource SidebarButtonBaseStyle}">
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsAssistanceCasesSelected}" Value="True">
-                    <Setter Property="Foreground" Value="{StaticResource BrandYellowBrush}" />
-                    <Setter Property="Background" Value="#26F9C231" />
-                    <Setter Property="FontWeight" Value="SemiBold" />
+                    <Setter Property="Foreground" Value="White"/>
+                    <Setter Property="Background" Value="#4338CA"/>
+                    <Setter Property="FontWeight" Value="SemiBold"/>
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -100,178 +100,369 @@
         <Style x:Key="SidebarUtilityButtonStyle"
                TargetType="Button"
                BasedOn="{StaticResource MaterialDesignFlatButton}">
-            <Setter Property="Foreground" Value="White" />
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="HorizontalContentAlignment" Value="Left" />
-            <Setter Property="Padding" Value="12,8" />
-            <Setter Property="Margin" Value="0,12,0,12" />
-            <Setter Property="FontSize" Value="13" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="materialDesign:ButtonAssist.CornerRadius" Value="8" />
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Foreground" Value="{StaticResource BrandYellowBrush}" />
-                    <Setter Property="Background" Value="#1FFFFFFF" />
-                </Trigger>
-            </Style.Triggers>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="#4338CA"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Padding" Value="14,10"/>
+            <Setter Property="Margin" Value="0,10,0,0"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="materialDesign:ButtonAssist.CornerRadius" Value="14"/>
         </Style>
-
     </Window.Resources>
 
-    <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="220" />
-            <ColumnDefinition Width="*" />
-        </Grid.ColumnDefinitions>
+    <Border Margin="0"
+            CornerRadius="26"
+            BorderBrush="{StaticResource BrandBorderBrush}"
+            BorderThickness="1"
+            Background="#312E81">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="280"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
 
-        <Border Grid.Column="0"
-                Background="{StaticResource BrandMidnightBrush}"
-                Padding="16,24,16,16">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
+            <Border Grid.Column="0"
+                    Background="#312E81"
+                    Padding="18,22,18,18">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
 
-                <StackPanel Grid.Row="0">
-                    <TextBlock Text="eKalinga+"
-                               FontSize="14"
-                               FontWeight="SemiBold"
-                               Foreground="White" />
-                    <TextBlock Text="Administrator portal"
-                               Margin="0,4,0,0"
-                               FontSize="11"
-                               Foreground="{StaticResource BrandYellowBrush}" />
-                </StackPanel>
-
-                <StackPanel Grid.Row="1" Margin="0,24,0,0">
-                    <Button Style="{StaticResource DashboardSidebarButtonStyle}"
-                            Command="{Binding ShowDashboardCommand}">
-                        <StackPanel Orientation="Horizontal">
-                            <materialDesign:PackIcon Kind="HomeGroup" Width="18" Height="18" Margin="0,0,10,0" />
-                            <TextBlock Text="Dashboard" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Button>
-
-                    <Button Style="{StaticResource CashForWorkSidebarButtonStyle}"
-                            Command="{Binding ShowCashForWorkCommand}">
-                        <StackPanel Orientation="Horizontal">
-                            <materialDesign:PackIcon Kind="BriefcaseClockOutline" Width="18" Height="18" Margin="0,0,10,0" />
-                            <TextBlock Text="Cash-for-work" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Button>
-
-                    <Button Style="{StaticResource BudgetSidebarButtonStyle}"
-                            Command="{Binding ShowBudgetCommand}">
-                        <StackPanel Orientation="Horizontal">
-                            <materialDesign:PackIcon Kind="WalletBifoldOutline" Width="18" Height="18" Margin="0,0,10,0" />
-                            <TextBlock Text="Budget" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Button>
-
-                    <Button Style="{StaticResource DistributionSidebarButtonStyle}"
-                            Command="{Binding ShowDistributionCommand}">
-                        <StackPanel Orientation="Horizontal">
-                            <materialDesign:PackIcon Kind="GiftOutline" Width="18" Height="18" Margin="0,0,10,0" />
-                            <TextBlock Text="Distribution" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Button>
-
-                    <Button Style="{StaticResource MasterListSidebarButtonStyle}"
-                            Command="{Binding ShowMasterListCommand}">
-                        <StackPanel Orientation="Horizontal">
-                            <materialDesign:PackIcon Kind="TableLarge" Width="18" Height="18" Margin="0,0,10,0" />
-                            <TextBlock Text="Validated Beneficiaries" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Button>
-
-                    <Button Style="{StaticResource AssistanceCasesSidebarButtonStyle}"
-                            Command="{Binding ShowAssistanceCasesCommand}">
-                        <StackPanel Orientation="Horizontal">
-                            <materialDesign:PackIcon Kind="ClipboardPulseOutline" Width="18" Height="18" Margin="0,0,10,0" />
-                            <TextBlock Text="Aid Request" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Button>
-
-                </StackPanel>
-
-                <Button Grid.Row="2"
-                        Style="{StaticResource SidebarUtilityButtonStyle}"
-                        Click="CheckForUpdate_Click"
-                        ToolTip="Open the Updates tab and run an update check now.">
-                    <TextBlock Text="Check for Update"
-                               VerticalAlignment="Center" />
-                </Button>
-
-                <Border Grid.Row="3"
-                        Margin="0,20,0,0"
-                        Padding="12"
-                        CornerRadius="10"
-                        Background="#123980">
-                    <StackPanel>
-                        <TextBlock Text="{Binding UserDisplayName}"
-                                   FontSize="13"
+                    <StackPanel Grid.Row="0">
+                        <TextBlock Text="eKalinga+"
+                                   FontSize="18"
                                    FontWeight="SemiBold"
-                                   Foreground="White" />
-                        <TextBlock Text="{Binding ConnectionSummary}"
-                                   Margin="0,6,0,0"
-                                   FontSize="11"
-                                   Foreground="#D7E3FF"
-                                   TextWrapping="Wrap" />
-                    </StackPanel>
-                </Border>
-            </Grid>
-        </Border>
-
-        <Grid Grid.Column="1">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="*" />
-            </Grid.RowDefinitions>
-
-            <Border Grid.Row="0"
-                    Background="White"
-                    BorderBrush="{StaticResource BrandBorderBrush}"
-                    BorderThickness="0,0,0,1"
-                    Padding="24,18">
-                <DockPanel>
-                    <StackPanel>
-                        <TextBlock Text="{Binding CurrentSectionTitle}"
-                                   FontSize="20"
-                                   FontWeight="SemiBold"
-                                   Foreground="{StaticResource BrandMidnightBrush}" />
-                        <TextBlock Text="{Binding CurrentSectionSubtitle}"
+                                   Foreground="White"/>
+                        <TextBlock Text="Administrator portal"
                                    Margin="0,4,0,0"
-                                   FontSize="13"
-                                   Foreground="{StaticResource BrandTextSecondaryBrush}" />
+                                   FontSize="12"
+                                   Foreground="{StaticResource BrandYellowBrush}"/>
                     </StackPanel>
 
-                    <StackPanel DockPanel.Dock="Right"
-                                Orientation="Horizontal"
-                                VerticalAlignment="Center">
+                    <ScrollViewer Grid.Row="1"
+                                  Margin="0,26,0,0"
+                                  VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <StackPanel Margin="0,0,0,22">
+                                <TextBlock Text="OVERVIEW"
+                                           Margin="12,0,0,10"
+                                           FontSize="11"
+                                           FontWeight="SemiBold"
+                                           Foreground="#C7D2FE"/>
+
+                                <Button Style="{StaticResource DashboardSidebarButtonStyle}"
+                                        Command="{Binding ShowDashboardCommand}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="4"/>
+                                            <ColumnDefinition Width="16"/>
+                                            <ColumnDefinition Width="24"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <Border Grid.Column="0"
+                                                Width="4"
+                                                CornerRadius="4"
+                                                Background="{StaticResource BrandYellowBrush}"/>
+                                        <materialDesign:PackIcon Grid.Column="2"
+                                                                 Kind="HomeGroup"
+                                                                 Width="18"
+                                                                 Height="18"
+                                                                 VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="3"
+                                                   Margin="10,0,0,0"
+                                                   Text="Dashboard"
+                                                   VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Button>
+                            </StackPanel>
+
+                            <StackPanel Margin="0,0,0,22">
+                                <TextBlock Text="OPERATIONS"
+                                           Margin="12,0,0,10"
+                                           FontSize="11"
+                                           FontWeight="SemiBold"
+                                           Foreground="#C7D2FE"/>
+
+                                <Button Style="{StaticResource CashForWorkSidebarButtonStyle}"
+                                        Command="{Binding ShowCashForWorkCommand}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="4"/>
+                                            <ColumnDefinition Width="16"/>
+                                            <ColumnDefinition Width="24"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <Border Grid.Column="0"
+                                                Width="4"
+                                                CornerRadius="4"
+                                                Background="{StaticResource BrandYellowBrush}"/>
+                                        <materialDesign:PackIcon Grid.Column="2"
+                                                                 Kind="BriefcaseClockOutline"
+                                                                 Width="18"
+                                                                 Height="18"
+                                                                 VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="3"
+                                                   Margin="10,0,0,0"
+                                                   Text="Cash-for-work"
+                                                   VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Button>
+
+                                <Button Style="{StaticResource DistributionSidebarButtonStyle}"
+                                        Command="{Binding ShowDistributionCommand}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="4"/>
+                                            <ColumnDefinition Width="16"/>
+                                            <ColumnDefinition Width="24"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <Border Grid.Column="0"
+                                                Width="4"
+                                                CornerRadius="4"
+                                                Background="{StaticResource BrandYellowBrush}"/>
+                                        <materialDesign:PackIcon Grid.Column="2"
+                                                                 Kind="GiftOutline"
+                                                                 Width="18"
+                                                                 Height="18"
+                                                                 VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="3"
+                                                   Margin="10,0,0,0"
+                                                   Text="Distribution"
+                                                   VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Button>
+
+                                <Button Style="{StaticResource AssistanceCasesSidebarButtonStyle}"
+                                        Command="{Binding ShowAssistanceCasesCommand}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="4"/>
+                                            <ColumnDefinition Width="16"/>
+                                            <ColumnDefinition Width="24"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <Border Grid.Column="0"
+                                                Width="4"
+                                                CornerRadius="4"
+                                                Background="{StaticResource BrandYellowBrush}"/>
+                                        <materialDesign:PackIcon Grid.Column="2"
+                                                                 Kind="ClipboardPulseOutline"
+                                                                 Width="18"
+                                                                 Height="18"
+                                                                 VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="3"
+                                                   Margin="10,0,0,0"
+                                                   Text="Aid Request"
+                                                   VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Button>
+                            </StackPanel>
+
+                            <StackPanel>
+                                <TextBlock Text="MANAGEMENT"
+                                           Margin="12,0,0,10"
+                                           FontSize="11"
+                                           FontWeight="SemiBold"
+                                           Foreground="#C7D2FE"/>
+
+                                <Button Style="{StaticResource BudgetSidebarButtonStyle}"
+                                        Command="{Binding ShowBudgetCommand}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="4"/>
+                                            <ColumnDefinition Width="16"/>
+                                            <ColumnDefinition Width="24"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <Border Grid.Column="0"
+                                                Width="4"
+                                                CornerRadius="4"
+                                                Background="{StaticResource BrandYellowBrush}"/>
+                                        <materialDesign:PackIcon Grid.Column="2"
+                                                                 Kind="WalletBifoldOutline"
+                                                                 Width="18"
+                                                                 Height="18"
+                                                                 VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="3"
+                                                   Margin="10,0,0,0"
+                                                   Text="Budget"
+                                                   VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Button>
+
+                                <Button Style="{StaticResource MasterListSidebarButtonStyle}"
+                                        Command="{Binding ShowMasterListCommand}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="4"/>
+                                            <ColumnDefinition Width="16"/>
+                                            <ColumnDefinition Width="24"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <Border Grid.Column="0"
+                                                Width="4"
+                                                CornerRadius="4"
+                                                Background="{StaticResource BrandYellowBrush}"/>
+                                        <materialDesign:PackIcon Grid.Column="2"
+                                                                 Kind="TableLarge"
+                                                                 Width="18"
+                                                                 Height="18"
+                                                                 VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="3"
+                                                   Margin="10,0,0,0"
+                                                   Text="Validated Beneficiaries"
+                                                   VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Button>
+                            </StackPanel>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <StackPanel Grid.Row="2"
+                                Margin="0,18,0,0">
                         <Button Content="SETTINGS"
-                                Height="40"
-                                Margin="0,0,12,0"
-                                Style="{StaticResource SecondaryActionButton}"
-                                Click="Settings_Click" />
-                        <Button Content="LOAD TABLES"
-                                Height="40"
-                                Margin="0,0,12,0"
-                                Style="{StaticResource GoldActionButton}"
-                                Click="LoadTables_Click" />
+                                Style="{StaticResource SidebarUtilityButtonStyle}"
+                                Click="Settings_Click"/>
+
                         <Button Content="LOGOUT"
-                                Height="40"
-                                Style="{StaticResource SecondaryActionButton}"
-                                Click="Logout_Click" />
+                                Style="{StaticResource SidebarUtilityButtonStyle}"
+                                Click="Logout_Click"/>
+
+                        <Button Style="{StaticResource SidebarUtilityButtonStyle}"
+                                Content="CHECK FOR UPDATE"
+                                Click="CheckForUpdate_Click"
+                                ToolTip="Open the Updates tab and run an update check now."/>
+
+                        <Border Margin="0,14,0,0"
+                                Padding="16"
+                                CornerRadius="18">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                    <GradientStop Color="#4338CA" Offset="0"/>
+                                    <GradientStop Color="#1D4ED8" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Border.Background>
+
+                            <StackPanel>
+                                <TextBlock Text="{Binding UserDisplayName}"
+                                           FontSize="14"
+                                           FontWeight="SemiBold"
+                                           Foreground="White"/>
+                                <TextBlock Text="{Binding ConnectionSummary}"
+                                           Margin="0,8,0,0"
+                                           FontSize="11"
+                                           Foreground="#E2E8F0"
+                                           TextWrapping="Wrap"/>
+
+                                <DockPanel Margin="0,14,0,0">
+                                    <Border Padding="10,4"
+                                            CornerRadius="12"
+                                            Background="#334155">
+                                        <TextBlock Text="Online"
+                                                   FontSize="11"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="#86EFAC"/>
+                                    </Border>
+
+                                    <TextBlock DockPanel.Dock="Right"
+                                               Margin="10,2,0,0"
+                                               FontSize="11"
+                                               Foreground="#CBD5E1"
+                                               Text="Last sync 3:42 PM"/>
+                                </DockPanel>
+                            </StackPanel>
+                        </Border>
                     </StackPanel>
-                </DockPanel>
+                </Grid>
             </Border>
 
-            <ContentControl Grid.Row="1"
-                            Margin="24"
-                            Content="{Binding CurrentView}" />
+            <Border Grid.Column="1"
+                    Background="#F8FAFC"
+                    CornerRadius="0,26,26,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0"
+                            Background="#FDFDFD"
+                            BorderBrush="{StaticResource BrandBorderBrush}"
+                            BorderThickness="0,0,0,1"
+                            Padding="28,22">
+                        <StackPanel>
+                            <TextBlock Text="Operations overview"
+                                       FontSize="12"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrandTextSecondaryBrush}"/>
+                            <TextBlock Text="{Binding CurrentSectionTitle}"
+                                       Margin="0,6,0,0"
+                                       FontSize="28"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrandMidnightBrush}"/>
+                            <TextBlock Text="{Binding CurrentSectionSubtitle}"
+                                       Margin="0,8,0,0"
+                                       FontSize="13"
+                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                       TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Grid.Row="1"
+                            Margin="28"
+                            Padding="24"
+                            CornerRadius="24"
+                            Background="White"
+                            BorderBrush="{StaticResource BrandBorderBrush}"
+                            BorderThickness="1">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <DockPanel>
+                                <StackPanel>
+                                    <TextBlock Text="Main workspace"
+                                               FontSize="20"
+                                               FontWeight="SemiBold"
+                                               Foreground="{StaticResource BrandMidnightBrush}"/>
+                                    <TextBlock Text="Your selected page loads here with stronger spacing and a softer content container."
+                                               Margin="0,6,0,0"
+                                               FontSize="13"
+                                               Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                               TextWrapping="Wrap"/>
+                                </StackPanel>
+
+                                <Border DockPanel.Dock="Right"
+                                        Padding="12,6"
+                                        CornerRadius="14"
+                                        Background="#F1F5F9">
+                                    <TextBlock Text="ContentControl area"
+                                               FontSize="12"
+                                               FontWeight="SemiBold"
+                                               Foreground="{StaticResource BrandMidnightBrush}"/>
+                                </Border>
+                            </DockPanel>
+
+                            <ContentControl Grid.Row="1"
+                                            Margin="0,20,0,0"
+                                            Content="{Binding CurrentView}"/>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Border>
         </Grid>
-    </Grid>
+    </Border>
 </Window>
