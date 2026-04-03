@@ -7,6 +7,7 @@
         Width="1280"
         MinHeight="700"
         MinWidth="1040"
+        WindowState="Maximized"
         WindowStartupLocation="CenterScreen"
         Background="#091322"
         FontFamily="Segoe UI"
@@ -81,7 +82,7 @@
                         </Grid.RowDefinitions>
 
                         <Grid Grid.Row="1"
-                              Margin="0,30,0,30"
+                              Margin="0,18,0,30"
                               VerticalAlignment="Center">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
@@ -89,69 +90,56 @@
                                 <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
 
-                            <Viewbox MaxWidth="292"
-                                     MaxHeight="212"
+                            <Viewbox MaxWidth="260"
+                                     MaxHeight="210"
                                      Stretch="Uniform"
                                      StretchDirection="DownOnly"
                                      HorizontalAlignment="Center"
                                      VerticalAlignment="Center">
-                                <Border Width="292"
-                                        Height="212"
-                                        Background="#1BFFFFFF"
-                                        CornerRadius="30"
-                                        BorderBrush="#40FFFFFF"
-                                        BorderThickness="1"
-                                        ClipToBounds="True">
-                                    <Grid Margin="26">
-                                        <Border Width="92"
-                                                Height="92"
-                                                CornerRadius="24"
-                                                Background="#26FFFFFF"
-                                                HorizontalAlignment="Center"
-                                                VerticalAlignment="Center">
-                                            <Border.Style>
-                                                <Style TargetType="Border">
-                                                    <Setter Property="Visibility" Value="Visible" />
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding HasCustomBrandLogo}" Value="True">
-                                                            <Setter Property="Visibility" Value="Collapsed" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </Border.Style>
-                                            <materialDesign:PackIcon Kind="HandshakeOutline"
-                                                                     Width="40"
-                                                                     Height="40"
-                                                                     Foreground="{StaticResource BrandYellowBrush}"
-                                                                     HorizontalAlignment="Center"
-                                                                     VerticalAlignment="Center" />
-                                        </Border>
+                                <Grid Width="240"
+                                      Height="210">
+                                    <materialDesign:PackIcon Kind="HandshakeOutline"
+                                                             Width="72"
+                                                             Height="72"
+                                                             Foreground="{StaticResource BrandYellowBrush}"
+                                                             HorizontalAlignment="Center"
+                                                             VerticalAlignment="Center">
+                                        <materialDesign:PackIcon.Style>
+                                            <Style TargetType="materialDesign:PackIcon">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding HasCustomBrandLogo}" Value="True">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </materialDesign:PackIcon.Style>
+                                    </materialDesign:PackIcon>
 
-                                        <Image Source="{Binding BrandLogoImage}"
-                                               MaxWidth="182"
-                                               MaxHeight="134"
-                                               Stretch="Uniform"
-                                               HorizontalAlignment="Center"
-                                               VerticalAlignment="Center"
-                                               SnapsToDevicePixels="True"
-                                               RenderOptions.BitmapScalingMode="Fant">
-                                            <Image.Style>
-                                                <Style TargetType="Image">
-                                                    <Setter Property="Visibility" Value="Collapsed" />
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding HasCustomBrandLogo}" Value="True">
-                                                            <Setter Property="Visibility" Value="Visible" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </Image.Style>
-                                        </Image>
-                                    </Grid>
-                                </Border>
+                                    <Image Source="{Binding BrandLogoImage}"
+                                           MaxWidth="220"
+                                           MaxHeight="210"
+                                           Stretch="Uniform"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           SnapsToDevicePixels="True"
+                                           RenderOptions.BitmapScalingMode="Fant">
+                                        <Image.Style>
+                                            <Style TargetType="Image">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding HasCustomBrandLogo}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Image.Style>
+                                    </Image>
+                                </Grid>
                             </Viewbox>
 
                             <StackPanel Grid.Row="1"
-                                        Margin="0,28,0,0"
+                                        Margin="0,24,0,0"
                                         MaxWidth="560">
                                 <TextBlock Text="{Binding BrandSubtitle}"
                                            FontSize="38"

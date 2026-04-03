@@ -324,18 +324,6 @@ namespace AttendanceShiftingManagement.Views
             }
         }
 
-        private void LoadTables_Click(object sender, RoutedEventArgs e)
-        {
-            var window = new LoadTablesWindow
-            {
-                Owner = this
-            };
-
-            window.ShowDialog();
-            ViewModel.RefreshConnectionSummary();
-            ViewModel.ReloadCurrentView();
-        }
-
         private void Logout_Click(object sender, RoutedEventArgs e)
         {
             var result = MessageBox.Show(

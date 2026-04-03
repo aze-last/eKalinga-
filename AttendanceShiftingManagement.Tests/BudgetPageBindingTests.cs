@@ -18,10 +18,14 @@ public sealed class BudgetPageBindingTests
 
         Assert.Contains("Text=\"Budget Control\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding SyncGovernmentBudgetCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"Quick Actions\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"Programs\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"Private Donations\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding LedgerSearchText, UpdateSourceTrigger=PropertyChanged}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("ItemsSource=\"{Binding LedgerSourceFilters}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding ExportLedgerCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding RecordDonationCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding CreateProgramCommand}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"Project / Distribution Setup\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"Seminar Setup\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding OpenSeminarPanelCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding CloseSeminarPanelCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding CreateSeminarCommand}\"", xaml, StringComparison.Ordinal);
@@ -41,6 +45,12 @@ public sealed class BudgetPageBindingTests
         Assert.Contains("Text=\"{Binding ProgramBudgetCapText, UpdateSourceTrigger=PropertyChanged}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("SelectedDate=\"{Binding ProgramStartDate}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("SelectedDate=\"{Binding ProgramEndDate}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("ItemsSource=\"{Binding LedgerEntriesView}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("SelectedItem=\"{Binding SelectedLedgerEntry, Mode=TwoWay}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("ScrollViewer.HorizontalScrollBarVisibility=\"Auto\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Visibility=\"{Binding IsLedgerHistoryCardOpen, Converter={StaticResource BooleanToVisibilityConverter}}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding CloseLedgerHistoryCardCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding SelectedLedgerEntry.ProgramName, TargetNullValue=--}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Header=\"Release\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Binding=\"{Binding ReleaseKind}\"", xaml, StringComparison.Ordinal);
     }
