@@ -83,12 +83,7 @@ namespace AttendanceShiftingManagement.Views
 
         private void OpenAppDatabaseSettings_Click(object sender, RoutedEventArgs e)
         {
-            if (!ViewModel.IsSensitiveSettingsUnlocked)
-            {
-                return;
-            }
-
-            var window = new ConnectionSettingsWindow(selectionOnly: false)
+            var window = new ConnectionSettingsWindow(selectionOnly: false, requireOtpOnSave: true)
             {
                 Owner = this
             };
@@ -102,6 +97,14 @@ namespace AttendanceShiftingManagement.Views
             if (sender is PasswordBox passwordBox)
             {
                 ViewModel.CurrentPassword = passwordBox.Password;
+            }
+        }
+
+        private void ProtectedSettingsUnlockPasswordBox_PasswordChanged(object sender, RoutedEventArgs e)
+        {
+            if (sender is PasswordBox passwordBox)
+            {
+                ViewModel.SensitiveSettingsUnlockPassword = passwordBox.Password;
             }
         }
 

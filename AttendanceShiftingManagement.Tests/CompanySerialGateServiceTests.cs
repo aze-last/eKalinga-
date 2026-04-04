@@ -77,4 +77,32 @@ public sealed class CompanySerialGateServiceTests
         Assert.Equal("BAS-20260327-AB12", registration.CompanySerialNumber);
         Assert.Equal("Barangay San Isidro", registration.CompanyName);
     }
+
+    [Fact]
+    public void ValidateOrBind_WhenEnforcementIsDisabled_AllowsMismatchedSerial()
+    {
+        using var context = TestDbContextFactory.CreateContext();
+        context.SystemRegistrations.Add(new SystemRegistration
+        {
+            CompanySerialNumber = "BAS-20260327-AB12",
+            CompanyName = "Barangay San Isidro"
+        });
+        context.SaveChanges();
+
+        var result = CompanySerialGateService.ValidateOrBind(
+            context,
+            new SystemProfileSettingsModel
+            {
+                Owner = "Barangay Mabini",
+                InstallSerial = "BAS-20260327-ZZ99"
+            },
+            enforceGate: false);
+
+        Assert.True(result.IsSuccess);
+        Assert.Contains("disabled", result.Message, StringComparison.OrdinalIgnoreCase);
+
+        var registration = Assert.Single(context.SystemRegistrations);
+        Assert.Equal("BAS-20260327-AB12", registration.CompanySerialNumber);
+        Assert.Equal("Barangay San Isidro", registration.CompanyName);
+    }
 }

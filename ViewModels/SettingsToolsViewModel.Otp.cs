@@ -1,4 +1,5 @@
 using AttendanceShiftingManagement.Helpers;
+using AttendanceShiftingManagement.Models;
 using AttendanceShiftingManagement.Services;
 using System.Globalization;
 using System.Windows.Input;
@@ -16,6 +17,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private const string SharedProtectedSettingsPurposeLabel = "Remote Snapshot, App Database, and GGMS Budget Source";
         private const string PasswordChangePurposeLabel = "password change";
 
+        private RelayCommand _unlockSensitiveSettingsCommand = null!;
         private RelayCommand _sendSensitiveSettingsOtpCommand = null!;
         private RelayCommand _verifySensitiveSettingsOtpCommand = null!;
         private RelayCommand _resendSensitiveSettingsOtpCommand = null!;
@@ -25,10 +27,17 @@ namespace AttendanceShiftingManagement.ViewModels
         private DispatcherTimer _otpStateTimer = null!;
 
         private OtpChallengeSession? _sensitiveSettingsOtpSession;
+        private string _sensitiveSettingsUnlockPassword = string.Empty;
+        private string _sensitiveSettingsUnlockStatusMessage = "Re-enter the current admin password to unlock protected settings.";
+        private Brush _sensitiveSettingsUnlockStatusBrush = CreateBrush("#6B7280");
         private string _sensitiveSettingsOtpCode = string.Empty;
-        private string _sensitiveSettingsOtpStatusMessage = "Protected settings require OTP verification sent to the Official Email in System Profile.";
+        private string _sensitiveSettingsOtpStatusMessage = "OTP is only required when protected settings changes are being saved.";
         private Brush _sensitiveSettingsOtpStatusBrush = CreateBrush("#6B7280");
         private bool _isSensitiveSettingsUnlocked;
+        private bool _hasSensitiveSettingsSaveAuthorization;
+        private bool _showSensitiveSettingsOtpPanel;
+        private Action? _pendingSensitiveSettingsAuthorizationAction;
+        private string _pendingSensitiveSettingsActionDescription = SharedProtectedSettingsPurposeLabel;
 
         private OtpChallengeSession? _passwordChangeOtpSession;
         private DateTimeOffset? _passwordChangeOtpAuthorizedUntil;
@@ -39,6 +48,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private void InitializeOtpState()
         {
+            _unlockSensitiveSettingsCommand = new RelayCommand(_ => UnlockSensitiveSettings(), _ => CanUnlockSensitiveSettings);
             _sendSensitiveSettingsOtpCommand = new RelayCommand(async _ => await SendSensitiveSettingsOtpAsync(isResend: false), _ => CanSendSensitiveSettingsOtp);
             _verifySensitiveSettingsOtpCommand = new RelayCommand(_ => VerifySensitiveSettingsOtp(), _ => CanVerifySensitiveSettingsOtp);
             _resendSensitiveSettingsOtpCommand = new RelayCommand(async _ => await SendSensitiveSettingsOtpAsync(isResend: true), _ => CanResendSensitiveSettingsOtp);
@@ -75,8 +85,50 @@ namespace AttendanceShiftingManagement.ViewModels
 
         public bool IsSensitiveSettingsLocked => !IsSensitiveSettingsUnlocked;
 
+        public string SensitiveSettingsUnlockPassword
+        {
+            get => _sensitiveSettingsUnlockPassword;
+            set
+            {
+                if (SetProperty(ref _sensitiveSettingsUnlockPassword, value))
+                {
+                    _unlockSensitiveSettingsCommand.RaiseCanExecuteChanged();
+                }
+            }
+        }
+
+        public string SensitiveSettingsUnlockPromptText => !HasCurrentUser
+            ? "Sign in with the current admin account first before unlocking protected settings."
+            : _currentUser?.Role != UserRole.Admin
+                ? "Only admin accounts can unlock protected settings."
+                : "Re-enter the current admin password to unlock Remote Snapshot, App Database, and GGMS Budget Source.";
+
+        public string SensitiveSettingsUnlockStatusMessage
+        {
+            get => _sensitiveSettingsUnlockStatusMessage;
+            private set => SetProperty(ref _sensitiveSettingsUnlockStatusMessage, value);
+        }
+
+        public Brush SensitiveSettingsUnlockStatusBrush
+        {
+            get => _sensitiveSettingsUnlockStatusBrush;
+            private set => SetProperty(ref _sensitiveSettingsUnlockStatusBrush, value);
+        }
+
+        public bool ShowSensitiveSettingsOtpPanel
+        {
+            get => _showSensitiveSettingsOtpPanel;
+            private set
+            {
+                if (SetProperty(ref _showSensitiveSettingsOtpPanel, value))
+                {
+                    RaiseOtpCommandStates();
+                }
+            }
+        }
+
         public string SensitiveSettingsOtpPromptText => HasValidOfficialEmailForOtp
-            ? $"Unlock Remote Snapshot, App Database, and GGMS Budget Source for this Settings session using one OTP sent to {OfficialEmailMask}."
+            ? $"OTP is only required if you save changes to {_pendingSensitiveSettingsActionDescription}. Send the code to {OfficialEmailMask}, then verify it before the save continues."
             : "Save a valid Official Email in System Profile first before requesting access to protected settings.";
 
         public string SensitiveSettingsOtpCode
@@ -105,21 +157,31 @@ namespace AttendanceShiftingManagement.ViewModels
 
         public string SensitiveSettingsOtpResendButtonText => BuildResendButtonText(_sensitiveSettingsOtpSession);
 
+        public bool CanUnlockSensitiveSettings =>
+            !IsBusy
+            && IsSensitiveSettingsLocked
+            && HasCurrentUser
+            && _currentUser?.Role == UserRole.Admin
+            && !string.IsNullOrWhiteSpace(SensitiveSettingsUnlockPassword);
+
         public bool CanSendSensitiveSettingsOtp =>
             !IsBusy
-            && !IsSensitiveSettingsUnlocked
+            && ShowSensitiveSettingsOtpPanel
+            && !_hasSensitiveSettingsSaveAuthorization
             && HasValidOfficialEmailForOtp
             && _sensitiveSettingsOtpSession == null;
 
         public bool CanResendSensitiveSettingsOtp =>
             !IsBusy
-            && !IsSensitiveSettingsUnlocked
+            && ShowSensitiveSettingsOtpPanel
+            && !_hasSensitiveSettingsSaveAuthorization
             && HasValidOfficialEmailForOtp
             && _sensitiveSettingsOtpSession != null
             && OtpChallengeService.CanResend(_sensitiveSettingsOtpSession, DateTimeOffset.UtcNow);
 
         public bool CanVerifySensitiveSettingsOtp =>
             !IsBusy
+            && ShowSensitiveSettingsOtpPanel
             && _sensitiveSettingsOtpSession != null
             && !string.IsNullOrWhiteSpace(SensitiveSettingsOtpCode);
 
@@ -190,6 +252,7 @@ namespace AttendanceShiftingManagement.ViewModels
             && _passwordChangeOtpSession != null
             && !string.IsNullOrWhiteSpace(PasswordChangeOtpCode);
 
+        public ICommand UnlockSensitiveSettingsCommand => _unlockSensitiveSettingsCommand;
         public ICommand SendSensitiveSettingsOtpCommand => _sendSensitiveSettingsOtpCommand;
         public ICommand VerifySensitiveSettingsOtpCommand => _verifySensitiveSettingsOtpCommand;
         public ICommand ResendSensitiveSettingsOtpCommand => _resendSensitiveSettingsOtpCommand;
@@ -223,6 +286,58 @@ namespace AttendanceShiftingManagement.ViewModels
             CompletePasswordChange();
         }
 
+        private void UnlockSensitiveSettings()
+        {
+            if (_currentUser == null)
+            {
+                SetSensitiveSettingsUnlockError("Sign in with the current admin account first before unlocking protected settings.");
+                return;
+            }
+
+            if (_currentUser.Role != UserRole.Admin)
+            {
+                SetSensitiveSettingsUnlockError("Only admin accounts can unlock protected settings.");
+                return;
+            }
+
+            using var context = _dbContextFactory();
+            var result = UserAccountSettingsService.VerifyCurrentPassword(context, _currentUser, SensitiveSettingsUnlockPassword);
+            if (!result.IsSuccess)
+            {
+                SetSensitiveSettingsUnlockError(result.Message);
+                return;
+            }
+
+            SensitiveSettingsUnlockPassword = string.Empty;
+            IsSensitiveSettingsUnlocked = true;
+            SetSensitiveSettingsUnlockSuccess("Protected settings unlocked for this Settings session.");
+        }
+
+        private bool RequireSensitiveSettingsAuthorization(string actionDescription, Action onAuthorized)
+        {
+            if (_hasSensitiveSettingsSaveAuthorization)
+            {
+                return true;
+            }
+
+            _pendingSensitiveSettingsAuthorizationAction = onAuthorized;
+            _pendingSensitiveSettingsActionDescription = string.IsNullOrWhiteSpace(actionDescription)
+                ? SharedProtectedSettingsPurposeLabel
+                : actionDescription.Trim();
+            ShowSensitiveSettingsOtpPanel = true;
+
+            if (!HasValidOfficialEmailForOtp)
+            {
+                var message = "Save a valid Official Email in System Profile first before requesting OTP access.";
+                SetSensitiveSettingsOtpError(message);
+                return false;
+            }
+
+            SetSensitiveSettingsOtpNeutral($"OTP is required only because you changed {_pendingSensitiveSettingsActionDescription}. Send and verify the code before saving.");
+            RaiseOtpPropertyChanges();
+            return false;
+        }
+
         public void Dispose()
         {
             _otpStateTimer.Stop();
@@ -232,6 +347,8 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private async Task SendSensitiveSettingsOtpAsync(bool isResend)
         {
+            ShowSensitiveSettingsOtpPanel = true;
+
             if (!TryGetOfficialEmailRecipient(out var recipientEmail, out var validationMessage))
             {
                 SetSensitiveSettingsOtpError(validationMessage);
@@ -290,8 +407,13 @@ namespace AttendanceShiftingManagement.ViewModels
             }
 
             ResetSensitiveSettingsOtpSession(clearUnlockState: false);
-            IsSensitiveSettingsUnlocked = true;
-            SetSensitiveSettingsOtpSuccess("Protected settings unlocked for this Settings session.");
+            ShowSensitiveSettingsOtpPanel = false;
+            SetSensitiveSettingsOtpSuccess("OTP verified. Protected settings can be saved for this Settings session.");
+            _hasSensitiveSettingsSaveAuthorization = true;
+
+            var pendingAction = _pendingSensitiveSettingsAuthorizationAction;
+            _pendingSensitiveSettingsAuthorizationAction = null;
+            pendingAction?.Invoke();
         }
 
         private async Task SendPasswordChangeOtpAsync(bool isResend)
@@ -445,6 +567,11 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             _sensitiveSettingsOtpSession = null;
             SensitiveSettingsOtpCode = string.Empty;
+            ShowSensitiveSettingsOtpPanel = false;
+            SensitiveSettingsUnlockPassword = string.Empty;
+            _pendingSensitiveSettingsAuthorizationAction = null;
+            _pendingSensitiveSettingsActionDescription = SharedProtectedSettingsPurposeLabel;
+            _hasSensitiveSettingsSaveAuthorization = false;
             _passwordChangeOtpSession = null;
             _passwordChangeOtpAuthorizedUntil = null;
             PasswordChangeOtpCode = string.Empty;
@@ -461,10 +588,15 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             _sensitiveSettingsOtpSession = null;
             SensitiveSettingsOtpCode = string.Empty;
+            _hasSensitiveSettingsSaveAuthorization = false;
 
             if (clearUnlockState)
             {
                 IsSensitiveSettingsUnlocked = false;
+                ShowSensitiveSettingsOtpPanel = false;
+                SensitiveSettingsUnlockPassword = string.Empty;
+                _pendingSensitiveSettingsAuthorizationAction = null;
+                _pendingSensitiveSettingsActionDescription = SharedProtectedSettingsPurposeLabel;
             }
 
             RaiseOtpPropertyChanges();
@@ -541,6 +673,10 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             OnPropertyChanged(nameof(HasValidOfficialEmailForOtp));
             OnPropertyChanged(nameof(OfficialEmailMask));
+            OnPropertyChanged(nameof(SensitiveSettingsUnlockPromptText));
+            OnPropertyChanged(nameof(SensitiveSettingsUnlockStatusMessage));
+            OnPropertyChanged(nameof(SensitiveSettingsUnlockStatusBrush));
+            OnPropertyChanged(nameof(ShowSensitiveSettingsOtpPanel));
             OnPropertyChanged(nameof(IsSensitiveSettingsLocked));
             OnPropertyChanged(nameof(SensitiveSettingsOtpPromptText));
             OnPropertyChanged(nameof(SensitiveSettingsOtpResendButtonText));
@@ -552,6 +688,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private void RaiseOtpCommandStates()
         {
+            _unlockSensitiveSettingsCommand?.RaiseCanExecuteChanged();
             _sendSensitiveSettingsOtpCommand?.RaiseCanExecuteChanged();
             _verifySensitiveSettingsOtpCommand?.RaiseCanExecuteChanged();
             _resendSensitiveSettingsOtpCommand?.RaiseCanExecuteChanged();
@@ -565,6 +702,24 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             SensitiveSettingsOtpStatusMessage = message;
             SensitiveSettingsOtpStatusBrush = CreateBrush("#6B7280");
+        }
+
+        private void SetSensitiveSettingsUnlockNeutral(string message)
+        {
+            SensitiveSettingsUnlockStatusMessage = message;
+            SensitiveSettingsUnlockStatusBrush = CreateBrush("#6B7280");
+        }
+
+        private void SetSensitiveSettingsUnlockSuccess(string message)
+        {
+            SensitiveSettingsUnlockStatusMessage = message;
+            SensitiveSettingsUnlockStatusBrush = CreateBrush("#1A7A4A");
+        }
+
+        private void SetSensitiveSettingsUnlockError(string message)
+        {
+            SensitiveSettingsUnlockStatusMessage = message;
+            SensitiveSettingsUnlockStatusBrush = CreateBrush("#991B1B");
         }
 
         private void SetSensitiveSettingsOtpSuccess(string message)

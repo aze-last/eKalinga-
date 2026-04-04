@@ -1,3 +1,4 @@
+using AttendanceShiftingManagement.Services;
 using AttendanceShiftingManagement.ViewModels;
 
 namespace AttendanceShiftingManagement.Tests;
@@ -88,5 +89,85 @@ public sealed class ConnectionSettingsViewModelTests
 
         viewModel.SelectRemotePresetCommand.Execute(null);
         Assert.True(viewModel.TestConnectionCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void AdminMode_WhenOtpIsRequired_SaveWithoutChanges_DoesNotOpenOtpPanel()
+    {
+        var saveCallCount = 0;
+        bool? closeResult = null;
+        var viewModel = new ConnectionSettingsViewModel(
+            selectionOnly: false,
+            requireOtpOnSave: true,
+            initialSettings: BuildEditableSettings(),
+            saveSettings: _ => saveCallCount++);
+
+        viewModel.CloseRequested += result => closeResult = result;
+
+        viewModel.SaveCommand.Execute(null);
+
+        Assert.False(viewModel.ShowSaveOtpPanel);
+        Assert.Equal(1, saveCallCount);
+        Assert.True(closeResult);
+    }
+
+    [Fact]
+    public void AdminMode_WhenOtpIsRequired_SaveWithChanges_OpensOtpPanelBeforeSaving()
+    {
+        var saveCallCount = 0;
+        bool? closeResult = null;
+        var viewModel = new ConnectionSettingsViewModel(
+            selectionOnly: false,
+            requireOtpOnSave: true,
+            initialSettings: BuildEditableSettings(),
+            saveSettings: _ => saveCallCount++);
+
+        viewModel.CloseRequested += result => closeResult = result;
+        viewModel.SelectLanPresetCommand.Execute(null);
+        viewModel.Server = "10.0.0.55";
+
+        viewModel.SaveCommand.Execute(null);
+
+        Assert.True(viewModel.ShowSaveOtpPanel);
+        Assert.Equal(0, saveCallCount);
+        Assert.Null(closeResult);
+    }
+
+    private static ConnectionSettingsModel BuildEditableSettings()
+    {
+        return new ConnectionSettingsModel
+        {
+            SelectedPreset = "Local",
+            Presets = new Dictionary<string, DatabaseConnectionPreset>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Local"] = new DatabaseConnectionPreset
+                {
+                    DisplayName = "Local",
+                    Server = "127.0.0.1",
+                    Port = 3306,
+                    Database = "local_db",
+                    Username = "root",
+                    Password = "local"
+                },
+                ["Lan"] = new DatabaseConnectionPreset
+                {
+                    DisplayName = "Network (LAN)",
+                    Server = "192.168.1.10",
+                    Port = 3306,
+                    Database = "lan_db",
+                    Username = "lan_user",
+                    Password = "lan_pass"
+                },
+                ["Remote"] = new DatabaseConnectionPreset
+                {
+                    DisplayName = "Remote",
+                    Server = "db.example.com",
+                    Port = 3306,
+                    Database = "remote_db",
+                    Username = "remote_user",
+                    Password = "remote_pass"
+                }
+            }
+        };
     }
 }

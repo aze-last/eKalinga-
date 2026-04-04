@@ -69,6 +69,59 @@
                 BorderBrush="{StaticResource BrandBorderBrush}"
                 BorderThickness="0,1,0,0">
             <StackPanel>
+                <Border Margin="0,0,0,14"
+                        Padding="14"
+                        Background="#EEF4FF"
+                        BorderBrush="{StaticResource BrandBorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="10"
+                        Visibility="{Binding ShowSaveOtpPanel, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <StackPanel>
+                        <TextBlock Text="Save verification"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource BrandMidnightBrush}"/>
+                        <TextBlock Text="{Binding SaveOtpPromptText}"
+                                   Margin="0,6,0,0"
+                                   FontSize="12"
+                                   TextWrapping="Wrap"
+                                   Foreground="{StaticResource BrandTextSecondaryBrush}"/>
+
+                        <WrapPanel Margin="0,12,0,0">
+                            <Button Content="SEND OTP"
+                                    Margin="0,0,10,0"
+                                    Style="{StaticResource SecondaryActionButton}"
+                                    Command="{Binding SendSaveOtpCommand}"/>
+                            <Button Content="{Binding SaveOtpResendButtonText}"
+                                    Style="{StaticResource MaterialDesignOutlinedButton}"
+                                    Command="{Binding ResendSaveOtpCommand}"/>
+                        </WrapPanel>
+
+                        <Grid Margin="0,12,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="12"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <TextBox Grid.Column="0"
+                                     Text="{Binding SaveOtpCode, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     materialDesign:HintAssist.Hint="Enter 6-digit OTP"/>
+                            <Button Grid.Column="2"
+                                    MinWidth="132"
+                                    Content="VERIFY OTP"
+                                    Style="{StaticResource PrimaryActionButton}"
+                                    Command="{Binding VerifySaveOtpCommand}"/>
+                        </Grid>
+
+                        <TextBlock Margin="0,12,0,0"
+                                   Text="{Binding SaveOtpStatusMessage}"
+                                   Foreground="{Binding SaveOtpStatusBrush}"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Border>
+
                 <Border Padding="14,12"
                         Background="White"
                         BorderBrush="{StaticResource BrandBorderBrush}"

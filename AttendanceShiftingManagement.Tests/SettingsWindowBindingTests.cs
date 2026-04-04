@@ -49,7 +49,7 @@ public sealed class SettingsWindowBindingTests
     }
 
     [Fact]
-    public void SettingsWindow_ExposesOtpProtectionBindings_ForProtectedSettingsAndPasswordChange()
+    public void SettingsWindow_UsesPasswordUnlockOverlay_AndLazyOtpSaveBindings()
     {
         var windowPath = Path.GetFullPath(Path.Combine(
             AppContext.BaseDirectory,
@@ -62,7 +62,11 @@ public sealed class SettingsWindowBindingTests
 
         var xaml = File.ReadAllText(windowPath);
 
-        Assert.Contains("ContentTemplate=\"{StaticResource ProtectedSettingsOtpOverlayTemplate}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Style x:Key=\"ProtectedSettingsContentGridStyle\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Binding=\"{Binding IsSensitiveSettingsLocked}\" Value=\"True\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("PasswordChanged=\"ProtectedSettingsUnlockPasswordBox_PasswordChanged\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding UnlockSensitiveSettingsCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Visibility=\"{Binding ShowSensitiveSettingsOtpPanel, Converter={StaticResource BooleanToVisibilityConverter}}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding SendSensitiveSettingsOtpCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding VerifySensitiveSettingsOtpCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding SendPasswordChangeOtpCommand}\"", xaml, StringComparison.Ordinal);

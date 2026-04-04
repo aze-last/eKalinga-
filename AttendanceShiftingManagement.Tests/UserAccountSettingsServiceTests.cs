@@ -87,6 +87,35 @@ public sealed class UserAccountSettingsServiceTests
     }
 
     [Fact]
+    public void VerifyCurrentPassword_WhenPasswordMatches_ReturnsSuccess()
+    {
+        using var context = TestDbContextFactory.CreateContext();
+        var sessionUser = SeedUser(context, "captain", "captain@barangay.local", "Password123!", "Barangay Captain", "09170000001");
+
+        var result = UserAccountSettingsService.VerifyCurrentPassword(
+            context,
+            sessionUser,
+            "Password123!");
+
+        Assert.True(result.IsSuccess);
+    }
+
+    [Fact]
+    public void VerifyCurrentPassword_WhenPasswordIsInvalid_ReturnsFailure()
+    {
+        using var context = TestDbContextFactory.CreateContext();
+        var sessionUser = SeedUser(context, "captain", "captain@barangay.local", "Password123!", "Barangay Captain", "09170000001");
+
+        var result = UserAccountSettingsService.VerifyCurrentPassword(
+            context,
+            sessionUser,
+            "wrong-password");
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal("The current password is incorrect.", result.Message);
+    }
+
+    [Fact]
     public void ChangePassword_WhenValid_HashesNewPasswordAndWritesAudit()
     {
         using var context = TestDbContextFactory.CreateContext();

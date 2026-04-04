@@ -1,12 +1,12 @@
 {
-  "version": "1.0.3",
+  "version": "1.0.4",
   "notes": [
-    "Prepared version 1.0.3 for updater verification on the laptop.",
+    "Prepared version 1.0.4 for updater verification on the laptop.",
     "Includes the latest shell, budget, cash-for-work, and aid-request UI updates."
   ],
-  "publishedAt": "2026-04-03",
-  "releasePageUrl": "https://github.com/aze-last/BarangayAyudaSys/releases/tag/v1.0.3",
-  "installerFileName": "eKalingaPlus-Setup-1.0.3.exe",
-  "installerUrl": "https://github.com/aze-last/BarangayAyudaSys/releases/download/v1.0.3/eKalingaPlus-Setup-1.0.3.exe",
-  "sha256": "777da86276dc3f0d7d0be2a40381310998c7d58ebd09b5e25f054273078744ae"
+  "publishedAt": "2026-04-04",
+  "releasePageUrl": "https://github.com/aze-last/BarangayAyudaSys/releases/tag/v1.0.4",
+  "installerFileName": "eKalingaPlus-Setup-1.0.4.exe",
+  "installerUrl": "https://github.com/aze-last/BarangayAyudaSys/releases/download/v1.0.4/eKalingaPlus-Setup-1.0.4.exe",
+  "sha256": "06339efa291a6f4a92f693f1d0ab744b75cd085e981f0215a0f297b5fbdfd3cb"
 }

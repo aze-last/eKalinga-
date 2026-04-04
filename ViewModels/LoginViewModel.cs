@@ -460,11 +460,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private static void EnsureDatabaseReady()
         {
-            var configuration = new ConfigurationBuilder()
-                .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
-                .AddJsonFile("appsettings.json", optional: false)
-                .Build();
-
+            var configuration = BuildAppConfiguration();
             var resetDb = configuration.GetValue("Database:ResetOnStartup", false);
             var migrateOnStartup = configuration.GetValue("Database:MigrateOnStartup", false);
             DatabaseInitializer.Initialize(resetDb, migrateOnStartup);
@@ -472,12 +468,27 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private CompanySerialValidationResult ValidateCompanySerial(AppDbContext context)
         {
-            var localSettings = SystemProfileSettingsService.Load();
-            var result = CompanySerialGateService.ValidateOrBind(context, localSettings);
+            _ = context;
+            var localCompanySerial = (SystemProfileSettingsService.Load().InstallSerial ?? string.Empty)
+                .Trim()
+                .ToUpperInvariant();
+            var result = new CompanySerialValidationResult(
+                true,
+                false,
+                "Company serial is shown for reference only.",
+                localCompanySerial);
             _isCompanySerialAccessValid = result.IsSuccess;
             _loginCommand.RaiseCanExecuteChanged();
             _createInitialAdminCommand.RaiseCanExecuteChanged();
             return result;
+        }
+
+        private static IConfiguration BuildAppConfiguration()
+        {
+            return new ConfigurationBuilder()
+                .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
+                .AddJsonFile("appsettings.json", optional: false)
+                .Build();
         }
     }
 }

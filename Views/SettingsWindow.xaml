@@ -24,99 +24,6 @@
                 </DataTrigger>
             </Style.Triggers>
         </Style>
-
-        <DataTemplate x:Key="ProtectedSettingsOtpOverlayTemplate">
-            <Grid Background="#70FFFFFF">
-                <Border MaxWidth="560"
-                        Margin="24"
-                        Padding="22"
-                        CornerRadius="18"
-                        BorderBrush="{StaticResource BrandBorderBrush}"
-                        BorderThickness="1"
-                        Background="White"
-                        HorizontalAlignment="Center"
-                        VerticalAlignment="Center">
-                    <StackPanel>
-                        <StackPanel Orientation="Horizontal">
-                            <Border Width="42"
-                                    Height="42"
-                                    CornerRadius="21"
-                                    Background="#EEF4FF"
-                                    VerticalAlignment="Top">
-                                <materialDesign:PackIcon Kind="ShieldLockOutline"
-                                                         Width="22"
-                                                         Height="22"
-                                                         Foreground="{StaticResource BrandMidnightBrush}"
-                                                         HorizontalAlignment="Center"
-                                                         VerticalAlignment="Center" />
-                            </Border>
-
-                            <StackPanel Margin="12,0,0,0">
-                                <TextBlock Text="Protected settings"
-                                           FontSize="16"
-                                           FontWeight="SemiBold"
-                                           Foreground="{StaticResource BrandMidnightBrush}" />
-                                <TextBlock Margin="0,6,0,0"
-                                           Text="{Binding SensitiveSettingsOtpPromptText}"
-                                           Foreground="{StaticResource BrandTextSecondaryBrush}"
-                                           TextWrapping="Wrap" />
-                            </StackPanel>
-                        </StackPanel>
-
-                        <Border Margin="0,16,0,0"
-                                Padding="12"
-                                Background="{StaticResource BrandSurfaceBrush}"
-                                BorderBrush="{StaticResource BrandBorderBrush}"
-                                BorderThickness="1"
-                                CornerRadius="12">
-                            <StackPanel Orientation="Horizontal">
-                                <materialDesign:PackIcon Kind="EmailOutline"
-                                                         Width="18"
-                                                         Height="18"
-                                                         Foreground="{StaticResource BrandMidnightBrush}" />
-                                <TextBlock Margin="8,0,0,0"
-                                           Text="{Binding OfficialEmailMask}"
-                                           FontWeight="SemiBold"
-                                           Foreground="{StaticResource BrandMidnightBrush}" />
-                            </StackPanel>
-                        </Border>
-
-                        <WrapPanel Margin="0,16,0,0">
-                            <Button Content="SEND OTP"
-                                    Style="{StaticResource SecondaryActionButton}"
-                                    Command="{Binding SendSensitiveSettingsOtpCommand}" />
-                            <Button Margin="10,0,0,0"
-                                    Content="{Binding SensitiveSettingsOtpResendButtonText}"
-                                    Style="{StaticResource MaterialDesignOutlinedButton}"
-                                    Command="{Binding ResendSensitiveSettingsOtpCommand}" />
-                        </WrapPanel>
-
-                        <Grid Margin="0,16,0,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="12" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-
-                            <TextBox Grid.Column="0"
-                                     Text="{Binding SensitiveSettingsOtpCode, UpdateSourceTrigger=PropertyChanged}"
-                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                     materialDesign:HintAssist.Hint="Enter 6-digit OTP" />
-                            <Button Grid.Column="2"
-                                    MinWidth="132"
-                                    Content="VERIFY OTP"
-                                    Style="{StaticResource PrimaryActionButton}"
-                                    Command="{Binding VerifySensitiveSettingsOtpCommand}" />
-                        </Grid>
-
-                        <TextBlock Margin="0,14,0,0"
-                                   Text="{Binding SensitiveSettingsOtpStatusMessage}"
-                                   Foreground="{Binding SensitiveSettingsOtpStatusBrush}"
-                                   TextWrapping="Wrap" />
-                    </StackPanel>
-                </Border>
-            </Grid>
-        </DataTemplate>
     </Window.Resources>
 
     <Grid Margin="24">
@@ -166,6 +73,76 @@
                                 Command="{Binding RemindMeLaterCommand}"
                                 Visibility="{Binding ShowPendingUpdateActions, Converter={StaticResource BooleanToVisibilityConverter}}" />
                     </WrapPanel>
+                </StackPanel>
+            </Border>
+
+            <Border Margin="0,14,0,0"
+                    Padding="18"
+                    Background="#EEF4FF"
+                    BorderBrush="{StaticResource BrandBorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="12"
+                    Visibility="{Binding ShowSensitiveSettingsOtpPanel, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <StackPanel>
+                    <TextBlock Text="Protected settings save verification"
+                               FontSize="14"
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource BrandMidnightBrush}" />
+                    <TextBlock Margin="0,6,0,0"
+                               Text="{Binding SensitiveSettingsOtpPromptText}"
+                               Foreground="{StaticResource BrandTextSecondaryBrush}"
+                               TextWrapping="Wrap" />
+
+                    <Border Margin="0,12,0,0"
+                            Padding="12"
+                            Background="White"
+                            BorderBrush="{StaticResource BrandBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="10">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="EmailOutline"
+                                                     Width="18"
+                                                     Height="18"
+                                                     Foreground="{StaticResource BrandMidnightBrush}" />
+                            <TextBlock Margin="8,0,0,0"
+                                       Text="{Binding OfficialEmailMask}"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrandMidnightBrush}" />
+                        </StackPanel>
+                    </Border>
+
+                    <WrapPanel Margin="0,12,0,0">
+                        <Button Content="SEND OTP"
+                                Style="{StaticResource SecondaryActionButton}"
+                                Command="{Binding SendSensitiveSettingsOtpCommand}" />
+                        <Button Margin="10,0,0,0"
+                                Content="{Binding SensitiveSettingsOtpResendButtonText}"
+                                Style="{StaticResource MaterialDesignOutlinedButton}"
+                                Command="{Binding ResendSensitiveSettingsOtpCommand}" />
+                    </WrapPanel>
+
+                    <Grid Margin="0,12,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="12" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <TextBox Grid.Column="0"
+                                 Text="{Binding SensitiveSettingsOtpCode, UpdateSourceTrigger=PropertyChanged}"
+                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                 materialDesign:HintAssist.Hint="Enter 6-digit OTP" />
+                        <Button Grid.Column="2"
+                                MinWidth="132"
+                                Content="VERIFY OTP"
+                                Style="{StaticResource PrimaryActionButton}"
+                                Command="{Binding VerifySensitiveSettingsOtpCommand}" />
+                    </Grid>
+
+                    <TextBlock Margin="0,12,0,0"
+                               Text="{Binding SensitiveSettingsOtpStatusMessage}"
+                               Foreground="{Binding SensitiveSettingsOtpStatusBrush}"
+                               TextWrapping="Wrap" />
                 </StackPanel>
             </Border>
         </StackPanel>
@@ -615,17 +592,17 @@
             <TabItem Header="Remote Snapshot">
                 <Grid Margin="0,20,0,0">
                     <Grid Style="{StaticResource ProtectedSettingsContentGridStyle}">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                    </Grid.RowDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
 
-                    <Grid Grid.Row="0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="2.2*" />
-                            <ColumnDefinition Width="16" />
-                            <ColumnDefinition Width="1.2*" />
-                        </Grid.ColumnDefinitions>
+                        <Grid Grid.Row="0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="2.2*" />
+                                <ColumnDefinition Width="16" />
+                                <ColumnDefinition Width="1.2*" />
+                            </Grid.ColumnDefinitions>
 
                         <Border Grid.Column="0"
                                 Background="White"
@@ -808,21 +785,21 @@
                                         Command="{Binding OpenAdvancedLoadTablesCommand}" />
                             </StackPanel>
                         </Border>
-                    </Grid>
+                        </Grid>
 
-                    <Border Grid.Row="1"
-                            Margin="0,18,0,0"
-                            Background="White"
-                            BorderBrush="{StaticResource BrandBorderBrush}"
-                            BorderThickness="1"
-                            CornerRadius="14"
-                            Padding="20">
-                        <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="*" />
-                            </Grid.RowDefinitions>
+                        <Border Grid.Row="1"
+                                Margin="0,18,0,0"
+                                Background="White"
+                                BorderBrush="{StaticResource BrandBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="14"
+                                Padding="20">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
 
                             <DockPanel>
                                 <TextBlock Text="{Binding PreviewCardTitle}"
@@ -856,14 +833,46 @@
                                       CanUserDeleteRows="False"
                                       IsReadOnly="True"
                                       MinHeight="300" />
-                        </Grid>
-                    </Border>
-
+                            </Grid>
+                        </Border>
                     </Grid>
-                    <ContentControl Panel.ZIndex="10"
-                                    Content="{Binding}"
-                                    ContentTemplate="{StaticResource ProtectedSettingsOtpOverlayTemplate}"
-                                    Visibility="{Binding IsSensitiveSettingsLocked, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+                    <Border Panel.ZIndex="10"
+                            Background="#70FFFFFF"
+                            Visibility="{Binding IsSensitiveSettingsLocked, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Border MaxWidth="560"
+                                Margin="24"
+                                Padding="22"
+                                CornerRadius="18"
+                                BorderBrush="{StaticResource BrandBorderBrush}"
+                                BorderThickness="1"
+                                Background="White"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center">
+                            <StackPanel>
+                                <TextBlock Text="Protected settings"
+                                           FontSize="16"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource BrandMidnightBrush}" />
+                                <TextBlock Margin="0,8,0,0"
+                                           Text="{Binding SensitiveSettingsUnlockPromptText}"
+                                           Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                           TextWrapping="Wrap" />
+                                <PasswordBox Margin="0,16,0,0"
+                                             PasswordChanged="ProtectedSettingsUnlockPasswordBox_PasswordChanged"
+                                             Style="{StaticResource MaterialDesignOutlinedPasswordBox}"
+                                             materialDesign:HintAssist.Hint="Re-enter admin password" />
+                                <Button Margin="0,16,0,0"
+                                        Content="UNLOCK PROTECTED SETTINGS"
+                                        Style="{StaticResource PrimaryActionButton}"
+                                        Command="{Binding UnlockSensitiveSettingsCommand}" />
+                                <TextBlock Margin="0,12,0,0"
+                                           Text="{Binding SensitiveSettingsUnlockStatusMessage}"
+                                           Foreground="{Binding SensitiveSettingsUnlockStatusBrush}"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+                    </Border>
                 </Grid>
             </TabItem>
 
@@ -1002,154 +1011,218 @@
             <TabItem Header="App Database">
                 <Grid Margin="0,20,0,0">
                     <Grid Style="{StaticResource ProtectedSettingsContentGridStyle}">
-                    <Border Background="White"
-                            BorderBrush="{StaticResource BrandBorderBrush}"
-                            BorderThickness="1"
-                            CornerRadius="14"
-                            Padding="20">
-                        <StackPanel>
-                            <TextBlock Text="App Database Presets"
-                                       FontSize="15"
-                                       FontWeight="SemiBold"
-                                       Foreground="{StaticResource BrandMidnightBrush}" />
-                            <TextBlock Text="Choose which preset the app uses for login, startup initialization, dashboard reads, and local snapshots. Before login, users can switch presets and configure only Network (LAN). Local and Remote stay fixed by the shipped app configuration."
-                                       Margin="0,8,0,0"
-                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
-                                       TextWrapping="Wrap" />
-
-                            <TextBlock Margin="0,18,0,0"
-                                       Text="Current App Database"
-                                       FontWeight="SemiBold"
-                                       Foreground="{StaticResource BrandMidnightBrush}" />
-                            <TextBlock Margin="0,8,0,0"
-                                       Text="{Binding ActiveTargetSummary}"
-                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
-                                       TextWrapping="Wrap" />
-
-                            <Border Margin="0,16,0,0"
-                                    Padding="14"
-                                    CornerRadius="10"
-                                    Background="#FFF7D6">
-                                <TextBlock Text="Only Network (LAN) credentials are editable. Local and Remote are fixed by the shipped app configuration, and the migrate action below updates both Local and Remote after schema changes."
-                                           Foreground="#9A5A00"
+                        <Border Background="White"
+                                BorderBrush="{StaticResource BrandBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="14"
+                                Padding="20">
+                            <StackPanel>
+                                <TextBlock Text="App Database Presets"
+                                           FontSize="15"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource BrandMidnightBrush}" />
+                                <TextBlock Text="Choose which preset the app uses for login, startup initialization, dashboard reads, and local snapshots. Before login, users can switch presets and configure only Network (LAN). Local and Remote stay fixed by the shipped app configuration."
+                                           Margin="0,8,0,0"
+                                           Foreground="{StaticResource BrandTextSecondaryBrush}"
                                            TextWrapping="Wrap" />
-                            </Border>
 
-                            <WrapPanel Margin="0,18,0,0">
-                                <Button Width="250"
-                                        HorizontalAlignment="Left"
-                                        Content="OPEN APP DATABASE SETTINGS"
-                                        Style="{StaticResource PrimaryActionButton}"
-                                        Click="OpenAppDatabaseSettings_Click" />
-                                <Button Margin="12,0,0,0"
-                                        Content="MIGRATE LOCAL + REMOTE NOW"
-                                        Style="{StaticResource GoldActionButton}"
-                                        Command="{Binding MigrateLocalAndRemoteCommand}" />
-                            </WrapPanel>
+                                <TextBlock Margin="0,18,0,0"
+                                           Text="Current App Database"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource BrandMidnightBrush}" />
+                                <TextBlock Margin="0,8,0,0"
+                                           Text="{Binding ActiveTargetSummary}"
+                                           Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                           TextWrapping="Wrap" />
 
-                            <TextBlock Margin="0,14,0,0"
-                                       Text="{Binding AppDatabaseStatusMessage}"
-                                       Foreground="{Binding AppDatabaseStatusBrush}"
-                                       TextWrapping="Wrap" />
-                        </StackPanel>
-                    </Border>
+                                <Border Margin="0,16,0,0"
+                                        Padding="14"
+                                        CornerRadius="10"
+                                        Background="#FFF7D6">
+                                    <TextBlock Text="Only Network (LAN) credentials are editable. Local and Remote are fixed by the shipped app configuration, and the migrate action below updates both Local and Remote after schema changes."
+                                               Foreground="#9A5A00"
+                                               TextWrapping="Wrap" />
+                                </Border>
 
+                                <WrapPanel Margin="0,18,0,0">
+                                    <Button Width="250"
+                                            HorizontalAlignment="Left"
+                                            Content="OPEN APP DATABASE SETTINGS"
+                                            Style="{StaticResource PrimaryActionButton}"
+                                            Click="OpenAppDatabaseSettings_Click" />
+                                    <Button Margin="12,0,0,0"
+                                            Content="MIGRATE LOCAL + REMOTE NOW"
+                                            Style="{StaticResource GoldActionButton}"
+                                            Command="{Binding MigrateLocalAndRemoteCommand}" />
+                                </WrapPanel>
+
+                                <TextBlock Margin="0,14,0,0"
+                                           Text="{Binding AppDatabaseStatusMessage}"
+                                           Foreground="{Binding AppDatabaseStatusBrush}"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
                     </Grid>
-                    <ContentControl Panel.ZIndex="10"
-                                    Content="{Binding}"
-                                    ContentTemplate="{StaticResource ProtectedSettingsOtpOverlayTemplate}"
-                                    Visibility="{Binding IsSensitiveSettingsLocked, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+                    <Border Panel.ZIndex="10"
+                            Background="#70FFFFFF"
+                            Visibility="{Binding IsSensitiveSettingsLocked, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Border MaxWidth="560"
+                                Margin="24"
+                                Padding="22"
+                                CornerRadius="18"
+                                BorderBrush="{StaticResource BrandBorderBrush}"
+                                BorderThickness="1"
+                                Background="White"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center">
+                            <StackPanel>
+                                <TextBlock Text="Protected settings"
+                                           FontSize="16"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource BrandMidnightBrush}" />
+                                <TextBlock Margin="0,8,0,0"
+                                           Text="{Binding SensitiveSettingsUnlockPromptText}"
+                                           Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                           TextWrapping="Wrap" />
+                                <PasswordBox Margin="0,16,0,0"
+                                             PasswordChanged="ProtectedSettingsUnlockPasswordBox_PasswordChanged"
+                                             Style="{StaticResource MaterialDesignOutlinedPasswordBox}"
+                                             materialDesign:HintAssist.Hint="Re-enter admin password" />
+                                <Button Margin="0,16,0,0"
+                                        Content="UNLOCK PROTECTED SETTINGS"
+                                        Style="{StaticResource PrimaryActionButton}"
+                                        Command="{Binding UnlockSensitiveSettingsCommand}" />
+                                <TextBlock Margin="0,12,0,0"
+                                           Text="{Binding SensitiveSettingsUnlockStatusMessage}"
+                                           Foreground="{Binding SensitiveSettingsUnlockStatusBrush}"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+                    </Border>
                 </Grid>
             </TabItem>
 
             <TabItem Header="GGMS Budget Source">
                 <Grid Margin="0,20,0,0">
                     <Grid Style="{StaticResource ProtectedSettingsContentGridStyle}">
-                    <Border Background="White"
-                            BorderBrush="{StaticResource BrandBorderBrush}"
-                            BorderThickness="1"
-                            CornerRadius="14"
-                            Padding="20">
-                        <StackPanel>
-                            <TextBlock Text="GGMS Budget Source"
-                                       FontSize="15"
-                                       FontWeight="SemiBold"
-                                       Foreground="{StaticResource BrandMidnightBrush}" />
-                            <TextBlock Text="Configure the external GGMS source used by the budget module. Credentials stay outside the shipped installer, and the table names can be changed if your GGMS schema differs."
-                                       Margin="0,8,0,0"
-                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
-                                       TextWrapping="Wrap" />
+                        <Border Background="White"
+                                BorderBrush="{StaticResource BrandBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="14"
+                                Padding="20">
+                            <StackPanel>
+                                <TextBlock Text="GGMS Budget Source"
+                                           FontSize="15"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource BrandMidnightBrush}" />
+                                <TextBlock Text="Configure the external GGMS source used by the budget module. Credentials stay outside the shipped installer, and the table names can be changed if your GGMS schema differs."
+                                           Margin="0,8,0,0"
+                                           Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                           TextWrapping="Wrap" />
 
-                            <UniformGrid Margin="0,18,0,0" Columns="3">
-                                <TextBox Margin="0,0,8,0"
-                                         Text="{Binding GgmsOfficeCode, UpdateSourceTrigger=PropertyChanged}"
+                                <UniformGrid Margin="0,18,0,0" Columns="3">
+                                    <TextBox Margin="0,0,8,0"
+                                             Text="{Binding GgmsOfficeCode, UpdateSourceTrigger=PropertyChanged}"
+                                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                             materialDesign:HintAssist.Hint="Ayuda office code" />
+                                    <TextBox Margin="8,0,8,0"
+                                             Text="{Binding GgmsOfficeTable, UpdateSourceTrigger=PropertyChanged}"
+                                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                             materialDesign:HintAssist.Hint="Office table" />
+                                    <TextBox Margin="8,0,0,0"
+                                             Text="{Binding GgmsAllocationTable, UpdateSourceTrigger=PropertyChanged}"
+                                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                             materialDesign:HintAssist.Hint="Allocation table" />
+                                </UniformGrid>
+
+                                <Grid Margin="0,12,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="3*" />
+                                        <ColumnDefinition Width="12" />
+                                        <ColumnDefinition Width="1*" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBox Grid.Column="0"
+                                             Text="{Binding GgmsServer, UpdateSourceTrigger=PropertyChanged}"
+                                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                             materialDesign:HintAssist.Hint="GGMS server / host" />
+                                    <TextBox Grid.Column="2"
+                                             Text="{Binding GgmsPortText, UpdateSourceTrigger=PropertyChanged}"
+                                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                             materialDesign:HintAssist.Hint="Port" />
+                                </Grid>
+
+                                <TextBox Margin="0,12,0,0"
+                                         Text="{Binding GgmsDatabase, UpdateSourceTrigger=PropertyChanged}"
                                          Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                         materialDesign:HintAssist.Hint="Ayuda office code" />
-                                <TextBox Margin="8,0,8,0"
-                                         Text="{Binding GgmsOfficeTable, UpdateSourceTrigger=PropertyChanged}"
-                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                         materialDesign:HintAssist.Hint="Office table" />
-                                <TextBox Margin="8,0,0,0"
-                                         Text="{Binding GgmsAllocationTable, UpdateSourceTrigger=PropertyChanged}"
-                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                         materialDesign:HintAssist.Hint="Allocation table" />
-                            </UniformGrid>
+                                         materialDesign:HintAssist.Hint="GGMS database name" />
 
-                            <Grid Margin="0,12,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="3*" />
-                                    <ColumnDefinition Width="12" />
-                                    <ColumnDefinition Width="1*" />
-                                </Grid.ColumnDefinitions>
+                                <UniformGrid Margin="0,12,0,0" Columns="2">
+                                    <TextBox Margin="0,0,8,0"
+                                             Text="{Binding GgmsUsername, UpdateSourceTrigger=PropertyChanged}"
+                                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                             materialDesign:HintAssist.Hint="GGMS username" />
+                                    <TextBox Margin="8,0,0,0"
+                                             Text="{Binding GgmsPassword, UpdateSourceTrigger=PropertyChanged}"
+                                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                             materialDesign:HintAssist.Hint="GGMS password" />
+                                </UniformGrid>
 
-                                <TextBox Grid.Column="0"
-                                         Text="{Binding GgmsServer, UpdateSourceTrigger=PropertyChanged}"
-                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                         materialDesign:HintAssist.Hint="GGMS server / host" />
-                                <TextBox Grid.Column="2"
-                                         Text="{Binding GgmsPortText, UpdateSourceTrigger=PropertyChanged}"
-                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                         materialDesign:HintAssist.Hint="Port" />
-                            </Grid>
+                                <WrapPanel Margin="0,18,0,0">
+                                    <Button Content="TEST GGMS CONNECTION"
+                                            Margin="0,0,12,0"
+                                            Style="{StaticResource SecondaryActionButton}"
+                                            Command="{Binding TestGgmsConnectionCommand}" />
+                                    <Button Content="SAVE GGMS SETTINGS"
+                                            Style="{StaticResource GoldActionButton}"
+                                            Command="{Binding SaveGgmsSettingsCommand}" />
+                                </WrapPanel>
 
-                            <TextBox Margin="0,12,0,0"
-                                     Text="{Binding GgmsDatabase, UpdateSourceTrigger=PropertyChanged}"
-                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                     materialDesign:HintAssist.Hint="GGMS database name" />
-
-                            <UniformGrid Margin="0,12,0,0" Columns="2">
-                                <TextBox Margin="0,0,8,0"
-                                         Text="{Binding GgmsUsername, UpdateSourceTrigger=PropertyChanged}"
-                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                         materialDesign:HintAssist.Hint="GGMS username" />
-                                <TextBox Margin="8,0,0,0"
-                                         Text="{Binding GgmsPassword, UpdateSourceTrigger=PropertyChanged}"
-                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                         materialDesign:HintAssist.Hint="GGMS password" />
-                            </UniformGrid>
-
-                            <WrapPanel Margin="0,18,0,0">
-                                <Button Content="TEST GGMS CONNECTION"
-                                        Margin="0,0,12,0"
-                                        Style="{StaticResource SecondaryActionButton}"
-                                        Command="{Binding TestGgmsConnectionCommand}" />
-                                <Button Content="SAVE GGMS SETTINGS"
-                                        Style="{StaticResource GoldActionButton}"
-                                        Command="{Binding SaveGgmsSettingsCommand}" />
-                            </WrapPanel>
-
-                            <TextBlock Margin="0,14,0,0"
-                                       Text="{Binding GgmsStatusMessage}"
-                                       Foreground="{Binding GgmsStatusBrush}"
-                                       TextWrapping="Wrap" />
-                        </StackPanel>
-                    </Border>
-
+                                <TextBlock Margin="0,14,0,0"
+                                           Text="{Binding GgmsStatusMessage}"
+                                           Foreground="{Binding GgmsStatusBrush}"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
                     </Grid>
-                    <ContentControl Panel.ZIndex="10"
-                                    Content="{Binding}"
-                                    ContentTemplate="{StaticResource ProtectedSettingsOtpOverlayTemplate}"
-                                    Visibility="{Binding IsSensitiveSettingsLocked, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+                    <Border Panel.ZIndex="10"
+                            Background="#70FFFFFF"
+                            Visibility="{Binding IsSensitiveSettingsLocked, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Border MaxWidth="560"
+                                Margin="24"
+                                Padding="22"
+                                CornerRadius="18"
+                                BorderBrush="{StaticResource BrandBorderBrush}"
+                                BorderThickness="1"
+                                Background="White"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center">
+                            <StackPanel>
+                                <TextBlock Text="Protected settings"
+                                           FontSize="16"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource BrandMidnightBrush}" />
+                                <TextBlock Margin="0,8,0,0"
+                                           Text="{Binding SensitiveSettingsUnlockPromptText}"
+                                           Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                           TextWrapping="Wrap" />
+                                <PasswordBox Margin="0,16,0,0"
+                                             PasswordChanged="ProtectedSettingsUnlockPasswordBox_PasswordChanged"
+                                             Style="{StaticResource MaterialDesignOutlinedPasswordBox}"
+                                             materialDesign:HintAssist.Hint="Re-enter admin password" />
+                                <Button Margin="0,16,0,0"
+                                        Content="UNLOCK PROTECTED SETTINGS"
+                                        Style="{StaticResource PrimaryActionButton}"
+                                        Command="{Binding UnlockSensitiveSettingsCommand}" />
+                                <TextBlock Margin="0,12,0,0"
+                                           Text="{Binding SensitiveSettingsUnlockStatusMessage}"
+                                           Foreground="{Binding SensitiveSettingsUnlockStatusBrush}"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+                    </Border>
                 </Grid>
             </TabItem>
 

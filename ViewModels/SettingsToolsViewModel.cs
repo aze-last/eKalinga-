@@ -1157,6 +1157,17 @@ namespace AttendanceShiftingManagement.ViewModels
                 return;
             }
 
+            if (!HasImportConnectionChanges(preset))
+            {
+                SetSnapshotNeutral("No municipality import connection changes to save.");
+                return;
+            }
+
+            if (!RequireSensitiveSettingsAuthorization("the municipality import connection", ExecuteSaveImportConnection))
+            {
+                return;
+            }
+
             MunicipalityImportConnectionSettingsService.Save(preset);
             SetSnapshotSuccess("Municipality import connection saved.");
         }
@@ -1403,6 +1414,17 @@ namespace AttendanceShiftingManagement.ViewModels
             if (!TryBuildGgmsSettings(requireConnectionDetails: false, out var settings, out var validationMessage))
             {
                 SetGgmsError(validationMessage);
+                return;
+            }
+
+            if (!HasGgmsSettingsChanges(settings))
+            {
+                SetGgmsNeutral("No GGMS budget source changes to save.");
+                return;
+            }
+
+            if (!RequireSensitiveSettingsAuthorization("the GGMS budget source settings", ExecuteSaveGgmsSettings))
+            {
                 return;
             }
 
@@ -1820,6 +1842,16 @@ namespace AttendanceShiftingManagement.ViewModels
             return true;
         }
 
+        private static bool HasImportConnectionChanges(DatabaseConnectionPreset candidate)
+        {
+            var current = MunicipalityImportConnectionSettingsService.Load();
+            return !string.Equals(current.Server, candidate.Server, StringComparison.Ordinal)
+                || current.Port != candidate.Port
+                || !string.Equals(current.Database, candidate.Database, StringComparison.Ordinal)
+                || !string.Equals(current.Username, candidate.Username, StringComparison.Ordinal)
+                || !string.Equals(current.Password, candidate.Password, StringComparison.Ordinal);
+        }
+
         private bool TryBuildGgmsSettings(bool requireConnectionDetails, out BudgetRuntimeOptions settings, out string validationMessage)
         {
             settings = new BudgetRuntimeOptions();
@@ -1881,6 +1913,19 @@ namespace AttendanceShiftingManagement.ViewModels
             };
 
             return true;
+        }
+
+        private static bool HasGgmsSettingsChanges(BudgetRuntimeOptions candidate)
+        {
+            var current = BudgetRuntimeOptions.Load();
+            return !string.Equals(current.AyudaOfficeCode, candidate.AyudaOfficeCode, StringComparison.Ordinal)
+                || !string.Equals(current.GgmsOfficeTable, candidate.GgmsOfficeTable, StringComparison.Ordinal)
+                || !string.Equals(current.GgmsAllocationTable, candidate.GgmsAllocationTable, StringComparison.Ordinal)
+                || !string.Equals(current.GgmsConnection.Server, candidate.GgmsConnection.Server, StringComparison.Ordinal)
+                || current.GgmsConnection.Port != candidate.GgmsConnection.Port
+                || !string.Equals(current.GgmsConnection.Database, candidate.GgmsConnection.Database, StringComparison.Ordinal)
+                || !string.Equals(current.GgmsConnection.Username, candidate.GgmsConnection.Username, StringComparison.Ordinal)
+                || !string.Equals(current.GgmsConnection.Password, candidate.GgmsConnection.Password, StringComparison.Ordinal);
         }
 
         private void ApplyUpdateResult(UpdateCheckResult result, bool preserveNotCheckedMessage)

@@ -14,10 +14,28 @@ namespace AttendanceShiftingManagement.Services
     {
         public static CompanySerialValidationResult ValidateOrBind(AppDbContext context, SystemProfileSettingsModel localSettings)
         {
+            return ValidateOrBind(context, localSettings, enforceGate: true);
+        }
+
+        public static CompanySerialValidationResult ValidateOrBind(
+            AppDbContext context,
+            SystemProfileSettingsModel localSettings,
+            bool enforceGate)
+        {
             ArgumentNullException.ThrowIfNull(context);
             ArgumentNullException.ThrowIfNull(localSettings);
 
             var localCompanySerial = NormalizeSerial(localSettings.InstallSerial);
+
+            if (!enforceGate)
+            {
+                return new CompanySerialValidationResult(
+                    true,
+                    false,
+                    "Company serial enforcement is disabled for this demonstration run.",
+                    localCompanySerial);
+            }
+
             if (string.IsNullOrWhiteSpace(localCompanySerial))
             {
                 return new CompanySerialValidationResult(

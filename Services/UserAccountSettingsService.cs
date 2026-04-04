@@ -139,14 +139,10 @@ namespace AttendanceShiftingManagement.Services
                 return new AccountSettingsResult(false, "The signed-in user could not be loaded.");
             }
 
-            if (string.IsNullOrWhiteSpace(request.CurrentPassword))
+            var passwordVerification = VerifyCurrentPassword(context, sessionUser, request.CurrentPassword);
+            if (!passwordVerification.IsSuccess)
             {
-                return new AccountSettingsResult(false, "Enter your current password.");
-            }
-
-            if (!BCrypt.Net.BCrypt.Verify(request.CurrentPassword, user.PasswordHash))
-            {
-                return new AccountSettingsResult(false, "The current password is incorrect.");
+                return passwordVerification;
             }
 
             if (string.IsNullOrWhiteSpace(request.NewPassword) || request.NewPassword.Length < 8)
@@ -180,6 +176,30 @@ namespace AttendanceShiftingManagement.Services
                 $"User '{user.Username}' changed account password.");
 
             return new AccountSettingsResult(true, "Password changed successfully.");
+        }
+
+        public static AccountSettingsResult VerifyCurrentPassword(
+            AppDbContext context,
+            User sessionUser,
+            string currentPassword)
+        {
+            var user = context.Users.FirstOrDefault(item => item.Id == sessionUser.Id);
+            if (user == null)
+            {
+                return new AccountSettingsResult(false, "The signed-in user could not be loaded.");
+            }
+
+            if (string.IsNullOrWhiteSpace(currentPassword))
+            {
+                return new AccountSettingsResult(false, "Enter your current password.");
+            }
+
+            if (!BCrypt.Net.BCrypt.Verify(currentPassword, user.PasswordHash))
+            {
+                return new AccountSettingsResult(false, "The current password is incorrect.");
+            }
+
+            return new AccountSettingsResult(true, "Current password verified.");
         }
 
         private static bool IsValidEmail(string email)
