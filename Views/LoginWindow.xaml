@@ -43,24 +43,21 @@
             <Rectangle Fill="#381E3A5F" />
         </Grid>
 
-        <Grid Margin="44">
+        <Grid Margin="36">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="1.28*" />
+                <ColumnDefinition Width="1.42*" />
                 <ColumnDefinition Width="28" />
-                <ColumnDefinition Width="0.92*"
-                                  MinWidth="380"
-                                  MaxWidth="430" />
+                <ColumnDefinition Width="0.82*" MinWidth="390" MaxWidth="460" />
             </Grid.ColumnDefinitions>
 
+            <!-- LEFT BRAND PANEL -->
             <Border Grid.Column="0"
                     CornerRadius="34"
                     BorderBrush="#66FFFFFF"
                     BorderThickness="1"
-                    Background="#1FFFFFFF"
-                    Padding="0">
+                    Background="#1FFFFFFF">
                 <Grid>
-                    <Rectangle RadiusX="34"
-                               RadiusY="34">
+                    <Rectangle RadiusX="34" RadiusY="34">
                         <Rectangle.Fill>
                             <ImageBrush ImageSource="{Binding BrandBackgroundImage}"
                                         Stretch="UniformToFill" />
@@ -74,75 +71,76 @@
                                RadiusY="34"
                                Fill="#8C0D2B6E" />
 
-                    <Grid Margin="38">
+                    <Grid Margin="34">
                         <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" />
                             <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
 
-                        <Grid Grid.Row="1"
-                              Margin="0,18,0,30"
-                              VerticalAlignment="Center">
+                        <!-- TOP CONTENT -->
+                        <Grid Grid.Row="0"
+                              VerticalAlignment="Stretch">
                             <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="3*" />
                                 <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
 
-                            <Viewbox MaxWidth="260"
-                                     MaxHeight="210"
-                                     Stretch="Uniform"
-                                     StretchDirection="DownOnly"
-                                     HorizontalAlignment="Center"
-                                     VerticalAlignment="Center">
-                                <Grid Width="240"
-                                      Height="210">
-                                    <materialDesign:PackIcon Kind="HandshakeOutline"
-                                                             Width="72"
-                                                             Height="72"
-                                                             Foreground="{StaticResource BrandYellowBrush}"
-                                                             HorizontalAlignment="Center"
-                                                             VerticalAlignment="Center">
-                                        <materialDesign:PackIcon.Style>
-                                            <Style TargetType="materialDesign:PackIcon">
-                                                <Setter Property="Visibility" Value="Visible" />
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding HasCustomBrandLogo}" Value="True">
-                                                        <Setter Property="Visibility" Value="Collapsed" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </materialDesign:PackIcon.Style>
-                                    </materialDesign:PackIcon>
+                            <!-- BIGGER RESPONSIVE LOGO -->
+                            <Grid Grid.Row="0"
+                                  VerticalAlignment="Stretch"
+                                  HorizontalAlignment="Stretch"
+                                  MinHeight="320"
+                                  Margin="0,-30,0,0">
+                                <Viewbox Stretch="Uniform"
+                                         StretchDirection="Both"
+                                         HorizontalAlignment="Center"
+                                         VerticalAlignment="Center">
+                                    <Grid>
+                                        <materialDesign:PackIcon Kind="HandshakeOutline"
+                                                                 Width="160"
+                                                                 Height="160"
+                                                                 Foreground="{StaticResource BrandYellowBrush}"
+                                                                 HorizontalAlignment="Center"
+                                                                 VerticalAlignment="Center">
+                                            <materialDesign:PackIcon.Style>
+                                                <Style TargetType="materialDesign:PackIcon">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding HasCustomBrandLogo}" Value="True">
+                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </materialDesign:PackIcon.Style>
+                                        </materialDesign:PackIcon>
 
-                                    <Image Source="{Binding BrandLogoImage}"
-                                           MaxWidth="220"
-                                           MaxHeight="210"
-                                           Stretch="Uniform"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center"
-                                           SnapsToDevicePixels="True"
-                                           RenderOptions.BitmapScalingMode="Fant">
-                                        <Image.Style>
-                                            <Style TargetType="Image">
-                                                <Setter Property="Visibility" Value="Collapsed" />
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding HasCustomBrandLogo}" Value="True">
-                                                        <Setter Property="Visibility" Value="Visible" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Image.Style>
-                                    </Image>
-                                </Grid>
-                            </Viewbox>
+                                        <Image Source="{Binding BrandLogoImage}"
+                                               Stretch="Uniform"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               SnapsToDevicePixels="True"
+                                               RenderOptions.BitmapScalingMode="HighQuality">
+                                            <Image.Style>
+                                                <Style TargetType="Image">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding HasCustomBrandLogo}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Image.Style>
+                                        </Image>
+                                    </Grid>
+                                </Viewbox>
+                            </Grid>
 
+                            <!-- TITLE / SUBTITLE -->
                             <StackPanel Grid.Row="1"
-                                        Margin="0,24,0,0"
-                                        MaxWidth="560">
+                                        Margin="0,14,0,0"
+                                        MaxWidth="680">
                                 <TextBlock Text="{Binding BrandSubtitle}"
-                                           FontSize="38"
+                                           FontSize="34"
                                            FontWeight="Bold"
                                            Foreground="White"
                                            TextWrapping="Wrap" />
@@ -152,62 +150,16 @@
                                            Foreground="#E8EEF9"
                                            TextWrapping="Wrap" />
                             </StackPanel>
-
-                            <WrapPanel Grid.Row="2"
-                                       Margin="0,24,0,0">
-                                <Border Margin="0,0,12,12"
-                                        Padding="12,8"
-                                        CornerRadius="12"
-                                        Background="#20000000">
-                                    <StackPanel Orientation="Horizontal">
-                                        <materialDesign:PackIcon Kind="DatabaseSyncOutline"
-                                                                 Width="16"
-                                                                 Height="16"
-                                                                 Foreground="{StaticResource BrandYellowBrush}" />
-                                        <TextBlock Margin="8,0,0,0"
-                                                   Text="Live app database switching"
-                                                   Foreground="White" />
-                                    </StackPanel>
-                                </Border>
-
-                                <Border Margin="0,0,12,12"
-                                        Padding="12,8"
-                                        CornerRadius="12"
-                                        Background="#20000000">
-                                    <StackPanel Orientation="Horizontal">
-                                        <materialDesign:PackIcon Kind="CardAccountDetailsOutline"
-                                                                 Width="16"
-                                                                 Height="16"
-                                                                 Foreground="{StaticResource BrandYellowBrush}" />
-                                        <TextBlock Margin="8,0,0,0"
-                                                   Text="Digital ID and beneficiary lookup"
-                                                   Foreground="White" />
-                                    </StackPanel>
-                                </Border>
-
-                                <Border Margin="0,0,12,12"
-                                        Padding="12,8"
-                                        CornerRadius="12"
-                                        Background="#20000000">
-                                    <StackPanel Orientation="Horizontal">
-                                        <materialDesign:PackIcon Kind="WalletOutline"
-                                                                 Width="16"
-                                                                 Height="16"
-                                                                 Foreground="{StaticResource BrandYellowBrush}" />
-                                        <TextBlock Margin="8,0,0,0"
-                                                   Text="Aid request and budget release flow"
-                                                   Foreground="White" />
-                                    </StackPanel>
-                                </Border>
-                            </WrapPanel>
                         </Grid>
 
-                        <Border Grid.Row="2"
+                        <!-- IDENTITY CARD -->
+                        <Border Grid.Row="1"
+                                Margin="0,34,0,0"
                                 CornerRadius="26"
                                 BorderBrush="#59FFFFFF"
                                 BorderThickness="1"
                                 Background="#18FFFFFF">
-                            <Grid Margin="0">
+                            <Grid>
                                 <Rectangle RadiusX="26"
                                            RadiusY="26">
                                     <Rectangle.Fill>
@@ -284,6 +236,7 @@
                 </Grid>
             </Border>
 
+            <!-- RIGHT LOGIN PANEL -->
             <Border Grid.Column="2"
                     VerticalAlignment="Center"
                     CornerRadius="32"
