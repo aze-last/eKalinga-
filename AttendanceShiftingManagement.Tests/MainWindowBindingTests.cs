@@ -23,13 +23,14 @@ public sealed class MainWindowBindingTests
         Assert.Contains("Text=\"OVERVIEW\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"OPERATIONS\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"MANAGEMENT\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"Operations overview\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"Main workspace\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"Validated Beneficiaries\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Content=\"SETTINGS\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Content=\"LOGOUT\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Content=\"CHECK FOR UPDATE\"", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Content=\"LOAD TABLES\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Text=\"Operations overview\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Text=\"Main workspace\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Text=\"ContentControl area\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding ShowDashboardCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding ShowCashForWorkCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding ShowDistributionCommand}\"", xaml, StringComparison.Ordinal);

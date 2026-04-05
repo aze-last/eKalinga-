@@ -390,78 +390,8 @@
             <Border Grid.Column="1"
                     Background="#F8FAFC"
                     CornerRadius="0,26,26,0">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-
-                    <Border Grid.Row="0"
-                            Background="#FDFDFD"
-                            BorderBrush="{StaticResource BrandBorderBrush}"
-                            BorderThickness="0,0,0,1"
-                            Padding="28,22">
-                        <StackPanel>
-                            <TextBlock Text="Operations overview"
-                                       FontSize="12"
-                                       FontWeight="SemiBold"
-                                       Foreground="{StaticResource BrandTextSecondaryBrush}"/>
-                            <TextBlock Text="{Binding CurrentSectionTitle}"
-                                       Margin="0,6,0,0"
-                                       FontSize="28"
-                                       FontWeight="SemiBold"
-                                       Foreground="{StaticResource BrandMidnightBrush}"/>
-                            <TextBlock Text="{Binding CurrentSectionSubtitle}"
-                                       Margin="0,8,0,0"
-                                       FontSize="13"
-                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
-                                       TextWrapping="Wrap"/>
-                        </StackPanel>
-                    </Border>
-
-                    <Border Grid.Row="1"
-                            Margin="28"
-                            Padding="24"
-                            CornerRadius="24"
-                            Background="White"
-                            BorderBrush="{StaticResource BrandBorderBrush}"
-                            BorderThickness="1">
-                        <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="*"/>
-                            </Grid.RowDefinitions>
-
-                            <DockPanel>
-                                <StackPanel>
-                                    <TextBlock Text="Main workspace"
-                                               FontSize="20"
-                                               FontWeight="SemiBold"
-                                               Foreground="{StaticResource BrandMidnightBrush}"/>
-                                    <TextBlock Text="Your selected page loads here with stronger spacing and a softer content container."
-                                               Margin="0,6,0,0"
-                                               FontSize="13"
-                                               Foreground="{StaticResource BrandTextSecondaryBrush}"
-                                               TextWrapping="Wrap"/>
-                                </StackPanel>
-
-                                <Border DockPanel.Dock="Right"
-                                        Padding="12,6"
-                                        CornerRadius="14"
-                                        Background="#F1F5F9">
-                                    <TextBlock Text="ContentControl area"
-                                               FontSize="12"
-                                               FontWeight="SemiBold"
-                                               Foreground="{StaticResource BrandMidnightBrush}"/>
-                                </Border>
-                            </DockPanel>
-
-                            <ContentControl Grid.Row="1"
-                                            Margin="0,20,0,0"
-                                            Content="{Binding CurrentView}"/>
-                        </Grid>
-                    </Border>
-                </Grid>
+                <ContentControl Margin="28"
+                                Content="{Binding CurrentView}"/>
             </Border>
         </Grid>
     </Border>

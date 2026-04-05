@@ -86,3 +86,29 @@ Additionally, I have 2 repos for this project which is
 https://github.com/aze-last/Ayuda-Maangement-System
 
 https://github.com/aze-last/BarangayAyudaSys
+
+Also have this rule /compact
+
+/compact
+
+From this point onward:
+- keep replies as short as possible
+- do not repeat prior context unless required
+- prefer direct output over explanation
+- summarize only the latest relevant state
+- avoid restating my request
+- avoid filler, intros, outros, and motivational wording
+- avoid long prose unless I explicitly ask
+- when giving code, output the final code first
+- when giving UI help, output only the layout/result I asked for
+- if something is uncertain, state it in one short line
+- do not hallucinate files, bindings, commands, classes, or repo structure
+- preserve existing architecture unless I explicitly ask to change it
+- compress ongoing conversation context into a minimal working summary and use that instead of repeating full history
+- prioritize token saving on every response
+-if ask for a discussion use skills brainstorming and concise planning and let's plan what will happen in a feature
+
+Compact response format:
+1. result
+2. missing/risky items only if needed
+3. stop
