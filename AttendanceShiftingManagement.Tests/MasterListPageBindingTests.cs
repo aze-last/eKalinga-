@@ -23,6 +23,8 @@ public sealed class MasterListPageBindingTests
         Assert.Contains("Command=\"{Binding NextPageCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"{Binding PageSummary}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("SelectedItem=\"{Binding SelectedPageSize}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding SearchText, UpdateSourceTrigger=PropertyChanged, Delay=250}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("ScrollViewer.HorizontalScrollBarVisibility=\"Visible\"", xaml, StringComparison.Ordinal);
     }
 
     [Fact]

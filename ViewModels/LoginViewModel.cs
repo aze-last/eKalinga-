@@ -27,7 +27,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _activeConnectionSummary = string.Empty;
         private bool _isBootstrapMode;
         private string _brandTitle = "Local Government Unit";
-        private string _brandSubtitle = "eKalinga+";
+        private string _brandSubtitle = string.Empty;
         private string _brandAddress = string.Empty;
         private string _brandInstallSerial = string.Empty;
         private ImageSource? _brandLogoImage;

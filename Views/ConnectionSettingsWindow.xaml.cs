@@ -19,5 +19,15 @@ namespace AttendanceShiftingManagement.Views
             DialogResult = dialogResult;
             Close();
         }
+
+        private void Minimize_Click(object sender, RoutedEventArgs e)
+        {
+            WindowState = WindowState.Minimized;
+        }
+
+        private void Close_Click(object sender, RoutedEventArgs e)
+        {
+            Close();
+        }
     }
 }

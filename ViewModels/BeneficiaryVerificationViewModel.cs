@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Win32;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Globalization;
 using System.IO;
 using System.Windows;
 using System.Windows.Data;
@@ -22,6 +23,8 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly ObservableCollection<StagedBeneficiaryItem> _records = new();
         private readonly ObservableCollection<HouseholdOption> _households = new();
         private readonly ObservableCollection<HouseholdMemberOption> _availableHouseholdMembers = new();
+        private readonly ObservableCollection<BeneficiaryBenefitHistoryItem> _benefitsReceived = new();
+        private readonly Func<int, Task<IReadOnlyList<BeneficiaryAssistanceLedgerEntry>>> _benefitHistoryLoader;
         private readonly RelayCommand _previousPageCommand;
         private readonly RelayCommand _nextPageCommand;
         private readonly RelayCommand _refreshCommand;
@@ -76,11 +79,14 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _digitalIdIssuedAtText = "Approve a beneficiary to generate a digital ID.";
         private BitmapSource? _digitalIdPhotoImage;
         private BitmapSource? _digitalIdQrImage;
+        private string _benefitsReceivedSummary = "Select a beneficiary to view benefits received.";
+        private string _benefitsReceivedLatestReleaseText = string.Empty;
         private string _lookupScannerSessionUrl = string.Empty;
         private string _lookupScannerSessionPin = string.Empty;
         private string _lookupScannerSessionExpiresAtText = string.Empty;
         private BitmapSource? _lookupScannerQrImage;
         private bool _isReviewPanelOpen;
+        private int _benefitHistoryRequestVersion;
 
         public BeneficiaryVerificationViewModel(User currentUser)
             : this(currentUser, new BeneficiaryVerificationQueueService(), autoLoad: true, autoRefresh: true)
@@ -91,10 +97,12 @@ namespace AttendanceShiftingManagement.ViewModels
             User currentUser,
             IBeneficiaryVerificationQueueService queueService,
             bool autoLoad,
-            bool autoRefresh)
+            bool autoRefresh,
+            Func<int, Task<IReadOnlyList<BeneficiaryAssistanceLedgerEntry>>>? benefitHistoryLoader = null)
         {
             _currentUser = currentUser;
             _queueService = queueService ?? throw new ArgumentNullException(nameof(queueService));
+            _benefitHistoryLoader = benefitHistoryLoader ?? LoadBenefitsReceivedAsync;
             _autoRefresh = autoRefresh;
             StatusFilters = new ObservableCollection<string>(BeneficiaryVerificationStatusFilters.Options);
             PageSizeOptions = new ObservableCollection<int> { 50, 100, 250, 500 };
@@ -128,6 +136,8 @@ namespace AttendanceShiftingManagement.ViewModels
         public ObservableCollection<HouseholdOption> Households => _households;
 
         public ObservableCollection<HouseholdMemberOption> AvailableHouseholdMembers => _availableHouseholdMembers;
+
+        public ObservableCollection<BeneficiaryBenefitHistoryItem> BenefitsReceived => _benefitsReceived;
 
         public ICollectionView RecordsView
         {
@@ -449,6 +459,18 @@ namespace AttendanceShiftingManagement.ViewModels
             private set => SetProperty(ref _digitalIdQrImage, value);
         }
 
+        public string BenefitsReceivedSummary
+        {
+            get => _benefitsReceivedSummary;
+            private set => SetProperty(ref _benefitsReceivedSummary, value);
+        }
+
+        public string BenefitsReceivedLatestReleaseText
+        {
+            get => _benefitsReceivedLatestReleaseText;
+            private set => SetProperty(ref _benefitsReceivedLatestReleaseText, value);
+        }
+
         public string LookupScannerSessionUrl
         {
             get => _lookupScannerSessionUrl;
@@ -684,6 +706,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 EditableDisabilityType = string.Empty;
                 EditableReviewNotes = string.Empty;
                 ResetDigitalIdPreview();
+                ResetBenefitsReceivedPreview();
                 return;
             }
 
@@ -704,6 +727,7 @@ namespace AttendanceShiftingManagement.ViewModels
             EditableReviewNotes = SelectedBeneficiary.ReviewNotes;
 
             SyncDigitalIdPreviewFromSelection();
+            _ = LoadBenefitsReceivedPreviewAsync(SelectedBeneficiary.StagingId);
         }
 
         private void SyncDigitalIdPreviewFromSelection()
@@ -737,6 +761,89 @@ namespace AttendanceShiftingManagement.ViewModels
             LookupScannerSessionPin = string.Empty;
             LookupScannerSessionExpiresAtText = string.Empty;
             LookupScannerQrImage = null;
+        }
+
+        private async Task LoadBenefitsReceivedPreviewAsync(int? stagingId)
+        {
+            var requestVersion = ++_benefitHistoryRequestVersion;
+
+            if (!stagingId.HasValue)
+            {
+                ResetBenefitsReceivedPreview();
+                return;
+            }
+
+            SetBenefitsReceivedLoadingState();
+
+            try
+            {
+                var entries = await _benefitHistoryLoader(stagingId.Value);
+                if (requestVersion != _benefitHistoryRequestVersion
+                    || SelectedBeneficiary?.StagingId != stagingId.Value)
+                {
+                    return;
+                }
+
+                ApplyBenefitsReceivedPreview(entries);
+            }
+            catch
+            {
+                if (requestVersion != _benefitHistoryRequestVersion
+                    || SelectedBeneficiary?.StagingId != stagingId.Value)
+                {
+                    return;
+                }
+
+                SetBenefitsReceivedLoadErrorState();
+            }
+        }
+
+        private void ApplyBenefitsReceivedPreview(IReadOnlyList<BeneficiaryAssistanceLedgerEntry> entries)
+        {
+            _benefitsReceived.Clear();
+
+            foreach (var entry in entries.Take(5))
+            {
+                _benefitsReceived.Add(BeneficiaryBenefitHistoryItem.FromEntity(entry));
+            }
+
+            if (entries.Count == 0)
+            {
+                BenefitsReceivedSummary = "No benefits received recorded yet.";
+                BenefitsReceivedLatestReleaseText = "Latest release: --";
+                return;
+            }
+
+            BenefitsReceivedSummary = $"{entries.Count:N0} release(s) recorded. Total assistance received: {entries.Sum(entry => entry.Amount):N2}.";
+            BenefitsReceivedLatestReleaseText = $"Latest release: {entries[0].ReleaseDate.ToString("MMMM dd, yyyy", CultureInfo.CurrentCulture)}";
+        }
+
+        private void SetBenefitsReceivedLoadingState()
+        {
+            _benefitsReceived.Clear();
+            BenefitsReceivedSummary = "Loading benefits received...";
+            BenefitsReceivedLatestReleaseText = string.Empty;
+        }
+
+        private void SetBenefitsReceivedLoadErrorState()
+        {
+            _benefitsReceived.Clear();
+            BenefitsReceivedSummary = "Benefits received could not be loaded.";
+            BenefitsReceivedLatestReleaseText = string.Empty;
+        }
+
+        private void ResetBenefitsReceivedPreview()
+        {
+            _benefitsReceived.Clear();
+            BenefitsReceivedSummary = "Select a beneficiary to view benefits received.";
+            BenefitsReceivedLatestReleaseText = string.Empty;
+        }
+
+        private static async Task<IReadOnlyList<BeneficiaryAssistanceLedgerEntry>> LoadBenefitsReceivedAsync(int stagingId)
+        {
+            await using var context = new AppDbContext();
+            var ledgerService = new BeneficiaryAssistanceLedgerService(context);
+            return await ledgerService.GetEntriesForStagingAsync(stagingId);
         }
 
         private bool CanUseDigitalId()
@@ -1203,6 +1310,7 @@ namespace AttendanceShiftingManagement.ViewModels
             FilteredRecordCount = 0;
             CurrentPage = 1;
             ResetDigitalIdPreview();
+            ResetBenefitsReceivedPreview();
         }
 
         private void SetNeutralStatus(string message)
@@ -1397,6 +1505,37 @@ namespace AttendanceShiftingManagement.ViewModels
         private static Brush CreateBrush(string hexColor)
         {
             return new SolidColorBrush((Color)ColorConverter.ConvertFromString(hexColor));
+        }
+    }
+
+    public sealed class BeneficiaryBenefitHistoryItem
+    {
+        public string SourceLabel { get; init; } = string.Empty;
+        public string AmountText { get; init; } = string.Empty;
+        public string ReleaseDateText { get; init; } = string.Empty;
+        public string Remarks { get; init; } = string.Empty;
+
+        public static BeneficiaryBenefitHistoryItem FromEntity(BeneficiaryAssistanceLedgerEntry entry)
+        {
+            return new BeneficiaryBenefitHistoryItem
+            {
+                SourceLabel = FormatSource(entry.SourceModule),
+                AmountText = entry.Amount.ToString("N2", CultureInfo.CurrentCulture),
+                ReleaseDateText = entry.ReleaseDate.ToString("MMM dd, yyyy", CultureInfo.CurrentCulture),
+                Remarks = entry.Remarks
+            };
+        }
+
+        private static string FormatSource(BeneficiaryAssistanceSourceModule sourceModule)
+        {
+            return sourceModule switch
+            {
+                BeneficiaryAssistanceSourceModule.ManualHistory => "Manual History",
+                BeneficiaryAssistanceSourceModule.AssistanceCase => "Assistance Case",
+                BeneficiaryAssistanceSourceModule.CashForWork => "Cash For Work",
+                BeneficiaryAssistanceSourceModule.Grievance => "Grievance",
+                _ => sourceModule.ToString()
+            };
         }
     }
 

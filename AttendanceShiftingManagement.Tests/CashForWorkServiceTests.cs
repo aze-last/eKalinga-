@@ -133,6 +133,155 @@ public sealed class CashForWorkServiceTests
         Assert.Contains("approved", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void UpdateEvent_UpdatesSelectedEvent_AndWritesAuditLog()
+    {
+        using var context = TestDbContextFactory.CreateContext();
+        var admin = SeedAdmin(context);
+        var service = new CashForWorkService(context, new AuditService(context));
+
+        var cashForWorkEvent = service.CreateEvent(
+            "Barangay Clean-Up",
+            "Hall",
+            DateTime.Today,
+            new TimeSpan(7, 0, 0),
+            new TimeSpan(12, 0, 0),
+            "Initial notes",
+            admin.Id);
+
+        var updatedEvent = service.UpdateEvent(
+            cashForWorkEvent.Id,
+            "Updated Clean-Up",
+            "Covered Court",
+            DateTime.Today.AddDays(1),
+            new TimeSpan(8, 0, 0),
+            new TimeSpan(13, 0, 0),
+            "Updated notes",
+            admin.Id);
+
+        Assert.Equal("Updated Clean-Up", updatedEvent.Title);
+        Assert.Equal("Covered Court", updatedEvent.Location);
+        Assert.Equal(DateTime.Today.AddDays(1).Date, updatedEvent.EventDate.Date);
+        Assert.Equal(new TimeSpan(8, 0, 0), updatedEvent.StartTime);
+        Assert.Equal(new TimeSpan(13, 0, 0), updatedEvent.EndTime);
+        Assert.Equal("Updated notes", updatedEvent.Notes);
+        Assert.Contains(
+            context.ActivityLogs.Select(log => log.Action).ToArray(),
+            action => string.Equals(action, "CashForWorkEventUpdated", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void DeleteEvent_RemovesEventParticipantsAttendanceAndScannerSessions()
+    {
+        using var context = TestDbContextFactory.CreateContext();
+        var admin = SeedAdmin(context);
+        var beneficiary = SeedApprovedBeneficiary(context, 5001, "Pedro Santos");
+        var service = new CashForWorkService(context, new AuditService(context));
+
+        var cashForWorkEvent = service.CreateEvent(
+            "Barangay Clean-Up",
+            "Hall",
+            DateTime.Today,
+            new TimeSpan(7, 0, 0),
+            new TimeSpan(12, 0, 0),
+            null,
+            admin.Id);
+
+        service.AddParticipant(cashForWorkEvent.Id, beneficiary.StagingID, admin.Id);
+        var participantId = context.CashForWorkParticipants.Single().Id;
+        service.SaveManualAttendance(cashForWorkEvent.Id, admin.Id, [participantId]);
+
+        context.ScannerSessions.Add(new ScannerSession
+        {
+            Mode = ScannerSessionMode.Attendance,
+            SessionToken = "session-token",
+            PinHash = "pin-hash",
+            CashForWorkEventId = cashForWorkEvent.Id,
+            CreatedByUserId = admin.Id,
+            IsActive = true,
+            CreatedAt = DateTime.Now,
+            ExpiresAt = DateTime.Now.AddMinutes(10)
+        });
+        context.SaveChanges();
+
+        service.DeleteEvent(cashForWorkEvent.Id, admin.Id);
+
+        Assert.Empty(context.CashForWorkAttendances);
+        Assert.Empty(context.CashForWorkParticipants);
+        Assert.Empty(context.CashForWorkEvents);
+        Assert.Empty(context.ScannerSessions);
+        Assert.Contains(
+            context.ActivityLogs.Select(log => log.Action).ToArray(),
+            action => string.Equals(action, "CashForWorkEventDeleted", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void UpdateAttendance_UpdatesSelectedAttendance_AndWritesAuditLog()
+    {
+        using var context = TestDbContextFactory.CreateContext();
+        var admin = SeedAdmin(context);
+        var beneficiary = SeedApprovedBeneficiary(context, 6001, "Pedro Santos");
+        var service = new CashForWorkService(context, new AuditService(context));
+
+        var cashForWorkEvent = service.CreateEvent(
+            "Barangay Clean-Up",
+            "Hall",
+            DateTime.Today,
+            new TimeSpan(7, 0, 0),
+            new TimeSpan(12, 0, 0),
+            null,
+            admin.Id);
+
+        service.AddParticipant(cashForWorkEvent.Id, beneficiary.StagingID, admin.Id);
+        var participantId = context.CashForWorkParticipants.Single().Id;
+        service.SaveManualAttendance(cashForWorkEvent.Id, admin.Id, [participantId]);
+        var attendanceId = context.CashForWorkAttendances.Single().Id;
+
+        var updatedAttendance = service.UpdateAttendance(
+            attendanceId,
+            DateTime.Today.AddDays(1),
+            CashForWorkAttendanceStatus.Absent,
+            AttendanceCaptureSource.OcrUpload,
+            admin.Id);
+
+        Assert.Equal(DateTime.Today.AddDays(1).Date, updatedAttendance.AttendanceDate.Date);
+        Assert.Equal(CashForWorkAttendanceStatus.Absent, updatedAttendance.Status);
+        Assert.Equal(AttendanceCaptureSource.OcrUpload, updatedAttendance.Source);
+        Assert.Contains(
+            context.ActivityLogs.Select(log => log.Action).ToArray(),
+            action => string.Equals(action, "CashForWorkAttendanceUpdated", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void DeleteAttendance_RemovesSelectedAttendance_AndWritesAuditLog()
+    {
+        using var context = TestDbContextFactory.CreateContext();
+        var admin = SeedAdmin(context);
+        var beneficiary = SeedApprovedBeneficiary(context, 7001, "Pedro Santos");
+        var service = new CashForWorkService(context, new AuditService(context));
+
+        var cashForWorkEvent = service.CreateEvent(
+            "Barangay Clean-Up",
+            "Hall",
+            DateTime.Today,
+            new TimeSpan(7, 0, 0),
+            new TimeSpan(12, 0, 0),
+            null,
+            admin.Id);
+
+        service.AddParticipant(cashForWorkEvent.Id, beneficiary.StagingID, admin.Id);
+        var participantId = context.CashForWorkParticipants.Single().Id;
+        service.SaveManualAttendance(cashForWorkEvent.Id, admin.Id, [participantId]);
+        var attendanceId = context.CashForWorkAttendances.Single().Id;
+
+        service.DeleteAttendance(attendanceId, admin.Id);
+
+        Assert.Empty(context.CashForWorkAttendances);
+        Assert.Contains(
+            context.ActivityLogs.Select(log => log.Action).ToArray(),
+            action => string.Equals(action, "CashForWorkAttendanceDeleted", StringComparison.Ordinal));
+    }
+
     private static User SeedAdmin(Data.AppDbContext context)
     {
         var user = new User

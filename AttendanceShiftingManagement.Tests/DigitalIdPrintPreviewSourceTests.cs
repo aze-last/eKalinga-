@@ -20,6 +20,7 @@ public sealed class DigitalIdPrintPreviewSourceTests
         Assert.Contains("previewWindow.ShowDialog()", source, StringComparison.Ordinal);
         Assert.Contains("dialog.PrintVisual(printCard", source, StringComparison.Ordinal);
         Assert.Contains("Stretch = Stretch.Uniform", source, StringComparison.Ordinal);
+        Assert.Contains("BitmapScalingMode.NearestNeighbor", source, StringComparison.Ordinal);
         Assert.DoesNotContain("Stretch = Stretch.UniformToFill", source, StringComparison.Ordinal);
     }
 

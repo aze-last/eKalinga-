@@ -59,4 +59,21 @@ public sealed class CashForWorkBeneficiarySourceTests
         Assert.Contains("item.BeneficiaryStagingId == lookup.BeneficiaryStagingId", source, StringComparison.Ordinal);
         Assert.DoesNotContain("item.HouseholdMemberId == lookup.HouseholdMemberId.Value", source, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void CashForWorkViewModel_DoesNotAutoSelectFirstEvent_OnInitialLoad()
+    {
+        var viewModelPath = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..",
+            "..",
+            "..",
+            "..",
+            "ViewModels",
+            "CashForWorkOcrViewModel.cs"));
+
+        var source = File.ReadAllText(viewModelPath);
+
+        Assert.DoesNotContain("?? Events.FirstOrDefault();", source, StringComparison.Ordinal);
+    }
 }

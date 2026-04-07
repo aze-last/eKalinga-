@@ -8,7 +8,7 @@ namespace AttendanceShiftingManagement.Services
         public const string DefaultLogoUri = "pack://application:,,,/Images/96f88319-f1f4-46df-b780-691795d4e49e.png";
         public const string DefaultLoginBackgroundUri = "pack://application:,,,/Images/Gemini_Generated_Image_n4mhn0n4mhn0n4mh.png";
 
-        public string SystemName { get; set; } = "eKalinga+";
+        public string SystemName { get; set; } = string.Empty;
         public string Owner { get; set; } = string.Empty;
         public string CompanyAddress { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
@@ -21,7 +21,7 @@ namespace AttendanceShiftingManagement.Services
     public sealed class SystemLoginBrandingSnapshot
     {
         public string Title { get; init; } = "Local Government Unit";
-        public string Subtitle { get; init; } = "eKalinga+";
+        public string Subtitle { get; init; } = string.Empty;
         public string Address { get; init; } = string.Empty;
         public string InstallSerial { get; init; } = string.Empty;
         public string LogoPath { get; init; } = string.Empty;

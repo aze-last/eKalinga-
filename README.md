@@ -112,3 +112,5 @@ Compact response format:
 1. result
 2. missing/risky items only if needed
 3. stop
+
+Always test build on dotnet to check for errors.

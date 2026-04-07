@@ -5,11 +5,19 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         mc:Ignorable="d"
-        Title="eKalinga+"
+        Title=""
         WindowState="Maximized"
-        Background="{StaticResource BrandSurfaceBrush}"
-        FontFamily="Segoe UI"
-        Icon="/Images/municipal-house.ico">
+        Background="Transparent"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        FontFamily="Segoe UI">
+    
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="40" 
+                      ResizeBorderThickness="5" 
+                      GlassFrameThickness="0" 
+                      CornerRadius="0" />
+    </WindowChrome.WindowChrome>
 
     <Window.Resources>
         <Style x:Key="SidebarButtonBaseStyle"
@@ -109,6 +117,27 @@
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="materialDesign:ButtonAssist.CornerRadius" Value="14"/>
         </Style>
+        <Style x:Key="WindowControlButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource MaterialDesignFlatButton}">
+            <Setter Property="Width" Value="46"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Foreground" Value="{StaticResource BrandTextSecondaryBrush}"/>
+            <Setter Property="materialDesign:ButtonAssist.CornerRadius" Value="0"/>
+            <Setter Property="WindowChrome.IsHitTestVisibleInChrome" Value="True"/>
+        </Style>
+
+        <Style x:Key="WindowCloseButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource WindowControlButtonStyle}">
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#EF4444"/>
+                    <Setter Property="Foreground" Value="White"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
     </Window.Resources>
 
     <Border Margin="0"
@@ -122,6 +151,29 @@
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
+            <!-- CUSTOM WINDOW CONTROLS -->
+            <StackPanel Grid.Column="1"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Top"
+                        Panel.ZIndex="99">
+                <Button Style="{StaticResource WindowControlButtonStyle}"
+                        Click="Minimize_Click"
+                        ToolTip="Minimize">
+                    <materialDesign:PackIcon Kind="WindowMinimize" Width="18" Height="18"/>
+                </Button>
+                <Button Style="{StaticResource WindowControlButtonStyle}"
+                        Click="MaximizeRestore_Click"
+                        ToolTip="Maximize/Restore">
+                    <materialDesign:PackIcon Kind="WindowMaximize" Width="18" Height="18"/>
+                </Button>
+                <Button Style="{StaticResource WindowCloseButtonStyle}"
+                        Click="Close_Click"
+                        ToolTip="Close">
+                    <materialDesign:PackIcon Kind="Close" Width="20" Height="20"/>
+                </Button>
+            </StackPanel>
+
             <Border Grid.Column="0"
                     Background="#312E81"
                     Padding="18,22,18,18">
@@ -133,10 +185,6 @@
                     </Grid.RowDefinitions>
 
                     <StackPanel Grid.Row="0">
-                        <TextBlock Text="eKalinga+"
-                                   FontSize="18"
-                                   FontWeight="SemiBold"
-                                   Foreground="White"/>
                         <TextBlock Text="Administrator portal"
                                    Margin="0,4,0,0"
                                    FontSize="12"

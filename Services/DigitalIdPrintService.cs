@@ -166,11 +166,7 @@ namespace AttendanceShiftingManagement.Services
                 BorderThickness = new Thickness(1),
                 Child = request.QrImage == null
                     ? null
-                    : new Image
-                    {
-                        Source = request.QrImage,
-                        Stretch = Stretch.Fill
-                    }
+                    : BuildQrImage(request.QrImage)
             });
 
             qrContainer.Children.Add(new TextBlock
@@ -203,6 +199,19 @@ namespace AttendanceShiftingManagement.Services
         private static string Fallback(string? value)
         {
             return string.IsNullOrWhiteSpace(value) ? "--" : value.Trim();
+        }
+
+        private static Image BuildQrImage(BitmapSource source)
+        {
+            var image = new Image
+            {
+                Source = source,
+                Stretch = Stretch.Uniform,
+                SnapsToDevicePixels = true
+            };
+
+            RenderOptions.SetBitmapScalingMode(image, BitmapScalingMode.NearestNeighbor);
+            return image;
         }
     }
 }

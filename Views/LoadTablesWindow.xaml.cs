@@ -10,5 +10,15 @@ namespace AttendanceShiftingManagement.Views
             InitializeComponent();
             DataContext = new LoadTablesViewModel();
         }
+
+        private void Minimize_Click(object sender, RoutedEventArgs e)
+        {
+            WindowState = WindowState.Minimized;
+        }
+
+        private void Close_Click(object sender, RoutedEventArgs e)
+        {
+            Close();
+        }
     }
 }

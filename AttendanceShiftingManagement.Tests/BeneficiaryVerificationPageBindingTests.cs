@@ -19,6 +19,10 @@ public sealed class BeneficiaryVerificationPageBindingTests
         Assert.Contains("Text=\"Digital ID\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Source=\"{Binding DigitalIdPhotoImage}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Source=\"{Binding DigitalIdQrImage}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"Benefits Received\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding BenefitsReceivedSummary}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding BenefitsReceivedLatestReleaseText}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("ItemsSource=\"{Binding BenefitsReceived}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding UploadDigitalIdPhotoCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding PrintDigitalIdCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding CreateLookupScannerSessionCommand}\"", xaml, StringComparison.Ordinal);
@@ -28,6 +32,14 @@ public sealed class BeneficiaryVerificationPageBindingTests
         Assert.Contains("Command=\"{Binding NextPageCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("SelectedItem=\"{Binding SelectedPageSize}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"{Binding PageSummary}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding SearchText, UpdateSourceTrigger=PropertyChanged, Delay=250}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("ScrollViewer.HorizontalScrollBarVisibility=\"Visible\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Header=\"Full Name\" Binding=\"{Binding FullName}\" Width=\"240\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Header=\"Beneficiary ID\" Binding=\"{Binding BeneficiaryId}\" Width=\"160\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Header=\"Civil Registry ID\" Binding=\"{Binding CivilRegistryId}\" Width=\"180\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Header=\"Address\" Binding=\"{Binding Address}\" Width=\"240\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Header=\"Status\" Width=\"140\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Header=\"Full Name\" Binding=\"{Binding FullName}\" Width=\"*\"", xaml, StringComparison.Ordinal);
     }
 
     [Fact]

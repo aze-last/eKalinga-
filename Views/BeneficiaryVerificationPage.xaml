@@ -124,7 +124,7 @@
                                       SelectedItem="{Binding SelectedStatusFilter}"
                                       Style="{StaticResource MaterialDesignOutlinedComboBox}"/>
                             <TextBox Width="280"
-                                     Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                     Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged, Delay=250}"
                                      Style="{StaticResource MaterialDesignOutlinedTextBox}"
                                      materialDesign:HintAssist.Hint="Search name, IDs, address, or notes"/>
                         </StackPanel>
@@ -143,13 +143,14 @@
                               AutoGenerateColumns="False"
                               CanUserAddRows="False"
                               CanUserDeleteRows="False"
+                              ScrollViewer.HorizontalScrollBarVisibility="Visible"
                               IsReadOnly="True">
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="Full Name" Binding="{Binding FullName}" Width="*"/>
-                            <DataGridTextColumn Header="Beneficiary ID" Binding="{Binding BeneficiaryId}" Width="120"/>
-                            <DataGridTextColumn Header="Civil Registry ID" Binding="{Binding CivilRegistryId}" Width="130"/>
-                            <DataGridTextColumn Header="Address" Binding="{Binding Address}" Width="180"/>
-                            <DataGridTemplateColumn Header="Status" Width="110">
+                            <DataGridTextColumn Header="Full Name" Binding="{Binding FullName}" Width="240"/>
+                            <DataGridTextColumn Header="Beneficiary ID" Binding="{Binding BeneficiaryId}" Width="160"/>
+                            <DataGridTextColumn Header="Civil Registry ID" Binding="{Binding CivilRegistryId}" Width="180"/>
+                            <DataGridTextColumn Header="Address" Binding="{Binding Address}" Width="240"/>
+                            <DataGridTemplateColumn Header="Status" Width="140">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <Border Background="{Binding StatusBrush}" CornerRadius="12" Padding="8,4" HorizontalAlignment="Center">
@@ -259,6 +260,142 @@
                                        Margin="0,4,0,0"
                                        Foreground="{StaticResource BrandTextSecondaryBrush}"
                                        TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Margin="0,14,0,0"
+                            Padding="16"
+                            CornerRadius="10"
+                            Background="#F8FAFC"
+                            BorderBrush="{StaticResource BrandBorderBrush}"
+                            BorderThickness="1">
+                        <StackPanel>
+                            <TextBlock Text="Digital ID"
+                                       FontSize="15"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrandMidnightBrush}"/>
+                            <TextBlock Text="{Binding DigitalIdCardNumber}"
+                                       Margin="0,6,0,0"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrandMidnightBrush}"/>
+                            <TextBlock Text="{Binding DigitalIdIssuedAtText}"
+                                       Margin="0,4,0,0"
+                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                       TextWrapping="Wrap"/>
+
+                            <Grid Margin="0,12,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="92"/>
+                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="92"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0">
+                                    <Border Width="92"
+                                            Height="92"
+                                            Background="#DBEAFE"
+                                            CornerRadius="10"
+                                            BorderBrush="{StaticResource BrandBorderBrush}"
+                                            BorderThickness="1">
+                                        <Image Source="{Binding DigitalIdPhotoImage}" Stretch="UniformToFill"/>
+                                    </Border>
+                                    <TextBlock Text="PHOTO"
+                                               Margin="0,6,0,0"
+                                               HorizontalAlignment="Center"
+                                               FontSize="10"
+                                               FontWeight="SemiBold"
+                                               Foreground="#1D4ED8"/>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="2">
+                                    <Border Width="92"
+                                            Height="92"
+                                            Background="White"
+                                            CornerRadius="10"
+                                            BorderBrush="{StaticResource BrandBorderBrush}"
+                                            BorderThickness="1">
+                                                <Image Source="{Binding DigitalIdQrImage}"
+                                                       Stretch="Uniform"
+                                                       RenderOptions.BitmapScalingMode="NearestNeighbor"
+                                                       SnapsToDevicePixels="True"/>
+                                    </Border>
+                                    <TextBlock Text="QR"
+                                               Margin="0,6,0,0"
+                                               HorizontalAlignment="Center"
+                                               FontSize="10"
+                                               FontWeight="SemiBold"
+                                               Foreground="{StaticResource BrandTextSecondaryBrush}"/>
+                                </StackPanel>
+
+                                <TextBlock Grid.Column="3"
+                                           Margin="16,0,0,0"
+                                           VerticalAlignment="Center"
+                                           Text="Use the digital ID card details here before opening the full review panel or printing the beneficiary ID."
+                                           Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                           TextWrapping="Wrap"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Margin="0,14,0,0"
+                            Padding="16"
+                            CornerRadius="10"
+                            Background="#F8FAFC"
+                            BorderBrush="{StaticResource BrandBorderBrush}"
+                            BorderThickness="1">
+                        <StackPanel>
+                            <TextBlock Text="Benefits Received"
+                                       FontSize="15"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrandMidnightBrush}"/>
+                            <TextBlock Text="{Binding BenefitsReceivedSummary}"
+                                       Margin="0,6,0,0"
+                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                       TextWrapping="Wrap"/>
+                            <TextBlock Text="{Binding BenefitsReceivedLatestReleaseText}"
+                                       Margin="0,4,0,0"
+                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                       TextWrapping="Wrap"/>
+
+                            <ItemsControl ItemsSource="{Binding BenefitsReceived}"
+                                          Margin="0,12,0,0">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Margin="0,0,0,8"
+                                                Padding="10"
+                                                CornerRadius="10"
+                                                Background="White"
+                                                BorderBrush="{StaticResource BrandBorderBrush}"
+                                                BorderThickness="1">
+                                            <StackPanel>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <TextBlock Text="{Binding SourceLabel}"
+                                                               FontWeight="SemiBold"
+                                                               Foreground="{StaticResource BrandMidnightBrush}"/>
+                                                    <TextBlock Grid.Column="1"
+                                                               Text="{Binding AmountText}"
+                                                               FontWeight="SemiBold"
+                                                               Foreground="{StaticResource BrandSuccessBrush}"/>
+                                                </Grid>
+
+                                                <TextBlock Text="{Binding ReleaseDateText}"
+                                                           Margin="0,4,0,0"
+                                                           Foreground="{StaticResource BrandTextSecondaryBrush}"/>
+                                                <TextBlock Text="{Binding Remarks}"
+                                                           Margin="0,4,0,0"
+                                                           Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                                           TextWrapping="Wrap"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
                         </StackPanel>
                     </Border>
 
@@ -489,7 +626,10 @@
                                                 CornerRadius="12"
                                                 BorderBrush="{StaticResource BrandBorderBrush}"
                                                 BorderThickness="1">
-                                            <Image Source="{Binding DigitalIdQrImage}" Stretch="Uniform"/>
+                                            <Image Source="{Binding DigitalIdQrImage}"
+                                                   Stretch="Uniform"
+                                                   RenderOptions.BitmapScalingMode="NearestNeighbor"
+                                                   SnapsToDevicePixels="True"/>
                                         </Border>
 
                                         <StackPanel Grid.Column="3" Margin="16,0,0,0">
@@ -548,7 +688,10 @@
                                             BorderBrush="{StaticResource BrandBorderBrush}"
                                             BorderThickness="1"
                                             CornerRadius="12">
-                                        <Image Source="{Binding LookupScannerQrImage}" Stretch="Uniform"/>
+                                            <Image Source="{Binding LookupScannerQrImage}"
+                                                   Stretch="Uniform"
+                                                   RenderOptions.BitmapScalingMode="NearestNeighbor"
+                                                   SnapsToDevicePixels="True"/>
                                     </Border>
                                 </StackPanel>
                             </Border>

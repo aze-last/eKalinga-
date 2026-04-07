@@ -268,6 +268,149 @@ namespace AttendanceShiftingManagement.Services
             return true;
         }
 
+        public CashForWorkEvent UpdateEvent(int eventId, string title, string location, DateTime eventDate, TimeSpan startTime, TimeSpan endTime, string? notes, int updatedByUserId)
+        {
+            var cashForWorkEvent = _context.CashForWorkEvents
+                .FirstOrDefault(item => item.Id == eventId)
+                ?? throw new InvalidOperationException("Cash-for-work event was not found.");
+
+            EnsureEventCanBeModified(cashForWorkEvent);
+
+            cashForWorkEvent.Title = title.Trim();
+            cashForWorkEvent.Location = location.Trim();
+            cashForWorkEvent.EventDate = eventDate.Date;
+            cashForWorkEvent.StartTime = startTime;
+            cashForWorkEvent.EndTime = endTime;
+            cashForWorkEvent.Notes = string.IsNullOrWhiteSpace(notes) ? null : notes.Trim();
+            cashForWorkEvent.UpdatedAt = DateTime.Now;
+
+            var attendanceRows = _context.CashForWorkAttendances
+                .Include(attendance => attendance.Participant)
+                .Where(attendance => attendance.Participant.EventId == eventId)
+                .ToList();
+
+            foreach (var attendance in attendanceRows)
+            {
+                attendance.AttendanceDate = eventDate.Date;
+            }
+
+            _context.SaveChanges();
+            _auditService?.LogActivity(
+                updatedByUserId,
+                "CashForWorkEventUpdated",
+                "CashForWorkEvent",
+                cashForWorkEvent.Id,
+                $"Updated event '{cashForWorkEvent.Title}' scheduled on {cashForWorkEvent.EventDate:yyyy-MM-dd}.");
+
+            return cashForWorkEvent;
+        }
+
+        public void DeleteEvent(int eventId, int deletedByUserId)
+        {
+            var cashForWorkEvent = _context.CashForWorkEvents
+                .FirstOrDefault(item => item.Id == eventId)
+                ?? throw new InvalidOperationException("Cash-for-work event was not found.");
+
+            EnsureEventCanBeModified(cashForWorkEvent);
+
+            var eventTitle = cashForWorkEvent.Title;
+
+            var scannerSessions = _context.ScannerSessions
+                .Where(session => session.CashForWorkEventId == eventId)
+                .ToList();
+
+            var participants = _context.CashForWorkParticipants
+                .Where(participant => participant.EventId == eventId)
+                .ToList();
+
+            var participantIds = participants
+                .Select(participant => participant.Id)
+                .ToList();
+
+            var attendances = _context.CashForWorkAttendances
+                .Where(attendance => participantIds.Contains(attendance.ParticipantId))
+                .ToList();
+
+            if (attendances.Count > 0)
+            {
+                _context.CashForWorkAttendances.RemoveRange(attendances);
+            }
+
+            if (participants.Count > 0)
+            {
+                _context.CashForWorkParticipants.RemoveRange(participants);
+            }
+
+            if (scannerSessions.Count > 0)
+            {
+                _context.ScannerSessions.RemoveRange(scannerSessions);
+            }
+
+            _context.CashForWorkEvents.Remove(cashForWorkEvent);
+            _context.SaveChanges();
+
+            _auditService?.LogActivity(
+                deletedByUserId,
+                "CashForWorkEventDeleted",
+                "CashForWorkEvent",
+                eventId,
+                $"Deleted event '{eventTitle}' and its related attendance records.");
+        }
+
+        public CashForWorkAttendance UpdateAttendance(int attendanceId, DateTime attendanceDate, CashForWorkAttendanceStatus status, AttendanceCaptureSource source, int updatedByUserId)
+        {
+            var attendance = _context.CashForWorkAttendances
+                .Include(item => item.Participant)
+                .ThenInclude(participant => participant.Event)
+                .FirstOrDefault(item => item.Id == attendanceId)
+                ?? throw new InvalidOperationException("Attendance record was not found.");
+
+            EnsureEventCanBeModified(attendance.Participant.Event);
+
+            attendance.AttendanceDate = attendanceDate.Date;
+            attendance.Status = status;
+            attendance.Source = source;
+            attendance.RecordedByUserId = updatedByUserId;
+            attendance.RecordedAt = DateTime.Now;
+
+            if (source == AttendanceCaptureSource.Manual)
+            {
+                attendance.OcrExtractedName = null;
+            }
+
+            _context.SaveChanges();
+            _auditService?.LogActivity(
+                updatedByUserId,
+                "CashForWorkAttendanceUpdated",
+                "CashForWorkAttendance",
+                attendance.Id,
+                $"Updated attendance #{attendance.Id} for event '{attendance.Participant.Event.Title}'.");
+
+            return attendance;
+        }
+
+        public void DeleteAttendance(int attendanceId, int deletedByUserId)
+        {
+            var attendance = _context.CashForWorkAttendances
+                .Include(item => item.Participant)
+                .ThenInclude(participant => participant.Event)
+                .FirstOrDefault(item => item.Id == attendanceId)
+                ?? throw new InvalidOperationException("Attendance record was not found.");
+
+            EnsureEventCanBeModified(attendance.Participant.Event);
+
+            var eventTitle = attendance.Participant.Event.Title;
+
+            _context.CashForWorkAttendances.Remove(attendance);
+            _context.SaveChanges();
+            _auditService?.LogActivity(
+                deletedByUserId,
+                "CashForWorkAttendanceDeleted",
+                "CashForWorkAttendance",
+                attendanceId,
+                $"Deleted attendance #{attendanceId} for event '{eventTitle}'.");
+        }
+
         public async Task<CashForWorkReleaseOperationResult> ReleaseEventAsync(
             int eventId,
             int ayudaProgramId,
@@ -346,6 +489,14 @@ namespace AttendanceShiftingManagement.Services
                 .Where(cashForWorkEvent => cashForWorkEvent.Id == eventId)
                 .Select(cashForWorkEvent => cashForWorkEvent.Title)
                 .FirstOrDefault() ?? $"event #{eventId}";
+        }
+
+        private static void EnsureEventCanBeModified(CashForWorkEvent cashForWorkEvent)
+        {
+            if (cashForWorkEvent.BudgetLedgerEntryId.HasValue || cashForWorkEvent.Status == CashForWorkEventStatus.Completed)
+            {
+                throw new InvalidOperationException("Released cash-for-work events can no longer be modified.");
+            }
         }
 
         private HashSet<int> GetValidParticipantIds(int eventId)

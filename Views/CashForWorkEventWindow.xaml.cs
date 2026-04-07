@@ -12,10 +12,16 @@ namespace AttendanceShiftingManagement.Views
             DateTime eventDate,
             string eventStartTime,
             string eventEndTime,
-            string eventNotes)
+            string eventNotes,
+            string windowTitle = "New Cash-for-Work Event",
+            string submitButtonText = "CREATE EVENT")
         {
             InitializeComponent();
             WindowBrandingService.ApplyWindowIcon(this);
+
+            Title = windowTitle;
+            WindowHeadingTextBlock.Text = windowTitle;
+            SubmitButton.Content = submitButtonText;
 
             TitleTextBox.Text = eventTitle;
             LocationTextBox.Text = eventLocation;
@@ -76,6 +82,17 @@ namespace AttendanceShiftingManagement.Views
         }
 
         private void Cancel_Click(object sender, RoutedEventArgs e)
+        {
+            DialogResult = false;
+            Close();
+        }
+
+        private void Minimize_Click(object sender, RoutedEventArgs e)
+        {
+            WindowState = WindowState.Minimized;
+        }
+
+        private void Close_Click(object sender, RoutedEventArgs e)
         {
             DialogResult = false;
             Close();

@@ -1,5 +1,7 @@
 using QRCoder;
 using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Windows.Media.Imaging;
 using ZXing;
@@ -37,20 +39,20 @@ namespace AttendanceShiftingManagement.Services
             stream.CopyTo(buffer);
             buffer.Position = 0;
 
-            using var bitmap = new Bitmap(buffer);
-            var reader = new BarcodeReaderGeneric
-            {
-                AutoRotate = true,
-                Options = new DecodingOptions
-                {
-                    TryHarder = true,
-                    TryInverted = true,
-                    PossibleFormats = [BarcodeFormat.QR_CODE]
-                }
-            };
+            using var bitmap = LoadWorkingBitmap(buffer);
+            NormalizeOrientation(bitmap);
 
-            var result = reader.Decode(bitmap);
-            return result?.Text?.Trim();
+            foreach (var maxDimension in DecodePassDimensions)
+            {
+                using var candidate = ResizeForDecode(bitmap, maxDimension);
+                var decoded = TryDecodeBitmap(candidate);
+                if (!string.IsNullOrWhiteSpace(decoded))
+                {
+                    return decoded;
+                }
+            }
+
+            return null;
         }
 
         private static BitmapImage LoadBitmap(byte[] bytes)
@@ -63,6 +65,117 @@ namespace AttendanceShiftingManagement.Services
             image.EndInit();
             image.Freeze();
             return image;
+        }
+
+        private static readonly int[] DecodePassDimensions = [0, 2200, 1600, 1200, 900, 700, 500];
+
+        private static Bitmap LoadWorkingBitmap(Stream stream)
+        {
+            using var source = new Bitmap(stream);
+            var working = new Bitmap(source.Width, source.Height, PixelFormat.Format32bppArgb);
+
+            using var graphics = Graphics.FromImage(working);
+            graphics.CompositingQuality = CompositingQuality.HighQuality;
+            graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
+            graphics.SmoothingMode = SmoothingMode.HighQuality;
+            graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
+            graphics.DrawImage(source, 0, 0, source.Width, source.Height);
+
+            return working;
+        }
+
+        private static string? TryDecodeBitmap(Bitmap bitmap)
+        {
+            var reader = new BarcodeReaderGeneric
+            {
+                AutoRotate = true,
+                Options = new DecodingOptions
+                {
+                    TryHarder = true,
+                    TryInverted = true,
+                    PossibleFormats = [BarcodeFormat.QR_CODE]
+                }
+            };
+
+            var result = reader.Decode(bitmap);
+            return string.IsNullOrWhiteSpace(result?.Text) ? null : result.Text.Trim();
+        }
+
+        private static Bitmap ResizeForDecode(Bitmap source, int maxDimension)
+        {
+            var sourceMaxDimension = Math.Max(source.Width, source.Height);
+            if (maxDimension <= 0 || sourceMaxDimension <= maxDimension)
+            {
+                return (Bitmap)source.Clone();
+            }
+
+            var scale = maxDimension / (double)sourceMaxDimension;
+            var width = Math.Max(1, (int)Math.Round(source.Width * scale));
+            var height = Math.Max(1, (int)Math.Round(source.Height * scale));
+            var resized = new Bitmap(width, height, PixelFormat.Format32bppArgb);
+
+            using var graphics = Graphics.FromImage(resized);
+            graphics.Clear(Color.White);
+            graphics.CompositingQuality = CompositingQuality.HighQuality;
+            graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
+            graphics.SmoothingMode = SmoothingMode.HighQuality;
+            graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
+            graphics.DrawImage(source, 0, 0, width, height);
+
+            return resized;
+        }
+
+        private static void NormalizeOrientation(Bitmap bitmap)
+        {
+            const int orientationPropertyId = 0x0112;
+
+            if (Array.IndexOf(bitmap.PropertyIdList, orientationPropertyId) < 0)
+            {
+                return;
+            }
+
+            PropertyItem? orientationProperty;
+
+            try
+            {
+                orientationProperty = bitmap.GetPropertyItem(orientationPropertyId);
+            }
+            catch (ArgumentException)
+            {
+                return;
+            }
+
+            var orientationBytes = orientationProperty?.Value;
+            if (orientationBytes == null || orientationBytes.Length == 0)
+            {
+                return;
+            }
+
+            var orientation = orientationBytes[0];
+            var rotateFlipType = orientation switch
+            {
+                2 => RotateFlipType.RotateNoneFlipX,
+                3 => RotateFlipType.Rotate180FlipNone,
+                4 => RotateFlipType.Rotate180FlipX,
+                5 => RotateFlipType.Rotate90FlipX,
+                6 => RotateFlipType.Rotate90FlipNone,
+                7 => RotateFlipType.Rotate270FlipX,
+                8 => RotateFlipType.Rotate270FlipNone,
+                _ => RotateFlipType.RotateNoneFlipNone
+            };
+
+            if (rotateFlipType != RotateFlipType.RotateNoneFlipNone)
+            {
+                bitmap.RotateFlip(rotateFlipType);
+            }
+
+            try
+            {
+                bitmap.RemovePropertyItem(orientationPropertyId);
+            }
+            catch (ArgumentException)
+            {
+            }
         }
     }
 }

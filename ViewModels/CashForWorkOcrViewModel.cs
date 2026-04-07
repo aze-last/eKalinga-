@@ -52,6 +52,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private ICollectionView _savedAttendanceRowsView;
         private string _attendanceSearchText = string.Empty;
         private string _selectedAttendanceSourceFilter = AllAttendanceSourceFilter;
+        private CashForWorkSavedAttendanceRow? _selectedAttendanceRow;
 
         public CashForWorkOcrViewModel(User currentUser)
         {
@@ -280,6 +281,12 @@ namespace AttendanceShiftingManagement.ViewModels
             }
         }
 
+        public CashForWorkSavedAttendanceRow? SelectedAttendanceRow
+        {
+            get => _selectedAttendanceRow;
+            set => SetProperty(ref _selectedAttendanceRow, value);
+        }
+
         public string? EventDateDisplay => SelectedEvent?.EventDate.ToString("MMM dd, yyyy", CultureInfo.CurrentCulture);
 
         public string? EventTimeRangeDisplay => SelectedEvent == null
@@ -295,8 +302,9 @@ namespace AttendanceShiftingManagement.ViewModels
                 Events.Add(cashForWorkEvent);
             }
 
-            SelectedEvent = Events.FirstOrDefault(item => item.Id == selectedEventId)
-                ?? Events.FirstOrDefault();
+            SelectedEvent = selectedEventId.HasValue
+                ? Events.FirstOrDefault(item => item.Id == selectedEventId.Value)
+                : null;
         }
 
         private void LoadAyudaPrograms()
@@ -346,9 +354,11 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private void LoadSavedAttendance()
         {
+            var selectedAttendanceId = SelectedAttendanceRow?.AttendanceId;
             SavedAttendanceRows.Clear();
             if (SelectedEvent == null)
             {
+                SelectedAttendanceRow = null;
                 RefreshAttendanceSourceFilters();
                 RefreshAttendanceFilters();
                 ResetReleaseSummary();
@@ -356,28 +366,39 @@ namespace AttendanceShiftingManagement.ViewModels
             }
 
             var attendanceRecords = _cashForWorkService.GetAttendanceRecords(SelectedEvent.Id);
-            var savedParticipantIds = attendanceRecords
+            var presentParticipantIds = attendanceRecords
+                .Where(record =>
+                    record.AttendanceDate.Date == SelectedEvent.EventDate.Date &&
+                    record.Status == CashForWorkAttendanceStatus.Present)
                 .Select(record => record.ParticipantId)
                 .ToHashSet();
 
             foreach (var participant in Participants)
             {
-                participant.IsMarkedPresent = savedParticipantIds.Contains(participant.ParticipantId);
+                participant.IsMarkedPresent = presentParticipantIds.Contains(participant.ParticipantId);
             }
 
             foreach (var record in attendanceRecords)
             {
                 SavedAttendanceRows.Add(new CashForWorkSavedAttendanceRow
                 {
+                    AttendanceId = record.Id,
+                    ParticipantId = record.ParticipantId,
+                    AttendanceDate = record.AttendanceDate,
                     FullName = BuildParticipantName(record.Participant),
                     BeneficiaryId = NormalizeNullable(record.Participant.Beneficiary?.BeneficiaryId) ?? "--",
                     CivilRegistryId = NormalizeNullable(record.Participant.Beneficiary?.CivilRegistryId) ?? "--",
+                    StatusValue = record.Status,
                     Status = record.Status.ToString(),
+                    SourceValue = record.Source,
                     Source = record.Source.ToString(),
                     RecordedAt = record.RecordedAt
                 });
             }
 
+            SelectedAttendanceRow = selectedAttendanceId.HasValue
+                ? SavedAttendanceRows.FirstOrDefault(row => row.AttendanceId == selectedAttendanceId.Value)
+                : null;
             RefreshAttendanceSourceFilters();
             RefreshAttendanceFilters();
             UpdateAttendanceSummary();
@@ -530,6 +551,82 @@ namespace AttendanceShiftingManagement.ViewModels
             LoadSavedAttendance();
             StatusMessage = $"Saved {savedCount} manual attendance record(s) for {SelectedEvent.Title}.";
             MessageBox.Show(StatusMessage, "Manual Attendance Saved", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        public CashForWorkEvent UpdateSelectedEvent(string title, string location, DateTime eventDate, string eventStartTime, string eventEndTime, string? eventNotes)
+        {
+            if (SelectedEvent == null)
+            {
+                throw new InvalidOperationException("Select an event first.");
+            }
+
+            if (!TimeSpan.TryParse(eventStartTime, out var startTime) ||
+                !TimeSpan.TryParse(eventEndTime, out var endTime))
+            {
+                throw new InvalidOperationException("Use HH:mm format for start and end time.");
+            }
+
+            var updatedEvent = _cashForWorkService.UpdateEvent(
+                SelectedEvent.Id,
+                title,
+                location,
+                eventDate,
+                startTime,
+                endTime,
+                eventNotes,
+                _currentUser.Id);
+
+            LoadEvents();
+            SelectedEvent = Events.FirstOrDefault(item => item.Id == updatedEvent.Id);
+            StatusMessage = $"Updated event: {updatedEvent.Title}";
+            return updatedEvent;
+        }
+
+        public void DeleteSelectedEvent()
+        {
+            if (SelectedEvent == null)
+            {
+                throw new InvalidOperationException("Select an event first.");
+            }
+
+            var deletedEventTitle = SelectedEvent.Title;
+            _cashForWorkService.DeleteEvent(SelectedEvent.Id, _currentUser.Id);
+            LoadEvents();
+            StatusMessage = $"Deleted event: {deletedEventTitle}";
+        }
+
+        public CashForWorkSavedAttendanceRow UpdateSelectedAttendance(DateTime attendanceDate, CashForWorkAttendanceStatus status, AttendanceCaptureSource source)
+        {
+            if (SelectedAttendanceRow == null)
+            {
+                throw new InvalidOperationException("Select an attendance record first.");
+            }
+
+            var updatedAttendance = _cashForWorkService.UpdateAttendance(
+                SelectedAttendanceRow.AttendanceId,
+                attendanceDate,
+                status,
+                source,
+                _currentUser.Id);
+
+            LoadSavedAttendance();
+            SelectedAttendanceRow = SavedAttendanceRows.FirstOrDefault(row => row.AttendanceId == updatedAttendance.Id);
+            StatusMessage = $"Updated attendance for {SelectedAttendanceRow?.FullName ?? "the selected participant"}.";
+            return SelectedAttendanceRow
+                ?? throw new InvalidOperationException("Attendance record could not be reloaded.");
+        }
+
+        public void DeleteSelectedAttendance()
+        {
+            if (SelectedAttendanceRow == null)
+            {
+                throw new InvalidOperationException("Select an attendance record first.");
+            }
+
+            var participantName = SelectedAttendanceRow.FullName;
+            _cashForWorkService.DeleteAttendance(SelectedAttendanceRow.AttendanceId, _currentUser.Id);
+            LoadSavedAttendance();
+            StatusMessage = $"Deleted attendance for {participantName}.";
         }
 
         private async Task ExecuteReleaseBudgetAsync()
@@ -792,10 +889,15 @@ namespace AttendanceShiftingManagement.ViewModels
 
     public sealed class CashForWorkSavedAttendanceRow
     {
+        public int AttendanceId { get; set; }
+        public int ParticipantId { get; set; }
+        public DateTime AttendanceDate { get; set; }
         public string FullName { get; set; } = string.Empty;
         public string BeneficiaryId { get; set; } = string.Empty;
         public string CivilRegistryId { get; set; } = string.Empty;
+        public CashForWorkAttendanceStatus StatusValue { get; set; }
         public string Status { get; set; } = string.Empty;
+        public AttendanceCaptureSource SourceValue { get; set; }
         public string Source { get; set; } = string.Empty;
         public DateTime RecordedAt { get; set; }
     }

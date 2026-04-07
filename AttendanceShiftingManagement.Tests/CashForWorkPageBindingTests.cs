@@ -29,6 +29,7 @@ public sealed class CashForWorkPageBindingTests
         Assert.Contains("Command=\"{Binding ExportAttendanceCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("ItemsSource=\"{Binding Events}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("SelectedItem=\"{Binding SelectedEvent}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("SelectedItem=\"{Binding SelectedAttendanceRow}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"{Binding AttendanceScannerSessionUrl, Mode=OneWay}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"{Binding AttendanceScannerSessionPin}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Source=\"{Binding AttendanceScannerQrImage}\"", xaml, StringComparison.Ordinal);
@@ -36,7 +37,15 @@ public sealed class CashForWorkPageBindingTests
         Assert.Contains("SelectedItem=\"{Binding SelectedEligibleBeneficiary}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("DisplayMemberPath=\"DisplayLabel\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Click=\"CreateEvent_Click\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Click=\"EditEvent_Click\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Click=\"DeleteEvent_Click\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Click=\"EditAttendance_Click\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Click=\"DeleteAttendance_Click\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Content=\"NEW EVENT\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Content=\"EDIT EVENT\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Content=\"DELETE EVENT\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Content=\"EDIT ATTENDANCE\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Content=\"DELETE ATTENDANCE\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Header=\"Beneficiary ID\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Header=\"Civil Registry ID\"", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Select a household member to add.", xaml, StringComparison.Ordinal);
@@ -66,7 +75,11 @@ public sealed class CashForWorkPageBindingTests
 
                 var xaml = File.ReadAllText(pagePath)
                     .Replace("x:Class=\"AttendanceShiftingManagement.Views.CashForWorkOcrPage\"", string.Empty, StringComparison.Ordinal)
-                    .Replace(" Click=\"CreateEvent_Click\"", string.Empty, StringComparison.Ordinal);
+                    .Replace(" Click=\"CreateEvent_Click\"", string.Empty, StringComparison.Ordinal)
+                    .Replace(" Click=\"EditEvent_Click\"", string.Empty, StringComparison.Ordinal)
+                    .Replace(" Click=\"DeleteEvent_Click\"", string.Empty, StringComparison.Ordinal)
+                    .Replace(" Click=\"EditAttendance_Click\"", string.Empty, StringComparison.Ordinal)
+                    .Replace(" Click=\"DeleteAttendance_Click\"", string.Empty, StringComparison.Ordinal);
 
                 _ = XamlReader.Parse(xaml);
             }

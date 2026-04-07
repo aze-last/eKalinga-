@@ -9,7 +9,7 @@ namespace AttendanceShiftingManagement.Views
         {
             InitializeComponent();
             WindowBrandingService.ApplyWindowIcon(this);
-            Title = $"eKalinga+ - {fullName} Preview";
+            Title = $"{fullName} Preview";
             PreviewHost.Content = previewCard;
         }
 
@@ -22,6 +22,17 @@ namespace AttendanceShiftingManagement.Views
         private void PrintButton_Click(object sender, RoutedEventArgs e)
         {
             DialogResult = true;
+            Close();
+        }
+
+        private void Minimize_Click(object sender, RoutedEventArgs e)
+        {
+            WindowState = WindowState.Minimized;
+        }
+
+        private void Close_Click(object sender, RoutedEventArgs e)
+        {
+            DialogResult = false;
             Close();
         }
     }

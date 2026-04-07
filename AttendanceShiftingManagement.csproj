@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <DefaultItemExcludes>$(DefaultItemExcludes);artifacts\**</DefaultItemExcludes>
     <Version>1.0.4</Version>
     <AssemblyVersion>1.0.4.0</AssemblyVersion>
     <FileVersion>1.0.4.0</FileVersion>
@@ -52,9 +53,16 @@
 
   <ItemGroup>
     <Compile Remove="AttendanceShiftingManagement.Tests\**\*.cs" />
+    <Compile Remove="artifacts\**\*.cs" />
     <EmbeddedResource Remove="AttendanceShiftingManagement.Tests\**\*" />
+    <EmbeddedResource Remove="artifacts\**\*" />
     <None Remove="AttendanceShiftingManagement.Tests\**\*" />
+    <None Remove="artifacts\**\*" />
     <Page Remove="AttendanceShiftingManagement.Tests\**\*" />
+    <Page Remove="artifacts\**\*" />
+    <ApplicationDefinition Remove="artifacts\**\*" />
+    <Resource Remove="artifacts\**\*" />
+    <Content Remove="artifacts\**\*" />
   </ItemGroup>
 
 </Project>

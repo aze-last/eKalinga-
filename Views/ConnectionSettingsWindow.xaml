@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         mc:Ignorable="d"
         Title="App Database Settings"
         Width="760"
@@ -11,9 +12,40 @@
         MinWidth="760"
         MinHeight="560"
         WindowStartupLocation="CenterScreen"
-        ResizeMode="CanResize"
-        Background="{StaticResource BrandSurfaceBrush}">
+        Background="Transparent"
+        AllowsTransparency="True"
+        WindowStyle="None">
+
+    <shell:WindowChrome.WindowChrome>
+        <shell:WindowChrome CaptionHeight="40" 
+                      ResizeBorderThickness="5" 
+                      GlassFrameThickness="0" 
+                      CornerRadius="0" />
+    </shell:WindowChrome.WindowChrome>
+
     <Window.Resources>
+        <Style x:Key="WindowControlButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource MaterialDesignFlatButton}">
+            <Setter Property="Width" Value="46"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Foreground" Value="{StaticResource BrandTextSecondaryBrush}"/>
+            <Setter Property="materialDesign:ButtonAssist.CornerRadius" Value="0"/>
+            <Setter Property="shell:WindowChrome.IsHitTestVisibleInChrome" Value="True"/>
+        </Style>
+
+        <Style x:Key="WindowCloseButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource WindowControlButtonStyle}">
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#EF4444"/>
+                    <Setter Property="Foreground" Value="White"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
         <Style x:Key="PresetButtonBaseStyle"
                TargetType="Button"
                BasedOn="{StaticResource SecondaryActionButton}">
@@ -62,6 +94,10 @@
         </Style>
     </Window.Resources>
 
+    <Border Background="{StaticResource BrandSurfaceBrush}"
+            CornerRadius="16"
+            BorderBrush="{StaticResource BrandBorderBrush}"
+            BorderThickness="1">
     <DockPanel Margin="24" LastChildFill="True">
         <Border DockPanel.Dock="Bottom"
                 Margin="0,18,0,0"
@@ -218,6 +254,24 @@
                       PanningMode="VerticalOnly">
             <StackPanel Margin="0,0,0,12">
                 <StackPanel>
+                    <!-- CUSTOM WINDOW CONTROLS -->
+                    <StackPanel Orientation="Horizontal"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Top"
+                                Panel.ZIndex="99"
+                                Margin="0,-24,-24,0">
+                        <Button Style="{StaticResource WindowControlButtonStyle}"
+                                Click="Minimize_Click"
+                                ToolTip="Minimize">
+                            <materialDesign:PackIcon Kind="WindowMinimize" Width="18" Height="18"/>
+                        </Button>
+                        <Button Style="{StaticResource WindowCloseButtonStyle}"
+                                Click="Close_Click"
+                                ToolTip="Close">
+                            <materialDesign:PackIcon Kind="Close" Width="20" Height="20"/>
+                        </Button>
+                    </StackPanel>
+
                     <TextBlock Text="App Database Settings"
                                FontSize="24"
                                FontWeight="SemiBold"
@@ -449,4 +503,5 @@
             </StackPanel>
         </ScrollViewer>
     </DockPanel>
+    </Border>
 </Window>

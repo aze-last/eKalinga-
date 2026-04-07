@@ -157,5 +157,15 @@ namespace AttendanceShiftingManagement.Views
 
             base.OnClosed(e);
         }
+
+        private void Minimize_Click(object sender, RoutedEventArgs e)
+        {
+            WindowState = WindowState.Minimized;
+        }
+
+        private void Close_Click(object sender, RoutedEventArgs e)
+        {
+            Close();
+        }
     }
 }
