@@ -22,6 +22,7 @@ public sealed class SystemProfileSettingsServiceTests
             Assert.Equal(string.Empty, settings.ContactNumber);
             Assert.Equal(SystemProfileSettingsModel.DefaultLogoUri, settings.LogoPath);
             Assert.Equal(SystemProfileSettingsModel.DefaultLoginBackgroundUri, settings.LoginBackgroundPath);
+            Assert.Equal(AppAppearanceMode.Light, settings.AppearanceMode);
             Assert.Matches(@"^BAS-\d{8}-[A-Z0-9]{4}$", settings.InstallSerial);
             Assert.True(File.Exists(runtimePath));
 
@@ -56,6 +57,7 @@ public sealed class SystemProfileSettingsServiceTests
                 Email = "help@barangay.local",
                 ContactNumber = "09171234567",
                 LogoPath = Path.Combine(tempDirectory, "branding", "system-logo.png"),
+                AppearanceMode = AppAppearanceMode.Dark,
                 InstallSerial = "BAS-20260326-AB12"
             };
 
@@ -68,6 +70,7 @@ public sealed class SystemProfileSettingsServiceTests
             Assert.Equal(expected.Email, loaded.Email);
             Assert.Equal(expected.ContactNumber, loaded.ContactNumber);
             Assert.Equal(expected.LogoPath, loaded.LogoPath);
+            Assert.Equal(expected.AppearanceMode, loaded.AppearanceMode);
             Assert.Equal(expected.InstallSerial, loaded.InstallSerial);
         }
         finally

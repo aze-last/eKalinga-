@@ -26,9 +26,12 @@ namespace AttendanceShiftingManagement.Services
         string? Age,
         string? MaritalStatus,
         string? Address,
+        bool IsPwd,
         string? PwdIdNo,
+        bool IsSenior,
         string? SeniorIdNo,
         string? DisabilityType,
+        string? CauseOfDisability,
         string? ReviewNotes);
 
     public sealed class BeneficiaryVerificationService
@@ -60,6 +63,18 @@ namespace AttendanceShiftingManagement.Services
             if (request.Corrections != null)
             {
                 ApplyCorrections(stagingRow, request.Corrections, actedByUserId);
+            }
+
+            var collision = await CheckForCollisionAsync(
+                stagingRow.StagingID,
+                stagingRow.BeneficiaryId,
+                stagingRow.CivilRegistryId,
+                stagingRow.FullName,
+                stagingRow.DateOfBirth);
+
+            if (collision != null)
+            {
+                return new BeneficiaryVerificationOperationResult(false, collision);
             }
 
             var fullName = BuildDisplayName(stagingRow);
@@ -96,28 +111,33 @@ namespace AttendanceShiftingManagement.Services
                 return new BeneficiaryVerificationOperationResult(false, "The selected staging record no longer exists.");
             }
 
-            if (stagingRow.VerificationStatus == VerificationStatus.Approved)
+            var wasApproved = stagingRow.VerificationStatus == VerificationStatus.Approved;
+            var previousBeneficiaryId = NormalizeNullable(stagingRow.BeneficiaryId);
+            var previousCivilRegistryId = NormalizeNullable(stagingRow.CivilRegistryId);
+
+            var collision = await CheckForCollisionAsync(
+                request.StagingId,
+                request.BeneficiaryId,
+                request.CivilRegistryId,
+                request.FullName ?? BuildDisplayName(request, stagingRow),
+                request.DateOfBirth);
+
+            if (collision != null)
             {
-                return new BeneficiaryVerificationOperationResult(false, "Approved records can no longer be edited from staging.");
+                return new BeneficiaryVerificationOperationResult(false, collision);
             }
 
-            stagingRow.BeneficiaryId = NormalizeNullable(request.BeneficiaryId);
-            stagingRow.CivilRegistryId = NormalizeNullable(request.CivilRegistryId);
-            stagingRow.FirstName = NormalizeNullable(request.FirstName);
-            stagingRow.MiddleName = NormalizeNullable(request.MiddleName);
-            stagingRow.LastName = NormalizeNullable(request.LastName);
-            stagingRow.FullName = NormalizeNullable(request.FullName) ?? BuildDisplayName(stagingRow);
-            stagingRow.Sex = NormalizeNullable(request.Sex);
-            stagingRow.DateOfBirth = NormalizeNullable(request.DateOfBirth);
-            stagingRow.Age = NormalizeNullable(request.Age);
-            stagingRow.MaritalStatus = NormalizeNullable(request.MaritalStatus);
-            stagingRow.Address = NormalizeNullable(request.Address);
-            stagingRow.PwdIdNo = NormalizeNullable(request.PwdIdNo);
-            stagingRow.SeniorIdNo = NormalizeNullable(request.SeniorIdNo);
-            stagingRow.DisabilityType = NormalizeNullable(request.DisabilityType);
-            stagingRow.ReviewNotes = NormalizeNullable(request.ReviewNotes);
-            stagingRow.ReviewedAt = DateTime.Now;
-            stagingRow.ReviewedByUserId = actedByUserId;
+            ApplyCorrections(stagingRow, request, actedByUserId);
+
+            if (wasApproved)
+            {
+                await SyncApprovedBeneficiaryReferencesAsync(
+                    stagingRow.StagingID,
+                    previousBeneficiaryId,
+                    previousCivilRegistryId,
+                    stagingRow);
+            }
+
             await _context.SaveChangesAsync();
 
             await _auditService.LogActivityAsync(
@@ -128,6 +148,161 @@ namespace AttendanceShiftingManagement.Services
                 $"Saved registry corrections for '{BuildDisplayName(stagingRow)}'.");
 
             return new BeneficiaryVerificationOperationResult(true, $"Saved corrections for {BuildDisplayName(stagingRow)}.");
+        }
+
+        public async Task<BeneficiaryVerificationOperationResult> ReturnToPendingAsync(int stagingId, int actedByUserId, string? reviewNotes)
+        {
+            var stagingRow = await _context.BeneficiaryStaging
+                .FirstOrDefaultAsync(row => row.StagingID == stagingId);
+
+            if (stagingRow == null)
+            {
+                return new BeneficiaryVerificationOperationResult(false, "The selected staging record no longer exists.");
+            }
+
+            if (stagingRow.VerificationStatus == VerificationStatus.Pending)
+            {
+                return new BeneficiaryVerificationOperationResult(false, "This beneficiary is already pending review.");
+            }
+
+            var benefitConflict = await EnsureNoActiveBenefitsAsync(stagingRow);
+            if (benefitConflict != null)
+            {
+                return new BeneficiaryVerificationOperationResult(false, benefitConflict);
+            }
+
+            stagingRow.VerificationStatus = VerificationStatus.Pending;
+            stagingRow.ReviewNotes = NormalizeNullable(reviewNotes);
+            stagingRow.ReviewedAt = DateTime.Now;
+            stagingRow.ReviewedByUserId = actedByUserId;
+            stagingRow.LinkedHouseholdId = null;
+            stagingRow.LinkedHouseholdMemberId = null;
+
+            var activeDigitalId = await _context.BeneficiaryDigitalIds
+                .FirstOrDefaultAsync(item => item.BeneficiaryStagingId == stagingId && item.IsActive);
+
+            if (activeDigitalId != null)
+            {
+                activeDigitalId.IsActive = false;
+                activeDigitalId.RevokedAt = DateTime.Now;
+            }
+
+            await _context.SaveChangesAsync();
+
+            var fullName = BuildDisplayName(stagingRow);
+            await _auditService.LogActivityAsync(
+                actedByUserId,
+                "BeneficiaryReturnedToPending",
+                "BeneficiaryStaging",
+                stagingRow.StagingID,
+                $"Returned '{fullName}' to pending review.");
+
+            return new BeneficiaryVerificationOperationResult(true, $"{fullName} is back in pending review.");
+        }
+
+        private async Task SyncApprovedBeneficiaryReferencesAsync(
+            int stagingId,
+            string? previousBeneficiaryId,
+            string? previousCivilRegistryId,
+            BeneficiaryStaging stagingRow)
+        {
+            var fullName = BuildDisplayName(stagingRow);
+            var beneficiaryId = NormalizeNullable(stagingRow.BeneficiaryId);
+            var civilRegistryId = NormalizeNullable(stagingRow.CivilRegistryId);
+
+            var projectBeneficiaries = await _context.AyudaProjectBeneficiaries
+                .Where(item => item.BeneficiaryStagingId == stagingId)
+                .ToListAsync();
+
+            foreach (var projectBeneficiary in projectBeneficiaries)
+            {
+                projectBeneficiary.FullName = fullName;
+                projectBeneficiary.BeneficiaryId = beneficiaryId;
+                projectBeneficiary.CivilRegistryId = civilRegistryId;
+            }
+
+            var projectClaims = await _context.AyudaProjectClaims
+                .Where(item => item.BeneficiaryStagingId == stagingId)
+                .ToListAsync();
+
+            foreach (var projectClaim in projectClaims)
+            {
+                projectClaim.FullName = fullName;
+                projectClaim.BeneficiaryId = beneficiaryId;
+                projectClaim.CivilRegistryId = civilRegistryId;
+            }
+
+            var assistanceCases = await LoadAssistanceCasesByPreviousIdentityAsync(previousBeneficiaryId, previousCivilRegistryId);
+            foreach (var assistanceCase in assistanceCases)
+            {
+                assistanceCase.ValidatedBeneficiaryName = fullName;
+                assistanceCase.ValidatedBeneficiaryId = beneficiaryId;
+                assistanceCase.ValidatedCivilRegistryId = civilRegistryId;
+                assistanceCase.UpdatedAt = DateTime.Now;
+            }
+
+            var ledgerEntries = await LoadLedgerEntriesByPreviousIdentityAsync(previousBeneficiaryId, previousCivilRegistryId);
+            foreach (var ledgerEntry in ledgerEntries)
+            {
+                ledgerEntry.BeneficiaryId = beneficiaryId;
+                ledgerEntry.CivilRegistryId = civilRegistryId;
+            }
+        }
+
+        private async Task<List<AssistanceCase>> LoadAssistanceCasesByPreviousIdentityAsync(string? previousBeneficiaryId, string? previousCivilRegistryId)
+        {
+            if (string.IsNullOrWhiteSpace(previousBeneficiaryId) && string.IsNullOrWhiteSpace(previousCivilRegistryId))
+            {
+                return [];
+            }
+
+            if (!string.IsNullOrWhiteSpace(previousBeneficiaryId) && !string.IsNullOrWhiteSpace(previousCivilRegistryId))
+            {
+                return await _context.AssistanceCases
+                    .Where(item =>
+                        item.ValidatedBeneficiaryId == previousBeneficiaryId
+                        || item.ValidatedCivilRegistryId == previousCivilRegistryId)
+                    .ToListAsync();
+            }
+
+            if (!string.IsNullOrWhiteSpace(previousBeneficiaryId))
+            {
+                return await _context.AssistanceCases
+                    .Where(item => item.ValidatedBeneficiaryId == previousBeneficiaryId)
+                    .ToListAsync();
+            }
+
+            return await _context.AssistanceCases
+                .Where(item => item.ValidatedCivilRegistryId == previousCivilRegistryId)
+                .ToListAsync();
+        }
+
+        private async Task<List<BeneficiaryAssistanceLedgerEntry>> LoadLedgerEntriesByPreviousIdentityAsync(string? previousBeneficiaryId, string? previousCivilRegistryId)
+        {
+            if (string.IsNullOrWhiteSpace(previousBeneficiaryId) && string.IsNullOrWhiteSpace(previousCivilRegistryId))
+            {
+                return [];
+            }
+
+            if (!string.IsNullOrWhiteSpace(previousBeneficiaryId) && !string.IsNullOrWhiteSpace(previousCivilRegistryId))
+            {
+                return await _context.BeneficiaryAssistanceLedgerEntries
+                    .Where(item =>
+                        item.BeneficiaryId == previousBeneficiaryId
+                        || item.CivilRegistryId == previousCivilRegistryId)
+                    .ToListAsync();
+            }
+
+            if (!string.IsNullOrWhiteSpace(previousBeneficiaryId))
+            {
+                return await _context.BeneficiaryAssistanceLedgerEntries
+                    .Where(item => item.BeneficiaryId == previousBeneficiaryId)
+                    .ToListAsync();
+            }
+
+            return await _context.BeneficiaryAssistanceLedgerEntries
+                .Where(item => item.CivilRegistryId == previousCivilRegistryId)
+                .ToListAsync();
         }
 
         public async Task<BeneficiaryVerificationOperationResult> VerifyAsync(int stagingId, int actedByUserId, string? reviewNotes)
@@ -176,6 +351,12 @@ namespace AttendanceShiftingManagement.Services
                 return new BeneficiaryVerificationOperationResult(false, "The selected staging record no longer exists.");
             }
 
+            var benefitConflict = await EnsureNoActiveBenefitsAsync(stagingRow);
+            if (benefitConflict != null)
+            {
+                return new BeneficiaryVerificationOperationResult(false, benefitConflict);
+            }
+
             if (stagingRow.VerificationStatus == VerificationStatus.Approved)
             {
                 return new BeneficiaryVerificationOperationResult(false, "Approved records cannot be rejected from staging.");
@@ -222,6 +403,12 @@ namespace AttendanceShiftingManagement.Services
                 return new BeneficiaryVerificationOperationResult(false, "The selected staging record no longer exists.");
             }
 
+            var benefitConflict = await EnsureNoActiveBenefitsAsync(stagingRow);
+            if (benefitConflict != null)
+            {
+                return new BeneficiaryVerificationOperationResult(false, benefitConflict);
+            }
+
             if (stagingRow.VerificationStatus == VerificationStatus.Approved)
             {
                 return new BeneficiaryVerificationOperationResult(false, "Approved records can no longer be updated from staging.");
@@ -264,12 +451,120 @@ namespace AttendanceShiftingManagement.Services
             stagingRow.Age = NormalizeNullable(request.Age);
             stagingRow.MaritalStatus = NormalizeNullable(request.MaritalStatus);
             stagingRow.Address = NormalizeNullable(request.Address);
-            stagingRow.PwdIdNo = NormalizeNullable(request.PwdIdNo);
-            stagingRow.SeniorIdNo = NormalizeNullable(request.SeniorIdNo);
-            stagingRow.DisabilityType = NormalizeNullable(request.DisabilityType);
+            stagingRow.IsPwd = request.IsPwd;
+            stagingRow.IsSenior = request.IsSenior;
+            stagingRow.PwdIdNo = request.IsPwd ? NormalizeNullable(request.PwdIdNo) : null;
+            stagingRow.SeniorIdNo = request.IsSenior ? NormalizeNullable(request.SeniorIdNo) : null;
+            stagingRow.DisabilityType = request.IsPwd ? NormalizeNullable(request.DisabilityType) : null;
+            stagingRow.CauseOfDisability = request.IsPwd ? NormalizeNullable(request.CauseOfDisability) : null;
             stagingRow.ReviewNotes = NormalizeNullable(request.ReviewNotes);
             stagingRow.ReviewedAt = DateTime.Now;
             stagingRow.ReviewedByUserId = actedByUserId;
+        }
+
+        private async Task<string?> EnsureNoActiveBenefitsAsync(BeneficiaryStaging row)
+        {
+            // Check for Aid Requests (AssistanceCases)
+            var hasAidRequests = await _context.AssistanceCases
+                .AnyAsync(ac => (ac.ValidatedBeneficiaryId == row.BeneficiaryId || ac.ValidatedCivilRegistryId == row.CivilRegistryId) 
+                    && ac.Status != AssistanceCaseStatus.Cancelled 
+                    && ac.Status != AssistanceCaseStatus.Rejected);
+            
+            if (hasAidRequests)
+            {
+                return "Cannot change this beneficiary status because they have an active or released aid request.";
+            }
+
+            // Check for Project Enrollment
+            var isInProject = await _context.AyudaProjectBeneficiaries
+                .AnyAsync(pb => pb.BeneficiaryStagingId == row.StagingID);
+
+            if (isInProject)
+            {
+                return "Cannot change this beneficiary status because they are enrolled in an ayuda project.";
+            }
+
+            // Check for Project Claims
+            var hasProjectClaims = await _context.AyudaProjectClaims
+                .AnyAsync(pc => pc.BeneficiaryStagingId == row.StagingID);
+
+            if (hasProjectClaims)
+            {
+                return "Cannot change this beneficiary status because they have already claimed benefits from an ayuda project.";
+            }
+
+            // Check for Cash-for-Work Participation
+            var isCfwParticipant = await _context.CashForWorkParticipants
+                .AnyAsync(p => p.BeneficiaryStagingId == row.StagingID);
+
+            if (isCfwParticipant)
+            {
+                return "Cannot change this beneficiary status because they are a participant in a cash-for-work event.";
+            }
+
+            return null;
+        }
+
+        private async Task<string?> CheckForCollisionAsync(
+            int stagingId,
+            string? beneficiaryId,
+            string? civilRegistryId,
+            string? fullName,
+            string? dateOfBirth)
+        {
+            var normalizedCivilRegistryId = NormalizeNullable(civilRegistryId);
+            var normalizedBeneficiaryId = NormalizeNullable(beneficiaryId);
+            var fingerprint = BeneficiaryImportDeduplication.BuildFingerprint(fullName, dateOfBirth);
+
+            var query = _context.BeneficiaryStaging
+                .AsNoTracking()
+                .Where(row => row.StagingID != stagingId && row.VerificationStatus == VerificationStatus.Approved);
+
+            // Check IDs
+            if (!string.IsNullOrWhiteSpace(normalizedCivilRegistryId))
+            {
+                if (await query.AnyAsync(row => row.CivilRegistryId == normalizedCivilRegistryId))
+                {
+                    return "Another approved beneficiary already exists with this Civil Registry ID.";
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(normalizedBeneficiaryId))
+            {
+                if (await query.AnyAsync(row => row.BeneficiaryId == normalizedBeneficiaryId))
+                {
+                    return "Another approved beneficiary already exists with this Beneficiary ID.";
+                }
+            }
+
+            // Check Fingerprint (Name + DOB)
+            if (!string.IsNullOrWhiteSpace(fingerprint))
+            {
+                var candidates = await query
+                    .Where(row => row.FullName != null && row.DateOfBirth != null)
+                    .Select(row => new { row.FullName, row.DateOfBirth })
+                    .ToListAsync();
+
+                if (candidates.Any(c => BeneficiaryImportDeduplication.BuildFingerprint(c.FullName, c.DateOfBirth) == fingerprint))
+                {
+                    return "Another approved beneficiary already exists with the same name and date of birth.";
+                }
+            }
+
+            return null;
+        }
+
+        private static string BuildDisplayName(BeneficiaryCorrectionRequest request, BeneficiaryStaging row)
+        {
+            var fullName = NormalizeNullable(request.FullName);
+            if (!string.IsNullOrWhiteSpace(fullName))
+            {
+                return fullName;
+            }
+
+            return string.Join(" ", new[] { request.FirstName ?? row.FirstName, request.MiddleName ?? row.MiddleName, request.LastName ?? row.LastName }
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Select(value => value!.Trim()));
         }
 
         private static string BuildDisplayName(BeneficiaryStaging row)

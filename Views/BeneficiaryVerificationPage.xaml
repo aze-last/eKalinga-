@@ -1,4 +1,4 @@
-<UserControl x:Class="AttendanceShiftingManagement.Views.BeneficiaryVerificationPage"
+﻿<UserControl x:Class="AttendanceShiftingManagement.Views.BeneficiaryVerificationPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
@@ -335,6 +335,12 @@
                                            Foreground="{StaticResource BrandTextSecondaryBrush}"
                                            TextWrapping="Wrap"/>
                             </Grid>
+
+                            <Button Content="UPLOAD / CHANGE PHOTO"
+                                    Command="{Binding UploadDigitalIdPhotoCommand}"
+                                    Margin="0,12,0,0"
+                                    Height="38"
+                                    Style="{StaticResource SecondaryActionButton}"/>
                         </StackPanel>
                     </Border>
 
@@ -472,7 +478,7 @@
 
                     <ScrollViewer Grid.Row="2" Margin="0,0,0,0" VerticalScrollBarVisibility="Auto">
                         <StackPanel>
-                            <TextBlock Text="Editable Staged Details"
+                            <TextBlock Text="Editable Beneficiary Details"
                                        FontWeight="SemiBold"
                                        Foreground="{StaticResource BrandMidnightBrush}"/>
 
@@ -522,17 +528,27 @@
                                          Style="{StaticResource MaterialDesignOutlinedTextBox}"
                                          materialDesign:HintAssist.Hint="Marital Status"/>
 
+                                <CheckBox Margin="0,8,8,10"
+                                          IsChecked="{Binding EditableIsPwd}"
+                                          Content="PWD beneficiary"/>
+                                <CheckBox Margin="8,8,0,10"
+                                          IsChecked="{Binding EditableIsSenior}"
+                                          Content="Senior beneficiary"/>
+
                                 <TextBox Margin="0,0,8,10"
                                          Text="{Binding EditablePwdIdNo, UpdateSourceTrigger=PropertyChanged}"
+                                         IsEnabled="{Binding EditableIsPwd}"
                                          Style="{StaticResource MaterialDesignOutlinedTextBox}"
                                          materialDesign:HintAssist.Hint="PWD ID No."/>
                                 <TextBox Margin="8,0,0,10"
                                          Text="{Binding EditableSeniorIdNo, UpdateSourceTrigger=PropertyChanged}"
+                                         IsEnabled="{Binding EditableIsSenior}"
                                          Style="{StaticResource MaterialDesignOutlinedTextBox}"
                                          materialDesign:HintAssist.Hint="Senior ID No."/>
 
                                 <TextBox Margin="0,0,8,10"
                                          Text="{Binding EditableDisabilityType, UpdateSourceTrigger=PropertyChanged}"
+                                         IsEnabled="{Binding EditableIsPwd}"
                                          Style="{StaticResource MaterialDesignOutlinedTextBox}"
                                          materialDesign:HintAssist.Hint="Disability Type"/>
                                 <TextBlock Margin="8,8,0,10"
@@ -541,6 +557,12 @@
                                            Foreground="{StaticResource BrandTextSecondaryBrush}"
                                            TextWrapping="Wrap"/>
                             </UniformGrid>
+
+                            <TextBox Margin="0,0,0,10"
+                                     Text="{Binding EditableCauseOfDisability, UpdateSourceTrigger=PropertyChanged}"
+                                     IsEnabled="{Binding EditableIsPwd}"
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     materialDesign:HintAssist.Hint="Cause Of Disability"/>
 
                             <TextBox Margin="0,0,0,10"
                                      Text="{Binding EditableAddress, UpdateSourceTrigger=PropertyChanged}"
@@ -556,6 +578,20 @@
                                      materialDesign:HintAssist.Hint="Review notes (required for reject)"/>
 
                             <WrapPanel Margin="0,14,0,0">
+                                <Button Content="SAVE CHANGES"
+                                        Command="{Binding SaveCorrectionsCommand}"
+                                        Style="{StaticResource SecondaryActionButton}"
+                                        Height="38"
+                                        Margin="0,0,10,10"
+                                        Padding="18,0"/>
+                                <Button Content="BACK TO PENDING"
+                                        Command="{Binding ReturnToPendingCommand}"
+                                        Style="{StaticResource MaterialDesignRaisedButton}"
+                                        Background="#D97706"
+                                        Foreground="White"
+                                        Height="38"
+                                        Margin="0,0,10,10"
+                                        Padding="18,0"/>
                                 <Button Content="APPROVE"
                                         Command="{Binding ApproveCommand}"
                                         Style="{StaticResource MaterialDesignRaisedButton}"
@@ -640,7 +676,7 @@
                                                        Margin="0,6,0,0"
                                                        Foreground="{StaticResource BrandTextSecondaryBrush}"
                                                        TextWrapping="Wrap"/>
-                                            <Button Content="UPLOAD PHOTO"
+                                            <Button Content="UPLOAD / CHANGE PHOTO"
                                                     Command="{Binding UploadDigitalIdPhotoCommand}"
                                                     Margin="0,12,0,0"
                                                     Height="38"
@@ -703,3 +739,6 @@
     </Grid>
     </ScrollViewer>
 </UserControl>
+
+
+

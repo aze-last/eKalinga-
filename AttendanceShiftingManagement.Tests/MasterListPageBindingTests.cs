@@ -51,13 +51,13 @@ public sealed class MasterListPageBindingTests
         var mainWindowXaml = File.ReadAllText(mainWindowPath);
         var dashboardXaml = File.ReadAllText(dashboardPath);
 
-        Assert.Contains("Text=\"Validated Beneficiaries\"", mainWindowXaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Text=\"Beneficiary Review\"", mainWindowXaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Text=\"Grievance / Corrections\"", mainWindowXaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("Text=\"Beneficiaries\"", mainWindowXaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Text=\"Masterlist\"", mainWindowXaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Text=\"Household registry\"", mainWindowXaml, StringComparison.Ordinal);
-        Assert.Contains("Content=\"OPEN VALIDATED BENEFICIARIES\"", dashboardXaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"Validated Beneficiaries\"", dashboardXaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding DataContext.ShowMasterListCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}\"", dashboardXaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Content=\"OPEN VALIDATED BENEFICIARIES\"", dashboardXaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Content=\"BROWSE HOUSEHOLDS\"", dashboardXaml, StringComparison.Ordinal);
     }
 }

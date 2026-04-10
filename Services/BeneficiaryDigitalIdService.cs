@@ -99,7 +99,7 @@ namespace AttendanceShiftingManagement.Services
 
             if (digitalId == null)
             {
-                return false;
+                digitalId = await EnsureIssuedAsync(stagingId, actedByUserId);
             }
 
             digitalId.PhotoPath = NormalizeNullable(photoPath);

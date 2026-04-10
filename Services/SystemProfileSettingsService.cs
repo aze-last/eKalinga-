@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace AttendanceShiftingManagement.Services
 {
@@ -8,13 +9,14 @@ namespace AttendanceShiftingManagement.Services
         public const string DefaultLogoUri = "pack://application:,,,/Images/96f88319-f1f4-46df-b780-691795d4e49e.png";
         public const string DefaultLoginBackgroundUri = "pack://application:,,,/Images/Gemini_Generated_Image_n4mhn0n4mhn0n4mh.png";
 
-        public string SystemName { get; set; } = string.Empty;
+        public string SystemName { get; set; } = "eKalinga+";
         public string Owner { get; set; } = string.Empty;
         public string CompanyAddress { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public string ContactNumber { get; set; } = string.Empty;
         public string LogoPath { get; set; } = DefaultLogoUri;
         public string LoginBackgroundPath { get; set; } = DefaultLoginBackgroundUri;
+        public AppAppearanceMode AppearanceMode { get; set; } = AppAppearanceMode.Light;
         public string InstallSerial { get; set; } = string.Empty;
     }
 
@@ -41,7 +43,11 @@ namespace AttendanceShiftingManagement.Services
         private static readonly JsonSerializerOptions JsonOptions = new()
         {
             PropertyNameCaseInsensitive = true,
-            WriteIndented = true
+            WriteIndented = true,
+            Converters =
+            {
+                new JsonStringEnumConverter()
+            }
         };
 
         public static SystemProfileSettingsModel Load()
@@ -217,6 +223,7 @@ namespace AttendanceShiftingManagement.Services
         {
             settings.LogoPath = NormalizeAssetPath(settings.LogoPath, "96f88319-f1f4-46df-b780-691795d4e49e.png", SystemProfileSettingsModel.DefaultLogoUri);
             settings.LoginBackgroundPath = NormalizeAssetPath(settings.LoginBackgroundPath, "Gemini_Generated_Image_n4mhn0n4mhn0n4mh.png", SystemProfileSettingsModel.DefaultLoginBackgroundUri);
+            settings.AppearanceMode = NormalizeAppearanceMode(settings.AppearanceMode);
 
             if (!string.IsNullOrWhiteSpace(settings.InstallSerial))
             {
@@ -266,6 +273,13 @@ namespace AttendanceShiftingManagement.Services
         private static bool LooksLikePackUri(string path)
         {
             return path.StartsWith("pack://", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static AppAppearanceMode NormalizeAppearanceMode(AppAppearanceMode appearanceMode)
+        {
+            return Enum.IsDefined(typeof(AppAppearanceMode), appearanceMode)
+                ? appearanceMode
+                : AppAppearanceMode.Light;
         }
     }
 }

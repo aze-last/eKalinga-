@@ -34,6 +34,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly RelayCommand _markDuplicateCommand;
         private readonly RelayCommand _markInactiveCommand;
         private readonly RelayCommand _rejectCommand;
+        private readonly RelayCommand _returnToPendingCommand;
         private readonly RelayCommand _openReviewPanelCommand;
         private readonly RelayCommand _closeReviewPanelCommand;
         private readonly RelayCommand _uploadDigitalIdPhotoCommand;
@@ -71,9 +72,12 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _editableAge = string.Empty;
         private string _editableMaritalStatus = string.Empty;
         private string _editableAddress = string.Empty;
+        private bool _editableIsPwd;
         private string _editablePwdIdNo = string.Empty;
+        private bool _editableIsSenior;
         private string _editableSeniorIdNo = string.Empty;
         private string _editableDisabilityType = string.Empty;
+        private string _editableCauseOfDisability = string.Empty;
         private string _editableReviewNotes = string.Empty;
         private string _digitalIdCardNumber = "No digital ID issued yet.";
         private string _digitalIdIssuedAtText = "Approve a beneficiary to generate a digital ID.";
@@ -117,6 +121,7 @@ namespace AttendanceShiftingManagement.ViewModels
             _markDuplicateCommand = new RelayCommand(async _ => await MarkDuplicateSelectedAsync(), _ => CanMarkDuplicateSelected());
             _markInactiveCommand = new RelayCommand(async _ => await MarkInactiveSelectedAsync(), _ => CanMarkInactiveSelected());
             _rejectCommand = new RelayCommand(async _ => await RejectSelectedAsync(), _ => CanRejectSelected());
+            _returnToPendingCommand = new RelayCommand(async _ => await ReturnToPendingSelectedAsync(), _ => CanReturnToPendingSelected());
             _openReviewPanelCommand = new RelayCommand(_ => OpenReviewPanel(), _ => CanOpenReviewPanel());
             _closeReviewPanelCommand = new RelayCommand(_ => CloseReviewPanel(), _ => IsReviewPanelOpen);
             _uploadDigitalIdPhotoCommand = new RelayCommand(async _ => await UploadDigitalIdPhotoAsync(), _ => CanUseDigitalId());
@@ -405,10 +410,22 @@ namespace AttendanceShiftingManagement.ViewModels
             set => SetProperty(ref _editableAddress, value);
         }
 
+        public bool EditableIsPwd
+        {
+            get => _editableIsPwd;
+            set => SetProperty(ref _editableIsPwd, value);
+        }
+
         public string EditablePwdIdNo
         {
             get => _editablePwdIdNo;
             set => SetProperty(ref _editablePwdIdNo, value);
+        }
+
+        public bool EditableIsSenior
+        {
+            get => _editableIsSenior;
+            set => SetProperty(ref _editableIsSenior, value);
         }
 
         public string EditableSeniorIdNo
@@ -421,6 +438,12 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             get => _editableDisabilityType;
             set => SetProperty(ref _editableDisabilityType, value);
+        }
+
+        public string EditableCauseOfDisability
+        {
+            get => _editableCauseOfDisability;
+            set => SetProperty(ref _editableCauseOfDisability, value);
         }
 
         public string EditableReviewNotes
@@ -517,6 +540,7 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand MarkDuplicateCommand => _markDuplicateCommand;
         public ICommand MarkInactiveCommand => _markInactiveCommand;
         public ICommand RejectCommand => _rejectCommand;
+        public ICommand ReturnToPendingCommand => _returnToPendingCommand;
         public ICommand OpenReviewPanelCommand => _openReviewPanelCommand;
         public ICommand CloseReviewPanelCommand => _closeReviewPanelCommand;
         public ICommand UploadDigitalIdPhotoCommand => _uploadDigitalIdPhotoCommand;
@@ -701,9 +725,12 @@ namespace AttendanceShiftingManagement.ViewModels
                 EditableAge = string.Empty;
                 EditableMaritalStatus = string.Empty;
                 EditableAddress = string.Empty;
+                EditableIsPwd = false;
                 EditablePwdIdNo = string.Empty;
+                EditableIsSenior = false;
                 EditableSeniorIdNo = string.Empty;
                 EditableDisabilityType = string.Empty;
+                EditableCauseOfDisability = string.Empty;
                 EditableReviewNotes = string.Empty;
                 ResetDigitalIdPreview();
                 ResetBenefitsReceivedPreview();
@@ -721,9 +748,12 @@ namespace AttendanceShiftingManagement.ViewModels
             EditableAge = SelectedBeneficiary.Age;
             EditableMaritalStatus = SelectedBeneficiary.MaritalStatus;
             EditableAddress = SelectedBeneficiary.Address;
+            EditableIsPwd = SelectedBeneficiary.IsPwd;
             EditablePwdIdNo = SelectedBeneficiary.PwdIdNo;
+            EditableIsSenior = SelectedBeneficiary.IsSenior;
             EditableSeniorIdNo = SelectedBeneficiary.SeniorIdNo;
             EditableDisabilityType = SelectedBeneficiary.DisabilityType;
+            EditableCauseOfDisability = SelectedBeneficiary.CauseOfDisability;
             EditableReviewNotes = SelectedBeneficiary.ReviewNotes;
 
             SyncDigitalIdPreviewFromSelection();
@@ -732,9 +762,24 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private void SyncDigitalIdPreviewFromSelection()
         {
-            if (SelectedBeneficiary == null || !SelectedBeneficiary.HasDigitalId)
+            if (SelectedBeneficiary == null)
             {
                 ResetDigitalIdPreview();
+                return;
+            }
+
+            if (!SelectedBeneficiary.HasDigitalId)
+            {
+                DigitalIdCardNumber = "No digital ID issued yet.";
+                DigitalIdIssuedAtText = SelectedBeneficiary.VerificationStatus == VerificationStatus.Approved
+                    ? "Upload or replace a photo, print the ID, or create a scanner session to issue one now."
+                    : "Approve a beneficiary to generate a digital ID.";
+                DigitalIdPhotoImage = null;
+                DigitalIdQrImage = null;
+                LookupScannerSessionUrl = string.Empty;
+                LookupScannerSessionPin = string.Empty;
+                LookupScannerSessionExpiresAtText = string.Empty;
+                LookupScannerQrImage = null;
                 return;
             }
 
@@ -849,7 +894,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private bool CanUseDigitalId()
         {
             return !IsBusy
-                && SelectedBeneficiary?.HasDigitalId == true;
+                && SelectedBeneficiary?.VerificationStatus == VerificationStatus.Approved;
         }
 
         private bool CanCreateLookupScannerSession()
@@ -881,6 +926,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 var storedPhotoPath = StoreBeneficiaryPhoto(dialog.FileName, SelectedBeneficiary.StagingId);
                 await using var context = new AppDbContext();
                 var digitalIdService = new BeneficiaryDigitalIdService(context);
+                await digitalIdService.EnsureIssuedAsync(SelectedBeneficiary.StagingId, _currentUser.Id);
                 var wasSaved = await digitalIdService.UpdatePhotoAsync(SelectedBeneficiary.StagingId, storedPhotoPath, _currentUser.Id);
 
                 if (!wasSaved)
@@ -901,6 +947,16 @@ namespace AttendanceShiftingManagement.ViewModels
         private async Task PrintDigitalIdAsync()
         {
             if (!CanUseDigitalId() || SelectedBeneficiary == null)
+            {
+                return;
+            }
+
+            if (!await EnsureDigitalIdReadyAsync(SelectedBeneficiary.StagingId))
+            {
+                return;
+            }
+
+            if (SelectedBeneficiary == null)
             {
                 return;
             }
@@ -933,6 +989,16 @@ namespace AttendanceShiftingManagement.ViewModels
                 return;
             }
 
+            if (SelectedBeneficiary == null)
+            {
+                return;
+            }
+
+            if (!await EnsureDigitalIdReadyAsync(SelectedBeneficiary.StagingId))
+            {
+                return;
+            }
+
             try
             {
                 var baseUrl = await LocalScannerGatewayService.Shared.EnsureStartedAsync();
@@ -956,8 +1022,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private bool CanSaveCorrectionsSelected()
         {
             return !IsBusy
-                && SelectedBeneficiary != null
-                && SelectedBeneficiary.VerificationStatus != VerificationStatus.Approved;
+                && SelectedBeneficiary != null;
         }
 
         private bool CanVerifySelected()
@@ -1002,6 +1067,13 @@ namespace AttendanceShiftingManagement.ViewModels
                 && HasReviewNotes();
         }
 
+        private bool CanReturnToPendingSelected()
+        {
+            return !IsBusy
+                && SelectedBeneficiary != null
+                && SelectedBeneficiary.VerificationStatus != VerificationStatus.Pending;
+        }
+
         private bool HasReviewNotes()
         {
             return !string.IsNullOrWhiteSpace(EditableReviewNotes);
@@ -1038,9 +1110,12 @@ namespace AttendanceShiftingManagement.ViewModels
                         NormalizeNullable(EditableAge),
                         NormalizeNullable(EditableMaritalStatus),
                         NormalizeNullable(EditableAddress),
+                        EditableIsPwd,
                         NormalizeNullable(EditablePwdIdNo),
+                        EditableIsSenior,
                         NormalizeNullable(EditableSeniorIdNo),
                         NormalizeNullable(EditableDisabilityType),
+                        NormalizeNullable(EditableCauseOfDisability),
                         NormalizeNullable(EditableReviewNotes)),
                     _currentUser.Id);
 
@@ -1146,9 +1221,12 @@ namespace AttendanceShiftingManagement.ViewModels
                             NormalizeNullable(EditableAge),
                             NormalizeNullable(EditableMaritalStatus),
                             NormalizeNullable(EditableAddress),
+                            EditableIsPwd,
                             NormalizeNullable(EditablePwdIdNo),
+                            EditableIsSenior,
                             NormalizeNullable(EditableSeniorIdNo),
                             NormalizeNullable(EditableDisabilityType),
+                            NormalizeNullable(EditableCauseOfDisability),
                             NormalizeNullable(EditableReviewNotes))),
                     _currentUser.Id);
 
@@ -1234,6 +1312,27 @@ namespace AttendanceShiftingManagement.ViewModels
                 (service, stagingId) => service.RejectAsync(stagingId, _currentUser.Id, NormalizeNullable(EditableReviewNotes)));
         }
 
+        private async Task ReturnToPendingSelectedAsync()
+        {
+            if (!CanReturnToPendingSelected() || SelectedBeneficiary == null)
+            {
+                return;
+            }
+
+            if (MessageBox.Show(
+                    $"Move {SelectedBeneficiary.FullName} back to pending review?",
+                    "Back To Pending",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question) != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            await ChangeChecklistStatusAsync(
+                "pending",
+                (service, stagingId) => service.ReturnToPendingAsync(stagingId, _currentUser.Id, NormalizeNullable(EditableReviewNotes)));
+        }
+
         private async Task ChangeChecklistStatusAsync(
             string actionLabel,
             Func<BeneficiaryVerificationService, int, Task<BeneficiaryVerificationOperationResult>> action)
@@ -1283,11 +1382,29 @@ namespace AttendanceShiftingManagement.ViewModels
             _markDuplicateCommand.RaiseCanExecuteChanged();
             _markInactiveCommand.RaiseCanExecuteChanged();
             _rejectCommand.RaiseCanExecuteChanged();
+            _returnToPendingCommand.RaiseCanExecuteChanged();
             _openReviewPanelCommand.RaiseCanExecuteChanged();
             _closeReviewPanelCommand.RaiseCanExecuteChanged();
             _uploadDigitalIdPhotoCommand.RaiseCanExecuteChanged();
             _printDigitalIdCommand.RaiseCanExecuteChanged();
             _createLookupScannerSessionCommand.RaiseCanExecuteChanged();
+        }
+
+        private async Task<bool> EnsureDigitalIdReadyAsync(int stagingId)
+        {
+            try
+            {
+                await using var context = new AppDbContext();
+                var digitalIdService = new BeneficiaryDigitalIdService(context);
+                await digitalIdService.EnsureIssuedAsync(stagingId, _currentUser.Id);
+                await LoadPageAsync(CurrentPage, stagingId, syncValidatedSnapshot: false, CancellationToken.None);
+                return SelectedBeneficiary?.HasDigitalId == true;
+            }
+            catch (Exception ex)
+            {
+                SetErrorStatus($"Unable to issue the beneficiary digital ID: {ex.Message}");
+                return false;
+            }
         }
 
         private void ClearLoadedState()
@@ -1403,6 +1520,7 @@ namespace AttendanceShiftingManagement.ViewModels
     public sealed class StagedBeneficiaryItem
     {
         public int StagingId { get; init; }
+        public long? ResidentsId { get; init; }
         public string BeneficiaryId { get; init; } = string.Empty;
         public string CivilRegistryId { get; init; } = string.Empty;
         public string FirstName { get; init; } = string.Empty;
@@ -1419,6 +1537,7 @@ namespace AttendanceShiftingManagement.ViewModels
         public string DateOfBirth { get; init; } = string.Empty;
         public string MaritalStatus { get; init; } = string.Empty;
         public string DisabilityType { get; init; } = string.Empty;
+        public string CauseOfDisability { get; init; } = string.Empty;
         public string SeniorIdNo { get; init; } = string.Empty;
         public string PwdIdNo { get; init; } = string.Empty;
         public string ReviewNotes { get; init; } = string.Empty;
@@ -1474,6 +1593,7 @@ namespace AttendanceShiftingManagement.ViewModels
             return new StagedBeneficiaryItem
             {
                 StagingId = row.StagingID,
+                ResidentsId = row.ResidentsId,
                 BeneficiaryId = row.BeneficiaryId ?? string.Empty,
                 CivilRegistryId = row.CivilRegistryId ?? string.Empty,
                 FirstName = row.FirstName ?? string.Empty,
@@ -1490,6 +1610,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 DateOfBirth = row.DateOfBirth ?? string.Empty,
                 MaritalStatus = row.MaritalStatus ?? string.Empty,
                 DisabilityType = row.DisabilityType ?? string.Empty,
+                CauseOfDisability = row.CauseOfDisability ?? string.Empty,
                 SeniorIdNo = row.SeniorIdNo ?? string.Empty,
                 PwdIdNo = row.PwdIdNo ?? string.Empty,
                 ReviewNotes = row.ReviewNotes ?? string.Empty,

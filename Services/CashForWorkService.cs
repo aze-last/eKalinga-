@@ -86,6 +86,8 @@ namespace AttendanceShiftingManagement.Services
                 .Select(group => group
                     .OrderByDescending(attendance => attendance.RecordedAt)
                     .First())
+                .Where(attendance => 
+                    attendance.Participant.Beneficiary?.VerificationStatus == VerificationStatus.Approved)
                 .OrderBy(attendance => BuildParticipantDisplayName(attendance.Participant))
                 .ToList();
 
@@ -191,6 +193,10 @@ namespace AttendanceShiftingManagement.Services
                 .AsNoTracking()
                 .FirstOrDefault(e => e.Id == eventId)
                 ?? throw new InvalidOperationException("Cash-for-work event was not found.");
+            if (cashForWorkEvent.EventDate.Date > DateTime.Today)
+            {
+                throw new InvalidOperationException("Attendance cannot be recorded for future events.");
+            }
 
             var selectedParticipantIds = participantIds
                 .Distinct()
@@ -227,21 +233,45 @@ namespace AttendanceShiftingManagement.Services
             return savedCount;
         }
 
-        public bool SaveScannerAttendance(int eventId, int recordedByUserId, int participantId, string qrPayload)
+        public async Task<bool> SaveScannerAttendanceAsync(int eventId, int recordedByUserId, int participantId, string qrPayload)
         {
-            var cashForWorkEvent = _context.CashForWorkEvents
+            var cashForWorkEvent = await _context.CashForWorkEvents
                 .AsNoTracking()
-                .FirstOrDefault(item => item.Id == eventId)
-                ?? throw new InvalidOperationException("Cash-for-work event was not found.");
+                .FirstOrDefaultAsync(item => item.Id == eventId);
 
-            var validParticipantIds = GetValidParticipantIds(eventId);
-            if (!validParticipantIds.Contains(participantId))
+            if (cashForWorkEvent == null)
+            {
+                throw new InvalidOperationException("Cash-for-work event was not found.");
+            }
+            if (cashForWorkEvent.EventDate.Date > DateTime.Today)
+            {
+                throw new InvalidOperationException("Attendance cannot be recorded for future events.");
+            }
+
+            var participant = await _context.CashForWorkParticipants
+                .AsNoTracking()
+                .FirstOrDefaultAsync(item => item.Id == participantId && item.EventId == eventId);
+
+            if (participant == null || participant.Beneficiary?.VerificationStatus != VerificationStatus.Approved)
             {
                 return false;
             }
 
-            var recordedParticipantIds = GetRecordedParticipantIds(eventId, cashForWorkEvent.EventDate.Date);
-            if (!recordedParticipantIds.Add(participantId))
+            // Verify identity via QR payload
+            var digitalIdService = new BeneficiaryDigitalIdService(_context);
+            var lookupResult = await digitalIdService.LookupByQrPayloadAsync(qrPayload);
+
+            if (lookupResult == null || lookupResult.BeneficiaryStagingId != participant.BeneficiaryStagingId)
+            {
+                // Identity mismatch or invalid QR
+                return false;
+            }
+
+            var attendanceDate = cashForWorkEvent.EventDate.Date;
+            var alreadyRecorded = await _context.CashForWorkAttendances
+                .AnyAsync(item => item.ParticipantId == participantId && item.AttendanceDate == attendanceDate);
+
+            if (alreadyRecorded)
             {
                 return false;
             }
@@ -249,21 +279,22 @@ namespace AttendanceShiftingManagement.Services
             _context.CashForWorkAttendances.Add(new CashForWorkAttendance
             {
                 ParticipantId = participantId,
-                AttendanceDate = cashForWorkEvent.EventDate.Date,
+                AttendanceDate = attendanceDate,
                 Status = CashForWorkAttendanceStatus.Present,
                 Source = AttendanceCaptureSource.ScannerSession,
-                OcrExtractedName = string.IsNullOrWhiteSpace(qrPayload) ? null : qrPayload.Trim(),
+                OcrExtractedName = qrPayload.Trim(),
                 RecordedByUserId = recordedByUserId,
                 RecordedAt = DateTime.Now
             });
 
-            _context.SaveChanges();
+            await _context.SaveChangesAsync();
+            
             _auditService?.LogActivity(
                 recordedByUserId,
                 "CashForWorkScannerAttendanceSaved",
                 "CashForWorkEvent",
                 eventId,
-                $"Saved scanner attendance for participant #{participantId} in event '{GetEventTitle(eventId)}'.");
+                $"Saved scanner attendance for participant '{lookupResult.FullName}' (staging #{participant.BeneficiaryStagingId}) in event '{cashForWorkEvent.Title}'.");
 
             return true;
         }
@@ -430,6 +461,10 @@ namespace AttendanceShiftingManagement.Services
             {
                 return new CashForWorkReleaseOperationResult(false, "Cash-for-work event was not found.");
             }
+            if (cashForWorkEvent.EventDate.Date > DateTime.Today)
+            {
+                return new CashForWorkReleaseOperationResult(false, "Cash-for-work events can only be released on or after the event date.");
+            }
 
             if (cashForWorkEvent.BudgetLedgerEntryId.HasValue)
             {
@@ -467,6 +502,33 @@ namespace AttendanceShiftingManagement.Services
             cashForWorkEvent.Status = CashForWorkEventStatus.Completed;
             cashForWorkEvent.UpdatedAt = DateTime.Now;
 
+            // Sync with beneficiary assistance history for each present participant
+            var historyService = new BeneficiaryAssistanceLedgerService(_context, _auditService);
+            var participantsToRecord = await _context.CashForWorkParticipants
+                .AsNoTracking()
+                .Include(p => p.Beneficiary)
+                .Where(p => p.EventId == eventId)
+                .ToListAsync();
+
+            var presentParticipantIds = releaseReadySummary.ReleaseReadyParticipants
+                .Select(p => p.ParticipantId)
+                .ToHashSet();
+
+            foreach (var participant in participantsToRecord)
+            {
+                if (!presentParticipantIds.Contains(participant.Id)) continue;
+
+                await historyService.RecordEntryAsync(
+                    NormalizeNullable(participant.Beneficiary?.CivilRegistryId),
+                    NormalizeNullable(participant.Beneficiary?.BeneficiaryId),
+                    BeneficiaryAssistanceSourceModule.CashForWork,
+                    $"cfw-payout:{eventId}:{participant.Id}",
+                    DateTime.Now,
+                    totalAmount / releaseReadySummary.ReleaseReadyParticipantCount,
+                    $"Cash-for-work payout for '{cashForWorkEvent.Title}'.",
+                    recordedByUserId);
+            }
+
             await _context.SaveChangesAsync();
 
             if (_auditService != null)
@@ -503,7 +565,10 @@ namespace AttendanceShiftingManagement.Services
         {
             return _context.CashForWorkParticipants
                 .AsNoTracking()
-                .Where(participant => participant.EventId == eventId)
+                .Include(p => p.Beneficiary)
+                .Where(participant => 
+                    participant.EventId == eventId && 
+                    participant.Beneficiary.VerificationStatus == VerificationStatus.Approved)
                 .Select(participant => participant.Id)
                 .ToHashSet();
         }

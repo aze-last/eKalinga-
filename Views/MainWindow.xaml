@@ -1,4 +1,4 @@
-<Window x:Class="AttendanceShiftingManagement.Views.MainWindow"
+﻿<Window x:Class="AttendanceShiftingManagement.Views.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -11,121 +11,51 @@
         WindowStyle="None"
         AllowsTransparency="True"
         FontFamily="Segoe UI">
-    
+
     <WindowChrome.WindowChrome>
-        <WindowChrome CaptionHeight="40" 
-                      ResizeBorderThickness="5" 
-                      GlassFrameThickness="0" 
+        <WindowChrome CaptionHeight="40"
+                      ResizeBorderThickness="5"
+                      GlassFrameThickness="0"
                       CornerRadius="0" />
     </WindowChrome.WindowChrome>
 
     <Window.Resources>
-        <Style x:Key="SidebarButtonBaseStyle"
+        <Style x:Key="TopbarActionButtonStyle"
                TargetType="Button"
                BasedOn="{StaticResource MaterialDesignFlatButton}">
-            <Setter Property="Foreground" Value="#E6E8FF"/>
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="HorizontalContentAlignment" Value="Left"/>
-            <Setter Property="Padding" Value="14,10"/>
-            <Setter Property="Margin" Value="0,0,0,8"/>
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="FontWeight" Value="Normal"/>
-            <Setter Property="materialDesign:ButtonAssist.CornerRadius" Value="14"/>
+            <Setter Property="Height" Value="72" />
+            <Setter Property="MinWidth" Value="146" />
+            <Setter Property="Margin" Value="0,0,14,0" />
+            <Setter Property="Padding" Value="18,0" />
+            <Setter Property="Foreground" Value="{DynamicResource ThemeSecondaryActionForegroundBrush}" />
+            <Setter Property="Background" Value="{DynamicResource ThemeSecondaryActionBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeSecondaryActionBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="materialDesign:ButtonAssist.CornerRadius" Value="20" />
         </Style>
 
-        <Style x:Key="DashboardSidebarButtonStyle"
+        <Style x:Key="TopbarActionLogoutButtonStyle"
                TargetType="Button"
-               BasedOn="{StaticResource SidebarButtonBaseStyle}">
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding IsDashboardSelected}" Value="True">
-                    <Setter Property="Foreground" Value="White"/>
-                    <Setter Property="Background" Value="#4338CA"/>
-                    <Setter Property="FontWeight" Value="SemiBold"/>
-                </DataTrigger>
-            </Style.Triggers>
+               BasedOn="{StaticResource TopbarActionButtonStyle}">
+            <Setter Property="Foreground" Value="{DynamicResource ThemeAccentBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeAccentBorderBrush}" />
+            <Setter Property="Background" Value="{DynamicResource ThemeAccentSoftBrush}" />
+            <Setter Property="Margin" Value="0" />
         </Style>
 
-        <Style x:Key="CashForWorkSidebarButtonStyle"
-               TargetType="Button"
-               BasedOn="{StaticResource SidebarButtonBaseStyle}">
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding IsCashForWorkSelected}" Value="True">
-                    <Setter Property="Foreground" Value="White"/>
-                    <Setter Property="Background" Value="#4338CA"/>
-                    <Setter Property="FontWeight" Value="SemiBold"/>
-                </DataTrigger>
-            </Style.Triggers>
-        </Style>
-
-        <Style x:Key="BudgetSidebarButtonStyle"
-               TargetType="Button"
-               BasedOn="{StaticResource SidebarButtonBaseStyle}">
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding IsBudgetSelected}" Value="True">
-                    <Setter Property="Foreground" Value="White"/>
-                    <Setter Property="Background" Value="#4338CA"/>
-                    <Setter Property="FontWeight" Value="SemiBold"/>
-                </DataTrigger>
-            </Style.Triggers>
-        </Style>
-
-        <Style x:Key="DistributionSidebarButtonStyle"
-               TargetType="Button"
-               BasedOn="{StaticResource SidebarButtonBaseStyle}">
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding IsDistributionSelected}" Value="True">
-                    <Setter Property="Foreground" Value="White"/>
-                    <Setter Property="Background" Value="#4338CA"/>
-                    <Setter Property="FontWeight" Value="SemiBold"/>
-                </DataTrigger>
-            </Style.Triggers>
-        </Style>
-
-        <Style x:Key="MasterListSidebarButtonStyle"
-               TargetType="Button"
-               BasedOn="{StaticResource SidebarButtonBaseStyle}">
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding IsMasterListSelected}" Value="True">
-                    <Setter Property="Foreground" Value="White"/>
-                    <Setter Property="Background" Value="#4338CA"/>
-                    <Setter Property="FontWeight" Value="SemiBold"/>
-                </DataTrigger>
-            </Style.Triggers>
-        </Style>
-
-        <Style x:Key="AssistanceCasesSidebarButtonStyle"
-               TargetType="Button"
-               BasedOn="{StaticResource SidebarButtonBaseStyle}">
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding IsAssistanceCasesSelected}" Value="True">
-                    <Setter Property="Foreground" Value="White"/>
-                    <Setter Property="Background" Value="#4338CA"/>
-                    <Setter Property="FontWeight" Value="SemiBold"/>
-                </DataTrigger>
-            </Style.Triggers>
-        </Style>
-
-        <Style x:Key="SidebarUtilityButtonStyle"
-               TargetType="Button"
-               BasedOn="{StaticResource MaterialDesignFlatButton}">
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="Background" Value="#4338CA"/>
-            <Setter Property="HorizontalContentAlignment" Value="Left"/>
-            <Setter Property="Padding" Value="14,10"/>
-            <Setter Property="Margin" Value="0,10,0,0"/>
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="materialDesign:ButtonAssist.CornerRadius" Value="14"/>
-        </Style>
         <Style x:Key="WindowControlButtonStyle"
                TargetType="Button"
                BasedOn="{StaticResource MaterialDesignFlatButton}">
-            <Setter Property="Width" Value="46"/>
-            <Setter Property="Height" Value="32"/>
-            <Setter Property="Padding" Value="0"/>
-            <Setter Property="Foreground" Value="{StaticResource BrandTextSecondaryBrush}"/>
-            <Setter Property="materialDesign:ButtonAssist.CornerRadius" Value="0"/>
-            <Setter Property="WindowChrome.IsHitTestVisibleInChrome" Value="True"/>
+            <Setter Property="Width" Value="44" />
+            <Setter Property="Height" Value="32" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Foreground" Value="{DynamicResource BrandTextSecondaryBrush}" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="materialDesign:ButtonAssist.CornerRadius" Value="12" />
+            <Setter Property="WindowChrome.IsHitTestVisibleInChrome" Value="True" />
         </Style>
 
         <Style x:Key="WindowCloseButtonStyle"
@@ -133,314 +63,240 @@
                BasedOn="{StaticResource WindowControlButtonStyle}">
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#EF4444"/>
-                    <Setter Property="Foreground" Value="White"/>
+                    <Setter Property="Background" Value="#EF4444" />
+                    <Setter Property="Foreground" Value="White" />
                 </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="DashboardBackButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource MaterialDesignFlatButton}">
+            <Setter Property="Height" Value="46" />
+            <Setter Property="Padding" Value="18,0" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="Background" Value="{DynamicResource ThemeAccentBrush}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="materialDesign:ButtonAssist.CornerRadius" Value="16" />
+        </Style>
+
+        <Style x:Key="OfficeLogoImageStyle" TargetType="Image">
+            <Setter Property="Visibility" Value="Collapsed" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding HasOfficeLogo}" Value="True">
+                    <Setter Property="Visibility" Value="Visible" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="OfficeLogoFallbackStyle" TargetType="TextBlock">
+            <Setter Property="Visibility" Value="Visible" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding HasOfficeLogo}" Value="True">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                </DataTrigger>
             </Style.Triggers>
         </Style>
     </Window.Resources>
 
     <Border Margin="0"
-            CornerRadius="26"
-            BorderBrush="{StaticResource BrandBorderBrush}"
-            BorderThickness="1"
-            Background="#312E81">
+            CornerRadius="30"
+            Background="{DynamicResource ThemeWindowShellBrush}"
+            BorderBrush="{DynamicResource ThemeWindowShellBorderBrush}"
+            BorderThickness="1">
         <Grid>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="280"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
-
-            <!-- CUSTOM WINDOW CONTROLS -->
-            <StackPanel Grid.Column="1"
-                        Orientation="Horizontal"
+            <StackPanel Orientation="Horizontal"
                         HorizontalAlignment="Right"
                         VerticalAlignment="Top"
+                        Margin="0,10,12,0"
                         Panel.ZIndex="99">
                 <Button Style="{StaticResource WindowControlButtonStyle}"
                         Click="Minimize_Click"
                         ToolTip="Minimize">
-                    <materialDesign:PackIcon Kind="WindowMinimize" Width="18" Height="18"/>
+                    <materialDesign:PackIcon Kind="WindowMinimize" Width="18" Height="18" />
                 </Button>
                 <Button Style="{StaticResource WindowControlButtonStyle}"
                         Click="MaximizeRestore_Click"
                         ToolTip="Maximize/Restore">
-                    <materialDesign:PackIcon Kind="WindowMaximize" Width="18" Height="18"/>
+                    <materialDesign:PackIcon Kind="WindowMaximize" Width="18" Height="18" />
                 </Button>
                 <Button Style="{StaticResource WindowCloseButtonStyle}"
                         Click="Close_Click"
                         ToolTip="Close">
-                    <materialDesign:PackIcon Kind="Close" Width="20" Height="20"/>
+                    <materialDesign:PackIcon Kind="Close" Width="18" Height="18" />
                 </Button>
             </StackPanel>
 
-            <Border Grid.Column="0"
-                    Background="#312E81"
-                    Padding="18,22,18,18">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
+            <Grid Margin="24">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
 
-                    <StackPanel Grid.Row="0">
-                        <TextBlock Text="Administrator portal"
-                                   Margin="0,4,0,0"
-                                   FontSize="12"
-                                   Foreground="{StaticResource BrandYellowBrush}"/>
-                    </StackPanel>
+                <Border Grid.Row="0"
+                        Padding="26,22"
+                        Margin="0,20,0,18"
+                        CornerRadius="30"
+                        Background="{DynamicResource ThemeCardRaisedBrush}"
+                        BorderBrush="{DynamicResource ThemeAccentBorderBrush}"
+                        BorderThickness="1">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="1.1*" />
+                            <ColumnDefinition Width="1.55*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
 
-                    <ScrollViewer Grid.Row="1"
-                                  Margin="0,26,0,0"
-                                  VerticalScrollBarVisibility="Auto">
-                        <StackPanel>
-                            <StackPanel Margin="0,0,0,22">
-                                <TextBlock Text="OVERVIEW"
-                                           Margin="12,0,0,10"
-                                           FontSize="11"
-                                           FontWeight="SemiBold"
-                                           Foreground="#C7D2FE"/>
+                        <StackPanel Grid.Column="0"
+                                    Orientation="Horizontal"
+                                    VerticalAlignment="Center">
+                            <Border Width="74"
+                                    Height="74"
+                                    CornerRadius="22"
+                                    Background="{DynamicResource ThemeAccentSoftBrush}"
+                                    BorderBrush="{DynamicResource ThemeAccentBorderBrush}"
+                                    BorderThickness="1">
+                                <Grid>
+                                    <Image Source="{Binding OfficeLogoImage}"
+                                           Stretch="UniformToFill"
+                                           Style="{StaticResource OfficeLogoImageStyle}" />
+                                    <TextBlock Text="{Binding OfficeInitials}"
+                                               Style="{StaticResource OfficeLogoFallbackStyle}"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               FontSize="24"
+                                               FontWeight="Bold"
+                                               Foreground="{DynamicResource ThemeAccentBrush}" />
+                                 </Grid>
+                             </Border>
 
-                                <Button Style="{StaticResource DashboardSidebarButtonStyle}"
-                                        Command="{Binding ShowDashboardCommand}">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="4"/>
-                                            <ColumnDefinition Width="16"/>
-                                            <ColumnDefinition Width="24"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
+                             <StackPanel Margin="18,0,0,0"
+                                         VerticalAlignment="Center">
+                                 <TextBlock Text="{Binding OfficeName}"
+                                            FontSize="18"
+                                            FontWeight="Bold"
+                                            Foreground="{DynamicResource BrandMidnightBrush}" />
+                                 <TextBlock Text="{Binding OfficeProfileLabel}"
+                                            Margin="0,5,0,0"
+                                            FontSize="14"
+                                            Foreground="{DynamicResource BrandTextSecondaryBrush}" />
+                             </StackPanel>
+                         </StackPanel>
 
-                                        <Border Grid.Column="0"
-                                                Width="4"
-                                                CornerRadius="4"
-                                                Background="{StaticResource BrandYellowBrush}"/>
-                                        <materialDesign:PackIcon Grid.Column="2"
-                                                                 Kind="HomeGroup"
-                                                                 Width="18"
-                                                                 Height="18"
-                                                                 VerticalAlignment="Center"/>
-                                        <TextBlock Grid.Column="3"
-                                                   Margin="10,0,0,0"
-                                                   Text="Dashboard"
-                                                   VerticalAlignment="Center"/>
-                                    </Grid>
-                                </Button>
-                            </StackPanel>
+                        <StackPanel Grid.Column="1"
+                                    Margin="24,0"
+                                    VerticalAlignment="Center">
+                             <TextBlock Text="{Binding SoftwareTitle}"
+                                        TextAlignment="Center"
+                                        FontSize="28"
+                                        FontWeight="Bold"
+                                        Foreground="{DynamicResource BrandMidnightBrush}"
+                                        TextWrapping="Wrap" />
+                             <TextBlock Text="{Binding SoftwareSubtitle}"
+                                        Margin="0,8,0,0"
+                                        TextAlignment="Center"
+                                        FontSize="15"
+                                        Foreground="{DynamicResource BrandTextSecondaryBrush}" />
+                         </StackPanel>
 
-                            <StackPanel Margin="0,0,0,22">
-                                <TextBlock Text="OPERATIONS"
-                                           Margin="12,0,0,10"
-                                           FontSize="11"
-                                           FontWeight="SemiBold"
-                                           Foreground="#C7D2FE"/>
+                        <StackPanel Grid.Column="2"
+                                    Orientation="Horizontal"
+                                    VerticalAlignment="Center"
+                                    HorizontalAlignment="Right">
+                            <Button Style="{StaticResource TopbarActionButtonStyle}"
+                                    Click="Settings_Click">
+                                <StackPanel Orientation="Horizontal"
+                                            VerticalAlignment="Center">
+                                     <materialDesign:PackIcon Kind="CogOutline"
+                                                              Width="18"
+                                                              Height="18"
+                                                              Foreground="{DynamicResource ThemeAccentBrush}" />
+                                     <TextBlock Margin="10,0,0,0"
+                                                VerticalAlignment="Center"
+                                                Text="Settings" />
+                                </StackPanel>
+                            </Button>
 
-                                <Button Style="{StaticResource CashForWorkSidebarButtonStyle}"
-                                        Command="{Binding ShowCashForWorkCommand}">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="4"/>
-                                            <ColumnDefinition Width="16"/>
-                                            <ColumnDefinition Width="24"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
+                            <Button Style="{StaticResource TopbarActionButtonStyle}"
+                                    Click="CheckForUpdate_Click">
+                                <StackPanel Orientation="Horizontal"
+                                            VerticalAlignment="Center">
+                                     <materialDesign:PackIcon Kind="Update"
+                                                              Width="18"
+                                                              Height="18"
+                                                              Foreground="{DynamicResource ThemeAccentBrush}" />
+                                     <TextBlock Margin="10,0,0,0"
+                                                VerticalAlignment="Center"
+                                                Text="Check for Update"
+                                               TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Button>
 
-                                        <Border Grid.Column="0"
-                                                Width="4"
-                                                CornerRadius="4"
-                                                Background="{StaticResource BrandYellowBrush}"/>
-                                        <materialDesign:PackIcon Grid.Column="2"
-                                                                 Kind="BriefcaseClockOutline"
-                                                                 Width="18"
-                                                                 Height="18"
-                                                                 VerticalAlignment="Center"/>
-                                        <TextBlock Grid.Column="3"
-                                                   Margin="10,0,0,0"
-                                                   Text="Cash-for-work"
-                                                   VerticalAlignment="Center"/>
-                                    </Grid>
-                                </Button>
-
-                                <Button Style="{StaticResource DistributionSidebarButtonStyle}"
-                                        Command="{Binding ShowDistributionCommand}">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="4"/>
-                                            <ColumnDefinition Width="16"/>
-                                            <ColumnDefinition Width="24"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-
-                                        <Border Grid.Column="0"
-                                                Width="4"
-                                                CornerRadius="4"
-                                                Background="{StaticResource BrandYellowBrush}"/>
-                                        <materialDesign:PackIcon Grid.Column="2"
-                                                                 Kind="GiftOutline"
-                                                                 Width="18"
-                                                                 Height="18"
-                                                                 VerticalAlignment="Center"/>
-                                        <TextBlock Grid.Column="3"
-                                                   Margin="10,0,0,0"
-                                                   Text="Distribution"
-                                                   VerticalAlignment="Center"/>
-                                    </Grid>
-                                </Button>
-
-                                <Button Style="{StaticResource AssistanceCasesSidebarButtonStyle}"
-                                        Command="{Binding ShowAssistanceCasesCommand}">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="4"/>
-                                            <ColumnDefinition Width="16"/>
-                                            <ColumnDefinition Width="24"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-
-                                        <Border Grid.Column="0"
-                                                Width="4"
-                                                CornerRadius="4"
-                                                Background="{StaticResource BrandYellowBrush}"/>
-                                        <materialDesign:PackIcon Grid.Column="2"
-                                                                 Kind="ClipboardPulseOutline"
-                                                                 Width="18"
-                                                                 Height="18"
-                                                                 VerticalAlignment="Center"/>
-                                        <TextBlock Grid.Column="3"
-                                                   Margin="10,0,0,0"
-                                                   Text="Aid Request"
-                                                   VerticalAlignment="Center"/>
-                                    </Grid>
-                                </Button>
-                            </StackPanel>
-
-                            <StackPanel>
-                                <TextBlock Text="MANAGEMENT"
-                                           Margin="12,0,0,10"
-                                           FontSize="11"
-                                           FontWeight="SemiBold"
-                                           Foreground="#C7D2FE"/>
-
-                                <Button Style="{StaticResource BudgetSidebarButtonStyle}"
-                                        Command="{Binding ShowBudgetCommand}">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="4"/>
-                                            <ColumnDefinition Width="16"/>
-                                            <ColumnDefinition Width="24"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-
-                                        <Border Grid.Column="0"
-                                                Width="4"
-                                                CornerRadius="4"
-                                                Background="{StaticResource BrandYellowBrush}"/>
-                                        <materialDesign:PackIcon Grid.Column="2"
-                                                                 Kind="WalletBifoldOutline"
-                                                                 Width="18"
-                                                                 Height="18"
-                                                                 VerticalAlignment="Center"/>
-                                        <TextBlock Grid.Column="3"
-                                                   Margin="10,0,0,0"
-                                                   Text="Budget"
-                                                   VerticalAlignment="Center"/>
-                                    </Grid>
-                                </Button>
-
-                                <Button Style="{StaticResource MasterListSidebarButtonStyle}"
-                                        Command="{Binding ShowMasterListCommand}">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="4"/>
-                                            <ColumnDefinition Width="16"/>
-                                            <ColumnDefinition Width="24"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-
-                                        <Border Grid.Column="0"
-                                                Width="4"
-                                                CornerRadius="4"
-                                                Background="{StaticResource BrandYellowBrush}"/>
-                                        <materialDesign:PackIcon Grid.Column="2"
-                                                                 Kind="TableLarge"
-                                                                 Width="18"
-                                                                 Height="18"
-                                                                 VerticalAlignment="Center"/>
-                                        <TextBlock Grid.Column="3"
-                                                   Margin="10,0,0,0"
-                                                   Text="Validated Beneficiaries"
-                                                   VerticalAlignment="Center"/>
-                                    </Grid>
-                                </Button>
-                            </StackPanel>
+                            <Button Style="{StaticResource TopbarActionLogoutButtonStyle}"
+                                    Click="Logout_Click">
+                                <StackPanel Orientation="Horizontal"
+                                            VerticalAlignment="Center">
+                                     <materialDesign:PackIcon Kind="LogoutVariant"
+                                                              Width="18"
+                                                              Height="18"
+                                                              Foreground="{DynamicResource ThemeAccentBrush}" />
+                                     <TextBlock Margin="10,0,0,0"
+                                                VerticalAlignment="Center"
+                                                Text="Logout" />
+                                </StackPanel>
+                            </Button>
                         </StackPanel>
-                    </ScrollViewer>
+                    </Grid>
+                </Border>
 
-                    <StackPanel Grid.Row="2"
-                                Margin="0,18,0,0">
-                        <Button Content="SETTINGS"
-                                Style="{StaticResource SidebarUtilityButtonStyle}"
-                                Click="Settings_Click"/>
+                <Border Grid.Row="1"
+                        Margin="0,0,0,18"
+                        Padding="24,18"
+                        CornerRadius="24"
+                        Background="{DynamicResource ThemeCardBrush}"
+                        BorderBrush="{DynamicResource BrandBorderBrush}"
+                        BorderThickness="1"
+                        Visibility="{Binding IsSecondarySectionVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
 
-                        <Button Content="LOGOUT"
-                                Style="{StaticResource SidebarUtilityButtonStyle}"
-                                Click="Logout_Click"/>
+                        <StackPanel>
+                            <TextBlock Text="{Binding CurrentSectionTitle}"
+                                       FontSize="20"
+                                       FontWeight="Bold"
+                                       Foreground="{DynamicResource BrandMidnightBrush}" />
+                            <TextBlock Text="{Binding CurrentSectionSubtitle}"
+                                       Margin="0,6,0,0"
+                                       FontSize="13"
+                                       Foreground="{DynamicResource BrandTextSecondaryBrush}"
+                                       TextWrapping="Wrap" />
+                        </StackPanel>
 
-                        <Button Style="{StaticResource SidebarUtilityButtonStyle}"
-                                Content="CHECK FOR UPDATE"
-                                Click="CheckForUpdate_Click"
-                                ToolTip="Open the Updates tab and run an update check now."/>
-
-                        <Border Margin="0,14,0,0"
-                                Padding="16"
-                                CornerRadius="18">
-                            <Border.Background>
-                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                    <GradientStop Color="#4338CA" Offset="0"/>
-                                    <GradientStop Color="#1D4ED8" Offset="1"/>
-                                </LinearGradientBrush>
-                            </Border.Background>
-
-                            <StackPanel>
-                                <TextBlock Text="{Binding UserDisplayName}"
-                                           FontSize="14"
-                                           FontWeight="SemiBold"
-                                           Foreground="White"/>
-                                <TextBlock Text="{Binding ConnectionSummary}"
-                                           Margin="0,8,0,0"
-                                           FontSize="11"
-                                           Foreground="#E2E8F0"
-                                           TextWrapping="Wrap"/>
-
-                                <DockPanel Margin="0,14,0,0">
-                                    <Border Padding="10,4"
-                                            CornerRadius="12"
-                                            Background="#334155">
-                                        <TextBlock Text="Online"
-                                                   FontSize="11"
-                                                   FontWeight="SemiBold"
-                                                   Foreground="#86EFAC"/>
-                                    </Border>
-
-                                    <TextBlock DockPanel.Dock="Right"
-                                               Margin="10,2,0,0"
-                                               FontSize="11"
-                                               Foreground="#CBD5E1"
-                                               Text="Last sync 3:42 PM"/>
-                                </DockPanel>
+                        <Button Grid.Column="1"
+                                Style="{StaticResource DashboardBackButtonStyle}"
+                                Command="{Binding ShowDashboardCommand}"
+                                VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="ArrowLeft"
+                                                         Width="18"
+                                                         Height="18"
+                                                         Foreground="White" />
+                                <TextBlock Margin="10,0,0,0"
+                                           VerticalAlignment="Center"
+                                           Text="Back to Dashboard" />
                             </StackPanel>
-                        </Border>
-                    </StackPanel>
-                </Grid>
-            </Border>
+                        </Button>
+                    </Grid>
+                </Border>
 
-            <Border Grid.Column="1"
-                    Background="#F8FAFC"
-                    CornerRadius="0,26,26,0">
-                <ContentControl Margin="28"
-                                Content="{Binding CurrentView}"/>
-            </Border>
+                <ContentControl Grid.Row="2"
+                                Content="{Binding CurrentView}" />
+            </Grid>
         </Grid>
     </Border>
 </Window>
+

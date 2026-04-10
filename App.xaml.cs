@@ -7,6 +7,7 @@ namespace AttendanceShiftingManagement
     {
         protected override void OnStartup(StartupEventArgs e)
         {
+            AppThemeService.ApplySavedTheme();
             base.OnStartup(e);
 
             try

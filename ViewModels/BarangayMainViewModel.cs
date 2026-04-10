@@ -4,7 +4,6 @@ using AttendanceShiftingManagement.Services;
 using AttendanceShiftingManagement.Views;
 using System.IO;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
 
 namespace AttendanceShiftingManagement.ViewModels
 {
@@ -16,8 +15,12 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _currentSectionTitle = "Dashboard";
         private string _currentSectionSubtitle = "Monitor validated beneficiaries, pending approvals, aid requests, budgets, and cash-for-work at a glance.";
         private string _connectionSummary = string.Empty;
+        private ImageSource? _officeLogoImage;
         private ImageSource? _userPhotoImage;
         private string _userDisplayName = "Barangay Administrator";
+        private string _officeName = "Local Government Unit";
+        private string _softwareTitle = "eKalinga+ Ayuda Management System";
+        private string _softwareSubtitle = "Centralized barangay assistance operations";
 
         public BarangayMainViewModel(User currentUser)
         {
@@ -30,6 +33,8 @@ namespace AttendanceShiftingManagement.ViewModels
             ShowDistributionCommand = new RelayCommand(_ => SwitchSection("Distribution"));
             ShowMasterListCommand = new RelayCommand(_ => SwitchSection("MasterList"));
             ShowAssistanceCasesCommand = new RelayCommand(_ => SwitchSection("AssistanceCases"));
+            ShowReportsCommand = new RelayCommand(_ => SwitchSection("Reports"));
+            RefreshBranding();
             RefreshConnectionSummary();
             LoadUserSummary();
         }
@@ -60,6 +65,48 @@ namespace AttendanceShiftingManagement.ViewModels
             private set => SetProperty(ref _connectionSummary, value);
         }
 
+        public string OfficeName
+        {
+            get => _officeName;
+            private set
+            {
+                if (SetProperty(ref _officeName, value))
+                {
+                    OnPropertyChanged(nameof(OfficeInitials));
+                }
+            }
+        }
+
+        public string OfficeProfileLabel => "Office Profile";
+
+        public string SoftwareTitle
+        {
+            get => _softwareTitle;
+            private set => SetProperty(ref _softwareTitle, value);
+        }
+
+        public string SoftwareSubtitle
+        {
+            get => _softwareSubtitle;
+            private set => SetProperty(ref _softwareSubtitle, value);
+        }
+
+        public ImageSource? OfficeLogoImage
+        {
+            get => _officeLogoImage;
+            private set
+            {
+                if (SetProperty(ref _officeLogoImage, value))
+                {
+                    OnPropertyChanged(nameof(HasOfficeLogo));
+                }
+            }
+        }
+
+        public bool HasOfficeLogo => OfficeLogoImage != null;
+
+        public string OfficeInitials => BuildInitials(OfficeName);
+
         public ImageSource? UserPhotoImage
         {
             get => _userPhotoImage;
@@ -78,18 +125,30 @@ namespace AttendanceShiftingManagement.ViewModels
         public bool IsDistributionSelected => _currentSection == "Distribution";
         public bool IsMasterListSelected => _currentSection == "MasterList";
         public bool IsAssistanceCasesSelected => _currentSection == "AssistanceCases";
+        public bool IsReportsSelected => _currentSection == "Reports";
+        public bool IsSecondarySectionVisible => _currentSection != "Dashboard";
         public RelayCommand ShowDashboardCommand { get; }
         public RelayCommand ShowCashForWorkCommand { get; }
         public RelayCommand ShowBudgetCommand { get; }
         public RelayCommand ShowDistributionCommand { get; }
         public RelayCommand ShowMasterListCommand { get; }
         public RelayCommand ShowAssistanceCasesCommand { get; }
+        public RelayCommand ShowReportsCommand { get; }
 
         public void RefreshConnectionSummary()
         {
             var settings = ConnectionSettingsService.Load();
             var preset = settings.GetPreset(settings.SelectedPreset);
             ConnectionSummary = $"{preset.DisplayName} | {preset.Server}:{preset.Port} / {preset.Database}";
+        }
+
+        public void RefreshBranding()
+        {
+            var branding = SystemProfileSettingsService.BuildLoginBranding(SystemProfileSettingsService.Load());
+            OfficeName = branding.Title;
+            SoftwareTitle = BuildSoftwareTitle(branding.Subtitle);
+            SoftwareSubtitle = "Centralized barangay assistance operations";
+            OfficeLogoImage = LocalImageLoader.Load(branding.LogoPath);
         }
 
         public void ReloadCurrentView()
@@ -117,6 +176,8 @@ namespace AttendanceShiftingManagement.ViewModels
             OnPropertyChanged(nameof(IsDistributionSelected));
             OnPropertyChanged(nameof(IsMasterListSelected));
             OnPropertyChanged(nameof(IsAssistanceCasesSelected));
+            OnPropertyChanged(nameof(IsReportsSelected));
+            OnPropertyChanged(nameof(IsSecondarySectionVisible));
             CurrentView = BuildView(section);
         }
 
@@ -144,6 +205,10 @@ namespace AttendanceShiftingManagement.ViewModels
                     CurrentSectionTitle = "Aid Request";
                     CurrentSectionSubtitle = "Create requests, choose a validated beneficiary or household, and release approved aid against budget.";
                     return new AssistanceCaseManagementPage(_currentUser);
+                case "Reports":
+                    CurrentSectionTitle = "Reports";
+                    CurrentSectionSubtitle = "Generate centralized summaries, export CSV tables, and print polished reports for PDF output.";
+                    return new ReportsPage(_currentUser);
                 default:
                     CurrentSectionTitle = "Cash-for-work";
                     CurrentSectionSubtitle = "Create work events, assign participants, and save attendance.";
@@ -165,19 +230,44 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private static ImageSource? BuildImage(string? path)
         {
-            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+            return LocalImageLoader.Load(path);
+        }
+
+        private static string BuildSoftwareTitle(string? systemName)
+        {
+            var trimmed = systemName?.Trim();
+            if (string.IsNullOrWhiteSpace(trimmed))
             {
-                return null;
+                return "eKalinga+ Ayuda Management System";
             }
 
-            using var stream = File.OpenRead(path);
-            var image = new BitmapImage();
-            image.BeginInit();
-            image.CacheOption = BitmapCacheOption.OnLoad;
-            image.StreamSource = stream;
-            image.EndInit();
-            image.Freeze();
-            return image;
+            if (trimmed.Contains("system", StringComparison.OrdinalIgnoreCase))
+            {
+                return trimmed;
+            }
+
+            if (trimmed.Contains("ayuda", StringComparison.OrdinalIgnoreCase))
+            {
+                return $"{trimmed} Management System";
+            }
+
+            return $"{trimmed} Ayuda Management System";
+        }
+
+        private static string BuildInitials(string? text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return "LGU";
+            }
+
+            var parts = text
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Take(3)
+                .Select(part => char.ToUpperInvariant(part[0]));
+
+            var initials = new string(parts.ToArray());
+            return string.IsNullOrWhiteSpace(initials) ? "LGU" : initials;
         }
     }
 }

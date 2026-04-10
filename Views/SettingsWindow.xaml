@@ -1,4 +1,4 @@
-<Window x:Class="AttendanceShiftingManagement.Views.SettingsWindow"
+﻿<Window x:Class="AttendanceShiftingManagement.Views.SettingsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
@@ -27,7 +27,7 @@
             <Setter Property="Width" Value="46"/>
             <Setter Property="Height" Value="32"/>
             <Setter Property="Padding" Value="0"/>
-            <Setter Property="Foreground" Value="{StaticResource BrandTextSecondaryBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource BrandTextSecondaryBrush}"/>
             <Setter Property="materialDesign:ButtonAssist.CornerRadius" Value="0"/>
             <Setter Property="shell:WindowChrome.IsHitTestVisibleInChrome" Value="True"/>
         </Style>
@@ -56,11 +56,89 @@
                 </DataTrigger>
             </Style.Triggers>
         </Style>
+
+        <Style x:Key="SettingsTabItemStyle"
+               TargetType="TabItem">
+            <Setter Property="Foreground" Value="{DynamicResource BrandTextSecondaryBrush}" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <Border x:Name="TabBorder"
+                                Margin="0,0,10,10"
+                                Padding="18,11"
+                                CornerRadius="18"
+                                Background="{DynamicResource ThemeTabStripBrush}"
+                                BorderBrush="{DynamicResource ThemeTabStripBorderBrush}"
+                                BorderThickness="1">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              ContentSource="Header"
+                                              RecognizesAccessKey="True" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="TabBorder" Property="Background" Value="{DynamicResource ThemeCardBrush}" />
+                                <Setter TargetName="TabBorder" Property="BorderBrush" Value="{DynamicResource ThemeAccentBorderBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource BrandMidnightBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="TabBorder" Property="BorderBrush" Value="{DynamicResource ThemeAccentBorderBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource BrandMidnightBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="SettingsSectionCardStyle"
+               TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource ThemeCardBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BrandBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="20" />
+            <Setter Property="Padding" Value="24" />
+        </Style>
+
+        <Style x:Key="AppearanceModeCardStyle"
+               TargetType="RadioButton">
+            <Setter Property="Background" Value="{DynamicResource ThemeCardRaisedBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BrandBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="18" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Foreground" Value="{DynamicResource BrandMidnightBrush}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="CardBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="18"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="CardBorder" Property="BorderBrush" Value="{DynamicResource ThemeAccentBorderBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="CardBorder" Property="Background" Value="{DynamicResource ThemeAccentSoftBrush}" />
+                                <Setter TargetName="CardBorder" Property="BorderBrush" Value="{DynamicResource ThemeAccentBorderBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
-    <Border Background="{StaticResource BrandSurfaceBrush}"
+    <Border Background="{DynamicResource ThemeWindowShellBrush}"
             CornerRadius="14"
-            BorderBrush="{StaticResource BrandBorderBrush}"
+            BorderBrush="{DynamicResource ThemeWindowShellBorderBrush}"
             BorderThickness="1">
     <Grid Margin="24">
         <Grid.RowDefinitions>
@@ -91,26 +169,26 @@
             <TextBlock Text="Settings"
                        FontSize="24"
                        FontWeight="SemiBold"
-                       Foreground="{StaticResource BrandMidnightBrush}" />
+                       Foreground="{DynamicResource BrandMidnightBrush}" />
             <TextBlock Text="Manage system profile, signed-in account settings, security, remote beneficiary snapshots, and database backups from one admin screen."
                        Margin="0,8,0,0"
                        FontSize="13"
-                       Foreground="{StaticResource BrandTextSecondaryBrush}"
+                       Foreground="{DynamicResource BrandTextSecondaryBrush}"
                        TextWrapping="Wrap" />
             <Border Margin="0,14,0,0"
                     Padding="14"
-                    Background="#FFF7D6"
-                    BorderBrush="#F4D27A"
+                    Background="{DynamicResource ThemeWarningSurfaceBrush}"
+                    BorderBrush="{DynamicResource ThemeWarningBorderBrush}"
                     BorderThickness="1"
                     CornerRadius="10"
                     Visibility="{Binding ShowUpdateBanner, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <StackPanel>
                     <TextBlock Text="{Binding UpdateBannerTitle}"
                                FontWeight="SemiBold"
-                               Foreground="#92400E" />
+                               Foreground="{DynamicResource ThemeWarningForegroundBrush}" />
                     <TextBlock Text="{Binding UpdateBannerMessage}"
                                Margin="0,4,0,0"
-                               Foreground="#9A5A00"
+                               Foreground="{DynamicResource ThemeWarningForegroundBrush}"
                                TextWrapping="Wrap" />
                     <WrapPanel Margin="0,10,0,0">
                         <Button Content="DOWNLOAD UPDATE"
@@ -133,8 +211,8 @@
 
             <Border Margin="0,14,0,0"
                     Padding="18"
-                    Background="#EEF4FF"
-                    BorderBrush="{StaticResource BrandBorderBrush}"
+                    Background="{DynamicResource ThemeAccentSoftBrush}"
+                    BorderBrush="{DynamicResource ThemeAccentBorderBrush}"
                     BorderThickness="1"
                     CornerRadius="12"
                     Visibility="{Binding ShowSensitiveSettingsOtpPanel, Converter={StaticResource BooleanToVisibilityConverter}}">
@@ -142,27 +220,27 @@
                     <TextBlock Text="Protected settings save verification"
                                FontSize="14"
                                FontWeight="SemiBold"
-                               Foreground="{StaticResource BrandMidnightBrush}" />
+                               Foreground="{DynamicResource BrandMidnightBrush}" />
                     <TextBlock Margin="0,6,0,0"
                                Text="{Binding SensitiveSettingsOtpPromptText}"
-                               Foreground="{StaticResource BrandTextSecondaryBrush}"
+                               Foreground="{DynamicResource BrandTextSecondaryBrush}"
                                TextWrapping="Wrap" />
 
                     <Border Margin="0,12,0,0"
                             Padding="12"
-                            Background="White"
-                            BorderBrush="{StaticResource BrandBorderBrush}"
+                            Background="{DynamicResource ThemeCardBrush}"
+                            BorderBrush="{DynamicResource BrandBorderBrush}"
                             BorderThickness="1"
                             CornerRadius="10">
                         <StackPanel Orientation="Horizontal">
                             <materialDesign:PackIcon Kind="EmailOutline"
                                                      Width="18"
                                                      Height="18"
-                                                     Foreground="{StaticResource BrandMidnightBrush}" />
+                                                     Foreground="{DynamicResource BrandMidnightBrush}" />
                             <TextBlock Margin="8,0,0,0"
                                        Text="{Binding OfficialEmailMask}"
                                        FontWeight="SemiBold"
-                                       Foreground="{StaticResource BrandMidnightBrush}" />
+                                       Foreground="{DynamicResource BrandMidnightBrush}" />
                         </StackPanel>
                     </Border>
 
@@ -205,24 +283,87 @@
         <TabControl x:Name="SettingsTabs"
                     Grid.Row="1"
                     Margin="0,20,0,0"
-                    Background="Transparent">
+                    Background="Transparent"
+                    BorderThickness="0"
+                    ItemContainerStyle="{StaticResource SettingsTabItemStyle}">
             <TabItem Header="System Profile">
                 <Grid Margin="0,20,0,0">
                     <ScrollViewer VerticalScrollBarVisibility="Auto"
                                   HorizontalScrollBarVisibility="Disabled">
-                        <Border Background="White"
-                                BorderBrush="{StaticResource BrandBorderBrush}"
+                        <Border Background="{DynamicResource ThemeCardBrush}"
+                                BorderBrush="{DynamicResource BrandBorderBrush}"
                                 BorderThickness="1"
-                                CornerRadius="14"
-                                Padding="20">
+                                CornerRadius="20"
+                                Padding="24">
                             <StackPanel>
-                            <TextBlock Text="System Profile"
+                            <Border Padding="22"
+                                    Background="{DynamicResource ThemeCardRaisedBrush}"
+                                    BorderBrush="{DynamicResource ThemeAccentBorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="18">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="1.5*" />
+                                        <ColumnDefinition Width="18" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Grid.Column="0">
+                                        <Border Width="52"
+                                                Height="52"
+                                                CornerRadius="16"
+                                                Background="{DynamicResource ThemeAccentSoftBrush}"
+                                                BorderBrush="{DynamicResource ThemeAccentBorderBrush}"
+                                                BorderThickness="1">
+                                            <materialDesign:PackIcon Kind="ShieldCrownOutline"
+                                                                     Width="26"
+                                                                     Height="26"
+                                                                     Foreground="{DynamicResource ThemeAccentBrush}"
+                                                                     HorizontalAlignment="Center"
+                                                                     VerticalAlignment="Center" />
+                                        </Border>
+                                        <TextBlock Margin="0,16,0,0"
+                                                   Text="System Profile"
+                                                   FontSize="21"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource BrandMidnightBrush}" />
+                                        <TextBlock Margin="0,8,0,0"
+                                                   Text="Manage the workstation identity, login presentation, and the premium light or dark experience used across this installation."
+                                                   Foreground="{DynamicResource BrandTextSecondaryBrush}"
+                                                   TextWrapping="Wrap" />
+                                    </StackPanel>
+
+                                    <Border Grid.Column="2"
+                                            Padding="16"
+                                            Background="{DynamicResource ThemeCardBrush}"
+                                            BorderBrush="{DynamicResource BrandBorderBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="16">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding SelectedAppearanceModeLabel}"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource BrandMidnightBrush}" />
+                                            <TextBlock Margin="0,6,0,0"
+                                                       Text="{Binding SelectedAppearanceModeDescription}"
+                                                       Foreground="{DynamicResource BrandTextSecondaryBrush}"
+                                                       TextWrapping="Wrap" />
+                                            <TextBlock Margin="0,12,0,0"
+                                                       Text="{Binding SystemInstallSerial, Mode=OneWay}"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource ThemeAccentBrush}" />
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+                            </Border>
+
+                            <TextBlock Margin="0,20,0,0"
+                                       Text="Identity"
                                        FontSize="15"
                                        FontWeight="SemiBold"
-                                       Foreground="{StaticResource BrandMidnightBrush}" />
-                            <TextBlock Text="Set the app-wide identity and login branding details shown to operators and used for internal records."
-                                       Margin="0,8,0,0"
-                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                       Foreground="{DynamicResource BrandMidnightBrush}" />
+                            <TextBlock Margin="0,8,0,0"
+                                       Text="Keep the official workstation details complete so records, login branding, and internal references stay consistent."
+                                       Foreground="{DynamicResource BrandTextSecondaryBrush}"
                                        TextWrapping="Wrap" />
 
                             <TextBox Margin="0,18,0,0"
@@ -267,10 +408,117 @@
                                          materialDesign:HintAssist.Hint="Contact Number" />
                             </Grid>
 
+                            <Border Margin="0,22,0,0"
+                                    Padding="18"
+                                    Background="{DynamicResource ThemeCardSubtleBrush}"
+                                    BorderBrush="{DynamicResource BrandBorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="18">
+                                <StackPanel>
+                                    <TextBlock Text="Appearance mode"
+                                               FontSize="15"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource BrandMidnightBrush}" />
+                                    <TextBlock Margin="0,8,0,0"
+                                               Text="Choose the visual treatment that fits the workspace. The preview applies immediately, and saving keeps the preference for future sessions."
+                                               Foreground="{DynamicResource BrandTextSecondaryBrush}"
+                                               TextWrapping="Wrap" />
+
+                                    <Grid Margin="0,18,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="14" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <RadioButton Grid.Column="0"
+                                                     GroupName="AppearanceModes"
+                                                     Style="{StaticResource AppearanceModeCardStyle}"
+                                                     IsChecked="{Binding IsLightAppearanceSelected}">
+                                            <StackPanel>
+                                                <Border Width="42"
+                                                        Height="42"
+                                                        CornerRadius="14"
+                                                        Background="#FFF4D8"
+                                                        BorderBrush="#E7D3A1"
+                                                        BorderThickness="1">
+                                                    <materialDesign:PackIcon Kind="WeatherSunny"
+                                                                             Width="22"
+                                                                             Height="22"
+                                                                             Foreground="#A96E11"
+                                                                             HorizontalAlignment="Center"
+                                                                             VerticalAlignment="Center" />
+                                                </Border>
+                                                <TextBlock Margin="0,16,0,0"
+                                                           Text="Light"
+                                                           FontSize="14"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource BrandMidnightBrush}" />
+                                                <TextBlock Margin="0,6,0,0"
+                                                           Text="Bright, document-friendly surfaces with formal contrast for daytime admin work."
+                                                           Foreground="{DynamicResource BrandTextSecondaryBrush}"
+                                                           TextWrapping="Wrap" />
+                                            </StackPanel>
+                                        </RadioButton>
+
+                                        <RadioButton Grid.Column="2"
+                                                     GroupName="AppearanceModes"
+                                                     Style="{StaticResource AppearanceModeCardStyle}"
+                                                     IsChecked="{Binding IsDarkAppearanceSelected}">
+                                            <StackPanel>
+                                                <Border Width="42"
+                                                        Height="42"
+                                                        CornerRadius="14"
+                                                        Background="#1B2634"
+                                                        BorderBrush="#384B63"
+                                                        BorderThickness="1">
+                                                    <materialDesign:PackIcon Kind="MoonWaningCrescent"
+                                                                             Width="22"
+                                                                             Height="22"
+                                                                             Foreground="#D7E4FF"
+                                                                             HorizontalAlignment="Center"
+                                                                             VerticalAlignment="Center" />
+                                                </Border>
+                                                <TextBlock Margin="0,16,0,0"
+                                                           Text="Dark"
+                                                           FontSize="14"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource BrandMidnightBrush}" />
+                                                <TextBlock Margin="0,6,0,0"
+                                                           Text="Midnight surfaces with refined contrast for long sessions and low-glare review."
+                                                           Foreground="{DynamicResource BrandTextSecondaryBrush}"
+                                                           TextWrapping="Wrap" />
+                                            </StackPanel>
+                                        </RadioButton>
+                                    </Grid>
+
+                                    <Border Margin="0,14,0,0"
+                                            Padding="14"
+                                            Background="{DynamicResource ThemeCardBrush}"
+                                            BorderBrush="{DynamicResource ThemeAccentBorderBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="16">
+                                        <TextBlock Text="{Binding SelectedAppearanceModeLabel}"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource BrandMidnightBrush}" />
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+
+                            <TextBlock Margin="0,22,0,0"
+                                       Text="Login branding"
+                                       FontSize="15"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource BrandMidnightBrush}" />
+                            <TextBlock Margin="0,8,0,0"
+                                       Text="Refine the sign-in screen with official branding assets that match the selected theme and office identity."
+                                       Foreground="{DynamicResource BrandTextSecondaryBrush}"
+                                       TextWrapping="Wrap" />
+
                             <Border Margin="0,18,0,0"
                                     Padding="16"
-                                    Background="{StaticResource BrandSurfaceBrush}"
-                                    BorderBrush="{StaticResource BrandBorderBrush}"
+                                    Background="{DynamicResource ThemeCardSubtleBrush}"
+                                    BorderBrush="{DynamicResource BrandBorderBrush}"
                                     BorderThickness="1"
                                     CornerRadius="12">
                                 <Grid>
@@ -305,7 +553,7 @@
                                                 <materialDesign:PackIcon Kind="TownHall"
                                                                          Width="30"
                                                                          Height="30"
-                                                                         Foreground="{StaticResource BrandYellowBrush}"
+                                                                         Foreground="{DynamicResource BrandYellowBrush}"
                                                                          HorizontalAlignment="Center"
                                                                          VerticalAlignment="Center" />
                                             </Border>
@@ -332,14 +580,14 @@
                                         <TextBlock Text="Login logo"
                                                    FontSize="12"
                                                    FontWeight="SemiBold"
-                                                   Foreground="{StaticResource BrandMidnightBrush}" />
+                                                   Foreground="{DynamicResource BrandMidnightBrush}" />
                                         <TextBlock Text="{Binding SystemLogoFileLabel}"
                                                    Margin="0,6,0,0"
-                                                   Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                                   Foreground="{DynamicResource BrandTextSecondaryBrush}"
                                                    TextWrapping="Wrap" />
                                         <TextBlock Text="This logo appears on the left side of the login screen. If no custom logo is saved, the default icon stays in place."
                                                    Margin="0,8,0,0"
-                                                   Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                                   Foreground="{DynamicResource BrandTextSecondaryBrush}"
                                                    TextWrapping="Wrap" />
 
                                         <StackPanel Margin="0,14,0,0"
@@ -358,8 +606,8 @@
 
                             <Border Margin="0,18,0,0"
                                     Padding="16"
-                                    Background="{StaticResource BrandSurfaceBrush}"
-                                    BorderBrush="{StaticResource BrandBorderBrush}"
+                                    Background="{DynamicResource ThemeCardSubtleBrush}"
+                                    BorderBrush="{DynamicResource BrandBorderBrush}"
                                     BorderThickness="1"
                                     CornerRadius="12">
                                 <Grid>
@@ -421,14 +669,14 @@
                                         <TextBlock Text="Login Panel Background"
                                                    FontSize="12"
                                                    FontWeight="SemiBold"
-                                                   Foreground="{StaticResource BrandMidnightBrush}" />
+                                                   Foreground="{DynamicResource BrandMidnightBrush}" />
                                         <TextBlock Text="{Binding SystemLoginBackgroundFileLabel}"
                                                    Margin="0,6,0,0"
-                                                   Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                                   Foreground="{DynamicResource BrandTextSecondaryBrush}"
                                                    TextWrapping="Wrap" />
                                         <TextBlock Text="This image appears behind the login glass panels on the sign-in screen."
                                                    Margin="0,8,0,0"
-                                                   Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                                   Foreground="{DynamicResource BrandTextSecondaryBrush}"
                                                    TextWrapping="Wrap" />
 
                                         <StackPanel Margin="0,14,0,0"
@@ -464,8 +712,8 @@
             <TabItem Header="My Account"
                      IsEnabled="{Binding HasCurrentUser}">
                 <Grid Margin="0,20,0,0">
-                    <Border Background="White"
-                            BorderBrush="{StaticResource BrandBorderBrush}"
+                    <Border Background="{DynamicResource ThemeCardBrush}"
+                            BorderBrush="{DynamicResource BrandBorderBrush}"
                             BorderThickness="1"
                             CornerRadius="14"
                             Padding="20">
@@ -473,10 +721,10 @@
                             <TextBlock Text="My Account"
                                        FontSize="15"
                                        FontWeight="SemiBold"
-                                       Foreground="{StaticResource BrandMidnightBrush}" />
+                                       Foreground="{DynamicResource BrandMidnightBrush}" />
                             <TextBlock Text="Update the signed-in account name, username, email, and contact number."
                                        Margin="0,8,0,0"
-                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                       Foreground="{DynamicResource BrandTextSecondaryBrush}"
                                        TextWrapping="Wrap" />
 
                             <TextBox Margin="0,18,0,0"
@@ -525,8 +773,8 @@
             <TabItem Header="Security"
                      IsEnabled="{Binding HasCurrentUser}">
                 <Grid Margin="0,20,0,0">
-                    <Border Background="White"
-                            BorderBrush="{StaticResource BrandBorderBrush}"
+                    <Border Background="{DynamicResource ThemeCardBrush}"
+                            BorderBrush="{DynamicResource BrandBorderBrush}"
                             BorderThickness="1"
                             CornerRadius="14"
                             Padding="20">
@@ -534,10 +782,10 @@
                             <TextBlock Text="Security"
                                        FontSize="15"
                                        FontWeight="SemiBold"
-                                       Foreground="{StaticResource BrandMidnightBrush}" />
+                                       Foreground="{DynamicResource BrandMidnightBrush}" />
                             <TextBlock Text="Change the signed-in user's password. The current password is required before a new one can be saved."
                                        Margin="0,8,0,0"
-                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                       Foreground="{DynamicResource BrandTextSecondaryBrush}"
                                        TextWrapping="Wrap" />
 
                             <PasswordBox x:Name="CurrentPasswordBox"
@@ -567,8 +815,8 @@
 
                             <Border Margin="0,16,0,0"
                                     Padding="16"
-                                    Background="{StaticResource BrandSurfaceBrush}"
-                                    BorderBrush="{StaticResource BrandBorderBrush}"
+                                    Background="{DynamicResource ThemeCardSubtleBrush}"
+                                    BorderBrush="{DynamicResource BrandBorderBrush}"
                                     BorderThickness="1"
                                     CornerRadius="12"
                                     Visibility="{Binding ShowPasswordChangeOtpPanel, Converter={StaticResource BooleanToVisibilityConverter}}">
@@ -576,27 +824,27 @@
                                     <TextBlock Text="Password Change Verification"
                                                FontSize="12"
                                                FontWeight="SemiBold"
-                                               Foreground="{StaticResource BrandMidnightBrush}" />
+                                               Foreground="{DynamicResource BrandMidnightBrush}" />
                                     <TextBlock Margin="0,8,0,0"
                                                Text="{Binding PasswordChangeOtpPromptText}"
-                                               Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                               Foreground="{DynamicResource BrandTextSecondaryBrush}"
                                                TextWrapping="Wrap" />
 
                                     <Border Margin="0,14,0,0"
                                             Padding="12"
-                                            Background="White"
-                                            BorderBrush="{StaticResource BrandBorderBrush}"
+                                            Background="{DynamicResource ThemeCardBrush}"
+                                            BorderBrush="{DynamicResource BrandBorderBrush}"
                                             BorderThickness="1"
                                             CornerRadius="12">
                                         <StackPanel Orientation="Horizontal">
                                             <materialDesign:PackIcon Kind="EmailOutline"
                                                                      Width="18"
                                                                      Height="18"
-                                                                     Foreground="{StaticResource BrandMidnightBrush}" />
+                                                                     Foreground="{DynamicResource BrandMidnightBrush}" />
                                             <TextBlock Margin="8,0,0,0"
                                                        Text="{Binding OfficialEmailMask}"
                                                        FontWeight="SemiBold"
-                                                       Foreground="{StaticResource BrandMidnightBrush}" />
+                                                       Foreground="{DynamicResource BrandMidnightBrush}" />
                                         </StackPanel>
                                     </Border>
 
@@ -660,8 +908,8 @@
                             </Grid.ColumnDefinitions>
 
                         <Border Grid.Column="0"
-                                Background="White"
-                                BorderBrush="{StaticResource BrandBorderBrush}"
+                                Background="{DynamicResource ThemeCardBrush}"
+                                BorderBrush="{DynamicResource BrandBorderBrush}"
                                 BorderThickness="1"
                                 CornerRadius="14"
                                 Padding="20">
@@ -669,10 +917,10 @@
                                 <TextBlock Text="Remote Snapshot Source"
                                            FontSize="15"
                                            FontWeight="SemiBold"
-                                           Foreground="{StaticResource BrandMidnightBrush}" />
+                                           Foreground="{DynamicResource BrandMidnightBrush}" />
                                 <TextBlock Text="Type the remote database credentials here, test them, then snapshot `val_beneficiaries` or import pending rows into `BeneficiaryStaging`."
                                            Margin="0,8,0,0"
-                                           Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                           Foreground="{DynamicResource BrandTextSecondaryBrush}"
                                            TextWrapping="Wrap" />
 
                                 <Grid Margin="0,16,0,0">
@@ -718,25 +966,27 @@
                                            Text="Local Target"
                                            FontSize="15"
                                            FontWeight="SemiBold"
-                                           Foreground="{StaticResource BrandMidnightBrush}" />
+                                           Foreground="{DynamicResource BrandMidnightBrush}" />
 
                                 <Border Margin="0,8,0,0"
                                         Padding="14"
-                                        Background="{StaticResource BrandSurfaceBrush}"
-                                        BorderBrush="{StaticResource BrandBorderBrush}"
+                                        Background="{DynamicResource ThemeCardSubtleBrush}"
+                                        BorderBrush="{DynamicResource BrandBorderBrush}"
                                         BorderThickness="1"
                                         CornerRadius="10">
                                     <TextBlock Text="{Binding ActiveTargetSummary}"
-                                               Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                               Foreground="{DynamicResource BrandTextSecondaryBrush}"
                                                TextWrapping="Wrap" />
                                 </Border>
 
                                 <Border Margin="0,16,0,0"
                                         Padding="14"
                                         CornerRadius="10"
-                                        Background="#FFF7D6">
+                                        Background="{DynamicResource ThemeWarningSurfaceBrush}"
+                                        BorderBrush="{DynamicResource ThemeWarningBorderBrush}"
+                                        BorderThickness="1">
                                     <TextBlock Text="Snapshot Validated Beneficiaries copies `val_beneficiaries` into the active database so the Validated Beneficiaries page has local data. Import to Staging appends new records into `BeneficiaryStaging` as Pending."
-                                               Foreground="#9A5A00"
+                                               Foreground="{DynamicResource ThemeWarningForegroundBrush}"
                                                TextWrapping="Wrap" />
                                 </Border>
 
@@ -762,8 +1012,8 @@
                         </Border>
 
                         <Border Grid.Column="2"
-                                Background="White"
-                                BorderBrush="{StaticResource BrandBorderBrush}"
+                                Background="{DynamicResource ThemeCardBrush}"
+                                BorderBrush="{DynamicResource BrandBorderBrush}"
                                 BorderThickness="1"
                                 CornerRadius="14"
                                 Padding="20">
@@ -771,7 +1021,7 @@
                                 <TextBlock Text="Local Snapshot Status"
                                            FontSize="15"
                                            FontWeight="SemiBold"
-                                           Foreground="{StaticResource BrandMidnightBrush}" />
+                                           Foreground="{DynamicResource BrandMidnightBrush}" />
 
                                 <Grid Margin="0,16,0,0">
                                     <Grid.ColumnDefinitions>
@@ -783,17 +1033,17 @@
                                             Margin="0,0,8,0"
                                             Padding="12"
                                             CornerRadius="10"
-                                            Background="{StaticResource BrandSurfaceBrush}">
+                                            Background="{DynamicResource ThemeCardSubtleBrush}">
                                         <StackPanel>
                                             <TextBlock Text="VALIDATED BENEFICIARIES ROWS"
                                                        FontSize="10"
                                                        FontWeight="SemiBold"
-                                                       Foreground="{StaticResource BrandTextSecondaryBrush}" />
+                                                       Foreground="{DynamicResource BrandTextSecondaryBrush}" />
                                             <TextBlock Text="{Binding MasterListRowCount, StringFormat=N0}"
                                                        Margin="0,6,0,0"
                                                        FontSize="24"
                                                        FontWeight="SemiBold"
-                                                       Foreground="{StaticResource BrandMidnightBrush}" />
+                                                       Foreground="{DynamicResource BrandMidnightBrush}" />
                                         </StackPanel>
                                     </Border>
 
@@ -801,32 +1051,32 @@
                                             Margin="8,0,0,0"
                                             Padding="12"
                                             CornerRadius="10"
-                                            Background="{StaticResource BrandSurfaceBrush}">
+                                            Background="{DynamicResource ThemeCardSubtleBrush}">
                                         <StackPanel>
                                             <TextBlock Text="STAGING ROWS"
                                                        FontSize="10"
                                                        FontWeight="SemiBold"
-                                                       Foreground="{StaticResource BrandTextSecondaryBrush}" />
+                                                       Foreground="{DynamicResource BrandTextSecondaryBrush}" />
                                             <TextBlock Text="{Binding StagingRowCount, StringFormat=N0}"
                                                        Margin="0,6,0,0"
                                                        FontSize="24"
                                                        FontWeight="SemiBold"
-                                                       Foreground="{StaticResource BrandMidnightBrush}" />
+                                                       Foreground="{DynamicResource BrandMidnightBrush}" />
                                         </StackPanel>
                                     </Border>
                                 </Grid>
 
                                 <Border Margin="0,18,0,0"
                                         Padding="14"
-                                        Background="{StaticResource BrandSurfaceBrush}"
-                                        BorderBrush="{StaticResource BrandBorderBrush}"
+                                        Background="{DynamicResource ThemeCardSubtleBrush}"
+                                        BorderBrush="{DynamicResource BrandBorderBrush}"
                                         BorderThickness="1"
                                         CornerRadius="10">
                                     <StackPanel>
                                         <TextBlock Text="Import Status"
                                                    FontSize="11"
                                                    FontWeight="SemiBold"
-                                                   Foreground="{StaticResource BrandMidnightBrush}" />
+                                                   Foreground="{DynamicResource BrandMidnightBrush}" />
                                         <TextBlock Text="{Binding SnapshotStatusMessage}"
                                                    Margin="0,6,0,0"
                                                    Foreground="{Binding SnapshotStatusBrush}"
@@ -844,8 +1094,8 @@
 
                         <Border Grid.Row="1"
                                 Margin="0,18,0,0"
-                                Background="White"
-                                BorderBrush="{StaticResource BrandBorderBrush}"
+                                Background="{DynamicResource ThemeCardBrush}"
+                                BorderBrush="{DynamicResource BrandBorderBrush}"
                                 BorderThickness="1"
                                 CornerRadius="14"
                                 Padding="20">
@@ -860,7 +1110,7 @@
                                 <TextBlock Text="{Binding PreviewCardTitle}"
                                            FontSize="15"
                                            FontWeight="SemiBold"
-                                           Foreground="{StaticResource BrandMidnightBrush}" />
+                                           Foreground="{DynamicResource BrandMidnightBrush}" />
 
                                 <StackPanel DockPanel.Dock="Right"
                                             Orientation="Horizontal">
@@ -878,7 +1128,7 @@
                             <TextBlock Grid.Row="1"
                                        Margin="0,14,0,14"
                                        Text="{Binding PreviewSummary}"
-                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                       Foreground="{DynamicResource BrandTextSecondaryBrush}"
                                        TextWrapping="Wrap" />
 
                             <DataGrid Grid.Row="2"
@@ -899,19 +1149,19 @@
                                 Margin="24"
                                 Padding="22"
                                 CornerRadius="18"
-                                BorderBrush="{StaticResource BrandBorderBrush}"
+                                BorderBrush="{DynamicResource BrandBorderBrush}"
                                 BorderThickness="1"
-                                Background="White"
+                                Background="{DynamicResource ThemeCardBrush}"
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center">
                             <StackPanel>
                                 <TextBlock Text="Protected settings"
                                            FontSize="16"
                                            FontWeight="SemiBold"
-                                           Foreground="{StaticResource BrandMidnightBrush}" />
+                                           Foreground="{DynamicResource BrandMidnightBrush}" />
                                 <TextBlock Margin="0,8,0,0"
                                            Text="{Binding SensitiveSettingsUnlockPromptText}"
-                                           Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                           Foreground="{DynamicResource BrandTextSecondaryBrush}"
                                            TextWrapping="Wrap" />
                                 <PasswordBox Margin="0,16,0,0"
                                              PasswordChanged="ProtectedSettingsUnlockPasswordBox_PasswordChanged"
@@ -933,8 +1183,8 @@
 
             <TabItem Header="Database Backup">
                 <Grid Margin="0,20,0,0">
-                    <Border Background="White"
-                            BorderBrush="{StaticResource BrandBorderBrush}"
+                    <Border Background="{DynamicResource ThemeCardBrush}"
+                            BorderBrush="{DynamicResource BrandBorderBrush}"
                             BorderThickness="1"
                             CornerRadius="14"
                             Padding="20">
@@ -942,19 +1192,19 @@
                             <TextBlock Text="Database Backup"
                                        FontSize="15"
                                        FontWeight="SemiBold"
-                                       Foreground="{StaticResource BrandMidnightBrush}" />
+                                       Foreground="{DynamicResource BrandMidnightBrush}" />
                             <TextBlock Text="Create full, incremental, and differential backups for the currently selected app preset. Restore uses the selected restore point and resolves the required backup chain automatically."
                                        Margin="0,8,0,0"
-                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                       Foreground="{DynamicResource BrandTextSecondaryBrush}"
                                        TextWrapping="Wrap" />
 
                             <TextBlock Margin="0,18,0,0"
                                        Text="Active Backup Preset"
                                        FontWeight="SemiBold"
-                                       Foreground="{StaticResource BrandMidnightBrush}" />
+                                       Foreground="{DynamicResource BrandMidnightBrush}" />
                             <TextBlock Margin="0,8,0,0"
                                        Text="{Binding BackupTargetSummary}"
-                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                       Foreground="{DynamicResource BrandTextSecondaryBrush}"
                                        TextWrapping="Wrap" />
 
                             <Grid Margin="0,18,0,0">
@@ -969,17 +1219,17 @@
                                 <Border Grid.Column="0"
                                         Padding="14"
                                         CornerRadius="10"
-                                        Background="{StaticResource BrandSurfaceBrush}"
-                                        BorderBrush="{StaticResource BrandBorderBrush}"
+                                        Background="{DynamicResource ThemeCardSubtleBrush}"
+                                        BorderBrush="{DynamicResource BrandBorderBrush}"
                                         BorderThickness="1">
                                     <StackPanel>
                                         <TextBlock Text="Last Full Backup"
                                                    FontSize="11"
                                                    FontWeight="SemiBold"
-                                                   Foreground="{StaticResource BrandMidnightBrush}" />
+                                                   Foreground="{DynamicResource BrandMidnightBrush}" />
                                         <TextBlock Margin="0,8,0,0"
                                                    Text="{Binding LastFullBackupDisplay}"
-                                                   Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                                   Foreground="{DynamicResource BrandTextSecondaryBrush}"
                                                    TextWrapping="Wrap" />
                                     </StackPanel>
                                 </Border>
@@ -987,17 +1237,17 @@
                                 <Border Grid.Column="2"
                                         Padding="14"
                                         CornerRadius="10"
-                                        Background="{StaticResource BrandSurfaceBrush}"
-                                        BorderBrush="{StaticResource BrandBorderBrush}"
+                                        Background="{DynamicResource ThemeCardSubtleBrush}"
+                                        BorderBrush="{DynamicResource BrandBorderBrush}"
                                         BorderThickness="1">
                                     <StackPanel>
                                         <TextBlock Text="Last Incremental Backup"
                                                    FontSize="11"
                                                    FontWeight="SemiBold"
-                                                   Foreground="{StaticResource BrandMidnightBrush}" />
+                                                   Foreground="{DynamicResource BrandMidnightBrush}" />
                                         <TextBlock Margin="0,8,0,0"
                                                    Text="{Binding LastIncrementalBackupDisplay}"
-                                                   Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                                   Foreground="{DynamicResource BrandTextSecondaryBrush}"
                                                    TextWrapping="Wrap" />
                                     </StackPanel>
                                 </Border>
@@ -1005,17 +1255,17 @@
                                 <Border Grid.Column="4"
                                         Padding="14"
                                         CornerRadius="10"
-                                        Background="{StaticResource BrandSurfaceBrush}"
-                                        BorderBrush="{StaticResource BrandBorderBrush}"
+                                        Background="{DynamicResource ThemeCardSubtleBrush}"
+                                        BorderBrush="{DynamicResource BrandBorderBrush}"
                                         BorderThickness="1">
                                     <StackPanel>
                                         <TextBlock Text="Last Differential Backup"
                                                    FontSize="11"
                                                    FontWeight="SemiBold"
-                                                   Foreground="{StaticResource BrandMidnightBrush}" />
+                                                   Foreground="{DynamicResource BrandMidnightBrush}" />
                                         <TextBlock Margin="0,8,0,0"
                                                    Text="{Binding LastDifferentialBackupDisplay}"
-                                                   Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                                   Foreground="{DynamicResource BrandTextSecondaryBrush}"
                                                    TextWrapping="Wrap" />
                                     </StackPanel>
                                 </Border>
@@ -1024,9 +1274,11 @@
                             <Border Margin="0,16,0,0"
                                     Padding="14"
                                     CornerRadius="10"
-                                    Background="#FFF7D6">
+                                    Background="{DynamicResource ThemeWarningSurfaceBrush}"
+                                    BorderBrush="{DynamicResource ThemeWarningBorderBrush}"
+                                    BorderThickness="1">
                                 <TextBlock Text="{Binding BackupGuidanceMessage}"
-                                           Foreground="#9A5A00"
+                                           Foreground="{DynamicResource ThemeWarningForegroundBrush}"
                                            TextWrapping="Wrap" />
                             </Border>
 
@@ -1056,7 +1308,7 @@
 
                             <TextBlock Margin="0,12,0,0"
                                        Text="{Binding LastBackupActivity}"
-                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                       Foreground="{DynamicResource BrandTextSecondaryBrush}"
                                        TextWrapping="Wrap" />
                         </StackPanel>
                     </Border>
@@ -1066,8 +1318,8 @@
             <TabItem Header="App Database">
                 <Grid Margin="0,20,0,0">
                     <Grid Style="{StaticResource ProtectedSettingsContentGridStyle}">
-                        <Border Background="White"
-                                BorderBrush="{StaticResource BrandBorderBrush}"
+                        <Border Background="{DynamicResource ThemeCardBrush}"
+                                BorderBrush="{DynamicResource BrandBorderBrush}"
                                 BorderThickness="1"
                                 CornerRadius="14"
                                 Padding="20">
@@ -1075,27 +1327,29 @@
                                 <TextBlock Text="App Database Presets"
                                            FontSize="15"
                                            FontWeight="SemiBold"
-                                           Foreground="{StaticResource BrandMidnightBrush}" />
+                                           Foreground="{DynamicResource BrandMidnightBrush}" />
                                 <TextBlock Text="Choose which preset the app uses for login, startup initialization, dashboard reads, and local snapshots. Before login, users can switch presets and configure only Network (LAN). Local and Remote stay fixed by the shipped app configuration."
                                            Margin="0,8,0,0"
-                                           Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                           Foreground="{DynamicResource BrandTextSecondaryBrush}"
                                            TextWrapping="Wrap" />
 
                                 <TextBlock Margin="0,18,0,0"
                                            Text="Current App Database"
                                            FontWeight="SemiBold"
-                                           Foreground="{StaticResource BrandMidnightBrush}" />
+                                           Foreground="{DynamicResource BrandMidnightBrush}" />
                                 <TextBlock Margin="0,8,0,0"
                                            Text="{Binding ActiveTargetSummary}"
-                                           Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                           Foreground="{DynamicResource BrandTextSecondaryBrush}"
                                            TextWrapping="Wrap" />
 
                                 <Border Margin="0,16,0,0"
                                         Padding="14"
                                         CornerRadius="10"
-                                        Background="#FFF7D6">
+                                        Background="{DynamicResource ThemeWarningSurfaceBrush}"
+                                        BorderBrush="{DynamicResource ThemeWarningBorderBrush}"
+                                        BorderThickness="1">
                                     <TextBlock Text="Only Network (LAN) credentials are editable. Local and Remote are fixed by the shipped app configuration, and the migrate action below updates both Local and Remote after schema changes."
-                                               Foreground="#9A5A00"
+                                               Foreground="{DynamicResource ThemeWarningForegroundBrush}"
                                                TextWrapping="Wrap" />
                                 </Border>
 
@@ -1126,19 +1380,19 @@
                                 Margin="24"
                                 Padding="22"
                                 CornerRadius="18"
-                                BorderBrush="{StaticResource BrandBorderBrush}"
+                                BorderBrush="{DynamicResource BrandBorderBrush}"
                                 BorderThickness="1"
-                                Background="White"
+                                Background="{DynamicResource ThemeCardBrush}"
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center">
                             <StackPanel>
                                 <TextBlock Text="Protected settings"
                                            FontSize="16"
                                            FontWeight="SemiBold"
-                                           Foreground="{StaticResource BrandMidnightBrush}" />
+                                           Foreground="{DynamicResource BrandMidnightBrush}" />
                                 <TextBlock Margin="0,8,0,0"
                                            Text="{Binding SensitiveSettingsUnlockPromptText}"
-                                           Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                           Foreground="{DynamicResource BrandTextSecondaryBrush}"
                                            TextWrapping="Wrap" />
                                 <PasswordBox Margin="0,16,0,0"
                                              PasswordChanged="ProtectedSettingsUnlockPasswordBox_PasswordChanged"
@@ -1161,8 +1415,8 @@
             <TabItem Header="GGMS Budget Source">
                 <Grid Margin="0,20,0,0">
                     <Grid Style="{StaticResource ProtectedSettingsContentGridStyle}">
-                        <Border Background="White"
-                                BorderBrush="{StaticResource BrandBorderBrush}"
+                        <Border Background="{DynamicResource ThemeCardBrush}"
+                                BorderBrush="{DynamicResource BrandBorderBrush}"
                                 BorderThickness="1"
                                 CornerRadius="14"
                                 Padding="20">
@@ -1170,10 +1424,10 @@
                                 <TextBlock Text="GGMS Budget Source"
                                            FontSize="15"
                                            FontWeight="SemiBold"
-                                           Foreground="{StaticResource BrandMidnightBrush}" />
+                                           Foreground="{DynamicResource BrandMidnightBrush}" />
                                 <TextBlock Text="Configure the external GGMS source used by the budget module. Credentials stay outside the shipped installer, and the table names can be changed if your GGMS schema differs."
                                            Margin="0,8,0,0"
-                                           Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                           Foreground="{DynamicResource BrandTextSecondaryBrush}"
                                            TextWrapping="Wrap" />
 
                                 <UniformGrid Margin="0,18,0,0" Columns="3">
@@ -1249,19 +1503,19 @@
                                 Margin="24"
                                 Padding="22"
                                 CornerRadius="18"
-                                BorderBrush="{StaticResource BrandBorderBrush}"
+                                BorderBrush="{DynamicResource BrandBorderBrush}"
                                 BorderThickness="1"
-                                Background="White"
+                                Background="{DynamicResource ThemeCardBrush}"
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center">
                             <StackPanel>
                                 <TextBlock Text="Protected settings"
                                            FontSize="16"
                                            FontWeight="SemiBold"
-                                           Foreground="{StaticResource BrandMidnightBrush}" />
+                                           Foreground="{DynamicResource BrandMidnightBrush}" />
                                 <TextBlock Margin="0,8,0,0"
                                            Text="{Binding SensitiveSettingsUnlockPromptText}"
-                                           Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                           Foreground="{DynamicResource BrandTextSecondaryBrush}"
                                            TextWrapping="Wrap" />
                                 <PasswordBox Margin="0,16,0,0"
                                              PasswordChanged="ProtectedSettingsUnlockPasswordBox_PasswordChanged"
@@ -1283,8 +1537,8 @@
 
             <TabItem Header="Updates">
                 <Grid Margin="0,20,0,0">
-                    <Border Background="White"
-                            BorderBrush="{StaticResource BrandBorderBrush}"
+                    <Border Background="{DynamicResource ThemeCardBrush}"
+                            BorderBrush="{DynamicResource BrandBorderBrush}"
                             BorderThickness="1"
                             CornerRadius="14"
                             Padding="20">
@@ -1292,10 +1546,10 @@
                             <TextBlock Text="App Updates"
                                        FontSize="15"
                                        FontWeight="SemiBold"
-                                       Foreground="{StaticResource BrandMidnightBrush}" />
+                                       Foreground="{DynamicResource BrandMidnightBrush}" />
                             <TextBlock Text="Check the public release manifest for a newer installer. Startup checks stay quiet and only surface here inside Settings."
                                        Margin="0,8,0,0"
-                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                       Foreground="{DynamicResource BrandTextSecondaryBrush}"
                                        TextWrapping="Wrap" />
 
                             <UniformGrid Margin="0,18,0,0" Columns="2">
@@ -1388,8 +1642,8 @@
 
             <TabItem Header="Feature Rules">
                 <Grid Margin="0,20,0,0">
-                    <Border Background="White"
-                            BorderBrush="{StaticResource BrandBorderBrush}"
+                    <Border Background="{DynamicResource ThemeCardBrush}"
+                            BorderBrush="{DynamicResource BrandBorderBrush}"
                             BorderThickness="1"
                             CornerRadius="14"
                             Padding="20">
@@ -1397,10 +1651,10 @@
                             <TextBlock Text="Large Assistance Warning Threshold"
                                        FontSize="15"
                                        FontWeight="SemiBold"
-                                       Foreground="{StaticResource BrandMidnightBrush}" />
+                                       Foreground="{DynamicResource BrandMidnightBrush}" />
                             <TextBlock Text="This amount is used as the warning-only limit when a beneficiary has already received significant ayuda. Records are not auto-declined when the threshold is reached."
                                        Margin="0,8,0,0"
-                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                       Foreground="{DynamicResource BrandTextSecondaryBrush}"
                                        TextWrapping="Wrap" />
 
                             <TextBox Margin="0,18,0,0"

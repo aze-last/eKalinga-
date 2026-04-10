@@ -54,15 +54,36 @@ namespace AttendanceShiftingManagement.Services
                 return new AssistanceLedgerOperationResult(false, "The selected imported beneficiary no longer exists.");
             }
 
+            return await RecordEntryAsync(
+                staging.CivilRegistryId,
+                staging.BeneficiaryId,
+                BeneficiaryAssistanceSourceModule.ManualHistory,
+                $"staging:{staging.StagingID}",
+                request.ReleaseDate,
+                request.Amount,
+                remarks,
+                recordedByUserId);
+        }
+
+        public async Task<AssistanceLedgerOperationResult> RecordEntryAsync(
+            string? civilRegistryId,
+            string? beneficiaryId,
+            BeneficiaryAssistanceSourceModule sourceModule,
+            string? sourceRecordId,
+            DateTime releaseDate,
+            decimal amount,
+            string remarks,
+            int recordedByUserId)
+        {
             var entry = new BeneficiaryAssistanceLedgerEntry
             {
-                CivilRegistryId = NormalizeNullable(staging.CivilRegistryId),
-                BeneficiaryId = NormalizeNullable(staging.BeneficiaryId),
-                SourceModule = BeneficiaryAssistanceSourceModule.ManualHistory,
-                SourceRecordId = $"staging:{staging.StagingID}",
-                ReleaseDate = request.ReleaseDate.Date,
-                Amount = request.Amount,
-                Remarks = remarks,
+                CivilRegistryId = NormalizeNullable(civilRegistryId),
+                BeneficiaryId = NormalizeNullable(beneficiaryId),
+                SourceModule = sourceModule,
+                SourceRecordId = NormalizeNullable(sourceRecordId),
+                ReleaseDate = releaseDate.Date,
+                Amount = amount,
+                Remarks = remarks.Trim(),
                 RecordedByUserId = recordedByUserId,
                 CreatedAt = DateTime.Now
             };
@@ -75,7 +96,7 @@ namespace AttendanceShiftingManagement.Services
                 "BeneficiaryAssistanceRecorded",
                 "BeneficiaryAssistanceLedgerEntry",
                 entry.Id,
-                $"Recorded {entry.Amount:N2} assistance history for beneficiary '{entry.CivilRegistryId ?? entry.BeneficiaryId ?? "unknown"}'.");
+                $"Recorded {entry.Amount:N2} assistance history ({sourceModule}) for beneficiary '{entry.CivilRegistryId ?? entry.BeneficiaryId ?? "unknown"}'.");
 
             return new AssistanceLedgerOperationResult(true, "Recorded assistance history.", entry.Id);
         }

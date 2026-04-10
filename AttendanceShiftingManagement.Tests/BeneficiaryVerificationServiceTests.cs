@@ -138,6 +138,9 @@ public sealed class BeneficiaryVerificationServiceTests
                     "25",
                     "Single",
                     "Purok 1, Barangay Centro",
+                    false,
+                    null,
+                    false,
                     null,
                     null,
                     null,
@@ -179,9 +182,12 @@ public sealed class BeneficiaryVerificationServiceTests
                 "46",
                 "Married",
                 "Updated address",
+                true,
                 "PWD-01",
+                true,
                 "Senior-01",
                 "Visual",
+                "Updated cause",
                 "Updated notes"),
             admin.Id);
 
@@ -191,10 +197,166 @@ public sealed class BeneficiaryVerificationServiceTests
         Assert.Equal("CRS-UPDATED", staged.CivilRegistryId);
         Assert.Equal("Elena M. Rivera", staged.FullName);
         Assert.Equal("Updated address", staged.Address);
+        Assert.True(staged.IsPwd);
+        Assert.True(staged.IsSenior);
+        Assert.Equal("Updated cause", staged.CauseOfDisability);
         Assert.Equal("Updated notes", staged.ReviewNotes);
 
         var auditLog = Assert.Single(context.ActivityLogs);
         Assert.Equal("BeneficiaryCorrected", auditLog.Action);
+    }
+
+    [Fact]
+    public async Task SaveCorrectionsAsync_AllowsApprovedBeneficiary_AndSyncsDependentRecords()
+    {
+        using var context = TestDbContextFactory.CreateContext();
+        var admin = SeedAdmin(context);
+        var program = SeedProgram(context, admin.Id);
+        var stagingRow = SeedStaging(context, VerificationStatus.Approved);
+
+        var assistanceCase = new AssistanceCase
+        {
+            CaseNumber = "AR-20260408-0001",
+            ValidatedBeneficiaryName = stagingRow.FullName,
+            ValidatedBeneficiaryId = stagingRow.BeneficiaryId,
+            ValidatedCivilRegistryId = stagingRow.CivilRegistryId,
+            AssistanceType = "Food Pack",
+            ReleaseKind = AssistanceReleaseKind.Goods,
+            Priority = AssistanceCasePriority.Medium,
+            Status = AssistanceCaseStatus.Approved,
+            RequestedOn = DateTime.Today,
+            ApprovedAmount = 500m,
+            CreatedByUserId = admin.Id,
+            CreatedAt = DateTime.Now,
+            UpdatedAt = DateTime.Now
+        };
+
+        var projectBeneficiary = new AyudaProjectBeneficiary
+        {
+            AyudaProgramId = program.Id,
+            BeneficiaryStagingId = stagingRow.StagingID,
+            BeneficiaryId = stagingRow.BeneficiaryId,
+            CivilRegistryId = stagingRow.CivilRegistryId,
+            FullName = stagingRow.FullName ?? string.Empty,
+            AddedByUserId = admin.Id,
+            AddedAt = DateTime.Now
+        };
+
+        var ledgerEntry = new BeneficiaryAssistanceLedgerEntry
+        {
+            CivilRegistryId = stagingRow.CivilRegistryId,
+            BeneficiaryId = stagingRow.BeneficiaryId,
+            SourceModule = BeneficiaryAssistanceSourceModule.ManualHistory,
+            SourceRecordId = "manual-history:1",
+            ReleaseDate = DateTime.Today,
+            Amount = 500m,
+            Remarks = "Manual aid history",
+            RecordedByUserId = admin.Id,
+            CreatedAt = DateTime.Now
+        };
+
+        context.AssistanceCases.Add(assistanceCase);
+        context.AyudaProjectBeneficiaries.Add(projectBeneficiary);
+        context.BeneficiaryAssistanceLedgerEntries.Add(ledgerEntry);
+        context.SaveChanges();
+
+        var projectClaim = new AyudaProjectClaim
+        {
+            AyudaProgramId = program.Id,
+            BeneficiaryStagingId = stagingRow.StagingID,
+            ProjectBeneficiaryId = projectBeneficiary.Id,
+            BeneficiaryId = stagingRow.BeneficiaryId,
+            CivilRegistryId = stagingRow.CivilRegistryId,
+            FullName = stagingRow.FullName ?? string.Empty,
+            ClaimedByUserId = admin.Id,
+            ClaimedAt = DateTime.Now
+        };
+
+        context.AyudaProjectClaims.Add(projectClaim);
+        context.SaveChanges();
+
+        var service = new BeneficiaryVerificationService(context);
+        var result = await service.SaveCorrectionsAsync(
+            new BeneficiaryCorrectionRequest(
+                stagingRow.StagingID,
+                "BEN-APPROVED-UPDATED",
+                "CRS-APPROVED-UPDATED",
+                "Maria",
+                "L.",
+                "Rivera",
+                "Maria L. Rivera",
+                "Female",
+                "1985-04-01",
+                "41",
+                "Married",
+                "Updated approved address",
+                true,
+                "PWD-88",
+                true,
+                "SC-88",
+                "Mobility",
+                "Accident",
+                "Approved profile updated"),
+            admin.Id);
+
+        Assert.True(result.IsSuccess);
+
+        var updatedStaging = Assert.Single(context.BeneficiaryStaging);
+        Assert.Equal("BEN-APPROVED-UPDATED", updatedStaging.BeneficiaryId);
+        Assert.Equal("CRS-APPROVED-UPDATED", updatedStaging.CivilRegistryId);
+        Assert.Equal("Maria L. Rivera", updatedStaging.FullName);
+
+        var updatedCase = Assert.Single(context.AssistanceCases);
+        Assert.Equal("BEN-APPROVED-UPDATED", updatedCase.ValidatedBeneficiaryId);
+        Assert.Equal("CRS-APPROVED-UPDATED", updatedCase.ValidatedCivilRegistryId);
+        Assert.Equal("Maria L. Rivera", updatedCase.ValidatedBeneficiaryName);
+
+        var updatedProjectBeneficiary = Assert.Single(context.AyudaProjectBeneficiaries);
+        Assert.Equal("BEN-APPROVED-UPDATED", updatedProjectBeneficiary.BeneficiaryId);
+        Assert.Equal("CRS-APPROVED-UPDATED", updatedProjectBeneficiary.CivilRegistryId);
+        Assert.Equal("Maria L. Rivera", updatedProjectBeneficiary.FullName);
+
+        var updatedProjectClaim = Assert.Single(context.AyudaProjectClaims);
+        Assert.Equal("BEN-APPROVED-UPDATED", updatedProjectClaim.BeneficiaryId);
+        Assert.Equal("CRS-APPROVED-UPDATED", updatedProjectClaim.CivilRegistryId);
+        Assert.Equal("Maria L. Rivera", updatedProjectClaim.FullName);
+
+        var updatedLedgerEntry = Assert.Single(context.BeneficiaryAssistanceLedgerEntries);
+        Assert.Equal("BEN-APPROVED-UPDATED", updatedLedgerEntry.BeneficiaryId);
+        Assert.Equal("CRS-APPROVED-UPDATED", updatedLedgerEntry.CivilRegistryId);
+    }
+
+    [Fact]
+    public async Task ReturnToPendingAsync_RevertsApprovedBeneficiary_AndRevokesDigitalId()
+    {
+        using var context = TestDbContextFactory.CreateContext();
+        var admin = SeedAdmin(context);
+        var stagingRow = SeedStaging(context, VerificationStatus.Approved);
+        context.BeneficiaryDigitalIds.Add(new BeneficiaryDigitalId
+        {
+            BeneficiaryStagingId = stagingRow.StagingID,
+            CardNumber = "BID-000001",
+            QrPayload = "ASM-BID|000001|ABC123",
+            IssuedByUserId = admin.Id,
+            IssuedAt = DateTime.Now,
+            IsActive = true
+        });
+        context.SaveChanges();
+
+        var service = new BeneficiaryVerificationService(context);
+        var result = await service.ReturnToPendingAsync(stagingRow.StagingID, admin.Id, "Needs profile re-check.");
+
+        Assert.True(result.IsSuccess);
+
+        var staged = Assert.Single(context.BeneficiaryStaging);
+        Assert.Equal(VerificationStatus.Pending, staged.VerificationStatus);
+        Assert.Equal("Needs profile re-check.", staged.ReviewNotes);
+
+        var digitalId = Assert.Single(context.BeneficiaryDigitalIds);
+        Assert.False(digitalId.IsActive);
+        Assert.NotNull(digitalId.RevokedAt);
+
+        Assert.Contains(context.ActivityLogs, log => log.Action == "BeneficiaryReturnedToPending");
     }
 
     [Fact]
@@ -306,7 +468,26 @@ public sealed class BeneficiaryVerificationServiceTests
         return member;
     }
 
-    private static BeneficiaryStaging SeedStaging(Data.AppDbContext context)
+    private static AyudaProgram SeedProgram(Data.AppDbContext context, int createdByUserId)
+    {
+        var program = new AyudaProgram
+        {
+            ProgramCode = "PRG-001",
+            ProgramName = "Family Support",
+            ProgramType = AyudaProgramType.GeneralPurpose,
+            DistributionStatus = AyudaProgramDistributionStatus.Open,
+            IsActive = true,
+            CreatedByUserId = createdByUserId,
+            CreatedAt = DateTime.Now,
+            UpdatedAt = DateTime.Now
+        };
+
+        context.AyudaPrograms.Add(program);
+        context.SaveChanges();
+        return program;
+    }
+
+    private static BeneficiaryStaging SeedStaging(Data.AppDbContext context, VerificationStatus status = VerificationStatus.Pending)
     {
         var row = new BeneficiaryStaging
         {
@@ -315,7 +496,7 @@ public sealed class BeneficiaryVerificationServiceTests
             FirstName = "Elena",
             LastName = "Rivera",
             FullName = "Elena Rivera",
-            VerificationStatus = VerificationStatus.Pending,
+            VerificationStatus = status,
             ImportedAt = DateTime.Now
         };
 

@@ -54,7 +54,7 @@ public sealed class BarangayDashboardBeneficiarySourceTests
     }
 
     [Fact]
-    public void BarangayDashboardPage_UsesBeneficiaryFirstMetricCardLabels()
+    public void BarangayDashboardPage_UsesRefinedDashboardModuleAndSummaryLabels()
     {
         var pagePath = Path.GetFullPath(Path.Combine(
             AppContext.BaseDirectory,
@@ -67,14 +67,15 @@ public sealed class BarangayDashboardBeneficiarySourceTests
 
         var xaml = File.ReadAllText(pagePath);
 
-        Assert.Contains("Text=\"{Binding CashForWorkBeneficiaryCount, StringFormat=N0}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"Cash-for-work beneficiaries\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"Approved beneficiaries currently available for cash-for-work events.\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"Approved beneficiaries\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"Rejected beneficiaries\"", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("Text=\"{Binding EligibleWorkerCount, StringFormat=N0}\"", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("Text=\"Eligible workers\"", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("Text=\"Members tagged for cash-for-work participation.\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"AID REQUESTS\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"PENDING\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"BUDGET ALERTS\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"DISTRIBUTIONS\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"Validated Beneficiaries\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"Cash-for-Work\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"Reports\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding DataContext.ShowReportsCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("No reports view wired yet", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Text=\"Active households\"", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Text=\"Registered members\"", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Households currently available in the registry.", xaml, StringComparison.Ordinal);

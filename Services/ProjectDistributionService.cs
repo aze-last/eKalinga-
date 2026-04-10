@@ -46,6 +46,11 @@ namespace AttendanceShiftingManagement.Services
                 return new ProjectDistributionOperationResult(false, "Select an active project/program first.");
             }
 
+            if (program.DistributionStatus != AyudaProgramDistributionStatus.Open)
+            {
+                return new ProjectDistributionOperationResult(false, $"Beneficiaries can only be added to projects that are 'Open' (Current status: {program.DistributionStatus}).");
+            }
+
             var beneficiary = await _context.BeneficiaryStaging
                 .AsNoTracking()
                 .FirstOrDefaultAsync(item => item.StagingID == beneficiaryStagingId);
@@ -139,6 +144,20 @@ namespace AttendanceShiftingManagement.Services
             string? qrPayload,
             string? remarks)
         {
+            if (string.IsNullOrWhiteSpace(qrPayload))
+            {
+                return new ProjectDistributionOperationResult(false, "Identity QR payload is required for project claims.");
+            }
+
+            // Verify identity via QR payload
+            var digitalIdService = new BeneficiaryDigitalIdService(_context);
+            var lookupResult = await digitalIdService.LookupByQrPayloadAsync(qrPayload);
+
+            if (lookupResult == null || lookupResult.BeneficiaryStagingId != beneficiaryStagingId)
+            {
+                return new ProjectDistributionOperationResult(false, "Beneficiary identity mismatch. The scanned ID does not match the selected record.");
+            }
+
             var qualification = await EvaluateQualificationAsync(ayudaProgramId, beneficiaryStagingId);
             if (!qualification.IsQualified)
             {
@@ -153,6 +172,12 @@ namespace AttendanceShiftingManagement.Services
             var program = await _context.AyudaPrograms
                 .AsNoTracking()
                 .FirstOrDefaultAsync(item => item.Id == ayudaProgramId);
+
+            var lifecycleValidation = ValidateProjectLifecycle(program);
+            if (lifecycleValidation != null)
+            {
+                return lifecycleValidation;
+            }
 
             var membership = await _context.AyudaProjectBeneficiaries
                 .AsNoTracking()
@@ -214,6 +239,18 @@ namespace AttendanceShiftingManagement.Services
                     await _context.SaveChangesAsync();
                     return new ProjectDistributionOperationResult(false, releaseResult.Message, membership.Id);
                 }
+
+                // Sync with beneficiary assistance history
+                var historyService = new BeneficiaryAssistanceLedgerService(_context, _auditService);
+                await historyService.RecordEntryAsync(
+                    membership.CivilRegistryId,
+                    membership.BeneficiaryId,
+                    BeneficiaryAssistanceSourceModule.ProjectDistribution,
+                    $"project-claim:{ayudaProgramId}:{beneficiaryStagingId}",
+                    claim.ClaimedAt,
+                    program!.UnitAmount ?? 0m,
+                    NormalizeNullable(remarks) ?? $"Project claim for {membership.FullName}.",
+                    actedByUserId);
             }
 
             await _auditService.LogActivityAsync(
@@ -264,6 +301,37 @@ namespace AttendanceShiftingManagement.Services
         private static string BuildClaimSourceRecordId(int ayudaProgramId, int beneficiaryStagingId)
         {
             return $"project-claim:{ayudaProgramId}:{beneficiaryStagingId}";
+        }
+
+        private static ProjectDistributionOperationResult? ValidateProjectLifecycle(AyudaProgram? program)
+        {
+            if (program == null)
+            {
+                return new ProjectDistributionOperationResult(false, "The project/program was not found.");
+            }
+
+            if (program.DistributionStatus == AyudaProgramDistributionStatus.Draft)
+            {
+                return new ProjectDistributionOperationResult(false, "This project distribution is still in 'Draft' and cannot accept claims.");
+            }
+
+            if (program.DistributionStatus == AyudaProgramDistributionStatus.Closed)
+            {
+                return new ProjectDistributionOperationResult(false, "This project distribution is already 'Closed'.");
+            }
+
+            var today = DateTime.Today;
+            if (program.StartDate.HasValue && today < program.StartDate.Value.Date)
+            {
+                return new ProjectDistributionOperationResult(false, $"This distribution has not started yet (Scheduled: {program.StartDate:MMM dd, yyyy}).");
+            }
+
+            if (program.EndDate.HasValue && today > program.EndDate.Value.Date)
+            {
+                return new ProjectDistributionOperationResult(false, $"This distribution has already ended (Scheduled: {program.EndDate:MMM dd, yyyy}).");
+            }
+
+            return null;
         }
 
         private static AssistanceReleaseKind ResolveReleaseKind(AyudaProgram program)

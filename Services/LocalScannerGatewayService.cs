@@ -169,7 +169,7 @@ namespace AttendanceShiftingManagement.Services
                 }
 
                 var cashForWorkService = new CashForWorkService(db, new AuditService(db));
-                var wasSaved = cashForWorkService.SaveScannerAttendance(
+                var wasSaved = await cashForWorkService.SaveScannerAttendanceAsync(
                     session.CashForWorkEventId.Value,
                     session.CreatedByUserId,
                     request.ParticipantId,
@@ -180,8 +180,9 @@ namespace AttendanceShiftingManagement.Services
                     success = wasSaved,
                     message = wasSaved
                         ? "Attendance saved."
-                        : "Attendance was already marked for this beneficiary."
+                        : "Attendance could not be saved. This is usually due to an ID mismatch, an invalid QR code, or attendance already being marked."
                 });
+
             });
 
             app.MapPost("/api/distribution/claim", async Task<IResult> (ScannerDistributionClaimRequest request) =>

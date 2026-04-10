@@ -63,9 +63,10 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _systemLoginBackgroundPath = string.Empty;
         private string _savedSystemLoginBackgroundPath = string.Empty;
         private string _systemInstallSerial = string.Empty;
+        private AppAppearanceMode _selectedAppearanceMode = AppAppearanceMode.Light;
         private ImageSource? _systemLogoImage;
         private ImageSource? _systemLoginBackgroundImage;
-        private string _systemProfileStatusMessage = "Set the app-wide system identity and keep the company serial number matched to the active database.";
+        private string _systemProfileStatusMessage = "Set the workstation identity, login branding, and appearance preference used across the application.";
         private Brush _systemProfileStatusBrush = CreateBrush("#6B7280");
         private string _accountFullName = string.Empty;
         private string _accountUsername = string.Empty;
@@ -246,6 +247,38 @@ namespace AttendanceShiftingManagement.ViewModels
             get => _systemInstallSerial;
             private set => SetProperty(ref _systemInstallSerial, value);
         }
+
+        public bool IsLightAppearanceSelected
+        {
+            get => _selectedAppearanceMode == AppAppearanceMode.Light;
+            set
+            {
+                if (value)
+                {
+                    SetAppearanceMode(AppAppearanceMode.Light);
+                }
+            }
+        }
+
+        public bool IsDarkAppearanceSelected
+        {
+            get => _selectedAppearanceMode == AppAppearanceMode.Dark;
+            set
+            {
+                if (value)
+                {
+                    SetAppearanceMode(AppAppearanceMode.Dark);
+                }
+            }
+        }
+
+        public string SelectedAppearanceModeLabel => _selectedAppearanceMode == AppAppearanceMode.Dark
+            ? "Dark mode is active"
+            : "Light mode is active";
+
+        public string SelectedAppearanceModeDescription => _selectedAppearanceMode == AppAppearanceMode.Dark
+            ? "Low-glare contrast for extended admin work, review, and night-shift use."
+            : "Bright, document-friendly surfaces with soft contrast for daytime operations.";
 
         public ImageSource? SystemLogoImage
         {
@@ -818,6 +851,7 @@ namespace AttendanceShiftingManagement.ViewModels
             SystemLoginBackgroundPath = settings.LoginBackgroundPath;
             _savedSystemLoginBackgroundPath = settings.LoginBackgroundPath;
             SystemInstallSerial = settings.InstallSerial;
+            SetAppearanceMode(settings.AppearanceMode, applyTheme: true, announcePreview: false, forceRefresh: true);
             RefreshSystemLogoPreview();
             RefreshSystemLoginBackgroundPreview();
         }
@@ -937,6 +971,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 ContactNumber = contactNumber,
                 LogoPath = logoPath,
                 LoginBackgroundPath = loginBackgroundPath,
+                AppearanceMode = _selectedAppearanceMode,
                 InstallSerial = SystemInstallSerial
             });
 
@@ -957,7 +992,7 @@ namespace AttendanceShiftingManagement.ViewModels
             SystemCompanyAddress = companyAddress;
             SystemEmail = email;
             SystemContactNumber = contactNumber;
-            SetSystemProfileSuccess("System profile saved.");
+            SetSystemProfileSuccess("System profile and appearance saved.");
         }
 
         private void ExecuteBrowseSystemLogo()
@@ -1615,6 +1650,34 @@ namespace AttendanceShiftingManagement.ViewModels
             return new SolidColorBrush((Color)ColorConverter.ConvertFromString(colorCode));
         }
 
+        private void SetAppearanceMode(
+            AppAppearanceMode appearanceMode,
+            bool applyTheme = true,
+            bool announcePreview = true,
+            bool forceRefresh = false)
+        {
+            if (!forceRefresh && _selectedAppearanceMode == appearanceMode)
+            {
+                return;
+            }
+
+            _selectedAppearanceMode = appearanceMode;
+            OnPropertyChanged(nameof(IsLightAppearanceSelected));
+            OnPropertyChanged(nameof(IsDarkAppearanceSelected));
+            OnPropertyChanged(nameof(SelectedAppearanceModeLabel));
+            OnPropertyChanged(nameof(SelectedAppearanceModeDescription));
+
+            if (applyTheme)
+            {
+                AppThemeService.Apply(appearanceMode);
+            }
+
+            if (announcePreview)
+            {
+                SetSystemProfileNeutral($"{SelectedAppearanceModeLabel} preview applied. Save system profile to keep this preference.");
+            }
+        }
+
         private void RefreshSystemLogoPreview()
         {
             SystemLogoImage = LocalImageLoader.Load(SystemLogoPath);
@@ -1672,6 +1735,12 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             SystemProfileStatusMessage = message;
             SystemProfileStatusBrush = CreateBrush("#1A7A4A");
+        }
+
+        private void SetSystemProfileNeutral(string message)
+        {
+            SystemProfileStatusMessage = message;
+            SystemProfileStatusBrush = CreateBrush("#6B7280");
         }
 
         private void SetSystemProfileError(string message)

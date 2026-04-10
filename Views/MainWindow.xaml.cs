@@ -61,6 +61,7 @@ namespace AttendanceShiftingManagement.Views
 
             window.ShowDialog();
             WindowBrandingService.ApplyWindowIcon(this);
+            ViewModel.RefreshBranding();
             ViewModel.RefreshConnectionSummary();
             ViewModel.RefreshUserSummary();
             ViewModel.ReloadCurrentView();

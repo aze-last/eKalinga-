@@ -2,6 +2,7 @@ using AttendanceShiftingManagement.Data;
 using AttendanceShiftingManagement.Models;
 using Microsoft.EntityFrameworkCore;
 using MySqlConnector;
+using System.Text;
 
 namespace AttendanceShiftingManagement.Services
 {
@@ -9,6 +10,8 @@ namespace AttendanceShiftingManagement.Services
     {
         public string ActiveDatabaseLabel { get; init; } = string.Empty;
         public DateTime RetrievedAt { get; init; }
+        public int AidRequestCount { get; init; }
+        public int AidRequestsToday { get; init; }
         public bool MasterListAvailable { get; init; }
         public int MasterListCount { get; init; }
         public DateTime? MasterListUpdatedAt { get; init; }
@@ -16,12 +19,24 @@ namespace AttendanceShiftingManagement.Services
         public int PendingBeneficiaries { get; init; }
         public int ApprovedBeneficiaries { get; init; }
         public int RejectedBeneficiaries { get; init; }
+        public int BudgetAlertCount { get; init; }
+        public int DistributionCount { get; init; }
+        public int DistributionsToday { get; init; }
+        public decimal ReleasedAmountToday { get; init; }
         public int CashForWorkBeneficiaryCount { get; init; }
         public int OpenCashForWorkEvents { get; init; }
         public int CompletedEventsThisMonth { get; init; }
         public int TodayAttendanceCount { get; init; }
+        public IReadOnlyList<DashboardRecentActivitySnapshot> RecentActivities { get; init; } = Array.Empty<DashboardRecentActivitySnapshot>();
         public IReadOnlyList<DashboardUpcomingEventSnapshot> UpcomingEvents { get; init; } = Array.Empty<DashboardUpcomingEventSnapshot>();
         public IReadOnlyList<DashboardRecentImportSnapshot> RecentImports { get; init; } = Array.Empty<DashboardRecentImportSnapshot>();
+    }
+
+    public sealed class DashboardRecentActivitySnapshot
+    {
+        public string Title { get; init; } = string.Empty;
+        public string Detail { get; init; } = string.Empty;
+        public DateTime OccurredAt { get; init; }
     }
 
     public sealed class DashboardUpcomingEventSnapshot
@@ -59,6 +74,14 @@ namespace AttendanceShiftingManagement.Services
 
             await using var context = new AppDbContext();
 
+            var aidRequestCount = await context.AssistanceCases
+                .AsNoTracking()
+                .CountAsync(cancellationToken);
+
+            var aidRequestsToday = await context.AssistanceCases
+                .AsNoTracking()
+                .CountAsync(item => item.CreatedAt >= today && item.CreatedAt < tomorrow, cancellationToken);
+
             var pendingBeneficiaries = await context.BeneficiaryStaging
                 .AsNoTracking()
                 .CountAsync(row => row.VerificationStatus == VerificationStatus.Pending, cancellationToken);
@@ -90,6 +113,51 @@ namespace AttendanceShiftingManagement.Services
                     attendance.AttendanceDate >= today &&
                     attendance.AttendanceDate < tomorrow,
                     cancellationToken);
+
+            var distributionCount = await context.AyudaProjectClaims
+                .AsNoTracking()
+                .CountAsync(cancellationToken);
+
+            var distributionsToday = await context.AyudaProjectClaims
+                .AsNoTracking()
+                .CountAsync(item => item.ClaimedAt >= today && item.ClaimedAt < tomorrow, cancellationToken);
+
+            var releasedAmountToday = await context.BudgetLedgerEntries
+                .AsNoTracking()
+                .Where(item =>
+                    item.EntryType == BudgetLedgerEntryType.Release &&
+                    item.EntryDate >= today &&
+                    item.EntryDate < tomorrow)
+                .SumAsync(item => (decimal?)item.TotalAmount, cancellationToken) ?? 0m;
+
+            var cappedPrograms = await context.AyudaPrograms
+                .AsNoTracking()
+                .Where(item => item.IsActive && item.BudgetCap.HasValue && item.BudgetCap.Value > 0)
+                .Select(item => new
+                {
+                    item.Id,
+                    BudgetCap = item.BudgetCap!.Value
+                })
+                .ToListAsync(cancellationToken);
+
+            var releasedByProgram = await context.BudgetLedgerEntries
+                .AsNoTracking()
+                .Where(item =>
+                    item.EntryType == BudgetLedgerEntryType.Release &&
+                    item.ProgramId.HasValue)
+                .GroupBy(item => item.ProgramId!.Value)
+                .Select(group => new
+                {
+                    ProgramId = group.Key,
+                    ReleasedTotal = group.Sum(entry => entry.TotalAmount)
+                })
+                .ToDictionaryAsync(item => item.ProgramId, item => item.ReleasedTotal, cancellationToken);
+
+            var budgetAlertCount = cappedPrograms.Count(item =>
+            {
+                releasedByProgram.TryGetValue(item.Id, out var releasedTotal);
+                return releasedTotal >= item.BudgetCap * 0.8m;
+            });
 
             var upcomingEvents = await context.CashForWorkEvents
                 .AsNoTracking()
@@ -124,10 +192,26 @@ namespace AttendanceShiftingManagement.Services
                 .Take(6)
                 .ToListAsync(cancellationToken);
 
+            var recentActivities = await context.ActivityLogs
+                .AsNoTracking()
+                .OrderByDescending(item => item.Timestamp)
+                .Take(4)
+                .Select(item => new DashboardRecentActivitySnapshot
+                {
+                    Title = BuildActivityTitle(item.Action, item.Entity),
+                    Detail = string.IsNullOrWhiteSpace(item.Details)
+                        ? $"{HumanizeToken(item.Entity)} activity recorded."
+                        : item.Details.Trim(),
+                    OccurredAt = item.Timestamp
+                })
+                .ToListAsync(cancellationToken);
+
             return new BarangayDashboardSnapshot
             {
                 ActiveDatabaseLabel = $"{activePreset.DisplayName}: {activePreset.Server}:{activePreset.Port} / {activePreset.Database}",
                 RetrievedAt = DateTime.Now,
+                AidRequestCount = aidRequestCount,
+                AidRequestsToday = aidRequestsToday,
                 MasterListAvailable = masterListMetrics.IsAvailable,
                 MasterListCount = masterListMetrics.Count,
                 MasterListUpdatedAt = masterListMetrics.LastUpdatedAt,
@@ -135,10 +219,15 @@ namespace AttendanceShiftingManagement.Services
                 PendingBeneficiaries = pendingBeneficiaries,
                 ApprovedBeneficiaries = approvedBeneficiaries,
                 RejectedBeneficiaries = rejectedBeneficiaries,
+                BudgetAlertCount = budgetAlertCount,
+                DistributionCount = distributionCount,
+                DistributionsToday = distributionsToday,
+                ReleasedAmountToday = releasedAmountToday,
                 CashForWorkBeneficiaryCount = approvedBeneficiaries,
                 OpenCashForWorkEvents = openCashForWorkEvents,
                 CompletedEventsThisMonth = completedEventsThisMonth,
                 TodayAttendanceCount = todayAttendanceCount,
+                RecentActivities = recentActivities,
                 UpcomingEvents = upcomingEvents,
                 RecentImports = recentImports
                     .Select(row => new DashboardRecentImportSnapshot
@@ -225,6 +314,51 @@ namespace AttendanceShiftingManagement.Services
                 new[] { firstName, middleName, lastName }
                     .Where(value => !string.IsNullOrWhiteSpace(value))
                     .Select(value => value!.Trim()));
+        }
+
+        private static string BuildActivityTitle(string? action, string? entity)
+        {
+            var actionText = HumanizeToken(action);
+            var entityText = HumanizeToken(entity);
+
+            if (string.IsNullOrWhiteSpace(entityText))
+            {
+                return actionText;
+            }
+
+            if (actionText.Contains(entityText, StringComparison.OrdinalIgnoreCase))
+            {
+                return actionText;
+            }
+
+            return $"{entityText} {actionText}".Trim();
+        }
+
+        private static string HumanizeToken(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return "Recent activity";
+            }
+
+            var source = value.Trim().Replace('_', ' ').Replace('-', ' ');
+            var builder = new StringBuilder(source.Length + 8);
+
+            for (var index = 0; index < source.Length; index++)
+            {
+                var current = source[index];
+                if (index > 0
+                    && char.IsUpper(current)
+                    && source[index - 1] != ' '
+                    && !char.IsUpper(source[index - 1]))
+                {
+                    builder.Append(' ');
+                }
+
+                builder.Append(current);
+            }
+
+            return builder.ToString().Trim();
         }
 
         private sealed record MasterListMetrics(bool IsAvailable, int Count, DateTime? LastUpdatedAt, string StatusText);

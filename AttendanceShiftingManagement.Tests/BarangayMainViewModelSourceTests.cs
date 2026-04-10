@@ -50,4 +50,25 @@ public sealed class BarangayMainViewModelSourceTests
         Assert.DoesNotContain("case \"HouseholdRegistry\":", source, StringComparison.Ordinal);
         Assert.DoesNotContain("return new HouseholdRegistryPage();", source, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void BarangayMainViewModel_ExposesReportsWorkspaceRouting()
+    {
+        var viewModelPath = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..",
+            "..",
+            "..",
+            "..",
+            "ViewModels",
+            "BarangayMainViewModel.cs"));
+
+        var source = File.ReadAllText(viewModelPath);
+
+        Assert.Contains("ShowReportsCommand", source, StringComparison.Ordinal);
+        Assert.Contains("IsReportsSelected", source, StringComparison.Ordinal);
+        Assert.Contains("case \"Reports\":", source, StringComparison.Ordinal);
+        Assert.Contains("CurrentSectionTitle = \"Reports\";", source, StringComparison.Ordinal);
+        Assert.Contains("return new ReportsPage(_currentUser);", source, StringComparison.Ordinal);
+    }
 }

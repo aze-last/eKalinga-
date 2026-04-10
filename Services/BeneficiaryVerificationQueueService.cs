@@ -114,7 +114,7 @@ namespace AttendanceShiftingManagement.Services
                 ? new Dictionary<int, BeneficiaryDigitalId>()
                 : await context.BeneficiaryDigitalIds
                     .AsNoTracking()
-                    .Where(item => stagingIds.Contains(item.BeneficiaryStagingId))
+                    .Where(item => stagingIds.Contains(item.BeneficiaryStagingId) && item.IsActive)
                     .ToDictionaryAsync(item => item.BeneficiaryStagingId, cancellationToken);
 
             return new BeneficiaryVerificationQueuePageResult

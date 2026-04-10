@@ -7,6 +7,48 @@ namespace AttendanceShiftingManagement.Tests;
 public sealed class BeneficiaryVerificationViewModelTests
 {
     [Fact]
+    public async Task LoadCurrentPageAsync_AllowsSaveCorrectionsForApprovedBeneficiary()
+    {
+        var queueService = new FakeBeneficiaryVerificationQueueService();
+        queueService.Enqueue(new BeneficiaryVerificationQueuePageResult
+        {
+            Rows =
+            [
+                new BeneficiaryVerificationQueueRow
+                {
+                    Staging = new BeneficiaryStaging
+                    {
+                        StagingID = 102,
+                        BeneficiaryId = "BEN-0102",
+                        CivilRegistryId = "CRS-0102",
+                        FirstName = "Mario",
+                        LastName = "Santos",
+                        FullName = "Mario Santos",
+                        VerificationStatus = VerificationStatus.Approved,
+                        ImportedAt = new DateTime(2026, 3, 22, 8, 0, 0)
+                    }
+                }
+            ],
+            PageNumber = 1,
+            FilteredRecordCount = 1,
+            TotalCount = 1,
+            ApprovedCount = 1
+        });
+
+        var viewModel = new BeneficiaryVerificationViewModel(
+            new User { Id = 1, Username = "admin" },
+            queueService,
+            autoLoad: false,
+            autoRefresh: false);
+
+        await viewModel.LoadCurrentPageAsync();
+        await WaitForConditionAsync(() => viewModel.SelectedBeneficiary != null);
+
+        Assert.True(viewModel.SaveCorrectionsCommand.CanExecute(null));
+        Assert.True(viewModel.UploadDigitalIdPhotoCommand.CanExecute(null));
+    }
+
+    [Fact]
     public async Task LoadCurrentPageAsync_LoadsBenefitsReceivedForSelectedBeneficiary()
     {
         var queueService = new FakeBeneficiaryVerificationQueueService();

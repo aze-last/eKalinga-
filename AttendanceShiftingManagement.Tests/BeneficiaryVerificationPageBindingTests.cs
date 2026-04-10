@@ -26,6 +26,7 @@ public sealed class BeneficiaryVerificationPageBindingTests
         Assert.Contains("Command=\"{Binding UploadDigitalIdPhotoCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding PrintDigitalIdCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding CreateLookupScannerSessionCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Content=\"UPLOAD / CHANGE PHOTO\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"{Binding LookupScannerSessionUrl, Mode=OneWay}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"{Binding LookupScannerSessionPin}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding PreviousPageCommand}\"", xaml, StringComparison.Ordinal);
@@ -64,7 +65,7 @@ public sealed class BeneficiaryVerificationPageBindingTests
     }
 
     [Fact]
-    public void BeneficiaryVerificationPage_RendersApproveAndRejectOnlyInEditableDetailsActions()
+    public void BeneficiaryVerificationPage_RendersSavePendingApproveAndRejectActions()
     {
         var pagePath = Path.GetFullPath(Path.Combine(
             AppContext.BaseDirectory,
@@ -77,10 +78,16 @@ public sealed class BeneficiaryVerificationPageBindingTests
 
         var xaml = File.ReadAllText(pagePath);
 
+        Assert.Contains("Content=\"SAVE CHANGES\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Content=\"BACK TO PENDING\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding ReturnToPendingCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding SaveCorrectionsCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Content=\"APPROVE\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Content=\"REJECT\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Hint=\"Review notes (required for reject)\"", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("Content=\"SAVE CORRECTIONS\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Content=\"PWD beneficiary\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Content=\"Senior beneficiary\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Hint=\"Cause Of Disability\"", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Content=\"MARK VERIFIED\"", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Content=\"MARK DUPLICATE\"", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Content=\"MARK INACTIVE\"", xaml, StringComparison.Ordinal);

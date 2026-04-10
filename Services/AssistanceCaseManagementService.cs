@@ -56,7 +56,7 @@ namespace AttendanceShiftingManagement.Services
                 Priority = request.Priority,
                 Status = AssistanceCaseStatus.Pending,
                 RequestedAmount = request.AssistanceAmount,
-                ApprovedAmount = request.AssistanceAmount,
+                ApprovedAmount = null, // Approved amount is set during approval, not creation
                 RequestedOn = request.RequestedOn,
                 ScheduledReleaseDate = request.ScheduledReleaseDate,
                 Summary = NormalizeNullable(request.Summary),
@@ -93,9 +93,9 @@ namespace AttendanceShiftingManagement.Services
                 return new AssistanceCaseOperationResult(false, "The selected aid request no longer exists.");
             }
 
-            if (assistanceCase.Status is AssistanceCaseStatus.Closed or AssistanceCaseStatus.Cancelled)
+            if (assistanceCase.Status is AssistanceCaseStatus.Released or AssistanceCaseStatus.Closed or AssistanceCaseStatus.Cancelled or AssistanceCaseStatus.Rejected)
             {
-                return new AssistanceCaseOperationResult(false, "Closed or cancelled aid requests can no longer be edited.");
+                return new AssistanceCaseOperationResult(false, "Released, closed, or terminal aid requests can no longer be edited.");
             }
 
             var validatedBeneficiaryName = NormalizeNullable(request.ValidatedBeneficiaryName);
@@ -116,7 +116,7 @@ namespace AttendanceShiftingManagement.Services
             assistanceCase.ReleaseKind = request.ReleaseKind;
             assistanceCase.Priority = request.Priority;
             assistanceCase.RequestedAmount = request.AssistanceAmount;
-            assistanceCase.ApprovedAmount = request.AssistanceAmount;
+            // ApprovedAmount is NOT updated here; it must be set via status change (Approve)
             assistanceCase.RequestedOn = request.RequestedOn;
             assistanceCase.ScheduledReleaseDate = request.ScheduledReleaseDate;
             assistanceCase.Summary = NormalizeNullable(request.Summary);
@@ -147,6 +147,53 @@ namespace AttendanceShiftingManagement.Services
             if (assistanceCase == null)
             {
                 return new AssistanceCaseOperationResult(false, "The selected aid request no longer exists.");
+            }
+
+            // Enforce State Machine
+            var currentStatus = assistanceCase.Status;
+            bool isValidTransition = (currentStatus, targetStatus) switch
+            {
+                (AssistanceCaseStatus.Pending, AssistanceCaseStatus.UnderReview) => true,
+                (AssistanceCaseStatus.Pending, AssistanceCaseStatus.Rejected) => true,
+                (AssistanceCaseStatus.Pending, AssistanceCaseStatus.Cancelled) => true,
+
+                (AssistanceCaseStatus.UnderReview, AssistanceCaseStatus.Approved) => true,
+                (AssistanceCaseStatus.UnderReview, AssistanceCaseStatus.Rejected) => true,
+                (AssistanceCaseStatus.UnderReview, AssistanceCaseStatus.Cancelled) => true,
+                (AssistanceCaseStatus.UnderReview, AssistanceCaseStatus.Pending) => true,
+
+                (AssistanceCaseStatus.Approved, AssistanceCaseStatus.Released) => true,
+                (AssistanceCaseStatus.Approved, AssistanceCaseStatus.UnderReview) => true,
+                (AssistanceCaseStatus.Approved, AssistanceCaseStatus.Cancelled) => true,
+
+                (AssistanceCaseStatus.Released, AssistanceCaseStatus.Closed) => true,
+                (AssistanceCaseStatus.Rejected, AssistanceCaseStatus.Pending) => true,
+                (AssistanceCaseStatus.Cancelled, AssistanceCaseStatus.Pending) => true,
+
+                // Allow resetting terminal states for admin corrections if needed, 
+                // but generally they are terminal.
+                _ => false
+            };
+
+            if (!isValidTransition && currentStatus != targetStatus)
+            {
+                return new AssistanceCaseOperationResult(false, $"Invalid status transition from {currentStatus} to {targetStatus}.");
+            }
+
+            if (targetStatus == AssistanceCaseStatus.Approved)
+            {
+                if (!assistanceCase.AyudaProgramId.HasValue)
+                {
+                    return new AssistanceCaseOperationResult(false, "Assign an ayuda program before approving this request.");
+                }
+                
+                // If moving to Approved, set the ApprovedAmount from RequestedAmount if it's currently null
+                assistanceCase.ApprovedAmount ??= assistanceCase.RequestedAmount;
+
+                if (!assistanceCase.ApprovedAmount.HasValue || assistanceCase.ApprovedAmount.Value <= 0)
+                {
+                    return new AssistanceCaseOperationResult(false, "Set an approved amount before approving this request.");
+                }
             }
 
             if (targetStatus == AssistanceCaseStatus.Released)
@@ -185,6 +232,18 @@ namespace AttendanceShiftingManagement.Services
                 }
 
                 assistanceCase.BudgetLedgerEntryId = budgetResult.LedgerEntryId;
+
+                // Sync with beneficiary assistance history
+                var historyService = new BeneficiaryAssistanceLedgerService(_context, _auditService);
+                await historyService.RecordEntryAsync(
+                    assistanceCase.ValidatedCivilRegistryId,
+                    assistanceCase.ValidatedBeneficiaryId,
+                    BeneficiaryAssistanceSourceModule.AssistanceCase,
+                    $"assistance:{assistanceCase.Id}",
+                    DateTime.Now,
+                    assistanceCase.ApprovedAmount!.Value,
+                    assistanceCase.Summary ?? assistanceCase.AssistanceType,
+                    actedByUserId);
             }
 
             assistanceCase.Status = targetStatus;

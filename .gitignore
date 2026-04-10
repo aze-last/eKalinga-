@@ -8,3 +8,20 @@ __pycache__/
 *.user
 *.suo
 *.cache
+
+# Secrets - keep local only
+appsettings.json
+
+# Build logs
+build.log
+build_errors.txt
+build_log.txt
+build_log_final.txt
+build_log_final_v2.txt
+build_log_final_v3.txt
+build_log_minimal.txt
+build_log_next.txt
+build_output.log
+build_output.txt
+error_details.txt
+msbuild.log

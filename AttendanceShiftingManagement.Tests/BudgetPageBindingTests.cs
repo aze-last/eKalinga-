@@ -56,20 +56,20 @@ public sealed class BudgetPageBindingTests
     }
 
     [Fact]
-    public void MainWindow_ContainsBudgetSidebarEntry()
+    public void DashboardPage_ContainsBudgetModuleTile()
     {
-        var windowPath = Path.GetFullPath(Path.Combine(
+        var pagePath = Path.GetFullPath(Path.Combine(
             AppContext.BaseDirectory,
             "..",
             "..",
             "..",
             "..",
             "Views",
-            "MainWindow.xaml"));
+            "BarangayDashboardPage.xaml"));
 
-        var xaml = File.ReadAllText(windowPath);
+        var xaml = File.ReadAllText(pagePath);
 
         Assert.Contains("Text=\"Budget\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Command=\"{Binding ShowBudgetCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding DataContext.ShowBudgetCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}\"", xaml, StringComparison.Ordinal);
     }
 }

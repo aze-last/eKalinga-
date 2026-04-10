@@ -1,0 +1,3 @@
+{
+    "dotnet.defaultSolution": ".release-clean/AttendanceShiftingManagement.sln"
+}

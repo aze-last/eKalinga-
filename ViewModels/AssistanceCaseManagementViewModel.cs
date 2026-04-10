@@ -585,9 +585,18 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private bool CanSaveCase()
         {
-            return !IsBusy
-                && SelectedValidatedBeneficiary != null
-                && !string.IsNullOrWhiteSpace(EditableAssistanceType);
+            if (IsBusy || SelectedValidatedBeneficiary == null || string.IsNullOrWhiteSpace(EditableAssistanceType))
+            {
+                return false;
+            }
+
+            // Block editing for Released or terminal cases
+            if (SelectedCase != null && SelectedCase.Status is AssistanceCaseStatus.Released or AssistanceCaseStatus.Closed or AssistanceCaseStatus.Rejected or AssistanceCaseStatus.Cancelled)
+            {
+                return false;
+            }
+
+            return true;
         }
 
         private bool CanChangeStatus(AssistanceCaseStatus targetStatus)
@@ -597,8 +606,38 @@ namespace AttendanceShiftingManagement.ViewModels
                 return false;
             }
 
+            var currentStatus = SelectedCase.Status;
+
+            // Enforcement of state machine in UI
+            bool isValidTransition = (currentStatus, targetStatus) switch
+            {
+                (AssistanceCaseStatus.Pending, AssistanceCaseStatus.UnderReview) => true,
+                (AssistanceCaseStatus.Pending, AssistanceCaseStatus.Rejected) => true,
+                (AssistanceCaseStatus.Pending, AssistanceCaseStatus.Cancelled) => true,
+
+                (AssistanceCaseStatus.UnderReview, AssistanceCaseStatus.Approved) => true,
+                (AssistanceCaseStatus.UnderReview, AssistanceCaseStatus.Rejected) => true,
+                (AssistanceCaseStatus.UnderReview, AssistanceCaseStatus.Cancelled) => true,
+                (AssistanceCaseStatus.UnderReview, AssistanceCaseStatus.Pending) => true,
+
+                (AssistanceCaseStatus.Approved, AssistanceCaseStatus.Released) => true,
+                (AssistanceCaseStatus.Approved, AssistanceCaseStatus.UnderReview) => true,
+                (AssistanceCaseStatus.Approved, AssistanceCaseStatus.Cancelled) => true,
+
+                (AssistanceCaseStatus.Released, AssistanceCaseStatus.Closed) => true,
+
+                _ => false
+            };
+
+            if (!isValidTransition)
+            {
+                return false;
+            }
+
+            // Specific requirements for high-consequence transitions
             return targetStatus switch
             {
+                AssistanceCaseStatus.Approved => SelectedCase.AyudaProgramId.HasValue,
                 AssistanceCaseStatus.Released => SelectedCase.ApprovedAmount.HasValue
                     && SelectedCase.ApprovedAmount.Value > 0
                     && SelectedCase.AyudaProgramId.HasValue,

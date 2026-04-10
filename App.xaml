@@ -24,14 +24,35 @@
                 <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesignTheme.DatePicker.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
-            <SolidColorBrush x:Key="BrandMidnightBrush" Color="#0D2B6E" />
-            <SolidColorBrush x:Key="BrandYellowBrush" Color="#F9C231" />
-            <SolidColorBrush x:Key="BrandGoldTextBrush" Color="#4A3600" />
-            <SolidColorBrush x:Key="BrandSuccessBrush" Color="#1A7A4A" />
-            <SolidColorBrush x:Key="BrandRedBrush" Color="#991B1B" />
-            <SolidColorBrush x:Key="BrandSurfaceBrush" Color="#F5F6FA" />
-            <SolidColorBrush x:Key="BrandBorderBrush" Color="#E2E5EF" />
-            <SolidColorBrush x:Key="BrandTextSecondaryBrush" Color="#6B7280" />
+            <SolidColorBrush x:Key="BrandMidnightBrush" Color="#10203A" />
+            <SolidColorBrush x:Key="BrandYellowBrush" Color="#D1AE68" />
+            <SolidColorBrush x:Key="BrandGoldTextBrush" Color="#35270B" />
+            <SolidColorBrush x:Key="BrandSuccessBrush" Color="#217650" />
+            <SolidColorBrush x:Key="BrandRedBrush" Color="#B24A4A" />
+            <SolidColorBrush x:Key="BrandSurfaceBrush" Color="#F3F6FA" />
+            <SolidColorBrush x:Key="BrandBorderBrush" Color="#D4DCE8" />
+            <SolidColorBrush x:Key="BrandTextSecondaryBrush" Color="#5F6B7A" />
+            <SolidColorBrush x:Key="ThemeWindowShellBrush" Color="#EEF2F7" />
+            <SolidColorBrush x:Key="ThemeWindowShellBorderBrush" Color="#D5DDE8" />
+            <SolidColorBrush x:Key="ThemeCardBrush" Color="#FFFFFF" />
+            <SolidColorBrush x:Key="ThemeCardRaisedBrush" Color="#FAFCFF" />
+            <SolidColorBrush x:Key="ThemeCardSubtleBrush" Color="#F4F8FC" />
+            <SolidColorBrush x:Key="ThemeInputSurfaceBrush" Color="#FFFFFF" />
+            <SolidColorBrush x:Key="ThemeInputBorderBrush" Color="#CCD6E3" />
+            <SolidColorBrush x:Key="ThemePrimaryActionBrush" Color="#1E4E89" />
+            <SolidColorBrush x:Key="ThemePrimaryActionForegroundBrush" Color="#FFFFFF" />
+            <SolidColorBrush x:Key="ThemeSecondaryActionBrush" Color="#F8FAFD" />
+            <SolidColorBrush x:Key="ThemeSecondaryActionBorderBrush" Color="#CCD6E3" />
+            <SolidColorBrush x:Key="ThemeSecondaryActionForegroundBrush" Color="#20314D" />
+            <SolidColorBrush x:Key="ThemeWarningSurfaceBrush" Color="#FDF4DE" />
+            <SolidColorBrush x:Key="ThemeWarningBorderBrush" Color="#EBCF8B" />
+            <SolidColorBrush x:Key="ThemeWarningForegroundBrush" Color="#7A5717" />
+            <SolidColorBrush x:Key="ThemeAccentBrush" Color="#2F5B98" />
+            <SolidColorBrush x:Key="ThemeAccentSoftBrush" Color="#E9F0FB" />
+            <SolidColorBrush x:Key="ThemeAccentBorderBrush" Color="#BFD0EA" />
+            <SolidColorBrush x:Key="ThemeTabStripBrush" Color="#EFF4FA" />
+            <SolidColorBrush x:Key="ThemeTabStripBorderBrush" Color="#D5DEEA" />
+            <SolidColorBrush x:Key="ThemeSelectionGlowBrush" Color="#E2ECFA" />
             <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
 
             <!-- Local fallback style keys so the app and designer do not depend on
@@ -40,7 +61,7 @@
                    TargetType="Button"
                    BasedOn="{StaticResource {x:Type Button}}">
                 <Setter Property="Background" Value="Transparent" />
-                <Setter Property="Foreground" Value="{StaticResource BrandMidnightBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource BrandMidnightBrush}" />
                 <Setter Property="Padding" Value="14,8" />
                 <Setter Property="BorderThickness" Value="0" />
                 <Setter Property="Height" Value="40" />
@@ -53,18 +74,20 @@
             <Style x:Key="MaterialDesignOutlinedButton"
                    TargetType="Button"
                    BasedOn="{StaticResource MaterialDesignFlatButton}">
-                <Setter Property="Background" Value="White" />
-                <Setter Property="BorderBrush" Value="{StaticResource BrandBorderBrush}" />
+                <Setter Property="Background" Value="{DynamicResource ThemeSecondaryActionBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource ThemeSecondaryActionBorderBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource ThemeSecondaryActionForegroundBrush}" />
                 <Setter Property="BorderThickness" Value="1" />
             </Style>
 
             <Style x:Key="MaterialDesignOutlinedTextBox"
                    TargetType="TextBox"
                    BasedOn="{StaticResource {x:Type TextBox}}">
-                <Setter Property="Background" Value="White" />
-                <Setter Property="BorderBrush" Value="{StaticResource BrandBorderBrush}" />
+                <Setter Property="Background" Value="{DynamicResource ThemeInputSurfaceBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource ThemeInputBorderBrush}" />
                 <Setter Property="BorderThickness" Value="1" />
-                <Setter Property="Foreground" Value="{StaticResource BrandMidnightBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource BrandMidnightBrush}" />
+                <Setter Property="CaretBrush" Value="{DynamicResource BrandMidnightBrush}" />
                 <Setter Property="Padding" Value="12,10" />
                 <Setter Property="Height" Value="44" />
                 <Setter Property="VerticalContentAlignment" Value="Center" />
@@ -74,10 +97,10 @@
             <Style x:Key="MaterialDesignOutlinedPasswordBox"
                    TargetType="PasswordBox"
                    BasedOn="{StaticResource {x:Type PasswordBox}}">
-                <Setter Property="Background" Value="White" />
-                <Setter Property="BorderBrush" Value="{StaticResource BrandBorderBrush}" />
+                <Setter Property="Background" Value="{DynamicResource ThemeInputSurfaceBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource ThemeInputBorderBrush}" />
                 <Setter Property="BorderThickness" Value="1" />
-                <Setter Property="Foreground" Value="{StaticResource BrandMidnightBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource BrandMidnightBrush}" />
                 <Setter Property="Padding" Value="12,10" />
                 <Setter Property="Height" Value="44" />
                 <Setter Property="FontSize" Value="13" />
@@ -89,7 +112,7 @@
                 <Setter Property="Background" Value="Transparent" />
                 <Setter Property="BorderBrush" Value="Transparent" />
                 <Setter Property="BorderThickness" Value="0" />
-                <Setter Property="Foreground" Value="{StaticResource BrandTextSecondaryBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource BrandTextSecondaryBrush}" />
                 <Setter Property="Padding" Value="0" />
                 <Setter Property="Cursor" Value="Hand" />
             </Style>
@@ -97,23 +120,23 @@
             <Style x:Key="MaterialDesignHeadline5TextBlock" TargetType="TextBlock">
                 <Setter Property="FontSize" Value="20" />
                 <Setter Property="FontWeight" Value="SemiBold" />
-                <Setter Property="Foreground" Value="{StaticResource BrandMidnightBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource BrandMidnightBrush}" />
             </Style>
 
             <Style x:Key="MaterialDesignHeadline6TextBlock" TargetType="TextBlock">
                 <Setter Property="FontSize" Value="15" />
                 <Setter Property="FontWeight" Value="SemiBold" />
-                <Setter Property="Foreground" Value="{StaticResource BrandMidnightBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource BrandMidnightBrush}" />
             </Style>
 
             <Style x:Key="MaterialDesignCaptionTextBlock" TargetType="TextBlock">
                 <Setter Property="FontSize" Value="11" />
-                <Setter Property="Foreground" Value="{StaticResource BrandTextSecondaryBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource BrandTextSecondaryBrush}" />
             </Style>
 
             <Style x:Key="MaterialDesignRaisedButton" TargetType="Button" BasedOn="{StaticResource MaterialDesignFlatButton}">
-                <Setter Property="Background" Value="{StaticResource BrandMidnightBrush}" />
-                <Setter Property="Foreground" Value="White" />
+                <Setter Property="Background" Value="{DynamicResource ThemePrimaryActionBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource ThemePrimaryActionForegroundBrush}" />
                 <Setter Property="Padding" Value="16,8" />
                 <Setter Property="BorderThickness" Value="0" />
                 <Setter Property="Height" Value="40" />
@@ -123,15 +146,15 @@
             </Style>
 
             <Style x:Key="PrimaryActionButton" TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}">
-                <Setter Property="Background" Value="{StaticResource BrandMidnightBrush}" />
-                <Setter Property="Foreground" Value="White" />
+                <Setter Property="Background" Value="{DynamicResource ThemePrimaryActionBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource ThemePrimaryActionForegroundBrush}" />
             </Style>
 
             <Style x:Key="SecondaryActionButton" TargetType="Button" BasedOn="{StaticResource MaterialDesignOutlinedButton}">
-                <Setter Property="Background" Value="White" />
-                <Setter Property="Foreground" Value="#374151" />
+                <Setter Property="Background" Value="{DynamicResource ThemeSecondaryActionBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource ThemeSecondaryActionForegroundBrush}" />
                 <Setter Property="Padding" Value="16,8" />
-                <Setter Property="BorderBrush" Value="#D1D5DB" />
+                <Setter Property="BorderBrush" Value="{DynamicResource ThemeSecondaryActionBorderBrush}" />
                 <Setter Property="BorderThickness" Value="1" />
                 <Setter Property="Height" Value="40" />
                 <Setter Property="FontSize" Value="13" />
@@ -140,8 +163,8 @@
             </Style>
 
             <Style x:Key="GoldActionButton" TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}">
-                <Setter Property="Background" Value="{StaticResource BrandYellowBrush}" />
-                <Setter Property="Foreground" Value="{StaticResource BrandGoldTextBrush}" />
+                <Setter Property="Background" Value="{DynamicResource BrandYellowBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource BrandGoldTextBrush}" />
             </Style>
         </ResourceDictionary>
     </Application.Resources>

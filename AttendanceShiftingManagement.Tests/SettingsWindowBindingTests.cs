@@ -73,4 +73,41 @@ public sealed class SettingsWindowBindingTests
         Assert.Contains("Command=\"{Binding VerifyPasswordChangeOtpCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Visibility=\"{Binding ShowPasswordChangeOtpPanel, Converter={StaticResource BooleanToVisibilityConverter}}\"", xaml, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void SettingsWindow_SystemProfileExposesAppearanceModeSelection()
+    {
+        var windowPath = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..",
+            "..",
+            "..",
+            "..",
+            "Views",
+            "SettingsWindow.xaml"));
+
+        var xaml = File.ReadAllText(windowPath);
+
+        Assert.Contains("Text=\"Appearance mode\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("IsChecked=\"{Binding IsLightAppearanceSelected}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("IsChecked=\"{Binding IsDarkAppearanceSelected}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding SelectedAppearanceModeLabel}\"", xaml, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SettingsWindow_TabHeadersRenderHeaderContent_InCustomTabItemTemplate()
+    {
+        var windowPath = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..",
+            "..",
+            "..",
+            "..",
+            "Views",
+            "SettingsWindow.xaml"));
+
+        var xaml = File.ReadAllText(windowPath);
+
+        Assert.Contains("ContentSource=\"Header\"", xaml, StringComparison.Ordinal);
+    }
 }
