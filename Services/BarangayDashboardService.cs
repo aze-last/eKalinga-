@@ -12,6 +12,7 @@ namespace AttendanceShiftingManagement.Services
         public DateTime RetrievedAt { get; init; }
         public int AidRequestCount { get; init; }
         public int AidRequestsToday { get; init; }
+        public int HouseholdCount { get; init; }
         public bool MasterListAvailable { get; init; }
         public int MasterListCount { get; init; }
         public DateTime? MasterListUpdatedAt { get; init; }
@@ -118,6 +119,10 @@ namespace AttendanceShiftingManagement.Services
                 .AsNoTracking()
                 .CountAsync(cancellationToken);
 
+            var householdCount = await context.Households
+                .AsNoTracking()
+                .CountAsync(cancellationToken);
+
             var distributionsToday = await context.AyudaProjectClaims
                 .AsNoTracking()
                 .CountAsync(item => item.ClaimedAt >= today && item.ClaimedAt < tomorrow, cancellationToken);
@@ -212,6 +217,7 @@ namespace AttendanceShiftingManagement.Services
                 RetrievedAt = DateTime.Now,
                 AidRequestCount = aidRequestCount,
                 AidRequestsToday = aidRequestsToday,
+                HouseholdCount = householdCount,
                 MasterListAvailable = masterListMetrics.IsAvailable,
                 MasterListCount = masterListMetrics.Count,
                 MasterListUpdatedAt = masterListMetrics.LastUpdatedAt,

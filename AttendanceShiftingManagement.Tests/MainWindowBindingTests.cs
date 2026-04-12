@@ -20,22 +20,34 @@ public sealed class MainWindowBindingTests
 
         var xaml = File.ReadAllText(windowPath);
 
+        Assert.Contains("Text=\"{Binding OfficeName}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"{Binding OfficeProfileLabel}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"{Binding SoftwareTitle}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"{Binding SoftwareSubtitle}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding UserDisplayName}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding ConnectionSummary}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"Workspaces\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"Settings\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"Check for Update\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"Logout\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Visibility=\"{Binding IsSecondarySectionVisible, Converter={StaticResource BooleanToVisibilityConverter}}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding CurrentSectionTitle}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding CurrentSectionSubtitle}\"", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Text=\"OVERVIEW\"", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Text=\"OPERATIONS\"", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Text=\"MANAGEMENT\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Text=\"Back to Dashboard\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding ShowDashboardCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding ShowAssistanceCasesCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding ShowMasterListCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding ShowDistributionCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding ShowBudgetCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding ShowCashForWorkCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding ShowReportsCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Content=\"{Binding CurrentView}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Background=\"{DynamicResource ThemeWindowShellBrush}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("BorderBrush=\"{DynamicResource ThemeWindowShellBorderBrush}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Background=\"{DynamicResource ThemeCardRaisedBrush}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Value=\"{DynamicResource ThemeSecondaryActionBrush}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Background=\"{StaticResource SidebarShellBrush}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("ThemeCardRaisedBrush", xaml, StringComparison.Ordinal);
+        Assert.Contains("ClipToBounds=\"True\"", xaml, StringComparison.Ordinal);
     }
 
     [Fact]

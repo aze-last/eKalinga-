@@ -21,6 +21,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private int _pendingReviewCount;
         private int _budgetAlertCount;
         private int _distributionCount;
+        private int _householdCount;
         private int _masterListCount;
         private int _approvedBeneficiaryCount;
         private int _rejectedBeneficiaryCount;
@@ -115,6 +116,12 @@ namespace AttendanceShiftingManagement.ViewModels
             private set => SetProperty(ref _distributionCount, value);
         }
 
+        public int HouseholdCount
+        {
+            get => _householdCount;
+            private set => SetProperty(ref _householdCount, value);
+        }
+
         public int MasterListCount
         {
             get => _masterListCount;
@@ -184,6 +191,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 PendingReviewCount = snapshot.PendingBeneficiaries;
                 BudgetAlertCount = snapshot.BudgetAlertCount;
                 DistributionCount = snapshot.DistributionCount;
+                HouseholdCount = snapshot.HouseholdCount;
                 MasterListCount = snapshot.MasterListCount;
                 ApprovedBeneficiaryCount = snapshot.ApprovedBeneficiaries;
                 RejectedBeneficiaryCount = snapshot.RejectedBeneficiaries;

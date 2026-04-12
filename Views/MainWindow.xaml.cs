@@ -21,9 +21,24 @@ namespace AttendanceShiftingManagement.Views
             WindowBrandingService.ApplyWindowIcon(this);
         }
 
-        private void Settings_Click(object sender, RoutedEventArgs e)
+        public void OpenSettingsFromDashboard()
         {
             OpenSettingsWindow(SettingsWindowSection.SystemProfile, checkForUpdatesOnOpen: false);
+        }
+
+        public Task CheckForUpdateFromDashboardAsync()
+        {
+            return RunUpdateCheckFlowAsync();
+        }
+
+        public void LogoutFromDashboard()
+        {
+            ExecuteLogout();
+        }
+
+        private void Settings_Click(object sender, RoutedEventArgs e)
+        {
+            OpenSettingsFromDashboard();
         }
 
         private async void CheckForUpdate_Click(object sender, RoutedEventArgs e)
@@ -343,6 +358,11 @@ namespace AttendanceShiftingManagement.Views
         }
 
         private void Logout_Click(object sender, RoutedEventArgs e)
+        {
+            ExecuteLogout();
+        }
+
+        private void ExecuteLogout()
         {
             var result = MessageBox.Show(
                 "Are you sure you want to logout?",

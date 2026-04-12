@@ -1,4 +1,5 @@
 using AttendanceShiftingManagement.ViewModels;
+using System.Windows;
 using System.Windows.Controls;
 
 namespace AttendanceShiftingManagement.Views
@@ -9,6 +10,30 @@ namespace AttendanceShiftingManagement.Views
         {
             InitializeComponent();
             DataContext = new BarangayDashboardViewModel();
+        }
+
+        private void SettingsButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (Window.GetWindow(this) is MainWindow window)
+            {
+                window.OpenSettingsFromDashboard();
+            }
+        }
+
+        private async void CheckForUpdateButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (Window.GetWindow(this) is MainWindow window)
+            {
+                await window.CheckForUpdateFromDashboardAsync();
+            }
+        }
+
+        private void LogoutButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (Window.GetWindow(this) is MainWindow window)
+            {
+                window.LogoutFromDashboard();
+            }
         }
     }
 }

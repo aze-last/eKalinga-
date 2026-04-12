@@ -85,7 +85,7 @@ public sealed class CashForWorkServiceTests
     }
 
     [Fact]
-    public void SaveScannerAttendance_UsesScannerSource_AndPreventsDuplicateAttendance()
+    public async Task SaveScannerAttendance_UsesScannerSource_AndPreventsDuplicateAttendance()
     {
         using var context = TestDbContextFactory.CreateContext();
         var admin = SeedAdmin(context);
@@ -104,8 +104,8 @@ public sealed class CashForWorkServiceTests
         service.AddParticipant(cashForWorkEvent.Id, beneficiary.StagingID, admin.Id);
         var participantId = context.CashForWorkParticipants.Single().Id;
 
-        Assert.True(service.SaveScannerAttendance(cashForWorkEvent.Id, admin.Id, participantId, "BEN-QR-001"));
-        Assert.False(service.SaveScannerAttendance(cashForWorkEvent.Id, admin.Id, participantId, "BEN-QR-001"));
+        Assert.True(await service.SaveScannerAttendanceAsync(cashForWorkEvent.Id, admin.Id, participantId, "BEN-QR-001"));
+        Assert.False(await service.SaveScannerAttendanceAsync(cashForWorkEvent.Id, admin.Id, participantId, "BEN-QR-001"));
 
         var attendance = Assert.Single(context.CashForWorkAttendances);
         Assert.Equal(AttendanceCaptureSource.ScannerSession, attendance.Source);
