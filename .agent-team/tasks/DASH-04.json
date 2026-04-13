@@ -1,0 +1,23 @@
+{
+  "id": "DASH-04",
+  "title": "Preserve approved dashboard UI while cleaning only needed structure",
+  "status": "done",
+  "owner": "dashboard-ui@attendance-shifting-management",
+  "goal": "Keep the adviser-approved dashboard look while allowing only minimal structural changes needed for wiring and maintainability.",
+  "allowedPaths": [
+    "Views/BarangayDashboardPage.xaml"
+  ],
+  "dependencies": [
+    "DASH-01"
+  ],
+  "verification": [
+    "Visual structure remains consistent with the approved dashboard layout."
+  ],
+  "notes": [
+    "Kept the approved adviser-facing dashboard layout and visual direction intact.",
+    "Limited XAML edits to behavior wiring only."
+  ],
+  "artifacts": [
+    "Views/BarangayDashboardPage.xaml"
+  ]
+}

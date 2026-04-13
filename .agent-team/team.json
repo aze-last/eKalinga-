@@ -1,0 +1,74 @@
+{
+  "name": "attendance-shifting-management",
+  "mode": "manual-session",
+  "designDocument": "docs/dashboard-agent-team-design.md",
+  "sharedState": {
+    "tasksPath": ".agent-team/tasks",
+    "mailboxPath": ".agent-team/mailbox",
+    "templatesPath": ".agent-team/templates",
+    "decisionsPath": ".agent-team/decisions.md"
+  },
+  "policies": {
+    "defaultIsolation": "shared-workspace-bounded-paths",
+    "verificationRequired": true,
+    "riskyPaths": [
+      "appsettings.json",
+      "appsettings.template.json"
+    ]
+  },
+  "workers": [
+    {
+      "id": "coordinator@attendance-shifting-management",
+      "role": "Coordinator",
+      "allowedPaths": [
+        ".agent-team",
+        "docs"
+      ]
+    },
+    {
+      "id": "repo-mapper@attendance-shifting-management",
+      "role": "Repo Mapper",
+      "allowedPaths": [
+        "Views/BarangayDashboardPage.xaml",
+        "Views/BarangayDashboardPage.xaml.cs",
+        "ViewModels/BarangayMainViewModel.cs",
+        "ViewModels/BarangayDashboardViewModel.cs"
+      ]
+    },
+    {
+      "id": "dashboard-ui@attendance-shifting-management",
+      "role": "Dashboard UI Worker",
+      "allowedPaths": [
+        "Views/BarangayDashboardPage.xaml"
+      ]
+    },
+    {
+      "id": "dashboard-nav@attendance-shifting-management",
+      "role": "Dashboard Navigation Worker",
+      "allowedPaths": [
+        "Views/BarangayDashboardPage.xaml",
+        "Views/BarangayDashboardPage.xaml.cs",
+        "ViewModels/BarangayMainViewModel.cs"
+      ]
+    },
+    {
+      "id": "dashboard-data@attendance-shifting-management",
+      "role": "Dashboard Data Worker",
+      "allowedPaths": [
+        "ViewModels/BarangayDashboardViewModel.cs",
+        "Services/BarangayDashboardService.cs"
+      ]
+    },
+    {
+      "id": "verifier@attendance-shifting-management",
+      "role": "Verifier",
+      "allowedPaths": [
+        "AttendanceShiftingManagement.sln",
+        "AttendanceShiftingManagement.Tests",
+        "Views",
+        "ViewModels",
+        "Services"
+      ]
+    }
+  ]
+}

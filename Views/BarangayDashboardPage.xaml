@@ -1,380 +1,768 @@
-<UserControl x:Class="AttendanceShiftingManagement.Views.BarangayDashboardPage"
+﻿<UserControl x:Class="AttendanceShiftingManagement.Views.BarangayDashboardPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
-             Background="Transparent">
+             Background="#EEF3FA">
+
     <UserControl.Resources>
-        <DropShadowEffect x:Key="DashboardShadow" BlurRadius="24" ShadowDepth="4" Opacity="0.08" Color="Black" />
-
-        <Style x:Key="OfficeLogoImageStyle" TargetType="Image">
-            <Setter Property="Visibility" Value="Collapsed" />
+        <Style x:Key="ConfiguredLogoStyle" TargetType="Image">
+            <Setter Property="Visibility" Value="Collapsed"/>
             <Style.Triggers>
                 <DataTrigger Binding="{Binding DataContext.HasOfficeLogo, RelativeSource={RelativeSource AncestorType={x:Type Window}}}" Value="True">
-                    <Setter Property="Visibility" Value="Visible" />
+                    <Setter Property="Visibility" Value="Visible"/>
                 </DataTrigger>
             </Style.Triggers>
         </Style>
 
-        <Style x:Key="OfficeInitialsTextStyle" TargetType="TextBlock">
-            <Setter Property="Visibility" Value="Visible" />
+        <Style x:Key="OfficeInitialsStyle" TargetType="TextBlock">
+            <Setter Property="Visibility" Value="Visible"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="FontSize" Value="22"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#3B82F6"/>
             <Style.Triggers>
                 <DataTrigger Binding="{Binding DataContext.HasOfficeLogo, RelativeSource={RelativeSource AncestorType={x:Type Window}}}" Value="True">
-                    <Setter Property="Visibility" Value="Collapsed" />
+                    <Setter Property="Visibility" Value="Collapsed"/>
                 </DataTrigger>
             </Style.Triggers>
         </Style>
 
-        <Style x:Key="DashboardTileButtonStyle" TargetType="Button">
-            <Setter Property="Foreground" Value="White" />
-            <Setter Property="BorderBrush" Value="#40FFFFFF" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Padding" Value="22" />
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-            <Setter Property="VerticalContentAlignment" Value="Stretch" />
+        <Style x:Key="UtilityButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#FFFFFF"/>
+            <Setter Property="Foreground" Value="#0F172A"/>
+            <Setter Property="BorderBrush" Value="#CFE0F8"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="18,14"/>
+            <Setter Property="Margin" Value="0,0,12,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Root"
-                                Background="{TemplateBinding Background}"
+                        <Border Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}">
-                            <ContentPresenter Margin="{TemplateBinding Padding}" />
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="18"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Root" Property="Opacity" Value="0.93" />
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Root" Property="Opacity" Value="0.84" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
         </Style>
 
-        <Style x:Key="DashboardInfoBorderStyle" TargetType="Border">
-            <Setter Property="BorderBrush" Value="#40FFFFFF" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Padding" Value="22" />
-        </Style>
-
-        <Style x:Key="DashboardTitleTextStyle" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="White" />
-            <Setter Property="FontSize" Value="19" />
-            <Setter Property="FontWeight" Value="Bold" />
-            <Setter Property="Margin" Value="0,16,0,0" />
-            <Setter Property="TextWrapping" Value="Wrap" />
-        </Style>
-
-        <Style x:Key="DashboardNoteTextStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="12" />
-            <Setter Property="Margin" Value="0,6,0,0" />
-            <Setter Property="TextWrapping" Value="Wrap" />
+        <Style x:Key="LaunchpadButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Margin" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <ContentPresenter/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
     </UserControl.Resources>
 
     <ScrollViewer VerticalScrollBarVisibility="Auto"
                   HorizontalScrollBarVisibility="Disabled"
-                  Background="#0B2B4A">
-        <Border Background="#0B2B4A"
-                BorderBrush="#0E7490"
-                BorderThickness="1"
-                Effect="{StaticResource DashboardShadow}"
-                MinHeight="{Binding RelativeSource={RelativeSource AncestorType=ScrollViewer}, Path=ActualHeight}">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
+                  Background="#EEF3FA">
+        <Grid Margin="24">
+            <Border Background="#F7FAFF"
+                    BorderBrush="#D8E5F7"
+                    BorderThickness="1"
+                    CornerRadius="28"
+                    Padding="28">
+                <StackPanel>
+                    <Border Background="#FFFFFF"
+                            BorderBrush="#D8E5F7"
+                            BorderThickness="1"
+                            CornerRadius="24"
+                            Padding="26">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="2.2*"/>
+                                <ColumnDefinition Width="2.8*"/>
+                                <ColumnDefinition Width="2.2*"/>
+                            </Grid.ColumnDefinitions>
 
-                <Border Grid.Row="0" Background="#133E87" Padding="36,28">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0"
+                                        Orientation="Horizontal"
+                                        VerticalAlignment="Center">
+                                <Border Width="78"
+                                        Height="78"
+                                        Background="#F4F8FF"
+                                        BorderBrush="#BFD6F8"
+                                        BorderThickness="1"
+                                        CornerRadius="18">
+                                    <Grid>
+                                        <Image Style="{StaticResource ConfiguredLogoStyle}"
+                                               Source="{Binding DataContext.OfficeLogoImage, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
+                                               Stretch="Uniform"
+                                               Margin="10"/>
+                                        <TextBlock Style="{StaticResource OfficeInitialsStyle}"
+                                                   Text="{Binding DataContext.OfficeInitials, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"/>
+                                    </Grid>
+                                </Border>
 
-                        <Border Width="120" Height="120" Background="#26FFFFFF" BorderBrush="#40FFFFFF" BorderThickness="1" Padding="10">
-                            <Grid>
-                                <Image Style="{StaticResource OfficeLogoImageStyle}"
-                                       Source="{Binding DataContext.OfficeLogoImage, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
-                                       Stretch="Uniform" />
-                                <TextBlock Style="{StaticResource OfficeInitialsTextStyle}"
-                                           Text="{Binding DataContext.OfficeInitials, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
+                                <StackPanel Margin="18,0,0,0"
+                                            VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding DataContext.OfficeName, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
+                                               Foreground="#0F172A"
+                                               FontSize="16"
+                                               FontWeight="SemiBold"/>
+                                    <TextBlock Text="{Binding DataContext.OfficeProfileLabel, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
+                                               Margin="0,4,0,0"
+                                               Foreground="#64748B"
+                                               FontSize="13"/>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1"
+                                        VerticalAlignment="Center">
+                                <TextBlock Text="{Binding DataContext.SoftwareTitle, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
                                            HorizontalAlignment="Center"
-                                           VerticalAlignment="Center"
-                                           FontSize="34"
+                                           TextAlignment="Center"
+                                           Foreground="#0F172A"
+                                           FontSize="28"
                                            FontWeight="Bold"
-                                           Foreground="White" />
+                                           TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding DataContext.SoftwareSubtitle, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
+                                           HorizontalAlignment="Center"
+                                           Margin="0,6,0,0"
+                                           Foreground="#64748B"
+                                           FontSize="14"
+                                           TextAlignment="Center"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="2"
+                                        Orientation="Horizontal"
+                                        HorizontalAlignment="Right"
+                                        VerticalAlignment="Center">
+                                <Button Style="{StaticResource UtilityButtonStyle}"
+                                        Click="SettingsButton_Click">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock FontFamily="Segoe MDL2 Assets"
+                                                   Text="&#xE713;"
+                                                   Foreground="#3B82F6"
+                                                   FontSize="14"
+                                                   VerticalAlignment="Center"/>
+                                        <TextBlock Text="Settings"
+                                                   Margin="12,0,0,0"
+                                                   FontSize="13"
+                                                   FontWeight="SemiBold"
+                                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+
+                                <Button Style="{StaticResource UtilityButtonStyle}"
+                                        Click="CheckForUpdateButton_Click">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock FontFamily="Segoe MDL2 Assets"
+                                                   Text="&#xE895;"
+                                                   Foreground="#3B82F6"
+                                                   FontSize="14"
+                                                   VerticalAlignment="Center"/>
+                                        <TextBlock Text="Check for Update"
+                                                   Margin="12,0,0,0"
+                                                   FontSize="13"
+                                                   FontWeight="SemiBold"
+                                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+
+                                <Button Style="{StaticResource UtilityButtonStyle}"
+                                        Margin="0"
+                                        Foreground="#2563EB"
+                                        Click="LogoutButton_Click">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock FontFamily="Segoe MDL2 Assets"
+                                                   Text="&#xE8AC;"
+                                                   Foreground="#3B82F6"
+                                                   FontSize="14"
+                                                   VerticalAlignment="Center"/>
+                                        <TextBlock Text="Logout"
+                                                   Margin="12,0,0,0"
+                                                   FontSize="13"
+                                                   FontWeight="SemiBold"
+                                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <UniformGrid Columns="4"
+                                 Margin="0,22,0,0">
+                        <Border Margin="0,0,16,0"
+                                Background="#FFFFFF"
+                                BorderBrush="#D3E1F7"
+                                BorderThickness="1"
+                                CornerRadius="22"
+                                Padding="0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="6"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Grid.Column="0"
+                                        Background="#3B82F6"
+                                        CornerRadius="22,0,0,22"/>
+                                <StackPanel Grid.Column="1"
+                                            Margin="24,20,24,20">
+                                    <TextBlock Text="AID REQUESTS"
+                                               Foreground="#64748B"
+                                               FontSize="12"
+                                               FontWeight="Bold"/>
+                                    <TextBlock Text="{Binding AidRequestCount, StringFormat={}{0:N0}}"
+                                               Margin="0,14,0,0"
+                                               Foreground="#0F172A"
+                                               FontSize="40"
+                                               FontWeight="Bold"/>
+                                </StackPanel>
                             </Grid>
                         </Border>
 
-                        <StackPanel Grid.Column="1" Margin="18,0,0,0" VerticalAlignment="Center">
-                            <TextBlock Text="{Binding DataContext.OfficeName, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
-                                       FontSize="28"
-                                       FontWeight="Bold"
-                                       Foreground="White"
-                                       TextWrapping="Wrap" />
-                            <TextBlock Text="{Binding DataContext.SoftwareSubtitle, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
-                                       FontSize="13"
-                                       Foreground="#D6E4FF"
-                                       Margin="0,4,0,0"
-                                       TextWrapping="Wrap" />
-                            <TextBlock Text="{Binding DataContext.UserDisplayName, RelativeSource={RelativeSource AncestorType={x:Type Window}}, StringFormat=Active user: {0}}"
-                                       FontSize="12"
-                                       Foreground="#BFDBFE"
-                                       Margin="0,6,0,0" />
-                            <WrapPanel Margin="0,14,0,0">
-                                <Border Background="#26FFFFFF" BorderBrush="#35FFFFFF" BorderThickness="1" Padding="12,8" Margin="0,0,12,0">
-                                    <TextBlock Text="{Binding ActiveDatabaseLabel}" FontSize="12" FontWeight="SemiBold" Foreground="White" />
-                                </Border>
-                                <Border Background="#26FFFFFF" BorderBrush="#35FFFFFF" BorderThickness="1" Padding="12,8">
-                                    <TextBlock Text="{Binding LastRefreshLabel}" FontSize="12" FontWeight="SemiBold" Foreground="White" />
-                                </Border>
-                            </WrapPanel>
-                        </StackPanel>
-                    </Grid>
-                </Border>
-
-                <Grid Grid.Row="1">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="1.25*" />
-                        <ColumnDefinition Width="1.25*" />
-                        <ColumnDefinition Width="1.25*" />
-                        <ColumnDefinition Width="1.15*" />
-                        <ColumnDefinition Width="2.1*" />
-                    </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="190" />
-                        <RowDefinition Height="190" />
-                    </Grid.RowDefinitions>
-
-                    <Button Grid.Row="0" Grid.Column="0"
-                            Command="{Binding DataContext.ShowAssistanceCasesCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
-                            Style="{StaticResource DashboardTileButtonStyle}"
-                            Background="#0F766E">
-                        <StackPanel>
-                            <materialDesign:PackIcon Kind="FileDocumentEditOutline" Width="44" Height="44" Foreground="White" />
-                            <TextBlock Text="Aid Request" Style="{StaticResource DashboardTitleTextStyle}" />
-                            <TextBlock Text="Create and manage ayuda requests."
-                                       Foreground="#D1FAE5"
-                                       Style="{StaticResource DashboardNoteTextStyle}" />
-                        </StackPanel>
-                    </Button>
-
-                    <Button Grid.Row="0" Grid.Column="1"
-                            Command="{Binding DataContext.ShowMasterListCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
-                            Style="{StaticResource DashboardTileButtonStyle}"
-                            Background="#0E7490">
-                        <StackPanel>
-                            <materialDesign:PackIcon Kind="AccountCheckOutline" Width="44" Height="44" Foreground="White" />
-                            <TextBlock Text="Validated Beneficiaries" Style="{StaticResource DashboardTitleTextStyle}" />
-                            <TextBlock Text="Review approved records ready for release workflows."
-                                       Foreground="#CFFAFE"
-                                       Style="{StaticResource DashboardNoteTextStyle}" />
-                        </StackPanel>
-                    </Button>
-
-                    <Button Grid.Row="0" Grid.Column="2"
-                            Command="{Binding DataContext.ShowBudgetCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
-                            Style="{StaticResource DashboardTileButtonStyle}"
-                            Background="#1D4ED8">
-                        <StackPanel>
-                            <materialDesign:PackIcon Kind="WalletOutline" Width="44" Height="44" Foreground="White" />
-                            <TextBlock Text="Budget" Style="{StaticResource DashboardTitleTextStyle}" />
-                            <TextBlock Text="Track releases, balances, and budget controls."
-                                       Foreground="#DBEAFE"
-                                       Style="{StaticResource DashboardNoteTextStyle}" />
-                        </StackPanel>
-                    </Button>
-
-                    <Border Grid.Row="0" Grid.Column="3" Grid.RowSpan="2"
-                            Style="{StaticResource DashboardInfoBorderStyle}"
-                            Background="#155E75">
-                        <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="*" />
-                                <RowDefinition Height="Auto" />
-                            </Grid.RowDefinitions>
-                            <StackPanel>
-                                <TextBlock Text="Today" FontSize="14" FontWeight="SemiBold" Foreground="#CFFAFE" />
-                                <TextBlock Text="{Binding TodayLabel}" FontSize="22" FontWeight="Bold" Foreground="White" Margin="0,10,0,0" TextWrapping="Wrap" />
-                                <TextBlock Text="{Binding TimeLabel}" FontSize="13" Foreground="#D5F5F6" Margin="0,6,0,0" />
-                            </StackPanel>
-                            <StackPanel Grid.Row="1" VerticalAlignment="Center">
-                                <TextBlock Text="{Binding TodayAttendanceCount, StringFormat={}{0:N0}}" FontSize="44" FontWeight="Bold" Foreground="White" />
-                                <TextBlock Text="attendance logged today" FontSize="13" Foreground="#CCFBF1" />
-                            </StackPanel>
-                            <TextBlock Grid.Row="2" Text="{Binding OpenEventCount, StringFormat=Open events: {0:N0}}" FontSize="12" Foreground="#D5F5F6" />
-                        </Grid>
-                    </Border>
-
-                    <Border Grid.Row="0" Grid.Column="4" Grid.RowSpan="2"
-                            Style="{StaticResource DashboardInfoBorderStyle}"
-                            Background="#115E59">
-                        <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="*" />
-                                <RowDefinition Height="Auto" />
-                            </Grid.RowDefinitions>
-                            <StackPanel Orientation="Horizontal">
-                                <Border Width="92" Height="92" Background="#1D4ED8" Padding="12">
-                                    <Grid>
-                                        <Image Style="{StaticResource OfficeLogoImageStyle}"
-                                               Source="{Binding DataContext.OfficeLogoImage, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
-                                               Stretch="Uniform" />
-                                        <TextBlock Style="{StaticResource OfficeInitialsTextStyle}"
-                                                   Text="{Binding DataContext.OfficeInitials, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
-                                                   HorizontalAlignment="Center"
-                                                   VerticalAlignment="Center"
-                                                   FontSize="24"
-                                                   FontWeight="Bold"
-                                                   Foreground="White" />
-                                    </Grid>
-                                </Border>
-                                <StackPanel Margin="16,0,0,0" VerticalAlignment="Center">
-                                    <TextBlock Text="Software Name and Trademark" FontSize="13" Foreground="#BFDBFE" />
-                                    <TextBlock Text="{Binding DataContext.SoftwareTitle, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
-                                               FontSize="24"
-                                               FontWeight="Bold"
-                                               Foreground="White"
-                                               Margin="0,4,0,0"
-                                               TextWrapping="Wrap"
-                                               Width="280" />
-                                    <TextBlock Text="{Binding DataContext.ConnectionSummary, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
+                        <Border Margin="0,0,16,0"
+                                Background="#FFFFFF"
+                                BorderBrush="#D3E1F7"
+                                BorderThickness="1"
+                                CornerRadius="22"
+                                Padding="0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="6"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Grid.Column="0"
+                                        Background="#3B82F6"
+                                        CornerRadius="22,0,0,22"/>
+                                <StackPanel Grid.Column="1"
+                                            Margin="24,20,24,20">
+                                    <TextBlock Text="PENDING"
+                                               Foreground="#64748B"
                                                FontSize="12"
-                                               Foreground="#D1FAE5"
-                                               Margin="0,6,0,0"
-                                               TextWrapping="Wrap"
-                                               Width="280" />
+                                               FontWeight="Bold"/>
+                                    <TextBlock Text="{Binding PendingReviewCount, StringFormat={}{0:N0}}"
+                                               Margin="0,14,0,0"
+                                               Foreground="#0F172A"
+                                               FontSize="40"
+                                               FontWeight="Bold"/>
                                 </StackPanel>
-                            </StackPanel>
-                            <StackPanel Grid.Row="1" VerticalAlignment="Center">
-                                <TextBlock Text="{Binding StatusMessage}" FontSize="16" FontWeight="SemiBold" Foreground="{Binding StatusBrush}" TextWrapping="Wrap" />
-                                <TextBlock Text="{Binding AidRequestCount, StringFormat=Aid requests: {0:N0}}" FontSize="13" Foreground="#CCFBF1" Margin="0,18,0,0" />
-                                <TextBlock Text="{Binding PendingReviewCount, StringFormat=Pending review: {0:N0}}" FontSize="13" Foreground="#CCFBF1" Margin="0,6,0,0" />
-                                <TextBlock Text="{Binding BudgetAlertCount, StringFormat=Budget alerts: {0:N0}}" FontSize="13" Foreground="#CCFBF1" Margin="0,6,0,0" />
-                            </StackPanel>
-                            <Border Grid.Row="2" Background="#0F172A" BorderBrush="#1E293B" BorderThickness="1" Padding="14">
-                                <TextBlock Text="{Binding DataContext.SoftwareSubtitle, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
-                                           FontSize="11"
-                                           Foreground="#CBD5E1"
-                                           TextWrapping="Wrap" />
+                            </Grid>
+                        </Border>
+                        <Border Margin="0,0,16,0"
+                                Background="#FFFFFF"
+                                BorderBrush="#D3E1F7"
+                                BorderThickness="1"
+                                CornerRadius="22"
+                                Padding="0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="6"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Grid.Column="0"
+                                        Background="#3B82F6"
+                                        CornerRadius="22,0,0,22"/>
+                                <StackPanel Grid.Column="1"
+                                            Margin="24,20,24,20">
+                                    <TextBlock Text="BUDGET ALERTS"
+                                               Foreground="#64748B"
+                                               FontSize="12"
+                                               FontWeight="Bold"/>
+                                    <TextBlock Text="{Binding BudgetAlertCount, StringFormat={}{0:N0}}"
+                                               Margin="0,14,0,0"
+                                               Foreground="#0F172A"
+                                               FontSize="40"
+                                               FontWeight="Bold"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <Border Background="#FFFFFF"
+                                BorderBrush="#D3E1F7"
+                                BorderThickness="1"
+                                CornerRadius="22"
+                                Padding="0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="6"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Grid.Column="0"
+                                        Background="#3B82F6"
+                                        CornerRadius="22,0,0,22"/>
+                                <StackPanel Grid.Column="1"
+                                            Margin="24,20,24,20">
+                                    <TextBlock Text="DISTRIBUTIONS"
+                                               Foreground="#64748B"
+                                               FontSize="12"
+                                               FontWeight="Bold"/>
+                                    <TextBlock Text="{Binding DistributionCount, StringFormat={}{0:N0}}"
+                                               Margin="0,14,0,0"
+                                               Foreground="#0F172A"
+                                               FontSize="40"
+                                               FontWeight="Bold"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </UniformGrid>
+
+                    <UniformGrid Columns="3"
+                                 Margin="0,22,0,0">
+                        <Button Style="{StaticResource LaunchpadButtonStyle}"
+                                Margin="0,0,20,0"
+                                Command="{Binding DataContext.ShowAssistanceCasesCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}">
+                            <Border Background="#FFFFFF"
+                                    BorderBrush="#D3E1F7"
+                                    BorderThickness="1"
+                                    CornerRadius="24"
+                                    Padding="0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="8"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0"
+                                            Background="#3B82F6"
+                                            CornerRadius="24,0,0,24"/>
+                                    <StackPanel Grid.Column="1"
+                                                Margin="24,24,24,24">
+                                        <Border Width="52"
+                                                Height="52"
+                                                Background="#EDF5FF"
+                                                BorderBrush="#BED7F8"
+                                                BorderThickness="1"
+                                                CornerRadius="14"
+                                                HorizontalAlignment="Left">
+                                            <TextBlock FontFamily="Segoe MDL2 Assets"
+                                                       Text="&#xE8A5;"
+                                                       Foreground="#3B82F6"
+                                                       FontSize="22"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"/>
+                                        </Border>
+                                        <TextBlock Text="Aid Request"
+                                                   Margin="0,20,0,0"
+                                                   Foreground="#0F172A"
+                                                   FontSize="20"
+                                                   FontWeight="Bold"/>
+                                        <TextBlock Text="Create and manage aid requests"
+                                                   Margin="0,18,0,0"
+                                                   Foreground="#64748B"
+                                                   FontSize="13"
+                                                   TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </Grid>
                             </Border>
-                        </Grid>
-                    </Border>
+                        </Button>
 
-                    <Button Grid.Row="1" Grid.Column="0"
-                            Command="{Binding DataContext.ShowDistributionCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
-                            Style="{StaticResource DashboardTileButtonStyle}"
-                            Background="#14532D">
-                        <StackPanel>
-                            <materialDesign:PackIcon Kind="PackageVariantClosedCheck" Width="44" Height="44" Foreground="White" />
-                            <TextBlock Text="Distribution" Style="{StaticResource DashboardTitleTextStyle}" />
-                            <TextBlock Text="Record claims and item release workflows."
-                                       Foreground="#DCFCE7"
-                                       Style="{StaticResource DashboardNoteTextStyle}" />
-                        </StackPanel>
-                    </Button>
+                        <Button Style="{StaticResource LaunchpadButtonStyle}"
+                                Margin="0,0,20,0"
+                                Command="{Binding DataContext.ShowMasterListCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}">
+                            <Border Background="#FFFFFF"
+                                    BorderBrush="#D3E1F7"
+                                    BorderThickness="1"
+                                    CornerRadius="24"
+                                    Padding="0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="8"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0"
+                                            Background="#3B82F6"
+                                            CornerRadius="24,0,0,24"/>
+                                    <StackPanel Grid.Column="1"
+                                                Margin="24,24,24,24">
+                                        <Border Width="52"
+                                                Height="52"
+                                                Background="#EDF5FF"
+                                                BorderBrush="#BED7F8"
+                                                BorderThickness="1"
+                                                CornerRadius="14"
+                                                HorizontalAlignment="Left">
+                                            <TextBlock FontFamily="Segoe MDL2 Assets"
+                                                       Text="&#xE77B;"
+                                                       Foreground="#3B82F6"
+                                                       FontSize="22"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"/>
+                                        </Border>
+                                        <TextBlock Text="Validated Beneficiaries"
+                                                   Margin="0,20,0,0"
+                                                   Foreground="#0F172A"
+                                                   FontSize="20"
+                                                   FontWeight="Bold"/>
+                                        <TextBlock Text="Master list and lookup"
+                                                   Margin="0,18,0,0"
+                                                   Foreground="#64748B"
+                                                   FontSize="13"
+                                                   TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </Button>
 
-                    <Button Grid.Row="1" Grid.Column="1"
-                            Command="{Binding DataContext.ShowCashForWorkCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
-                            Style="{StaticResource DashboardTileButtonStyle}"
-                            Background="#9A3412">
-                        <StackPanel>
-                            <materialDesign:PackIcon Kind="AccountHardHatOutline" Width="44" Height="44" Foreground="White" />
-                            <TextBlock Text="Cash-for-Work" Style="{StaticResource DashboardTitleTextStyle}" />
-                            <TextBlock Text="Create work events and save attendance."
-                                       Foreground="#FFEDD5"
-                                       Style="{StaticResource DashboardNoteTextStyle}" />
-                        </StackPanel>
-                    </Button>
+                        <Button Style="{StaticResource LaunchpadButtonStyle}"
+                                Command="{Binding DataContext.ShowBudgetCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}">
+                            <Border Background="#FFFFFF"
+                                    BorderBrush="#D3E1F7"
+                                    BorderThickness="1"
+                                    CornerRadius="24"
+                                    Padding="0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="8"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0"
+                                            Background="#3B82F6"
+                                            CornerRadius="24,0,0,24"/>
+                                    <StackPanel Grid.Column="1"
+                                                Margin="24,24,24,24">
+                                        <Border Width="52"
+                                                Height="52"
+                                                Background="#EDF5FF"
+                                                BorderBrush="#BED7F8"
+                                                BorderThickness="1"
+                                                CornerRadius="14"
+                                                HorizontalAlignment="Left">
+                                            <TextBlock FontFamily="Segoe MDL2 Assets"
+                                                       Text="&#xE8C7;"
+                                                       Foreground="#3B82F6"
+                                                       FontSize="22"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"/>
+                                        </Border>
+                                        <TextBlock Text="Budget"
+                                                   Margin="0,20,0,0"
+                                                   Foreground="#0F172A"
+                                                   FontSize="20"
+                                                   FontWeight="Bold"/>
+                                        <TextBlock Text="Track releases and balances"
+                                                   Margin="0,18,0,0"
+                                                   Foreground="#64748B"
+                                                   FontSize="13"
+                                                   TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </Button>
+                    </UniformGrid>
+                    <UniformGrid Columns="3"
+                                 Margin="0,18,0,0">
+                        <Button Style="{StaticResource LaunchpadButtonStyle}"
+                                Margin="0,0,20,0"
+                                Command="{Binding DataContext.ShowDistributionCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}">
+                            <Border Background="#FFFFFF"
+                                    BorderBrush="#D3E1F7"
+                                    BorderThickness="1"
+                                    CornerRadius="24"
+                                    Padding="0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="8"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0"
+                                            Background="#3B82F6"
+                                            CornerRadius="24,0,0,24"/>
+                                    <StackPanel Grid.Column="1"
+                                                Margin="24,24,24,24">
+                                        <Border Width="52"
+                                                Height="52"
+                                                Background="#EDF5FF"
+                                                BorderBrush="#BED7F8"
+                                                BorderThickness="1"
+                                                CornerRadius="14"
+                                                HorizontalAlignment="Left">
+                                            <TextBlock FontFamily="Segoe MDL2 Assets"
+                                                       Text="&#xE14C;"
+                                                       Foreground="#3B82F6"
+                                                       FontSize="22"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"/>
+                                        </Border>
+                                        <TextBlock Text="Distribution"
+                                                   Margin="0,20,0,0"
+                                                   Foreground="#0F172A"
+                                                   FontSize="20"
+                                                   FontWeight="Bold"/>
+                                        <TextBlock Text="Manage item and cash releases"
+                                                   Margin="0,18,0,0"
+                                                   Foreground="#64748B"
+                                                   FontSize="13"
+                                                   TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </Button>
 
-                    <Button Grid.Row="1" Grid.Column="2"
-                            Command="{Binding DataContext.ShowReportsCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
-                            Style="{StaticResource DashboardTileButtonStyle}"
-                            Background="#6D28D9">
-                        <StackPanel>
-                            <materialDesign:PackIcon Kind="ChartBoxOutline" Width="44" Height="44" Foreground="White" />
-                            <TextBlock Text="Reports" Style="{StaticResource DashboardTitleTextStyle}" />
-                            <TextBlock Text="Generate summaries and export report outputs."
-                                       Foreground="#F3E8FF"
-                                       Style="{StaticResource DashboardNoteTextStyle}" />
-                        </StackPanel>
-                    </Button>
-                </Grid>
+                        <Button Style="{StaticResource LaunchpadButtonStyle}"
+                                Margin="0,0,20,0"
+                                Command="{Binding DataContext.ShowCashForWorkCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}">
+                            <Border Background="#FFFFFF"
+                                    BorderBrush="#D3E1F7"
+                                    BorderThickness="1"
+                                    CornerRadius="24"
+                                    Padding="0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="8"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0"
+                                            Background="#3B82F6"
+                                            CornerRadius="24,0,0,24"/>
+                                    <StackPanel Grid.Column="1"
+                                                Margin="24,24,24,24">
+                                        <Border Width="52"
+                                                Height="52"
+                                                Background="#EDF5FF"
+                                                BorderBrush="#BED7F8"
+                                                BorderThickness="1"
+                                                CornerRadius="14"
+                                                HorizontalAlignment="Left">
+                                            <TextBlock FontFamily="Segoe MDL2 Assets"
+                                                       Text="&#xE7C3;"
+                                                       Foreground="#3B82F6"
+                                                       FontSize="22"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"/>
+                                        </Border>
+                                        <TextBlock Text="Cash-for-Work"
+                                                   Margin="0,20,0,0"
+                                                   Foreground="#0F172A"
+                                                   FontSize="20"
+                                                   FontWeight="Bold"/>
+                                        <TextBlock Text="Attendance and release flow"
+                                                   Margin="0,18,0,0"
+                                                   Foreground="#64748B"
+                                                   FontSize="13"
+                                                   TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </Button>
 
-                <UniformGrid Grid.Row="2" Columns="6">
-                    <Border Style="{StaticResource DashboardInfoBorderStyle}" Background="#92400E">
-                        <StackPanel>
-                            <materialDesign:PackIcon Kind="ChevronDoubleRight" Width="38" Height="38" Foreground="White" />
-                            <TextBlock Text="Pending Review" Style="{StaticResource DashboardTitleTextStyle}" />
-                            <TextBlock Text="{Binding PendingReviewCount, StringFormat={}{0:N0}}" FontSize="34" FontWeight="Bold" Foreground="White" Margin="0,12,0,0" />
-                        </StackPanel>
-                    </Border>
+                        <Button Style="{StaticResource LaunchpadButtonStyle}"
+                                Command="{Binding DataContext.ShowReportsCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}">
+                            <Border Background="#FFFFFF"
+                                    BorderBrush="#D3E1F7"
+                                    BorderThickness="1"
+                                    CornerRadius="24"
+                                    Padding="0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="8"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0"
+                                            Background="#3B82F6"
+                                            CornerRadius="24,0,0,24"/>
+                                    <StackPanel Grid.Column="1"
+                                                Margin="24,24,24,24">
+                                        <Border Width="52"
+                                                Height="52"
+                                                Background="#EDF5FF"
+                                                BorderBrush="#BED7F8"
+                                                BorderThickness="1"
+                                                CornerRadius="14"
+                                                HorizontalAlignment="Left">
+                                            <TextBlock FontFamily="Segoe MDL2 Assets"
+                                                       Text="&#xE9D2;"
+                                                       Foreground="#3B82F6"
+                                                       FontSize="22"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"/>
+                                        </Border>
+                                        <TextBlock Text="Reports"
+                                                   Margin="0,20,0,0"
+                                                   Foreground="#0F172A"
+                                                   FontSize="20"
+                                                   FontWeight="Bold"/>
+                                        <TextBlock Text="View summaries and exports"
+                                                   Margin="0,18,0,0"
+                                                   Foreground="#64748B"
+                                                   FontSize="13"
+                                                   TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </Button>
+                    </UniformGrid>
 
-                    <Border Style="{StaticResource DashboardInfoBorderStyle}" Background="#0369A1">
-                        <StackPanel>
-                            <materialDesign:PackIcon Kind="AccountHardHatOutline" Width="38" Height="38" Foreground="White" />
-                            <TextBlock Text="Open Events" Style="{StaticResource DashboardTitleTextStyle}" />
-                            <TextBlock Text="{Binding OpenEventCount, StringFormat={}{0:N0}}" FontSize="34" FontWeight="Bold" Foreground="White" Margin="0,12,0,0" />
-                        </StackPanel>
-                    </Border>
+                    <Grid Margin="0,22,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="1.35*"/>
+                            <ColumnDefinition Width="1"/>
+                        </Grid.ColumnDefinitions>
 
-                    <Button Command="{Binding RefreshCommand}"
-                            Style="{StaticResource DashboardTileButtonStyle}"
-                            Background="#475569">
-                        <StackPanel>
-                            <materialDesign:PackIcon Kind="Update" Width="38" Height="38" Foreground="White" />
-                            <TextBlock Text="Refresh Dashboard" Style="{StaticResource DashboardTitleTextStyle}" />
-                            <TextBlock Text="Reload counts and status."
-                                       Foreground="#E2E8F0"
-                                       Style="{StaticResource DashboardNoteTextStyle}" />
-                        </StackPanel>
-                    </Button>
+                        <Border Grid.Column="0"
+                                Margin="0,0,18,0"
+                                Background="#FFFFFF"
+                                BorderBrush="#D3E1F7"
+                                BorderThickness="1"
+                                CornerRadius="24"
+                                Padding="26">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
 
-                    <Button Click="SettingsButton_Click"
-                            Style="{StaticResource DashboardTileButtonStyle}"
-                            Background="#0F172A">
-                        <StackPanel>
-                            <materialDesign:PackIcon Kind="CogOutline" Width="38" Height="38" Foreground="White" />
-                            <TextBlock Text="Settings" Style="{StaticResource DashboardTitleTextStyle}" />
-                            <TextBlock Text="Open workstation tools."
-                                       Foreground="#CBD5E1"
-                                       Style="{StaticResource DashboardNoteTextStyle}" />
-                        </StackPanel>
-                    </Button>
+                                <TextBlock Text="Recent Activity"
+                                           Foreground="#0F172A"
+                                           FontSize="20"
+                                           FontWeight="Bold"/>
 
-                    <Button Click="CheckForUpdateButton_Click"
-                            Style="{StaticResource DashboardTileButtonStyle}"
-                            Background="#7C3AED">
-                        <StackPanel>
-                            <materialDesign:PackIcon Kind="Update" Width="38" Height="38" Foreground="White" />
-                            <TextBlock Text="Check for Update" Style="{StaticResource DashboardTitleTextStyle}" />
-                            <TextBlock Text="Check the published build manifest."
-                                       Foreground="#F3E8FF"
-                                       Style="{StaticResource DashboardNoteTextStyle}" />
-                        </StackPanel>
-                    </Button>
+                                <Grid Grid.Row="1"
+                                      Margin="0,20,0,0">
+                                    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                                  HorizontalScrollBarVisibility="Disabled">
+                                        <ItemsControl ItemsSource="{Binding RecentActivities}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Margin="0,0,0,12"
+                                                            Padding="18"
+                                                            Background="#F8FBFF"
+                                                            BorderBrush="#D9E6F8"
+                                                            BorderThickness="1"
+                                                            CornerRadius="18">
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                            </Grid.ColumnDefinitions>
 
-                    <Button Click="LogoutButton_Click"
-                            Style="{StaticResource DashboardTileButtonStyle}"
-                            Background="#C2410C">
-                        <StackPanel>
-                            <materialDesign:PackIcon Kind="LogoutVariant" Width="38" Height="38" Foreground="White" />
-                            <TextBlock Text="Logout" Style="{StaticResource DashboardTitleTextStyle}" />
-                            <TextBlock Text="Close the current session."
-                                       Foreground="#FFEDD5"
-                                       Style="{StaticResource DashboardNoteTextStyle}" />
-                        </StackPanel>
-                    </Button>
-                </UniformGrid>
-            </Grid>
-        </Border>
+                                                            <StackPanel Grid.Column="0">
+                                                                <TextBlock Text="{Binding Title}"
+                                                                           Foreground="#0F172A"
+                                                                           FontSize="15"
+                                                                           FontWeight="SemiBold"/>
+                                                                <TextBlock Text="{Binding Detail}"
+                                                                           Margin="0,6,0,0"
+                                                                           Foreground="#64748B"
+                                                                           FontSize="12"
+                                                                           TextWrapping="Wrap"/>
+                                                            </StackPanel>
+
+                                                            <TextBlock Grid.Column="1"
+                                                                       Margin="18,0,0,0"
+                                                                       VerticalAlignment="Top"
+                                                                       Foreground="#3B82F6"
+                                                                       FontSize="12"
+                                                                       FontWeight="SemiBold"
+                                                                       Text="{Binding TimeLabel}"/>
+                                                        </Grid>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+
+                                    <TextBlock Text="No recent activity yet."
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               Foreground="#94A3B8"
+                                               FontSize="13">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding HasRecentActivities}" Value="False">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </Grid>
+                            </Grid>
+                        </Border>
+
+                        <Border Grid.Column="1"
+                                Background="#FFFFFF"
+                                BorderBrush="#D3E1F7"
+                                BorderThickness="1"
+                                CornerRadius="24"
+                                Padding="26">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBlock Text="Today"
+                                               Foreground="#0F172A"
+                                               FontSize="20"
+                                               FontWeight="Bold"/>
+                                    <StackPanel Grid.Column="1"
+                                                HorizontalAlignment="Right">
+                                        <TextBlock Text="{Binding TodayLabel}"
+                                                   Foreground="#64748B"
+                                                   FontSize="11"
+                                                   TextAlignment="Right"/>
+                                        <TextBlock Text="{Binding TimeLabel}"
+                                                   Margin="0,2,0,0"
+                                                   Foreground="#3B82F6"
+                                                   FontSize="11"
+                                                   FontWeight="SemiBold"
+                                                   TextAlignment="Right"/>
+                                    </StackPanel>
+                                </Grid>
+
+                                <ScrollViewer Grid.Row="1"
+                                              Margin="0,20,0,0"
+                                              VerticalScrollBarVisibility="Auto"
+                                              HorizontalScrollBarVisibility="Disabled">
+                                    <ItemsControl ItemsSource="{Binding TodaySummaries}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Margin="0,0,0,12"
+                                                        Padding="18"
+                                                        Background="#F8FBFF"
+                                                        BorderBrush="#D9E6F8"
+                                                        BorderThickness="1"
+                                                        CornerRadius="18">
+                                                    <StackPanel>
+                                                        <TextBlock Text="{Binding Value}"
+                                                                   Foreground="#0F172A"
+                                                                   FontSize="24"
+                                                                   FontWeight="Bold"/>
+                                                        <TextBlock Text="{Binding Label}"
+                                                                   Margin="0,8,0,0"
+                                                                   Foreground="#334155"
+                                                                   FontSize="13"
+                                                                   FontWeight="SemiBold"/>
+                                                        <TextBlock Text="{Binding Note}"
+                                                                   Margin="0,6,0,0"
+                                                                   Foreground="#64748B"
+                                                                   FontSize="12"
+                                                                   TextWrapping="Wrap"/>
+                                                    </StackPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Grid>
     </ScrollViewer>
 </UserControl>

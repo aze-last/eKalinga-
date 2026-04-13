@@ -57,7 +57,7 @@ public sealed class BarangayDashboardBeneficiarySourceTests
     }
 
     [Fact]
-    public void BarangayDashboardPage_UsesHealthCenterStyleGridWithOnlyProjectModules()
+    public void BarangayDashboardPage_UsesApprovedDashboardModulesAndShellCommands()
     {
         var pagePath = Path.GetFullPath(Path.Combine(
             AppContext.BaseDirectory,
@@ -71,22 +71,50 @@ public sealed class BarangayDashboardBeneficiarySourceTests
         var xaml = File.ReadAllText(pagePath);
 
         Assert.Contains("Text=\"{Binding DataContext.OfficeName, RelativeSource={RelativeSource AncestorType={x:Type Window}}}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding DataContext.OfficeProfileLabel, RelativeSource={RelativeSource AncestorType={x:Type Window}}}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding DataContext.OfficeInitials, RelativeSource={RelativeSource AncestorType={x:Type Window}}}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding DataContext.SoftwareTitle, RelativeSource={RelativeSource AncestorType={x:Type Window}}}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"{Binding DataContext.SoftwareSubtitle, RelativeSource={RelativeSource AncestorType={x:Type Window}}}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"{Binding DataContext.OfficeName, RelativeSource={RelativeSource AncestorType={x:Type Window}}}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"Validated Beneficiaries\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"AID REQUESTS\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"PENDING\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"BUDGET ALERTS\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"DISTRIBUTIONS\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding AidRequestCount, StringFormat={}{0:N0}}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding PendingReviewCount, StringFormat={}{0:N0}}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding BudgetAlertCount, StringFormat={}{0:N0}}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding DistributionCount, StringFormat={}{0:N0}}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"Aid Request\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"Validated Beneficiaries\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"Budget\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"Distribution\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"Cash-for-Work\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"Reports\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"Pending Review\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"Open Events\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"Refresh Dashboard\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"Settings\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"Check for Update\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"Logout\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"Recent Activity\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("ItemsSource=\"{Binding RecentActivities}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"Today\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding TodayLabel}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding TimeLabel}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("ItemsSource=\"{Binding TodaySummaries}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding DataContext.ShowAssistanceCasesCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding DataContext.ShowMasterListCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding DataContext.ShowBudgetCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding DataContext.ShowDistributionCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding DataContext.ShowCashForWorkCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding DataContext.ShowReportsCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Command=\"{Binding RefreshCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Click=\"SettingsButton_Click\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Click=\"CheckForUpdateButton_Click\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Click=\"LogoutButton_Click\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Text=\"Barangay Management System\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Text=\"Attendance &amp; Aid Distribution Portal\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Text=\"SYSTEM STATUS\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Text=\"{Binding StatusMessage}\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Text=\"{Binding LastRefreshLabel}\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Text=\"Secure Sync Active\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Text=\"Pending Review\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Text=\"Open Events\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Text=\"Refresh Dashboard\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Command=\"{Binding RefreshCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Text=\"Beneficiaries\"", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Text=\"Patients\"", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Text=\"Consultations\"", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Text=\"Appointments\"", xaml, StringComparison.Ordinal);
@@ -95,9 +123,6 @@ public sealed class BarangayDashboardBeneficiarySourceTests
         Assert.DoesNotContain("Text=\"Dispensing\"", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Text=\"Health Programs\"", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Text=\"Forecasting\"", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("Text=\"Recent Activity\"", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("ItemsSource=\"{Binding RecentActivities}\"", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("ItemsSource=\"{Binding TodaySummaries}\"", xaml, StringComparison.Ordinal);
     }
 
     [Fact]

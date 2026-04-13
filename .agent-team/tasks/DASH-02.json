@@ -1,0 +1,24 @@
+{
+  "id": "DASH-02",
+  "title": "Wire dashboard tiles to shell navigation",
+  "status": "done",
+  "owner": "dashboard-nav@attendance-shifting-management",
+  "goal": "Connect each approved dashboard tile to the existing shell section-switch path.",
+  "allowedPaths": [
+    "Views/BarangayDashboardPage.xaml",
+    "Views/BarangayDashboardPage.xaml.cs",
+    "ViewModels/BarangayMainViewModel.cs"
+  ],
+  "dependencies": [
+    "DASH-01"
+  ],
+  "verification": [
+    "dotnet build AttendanceShiftingManagement.sln"
+  ],
+  "notes": [
+    "Wired Aid Request, Beneficiaries, Budget, Distribution, Cash-for-Work, and Reports tiles to the existing shell commands on the main window data context."
+  ],
+  "artifacts": [
+    "Views/BarangayDashboardPage.xaml"
+  ]
+}

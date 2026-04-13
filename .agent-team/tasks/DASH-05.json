@@ -1,0 +1,35 @@
+{
+  "id": "DASH-05",
+  "title": "Verify dashboard sprint changes",
+  "status": "blocked",
+  "owner": "verifier@attendance-shifting-management",
+  "goal": "Validate the dashboard wiring changes with build and tests before closure.",
+  "allowedPaths": [
+    "AttendanceShiftingManagement.sln",
+    "AttendanceShiftingManagement.Tests",
+    "Views",
+    "ViewModels",
+    "Services"
+  ],
+  "dependencies": [
+    "DASH-02",
+    "DASH-03",
+    "DASH-04"
+  ],
+  "verification": [
+    "dotnet build AttendanceShiftingManagement.sln",
+    "dotnet test AttendanceShiftingManagement.Tests"
+  ],
+  "notes": [
+    "dotnet build AttendanceShiftingManagement.sln passed after rerunning sequentially.",
+    "Targeted dashboard-facing tests now pass after aligning stale assertions with the approved dashboard UI.",
+    "dotnet test AttendanceShiftingManagement.Tests still fails with unrelated existing service test failures.",
+    "Dashboard-related test expectations are no longer blocking this sprint."
+  ],
+  "artifacts": [
+    "Build: passed",
+    "Targeted dashboard tests: passed (6/6)",
+    "Full suite: 151 passed, 7 failed",
+    "Remaining failures: AssistanceCaseManagementServiceTests, ProjectDistributionServiceTests, CashForWorkServiceTests"
+  ]
+}

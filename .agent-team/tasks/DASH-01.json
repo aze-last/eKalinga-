@@ -1,0 +1,27 @@
+{
+  "id": "DASH-01",
+  "title": "Audit current dashboard wiring gap",
+  "status": "done",
+  "owner": "repo-mapper@attendance-shifting-management",
+  "goal": "Confirm the real file seams for dashboard UI, shell navigation, and existing action handlers.",
+  "allowedPaths": [
+    "Views/BarangayDashboardPage.xaml",
+    "Views/BarangayDashboardPage.xaml.cs",
+    "ViewModels/BarangayMainViewModel.cs",
+    "ViewModels/BarangayDashboardViewModel.cs"
+  ],
+  "dependencies": [],
+  "verification": [
+    "Document file seams and current wiring status in task notes."
+  ],
+  "notes": [
+    "Confirmed that the approved dashboard XAML had no module tile wiring.",
+    "Confirmed that SettingsButton_Click, CheckForUpdateButton_Click, and LogoutButton_Click already existed in code-behind but were not hooked from XAML.",
+    "Confirmed that BarangayMainViewModel already exposed the shell navigation commands needed for dashboard tile routing."
+  ],
+  "artifacts": [
+    "Views/BarangayDashboardPage.xaml",
+    "Views/BarangayDashboardPage.xaml.cs",
+    "ViewModels/BarangayMainViewModel.cs"
+  ]
+}

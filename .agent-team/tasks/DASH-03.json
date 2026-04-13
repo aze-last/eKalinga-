@@ -1,0 +1,23 @@
+{
+  "id": "DASH-03",
+  "title": "Hook dashboard settings, update, and logout actions",
+  "status": "done",
+  "owner": "dashboard-nav@attendance-shifting-management",
+  "goal": "Use the existing dashboard code-behind handlers for Settings, Updates, and Logout.",
+  "allowedPaths": [
+    "Views/BarangayDashboardPage.xaml",
+    "Views/BarangayDashboardPage.xaml.cs"
+  ],
+  "dependencies": [
+    "DASH-01"
+  ],
+  "verification": [
+    "dotnet build AttendanceShiftingManagement.sln"
+  ],
+  "notes": [
+    "Connected Settings, Updates, and Logout buttons in XAML to the existing dashboard code-behind handlers."
+  ],
+  "artifacts": [
+    "Views/BarangayDashboardPage.xaml"
+  ]
+}
