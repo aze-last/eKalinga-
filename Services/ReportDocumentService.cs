@@ -195,6 +195,7 @@ namespace AttendanceShiftingManagement.Services
                 "validated-beneficiaries" => count == 1 ? "1 beneficiary" : $"{count:N0} beneficiaries",
                 "budget-utilization" => count == 1 ? "1 program" : $"{count:N0} programs",
                 "distribution-claims" => count == 1 ? "1 claim" : $"{count:N0} claims",
+                "cash-for-work-attendance-sheet" => count == 1 ? "1 participant" : $"{count:N0} participants",
                 _ => count == 1 ? "1 record" : $"{count:N0} records"
             };
         }

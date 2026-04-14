@@ -43,6 +43,9 @@ namespace AttendanceShiftingManagement.Models
         [Column("status")]
         public CashForWorkEventStatus Status { get; set; } = CashForWorkEventStatus.Draft;
 
+        [Column("event_kind")]
+        public CashForWorkEventKind EventKind { get; set; } = CashForWorkEventKind.CashForWork;
+
         [Column("ayuda_program_id")]
         public int? AyudaProgramId { get; set; }
 
@@ -71,6 +74,20 @@ namespace AttendanceShiftingManagement.Models
         public BudgetLedgerEntry? BudgetLedgerEntry { get; set; }
 
         public ICollection<CashForWorkParticipant> Participants { get; set; } = new List<CashForWorkParticipant>();
+
+        [NotMapped]
+        public string WorkspaceLabel =>
+            $"{(EventKind == CashForWorkEventKind.Seminar ? "Seminar" : "Cash-for-Work")} | {Title} | {EventDate:MMM dd, yyyy}";
+
+        [NotMapped]
+        public string WorkspaceAnnouncementLabel =>
+            $"{Title} - {Location} - {EventDate:MMM dd, yyyy}";
+    }
+
+    public enum CashForWorkEventKind
+    {
+        CashForWork,
+        Seminar
     }
 
     public enum CashForWorkEventStatus

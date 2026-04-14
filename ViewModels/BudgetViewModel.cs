@@ -34,8 +34,21 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly RelayCommand _closeLedgerHistoryCardCommand;
         private readonly RelayCommand _browseProofCommand;
         private readonly RelayCommand _exportLedgerCommand;
+        private readonly RelayCommand _openDashboardPanelCommand;
+        private readonly RelayCommand _openLedgerPanelCommand;
+        private readonly RelayCommand _closePanelCommand;
+        private readonly RelayCommand _closeHistoryDetailCommand;
         private string _statusMessage = "Loading budget controls...";
         private Brush _statusBrush = Brushes.DimGray;
+        private bool _dashboardVisibility = true;
+        private bool _ledgerVisibility = false;
+        private bool _donationPanelVisibility = false;
+        private bool _programPanelVisibility = false;
+        private bool _seminarPanelVisibility = false;
+        private bool _historyDetailVisibility = false;
+        private string _currentPanelTitle = "Budget Overview";
+        private string _currentPanelSubtitle = "Use left rail to switch between budget operations.";
+        private string _drawerVisibility = "Collapsed";
         private decimal _combinedAvailable;
         private decimal _governmentAvailable;
         private decimal _privateAvailable;
@@ -89,7 +102,9 @@ namespace AttendanceShiftingManagement.ViewModels
             _budgetService = new BudgetManagementService(_context);
             DonorTypes = new ObservableCollection<PrivateDonationDonorType>(Enum.GetValues<PrivateDonationDonorType>());
             ProofTypes = new ObservableCollection<DonationProofType>(Enum.GetValues<DonationProofType>());
-            ProgramTypes = new ObservableCollection<AyudaProgramType>(Enum.GetValues<AyudaProgramType>());
+            ProgramTypes = new ObservableCollection<AyudaProgramType>(
+                Enum.GetValues<AyudaProgramType>()
+                    .Where(type => type != AyudaProgramType.Seminar));
             ProgramDistributionStatuses = new ObservableCollection<AyudaProgramDistributionStatus>(Enum.GetValues<AyudaProgramDistributionStatus>());
             SeminarSupportKinds = new ObservableCollection<AssistanceReleaseKind>(Enum.GetValues<AssistanceReleaseKind>());
             Programs = new ObservableCollection<AyudaProgram>();
@@ -112,6 +127,10 @@ namespace AttendanceShiftingManagement.ViewModels
             _closeLedgerHistoryCardCommand = new RelayCommand(_ => CloseLedgerHistoryCard(), _ => SelectedLedgerEntry != null);
             _browseProofCommand = new RelayCommand(_ => BrowseProof());
             _exportLedgerCommand = new RelayCommand(async _ => await ExportLedgerAsync(), _ => !IsBusy && LedgerEntriesView.Cast<object>().Any());
+            _openDashboardPanelCommand = new RelayCommand(_ => OpenDashboardPanel());
+            _openLedgerPanelCommand = new RelayCommand(_ => OpenLedgerPanel());
+            _closePanelCommand = new RelayCommand(_ => ClosePanel());
+            _closeHistoryDetailCommand = new RelayCommand(_ => CloseHistoryDetail());
             _ = LoadAsync();
         }
 
@@ -139,6 +158,10 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand CloseLedgerHistoryCardCommand => _closeLedgerHistoryCardCommand;
         public ICommand BrowseProofCommand => _browseProofCommand;
         public ICommand ExportLedgerCommand => _exportLedgerCommand;
+        public ICommand OpenDashboardPanelCommand => _openDashboardPanelCommand;
+        public ICommand OpenLedgerPanelCommand => _openLedgerPanelCommand;
+        public ICommand ClosePanelCommand => _closePanelCommand;
+        public ICommand CloseHistoryDetailCommand => _closeHistoryDetailCommand;
 
         public bool IsBusy
         {
@@ -209,6 +232,60 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             get => _governmentSpentReference;
             private set => SetProperty(ref _governmentSpentReference, value);
+        }
+
+        public bool DashboardVisibility
+        {
+            get => _dashboardVisibility;
+            private set => SetProperty(ref _dashboardVisibility, value);
+        }
+
+        public bool LedgerVisibility
+        {
+            get => _ledgerVisibility;
+            private set => SetProperty(ref _ledgerVisibility, value);
+        }
+
+        public bool DonationPanelVisibility
+        {
+            get => _donationPanelVisibility;
+            private set => SetProperty(ref _donationPanelVisibility, value);
+        }
+
+        public bool ProgramPanelVisibility
+        {
+            get => _programPanelVisibility;
+            private set => SetProperty(ref _programPanelVisibility, value);
+        }
+
+        public bool SeminarPanelVisibility
+        {
+            get => _seminarPanelVisibility;
+            private set => SetProperty(ref _seminarPanelVisibility, value);
+        }
+
+        public bool HistoryDetailVisibility
+        {
+            get => _historyDetailVisibility;
+            private set => SetProperty(ref _historyDetailVisibility, value);
+        }
+
+        public string CurrentPanelTitle
+        {
+            get => _currentPanelTitle;
+            private set => SetProperty(ref _currentPanelTitle, value);
+        }
+
+        public string CurrentPanelSubtitle
+        {
+            get => _currentPanelSubtitle;
+            private set => SetProperty(ref _currentPanelSubtitle, value);
+        }
+
+        public string DrawerVisibility
+        {
+            get => _drawerVisibility;
+            private set => SetProperty(ref _drawerVisibility, value);
         }
 
         public string GovernmentOfficeCode
@@ -823,62 +900,18 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private void OpenSeminarPanel()
         {
-            if (IsBusy)
-            {
-                return;
-            }
-
-            CloseAllSetupPanels();
+            HideAllPanels();
+            SeminarPanelVisibility = true;
+            CurrentPanelTitle = "Seminar Setup";
+            CurrentPanelSubtitle = "Record seminar events, participant counts, and associated costs.";
             IsSeminarPanelOpen = true;
         }
 
         private void CloseSeminarPanel()
         {
+            SeminarPanelVisibility = false;
             IsSeminarPanelOpen = false;
-        }
-
-        private void OpenDonationPanel()
-        {
-            if (IsBusy)
-            {
-                return;
-            }
-
-            CloseAllSetupPanels();
-            IsDonationPanelOpen = true;
-        }
-
-        private void CloseDonationPanel()
-        {
-            IsDonationPanelOpen = false;
-        }
-
-        private void OpenProgramPanel()
-        {
-            if (IsBusy)
-            {
-                return;
-            }
-
-            CloseAllSetupPanels();
-            IsProgramPanelOpen = true;
-        }
-
-        private void CloseProgramPanel()
-        {
-            IsProgramPanelOpen = false;
-        }
-
-        private void CloseAllSetupPanels()
-        {
-            IsDonationPanelOpen = false;
-            IsProgramPanelOpen = false;
-            IsSeminarPanelOpen = false;
-        }
-
-        private void CloseLedgerHistoryCard()
-        {
-            SelectedLedgerEntry = null;
+            ClosePanel();
         }
 
         private void BrowseProof()
@@ -1141,6 +1174,88 @@ namespace AttendanceShiftingManagement.ViewModels
             }
 
             return normalized;
+        }
+
+        // C4W Layout Navigation Methods
+        private void OpenDashboardPanel()
+        {
+            HideAllPanels();
+            DashboardVisibility = true;
+            CurrentPanelTitle = "Budget Overview";
+            CurrentPanelSubtitle = "Use left rail to switch between budget operations.";
+        }
+
+        private void OpenLedgerPanel()
+        {
+            HideAllPanels();
+            LedgerVisibility = true;
+            CurrentPanelTitle = "Budget Ledger / Liquidation";
+            CurrentPanelSubtitle = "Complete financial history of all budget transactions and releases.";
+        }
+
+        private void ClosePanel()
+        {
+            HideAllPanels();
+            DashboardVisibility = true;
+            CurrentPanelTitle = "Budget Overview";
+            CurrentPanelSubtitle = "Use left rail to switch between budget operations.";
+        }
+
+        private void CloseHistoryDetail()
+        {
+            HistoryDetailVisibility = false;
+        }
+
+        private void HideAllPanels()
+        {
+            DashboardVisibility = false;
+            LedgerVisibility = false;
+            DonationPanelVisibility = false;
+            ProgramPanelVisibility = false;
+            SeminarPanelVisibility = false;
+            HistoryDetailVisibility = false;
+        }
+
+        // Update existing panel methods to use new C4W system
+        private void OpenDonationPanel()
+        {
+            HideAllPanels();
+            DonationPanelVisibility = true;
+            CurrentPanelTitle = "Private Donation Entry";
+            CurrentPanelSubtitle = "Record private donor contributions with proof attachments and amount details.";
+            _isDonationPanelOpen = true;
+            OnPropertyChanged(nameof(IsDonationPanelOpen));
+        }
+
+        private void CloseDonationPanel()
+        {
+            DonationPanelVisibility = false;
+            _isDonationPanelOpen = false;
+            OnPropertyChanged(nameof(IsDonationPanelOpen));
+            ClosePanel();
+        }
+
+        private void OpenProgramPanel()
+        {
+            HideAllPanels();
+            ProgramPanelVisibility = true;
+            CurrentPanelTitle = "Program Setup";
+            CurrentPanelSubtitle = "Create new ayuda projects, define distribution parameters, and set budget caps.";
+            _isProgramPanelOpen = true;
+            OnPropertyChanged(nameof(IsProgramPanelOpen));
+        }
+
+        private void CloseProgramPanel()
+        {
+            ProgramPanelVisibility = false;
+            _isProgramPanelOpen = false;
+            OnPropertyChanged(nameof(IsProgramPanelOpen));
+            ClosePanel();
+        }
+
+        private void CloseLedgerHistoryCard()
+        {
+            HistoryDetailVisibility = false;
         }
     }
 

@@ -255,6 +255,12 @@ namespace AttendanceShiftingManagement.Data
             EnsureColumnExists(
                 connection,
                 "cash_for_work_events",
+                "event_kind",
+                "ALTER TABLE `cash_for_work_events` ADD COLUMN `event_kind` varchar(32) NOT NULL DEFAULT 'CashForWork';");
+
+            EnsureColumnExists(
+                connection,
+                "cash_for_work_events",
                 "ayuda_program_id",
                 "ALTER TABLE `cash_for_work_events` ADD COLUMN `ayuda_program_id` int NULL;");
 
@@ -330,6 +336,15 @@ namespace AttendanceShiftingManagement.Data
                     PRIMARY KEY (`id`),
                     UNIQUE KEY `IX_ayuda_project_claims_program_beneficiary` (`ayuda_program_id`, `beneficiary_staging_id`)
                 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+                """);
+
+            ExecuteNonQuery(
+                connection,
+                """
+                UPDATE `cash_for_work_events`
+                SET `event_kind` = 'CashForWork'
+                WHERE `event_kind` IS NULL
+                   OR `event_kind` = '';
                 """);
 
             ExecuteNonQuery(
@@ -645,6 +660,7 @@ namespace AttendanceShiftingManagement.Data
                     `notes` varchar(500) NULL,
                     `created_by_user_id` int NOT NULL,
                     `status` longtext NOT NULL,
+                    `event_kind` varchar(32) NOT NULL,
                     `ayuda_program_id` int NULL,
                     `budget_ledger_entry_id` int NULL,
                     `release_amount` decimal(18,2) NULL,

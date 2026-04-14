@@ -60,6 +60,107 @@ namespace AttendanceShiftingManagement.Services
             };
         }
 
+        public async Task<ReportsSnapshot> BuildCashForWorkAttendanceSheetSnapshotAsync(
+            int eventId,
+            CancellationToken cancellationToken = default)
+        {
+            await using var context = new AppDbContext();
+
+            var cashForWorkEvent = await context.CashForWorkEvents
+                .AsNoTracking()
+                .FirstOrDefaultAsync(item => item.Id == eventId, cancellationToken)
+                ?? throw new InvalidOperationException("Cash-for-work event was not found.");
+
+            var participants = await context.CashForWorkParticipants
+                .AsNoTracking()
+                .Include(participant => participant.Beneficiary)
+                .Where(participant => participant.EventId == eventId)
+                .OrderBy(participant => participant.Beneficiary!.FullName ?? participant.Beneficiary!.LastName)
+                .ThenBy(participant => participant.Beneficiary!.FirstName)
+                .ToListAsync(cancellationToken);
+
+            var participantIds = participants
+                .Select(participant => participant.Id)
+                .ToList();
+
+            var attendanceLookup = await context.CashForWorkAttendances
+                .AsNoTracking()
+                .Where(attendance =>
+                    participantIds.Contains(attendance.ParticipantId) &&
+                    attendance.AttendanceDate.Date == cashForWorkEvent.EventDate.Date)
+                .GroupBy(attendance => attendance.ParticipantId)
+                .Select(group => group
+                    .OrderByDescending(attendance => attendance.RecordedAt)
+                    .First())
+                .ToListAsync(cancellationToken);
+
+            var attendanceByParticipantId = attendanceLookup.ToDictionary(attendance => attendance.ParticipantId);
+
+            var table = CreateTable(
+                ("Full Name", typeof(string)),
+                ("Beneficiary ID", typeof(string)),
+                ("Civil Registry ID", typeof(string)),
+                ("Event", typeof(string)),
+                ("Kind", typeof(string)),
+                ("Attendance Date", typeof(string)),
+                ("Status", typeof(string)),
+                ("Source", typeof(string)),
+                ("Recorded At", typeof(string)));
+
+            foreach (var participant in participants)
+            {
+                attendanceByParticipantId.TryGetValue(participant.Id, out var attendance);
+                var beneficiary = participant.Beneficiary;
+                var fullName = string.IsNullOrWhiteSpace(beneficiary?.FullName)
+                    ? string.Join(
+                        " ",
+                        new[] { beneficiary?.FirstName, beneficiary?.MiddleName, beneficiary?.LastName }
+                            .Where(value => !string.IsNullOrWhiteSpace(value))
+                            .Select(value => value!.Trim()))
+                    : beneficiary!.FullName!.Trim();
+
+                table.Rows.Add(
+                    string.IsNullOrWhiteSpace(fullName) ? $"Participant #{participant.Id}" : fullName,
+                    beneficiary?.BeneficiaryId ?? "--",
+                    beneficiary?.CivilRegistryId ?? "--",
+                    cashForWorkEvent.Title,
+                    cashForWorkEvent.EventKind == CashForWorkEventKind.Seminar ? "Seminar" : "Cash-for-Work",
+                    cashForWorkEvent.EventDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                    attendance?.Status.ToString() ?? "Not Recorded",
+                    attendance?.Source.ToString() ?? "--",
+                    attendance == null
+                        ? "--"
+                        : attendance.RecordedAt.ToString("yyyy-MM-dd hh:mm tt", CultureInfo.InvariantCulture));
+            }
+
+            var presentCount = attendanceLookup.Count(attendance => attendance.Status == CashForWorkAttendanceStatus.Present);
+            var absentCount = attendanceLookup.Count(attendance => attendance.Status == CashForWorkAttendanceStatus.Absent);
+            var pendingCount = Math.Max(0, participants.Count - attendanceLookup.Count);
+
+            return new ReportsSnapshot
+            {
+                Title = "Attendance Sheet",
+                Subtitle = $"Printable attendance history for {cashForWorkEvent.Title}.",
+                ExportFilePrefix = "cash-for-work-attendance-sheet",
+                RangeLabel = $"{cashForWorkEvent.EventDate:MMM dd, yyyy}",
+                ProgramLabel = cashForWorkEvent.EventKind == CashForWorkEventKind.Seminar ? "Seminar Event" : "Cash-for-Work Event",
+                SuggestedOrientation = "Landscape",
+                Table = table,
+                Metrics = new[]
+                {
+                    CreateMetric("Assigned", participants.Count.ToString("N0", CultureInfo.InvariantCulture), "Beneficiaries assigned to the selected event"),
+                    CreateMetric("Present", presentCount.ToString("N0", CultureInfo.InvariantCulture), "Attendance records marked present"),
+                    CreateMetric("Absent", absentCount.ToString("N0", CultureInfo.InvariantCulture), "Attendance records marked absent"),
+                    CreateMetric("Not Recorded", pendingCount.ToString("N0", CultureInfo.InvariantCulture), "Assigned beneficiaries without an attendance record")
+                },
+                Highlights = BuildHighlights(
+                    $"{cashForWorkEvent.Title} is scheduled for {cashForWorkEvent.EventDate:MMMM dd, yyyy} at {cashForWorkEvent.Location}.",
+                    pendingCount == 0
+                        ? "All assigned beneficiaries already have attendance records for this event."
+                        : $"{pendingCount:N0} assigned beneficiary row(s) still do not have an attendance record.")
+            };
+        }
+
         private static ReportsQueryOptions Normalize(ReportsQueryOptions options)
         {
             var dateFrom = options.DateFrom.Date;

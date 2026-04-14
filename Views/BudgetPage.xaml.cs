@@ -21,14 +21,7 @@ namespace AttendanceShiftingManagement.Views
 
         private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (e.PropertyName != nameof(BudgetViewModel.IsAnySetupPanelOpen) || !_viewModel.IsAnySetupPanelOpen)
-            {
-                return;
-            }
-
-            Dispatcher.BeginInvoke(
-                () => BudgetScrollViewer.ScrollToTop(),
-                DispatcherPriority.Background);
+            // Handle property changes if needed
         }
 
         private void OnBudgetPageUnloaded(object sender, System.Windows.RoutedEventArgs e)

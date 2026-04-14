@@ -64,6 +64,7 @@ public sealed class StartupMigrationTests
         Assert.NotNull(cashForWorkEvent?.FindProperty(nameof(CashForWorkEvent.AyudaProgramId)));
         Assert.NotNull(cashForWorkEvent?.FindProperty(nameof(CashForWorkEvent.BudgetLedgerEntryId)));
         Assert.NotNull(cashForWorkEvent?.FindProperty(nameof(CashForWorkEvent.ReleaseAmount)));
+        Assert.NotNull(cashForWorkEvent?.FindProperty(nameof(CashForWorkEvent.EventKind)));
 
         var cashForWorkParticipant = model.FindEntityType(typeof(CashForWorkParticipant));
         Assert.NotNull(cashForWorkParticipant?.FindProperty("BeneficiaryStagingId"));

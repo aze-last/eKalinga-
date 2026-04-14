@@ -91,6 +91,7 @@ public sealed class CashForWorkServiceTests
         var admin = SeedAdmin(context);
         var beneficiary = SeedApprovedBeneficiary(context, 3001, "Pedro Santos");
         var service = new CashForWorkService(context);
+        var digitalIdService = new BeneficiaryDigitalIdService(context);
 
         var cashForWorkEvent = service.CreateEvent(
             "Barangay Clean-Up",
@@ -103,13 +104,14 @@ public sealed class CashForWorkServiceTests
 
         service.AddParticipant(cashForWorkEvent.Id, beneficiary.StagingID, admin.Id);
         var participantId = context.CashForWorkParticipants.Single().Id;
+        var digitalId = await digitalIdService.EnsureIssuedAsync(beneficiary.StagingID, admin.Id);
 
-        Assert.True(await service.SaveScannerAttendanceAsync(cashForWorkEvent.Id, admin.Id, participantId, "BEN-QR-001"));
-        Assert.False(await service.SaveScannerAttendanceAsync(cashForWorkEvent.Id, admin.Id, participantId, "BEN-QR-001"));
+        Assert.True(await service.SaveScannerAttendanceAsync(cashForWorkEvent.Id, admin.Id, participantId, digitalId.QrPayload));
+        Assert.False(await service.SaveScannerAttendanceAsync(cashForWorkEvent.Id, admin.Id, participantId, digitalId.QrPayload));
 
         var attendance = Assert.Single(context.CashForWorkAttendances);
         Assert.Equal(AttendanceCaptureSource.ScannerSession, attendance.Source);
-        Assert.Equal("BEN-QR-001", attendance.OcrExtractedName);
+        Assert.Equal(digitalId.QrPayload, attendance.OcrExtractedName);
     }
 
     [Fact]
@@ -131,6 +133,86 @@ public sealed class CashForWorkServiceTests
 
         var ex = Assert.Throws<InvalidOperationException>(() => service.AddParticipant(cashForWorkEvent.Id, beneficiary.StagingID, admin.Id));
         Assert.Contains("approved", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void AddParticipant_RejectsReleasedEvents()
+    {
+        using var context = TestDbContextFactory.CreateContext();
+        var admin = SeedAdmin(context);
+        var beneficiary = SeedApprovedBeneficiary(context, 4101, "Released Participant");
+        var service = new CashForWorkService(context);
+
+        var cashForWorkEvent = service.CreateEvent(
+            "Released Event",
+            "Hall",
+            DateTime.Today,
+            new TimeSpan(7, 0, 0),
+            new TimeSpan(12, 0, 0),
+            null,
+            admin.Id);
+
+        cashForWorkEvent.Status = CashForWorkEventStatus.Completed;
+        context.SaveChanges();
+
+        var ex = Assert.Throws<InvalidOperationException>(() => service.AddParticipant(cashForWorkEvent.Id, beneficiary.StagingID, admin.Id));
+        Assert.Contains("can no longer be modified", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void SaveManualAttendance_RejectsReleasedEvents()
+    {
+        using var context = TestDbContextFactory.CreateContext();
+        var admin = SeedAdmin(context);
+        var beneficiary = SeedApprovedBeneficiary(context, 4201, "Released Attendance");
+        var service = new CashForWorkService(context);
+
+        var cashForWorkEvent = service.CreateEvent(
+            "Released Event",
+            "Hall",
+            DateTime.Today,
+            new TimeSpan(7, 0, 0),
+            new TimeSpan(12, 0, 0),
+            null,
+            admin.Id);
+
+        service.AddParticipant(cashForWorkEvent.Id, beneficiary.StagingID, admin.Id);
+        var participantId = context.CashForWorkParticipants.Single().Id;
+
+        cashForWorkEvent = context.CashForWorkEvents.Single();
+        cashForWorkEvent.Status = CashForWorkEventStatus.Completed;
+        context.SaveChanges();
+
+        var ex = Assert.Throws<InvalidOperationException>(() => service.SaveManualAttendance(cashForWorkEvent.Id, admin.Id, [participantId]));
+        Assert.Contains("can no longer be modified", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task SaveScannerAttendance_RejectsReleasedEvents()
+    {
+        using var context = TestDbContextFactory.CreateContext();
+        var admin = SeedAdmin(context);
+        var beneficiary = SeedApprovedBeneficiary(context, 4301, "Released Scanner");
+        var service = new CashForWorkService(context);
+
+        var cashForWorkEvent = service.CreateEvent(
+            "Released Event",
+            "Hall",
+            DateTime.Today,
+            new TimeSpan(7, 0, 0),
+            new TimeSpan(12, 0, 0),
+            null,
+            admin.Id);
+
+        service.AddParticipant(cashForWorkEvent.Id, beneficiary.StagingID, admin.Id);
+        var participantId = context.CashForWorkParticipants.Single().Id;
+
+        cashForWorkEvent = context.CashForWorkEvents.Single();
+        cashForWorkEvent.Status = CashForWorkEventStatus.Completed;
+        context.SaveChanges();
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => service.SaveScannerAttendanceAsync(cashForWorkEvent.Id, admin.Id, participantId, "IGNORED-QR"));
+        Assert.Contains("can no longer be modified", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

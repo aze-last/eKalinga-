@@ -511,7 +511,7 @@ namespace AttendanceShiftingManagement.Data.Migrations
                         .HasColumnType("varchar(40)")
                         .HasColumnName("card_number");
 
-                    b.Property<int>("HouseholdId")
+                    b.Property<int?>("HouseholdId")
                         .HasColumnType("int")
                         .HasColumnName("household_id");
 
@@ -809,6 +809,11 @@ namespace AttendanceShiftingManagement.Data.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("event_date");
 
+                    b.Property<string>("EventKind")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("event_kind");
+
                     b.Property<string>("Location")
                         .IsRequired()
                         .HasMaxLength(150)
@@ -875,13 +880,13 @@ namespace AttendanceShiftingManagement.Data.Migrations
                         .HasColumnType("int")
                         .HasColumnName("added_by_user_id");
 
-                    b.Property<int>("EventId")
-                        .HasColumnType("int")
-                        .HasColumnName("event_id");
-
                     b.Property<int?>("BeneficiaryStagingId")
                         .HasColumnType("int")
                         .HasColumnName("beneficiary_staging_id");
+
+                    b.Property<int>("EventId")
+                        .HasColumnType("int")
+                        .HasColumnName("event_id");
 
                     b.Property<int?>("HouseholdMemberId")
                         .HasColumnType("int")
@@ -1479,15 +1484,15 @@ namespace AttendanceShiftingManagement.Data.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("AttendanceShiftingManagement.Models.BeneficiaryStaging", "Beneficiary")
+                        .WithMany()
+                        .HasForeignKey("BeneficiaryStagingId");
+
                     b.HasOne("AttendanceShiftingManagement.Models.CashForWorkEvent", "Event")
                         .WithMany("Participants")
                         .HasForeignKey("EventId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.HasOne("AttendanceShiftingManagement.Models.BeneficiaryStaging", "Beneficiary")
-                        .WithMany()
-                        .HasForeignKey("BeneficiaryStagingId");
 
                     b.HasOne("AttendanceShiftingManagement.Models.HouseholdMember", "HouseholdMember")
                         .WithMany("CashForWorkParticipants")

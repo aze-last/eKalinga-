@@ -71,11 +71,11 @@
                 <Rectangle Fill="Black" Opacity="0.15" />
 
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="40">
-                    <Border Background="White" Width="140" Height="140" CornerRadius="24" Margin="0,0,0,30">
+                    <Border Width="180" Height="180" Margin="0,0,0,30">
                         <Border.Effect>
-                            <DropShadowEffect BlurRadius="20" Direction="-90" RenderingBias="Quality" ShadowDepth="4" Opacity="0.15" />
+                            <DropShadowEffect BlurRadius="25" Direction="-90" RenderingBias="Quality" ShadowDepth="6" Opacity="0.2" />
                         </Border.Effect>
-                        <Image Source="/Images/default icon.png" Stretch="Uniform" Margin="20" />
+                        <Image Source="/Images/Gemini_Generated_Image_1ivs1t1ivs1t1ivs-removebg-preview.png" Stretch="Uniform" />
                     </Border>
 
                     <TextBlock Text="eKalinga+" FontSize="36" FontWeight="Black" Foreground="White" HorizontalAlignment="Center" />

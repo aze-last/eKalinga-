@@ -72,6 +72,10 @@ namespace AttendanceShiftingManagement.Data
                 .Property(cashForWorkEvent => cashForWorkEvent.Status)
                 .HasConversion<string>();
 
+            modelBuilder.Entity<CashForWorkEvent>()
+                .Property(cashForWorkEvent => cashForWorkEvent.EventKind)
+                .HasConversion<string>();
+
             modelBuilder.Entity<CashForWorkAttendance>()
                 .Property(attendance => attendance.Status)
                 .HasConversion<string>();

@@ -22,12 +22,31 @@ namespace AttendanceShiftingManagement.Services
             _auditService = auditService;
         }
 
-        public List<CashForWorkEvent> GetEvents()
+        public List<CashForWorkEvent> GetEvents(CashForWorkEventKind? eventKind = null)
+        {
+            var query = _context.CashForWorkEvents
+                .AsNoTracking()
+                .AsQueryable();
+
+            if (eventKind.HasValue)
+            {
+                query = query.Where(cashForWorkEvent => cashForWorkEvent.EventKind == eventKind.Value);
+            }
+
+            return query
+                .OrderByDescending(e => e.EventDate)
+                .ThenBy(e => e.Title)
+                .ToList();
+        }
+
+        public List<CashForWorkEvent> GetOpenEvents()
         {
             return _context.CashForWorkEvents
                 .AsNoTracking()
-                .OrderByDescending(e => e.EventDate)
-                .ThenBy(e => e.Title)
+                .Where(cashForWorkEvent => cashForWorkEvent.Status == CashForWorkEventStatus.Open)
+                .OrderBy(cashForWorkEvent => cashForWorkEvent.EventDate)
+                .ThenBy(cashForWorkEvent => cashForWorkEvent.StartTime)
+                .ThenBy(cashForWorkEvent => cashForWorkEvent.Title)
                 .ToList();
         }
 
@@ -117,7 +136,15 @@ namespace AttendanceShiftingManagement.Services
                 releaseReadyParticipants);
         }
 
-        public CashForWorkEvent CreateEvent(string title, string location, DateTime eventDate, TimeSpan startTime, TimeSpan endTime, string? notes, int createdByUserId)
+        public CashForWorkEvent CreateEvent(
+            string title,
+            string location,
+            DateTime eventDate,
+            TimeSpan startTime,
+            TimeSpan endTime,
+            string? notes,
+            int createdByUserId,
+            CashForWorkEventKind eventKind = CashForWorkEventKind.CashForWork)
         {
             var cashForWorkEvent = new CashForWorkEvent
             {
@@ -129,6 +156,7 @@ namespace AttendanceShiftingManagement.Services
                 Notes = string.IsNullOrWhiteSpace(notes) ? null : notes.Trim(),
                 CreatedByUserId = createdByUserId,
                 Status = CashForWorkEventStatus.Open,
+                EventKind = eventKind,
                 CreatedAt = DateTime.Now,
                 UpdatedAt = DateTime.Now
             };
@@ -147,6 +175,12 @@ namespace AttendanceShiftingManagement.Services
 
         public void AddParticipant(int eventId, int beneficiaryStagingId, int addedByUserId)
         {
+            var cashForWorkEvent = _context.CashForWorkEvents
+                .FirstOrDefault(item => item.Id == eventId)
+                ?? throw new InvalidOperationException("Cash-for-work event was not found.");
+
+            EnsureEventCanBeModified(cashForWorkEvent);
+
             var beneficiary = _context.BeneficiaryStaging
                 .AsNoTracking()
                 .FirstOrDefault(item => item.StagingID == beneficiaryStagingId)
@@ -193,6 +227,9 @@ namespace AttendanceShiftingManagement.Services
                 .AsNoTracking()
                 .FirstOrDefault(e => e.Id == eventId)
                 ?? throw new InvalidOperationException("Cash-for-work event was not found.");
+
+            EnsureEventCanBeModified(cashForWorkEvent);
+
             if (cashForWorkEvent.EventDate.Date > DateTime.Today)
             {
                 throw new InvalidOperationException("Attendance cannot be recorded for future events.");
@@ -243,6 +280,9 @@ namespace AttendanceShiftingManagement.Services
             {
                 throw new InvalidOperationException("Cash-for-work event was not found.");
             }
+
+            EnsureEventCanBeModified(cashForWorkEvent);
+
             if (cashForWorkEvent.EventDate.Date > DateTime.Today)
             {
                 throw new InvalidOperationException("Attendance cannot be recorded for future events.");
@@ -250,6 +290,7 @@ namespace AttendanceShiftingManagement.Services
 
             var participant = await _context.CashForWorkParticipants
                 .AsNoTracking()
+                .Include(item => item.Beneficiary)
                 .FirstOrDefaultAsync(item => item.Id == participantId && item.EventId == eventId);
 
             if (participant == null || participant.Beneficiary?.VerificationStatus != VerificationStatus.Approved)
@@ -299,7 +340,16 @@ namespace AttendanceShiftingManagement.Services
             return true;
         }
 
-        public CashForWorkEvent UpdateEvent(int eventId, string title, string location, DateTime eventDate, TimeSpan startTime, TimeSpan endTime, string? notes, int updatedByUserId)
+        public CashForWorkEvent UpdateEvent(
+            int eventId,
+            string title,
+            string location,
+            DateTime eventDate,
+            TimeSpan startTime,
+            TimeSpan endTime,
+            string? notes,
+            int updatedByUserId,
+            CashForWorkEventKind eventKind = CashForWorkEventKind.CashForWork)
         {
             var cashForWorkEvent = _context.CashForWorkEvents
                 .FirstOrDefault(item => item.Id == eventId)
@@ -313,6 +363,7 @@ namespace AttendanceShiftingManagement.Services
             cashForWorkEvent.StartTime = startTime;
             cashForWorkEvent.EndTime = endTime;
             cashForWorkEvent.Notes = string.IsNullOrWhiteSpace(notes) ? null : notes.Trim();
+            cashForWorkEvent.EventKind = eventKind;
             cashForWorkEvent.UpdatedAt = DateTime.Now;
 
             var attendanceRows = _context.CashForWorkAttendances
