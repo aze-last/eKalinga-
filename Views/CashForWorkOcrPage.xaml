@@ -96,11 +96,9 @@
                 <Button Content="Payout"
                         Style="{StaticResource RailButtonStyle}"
                         Command="{Binding OpenPayoutPanelCommand}" />
-                <Button Content="Refresh Workspace"
-                        Height="42"
-                        Margin="0,12,0,0"
-                        Style="{StaticResource GoldActionButton}"
-                        Command="{Binding RefreshWorkspaceCommand}" />
+                <Button Content="Announcements"
+                        Style="{StaticResource RailButtonStyle}"
+                        Command="{Binding OpenAnnouncementsPanelCommand}" />
             </StackPanel>
         </Border>
 
@@ -145,16 +143,37 @@
                                 Background="{DynamicResource ThemeAccentSoftBrush}"
                                 BorderBrush="{DynamicResource ThemeAccentBorderBrush}"
                                 BorderThickness="1">
-                            <StackPanel>
-                                <TextBlock Text="{Binding SelectedEventLabel}"
-                                           FontWeight="Bold"
-                                           Foreground="{DynamicResource BrandMidnightBrush}"
-                                           TextWrapping="Wrap" />
-                                <TextBlock Margin="0,8,0,0"
-                                           Text="{Binding AttendanceSummary}"
-                                           Foreground="{DynamicResource BrandTextSecondaryBrush}"
-                                           TextWrapping="Wrap" />
-                            </StackPanel>
+                            <DockPanel LastChildFill="False">
+                                <StackPanel DockPanel.Dock="Left"
+                                            Width="220">
+                                    <TextBlock Text="{Binding SelectedEventLabel}"
+                                               FontWeight="Bold"
+                                               Foreground="{DynamicResource BrandMidnightBrush}"
+                                               TextWrapping="Wrap" />
+                                    <TextBlock Margin="0,8,0,0"
+                                               Text="{Binding AttendanceSummary}"
+                                               Foreground="{DynamicResource BrandTextSecondaryBrush}"
+                                               TextWrapping="Wrap" />
+                                </StackPanel>
+
+                                <WrapPanel DockPanel.Dock="Right"
+                                           HorizontalAlignment="Right"
+                                           VerticalAlignment="Top"
+                                           Visibility="{Binding SelectedEventVisibility}">
+                                    <Button Content="Edit Event"
+                                            Margin="0,0,8,8"
+                                            Style="{StaticResource SecondaryActionButton}"
+                                            Command="{Binding OpenEditEventPanelCommand}" />
+                                    <Button Content="Delete Event"
+                                            Margin="0,0,8,8"
+                                            Style="{StaticResource SecondaryActionButton}"
+                                            Command="{Binding DeleteEventCommand}" />
+                                    <Button Content="Print Attendance Sheet"
+                                            Margin="0,0,0,8"
+                                            Style="{StaticResource GoldActionButton}"
+                                            Command="{Binding PrintAttendanceSheetCommand}" />
+                                </WrapPanel>
+                            </DockPanel>
                         </Border>
                     </Grid>
 
@@ -166,14 +185,30 @@
 
                     <Border Style="{StaticResource OverviewPanelStyle}">
                         <StackPanel>
-                            <TextBlock Text="Attendance List"
-                                       FontSize="22"
-                                       FontWeight="Bold"
-                                       Foreground="{DynamicResource BrandMidnightBrush}" />
-                            <TextBlock Margin="0,6,0,0"
-                                       Text="Use the left rail to switch workflows. The selected event attendance stays here by default."
-                                       Foreground="{DynamicResource BrandTextSecondaryBrush}"
-                                       TextWrapping="Wrap" />
+                            <DockPanel LastChildFill="False">
+                                <StackPanel DockPanel.Dock="Left">
+                                    <TextBlock Text="Attendance List"
+                                               FontSize="22"
+                                               FontWeight="Bold"
+                                               Foreground="{DynamicResource BrandMidnightBrush}" />
+                                    <TextBlock Margin="0,6,0,0"
+                                               Text="Use the left rail to switch workflows. The selected event attendance stays here by default."
+                                               Foreground="{DynamicResource BrandTextSecondaryBrush}"
+                                               TextWrapping="Wrap" />
+                                </StackPanel>
+                                <WrapPanel DockPanel.Dock="Right"
+                                           VerticalAlignment="Top"
+                                           Visibility="{Binding SelectedEventVisibility}">
+                                    <Button Content="Edit Attendance"
+                                            Margin="0,0,8,8"
+                                            Style="{StaticResource SecondaryActionButton}"
+                                            Command="{Binding EditAttendanceCommand}" />
+                                    <Button Content="Delete Attendance"
+                                            Margin="0,0,0,8"
+                                            Style="{StaticResource SecondaryActionButton}"
+                                            Command="{Binding DeleteAttendanceCommand}" />
+                                </WrapPanel>
+                            </DockPanel>
 
                             <TextBlock Margin="0,18,0,0"
                                        Text="Select an event from the dropdown to load attendance."
@@ -183,6 +218,7 @@
                             <DataGrid Margin="0,18,0,0"
                                       Visibility="{Binding SelectedEventVisibility}"
                                       ItemsSource="{Binding SavedAttendanceRows}"
+                                      SelectedItem="{Binding SelectedAttendanceRow}"
                                       AutoGenerateColumns="False"
                                       CanUserAddRows="False"
                                       CanUserDeleteRows="False"
@@ -660,6 +696,134 @@
                                             Command="{Binding ReleaseBudgetCommand}" />
                                 </Grid>
                             </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource PanelCardStyle}"
+                            Visibility="{Binding AnnouncementsVisibility}">
+                        <StackPanel>
+                            <DockPanel LastChildFill="False">
+                                <StackPanel DockPanel.Dock="Left">
+                                    <TextBlock Text="{Binding DrawerTitle}"
+                                               FontSize="22"
+                                               FontWeight="Bold"
+                                               Foreground="{DynamicResource BrandMidnightBrush}" />
+                                    <TextBlock Margin="0,6,0,0"
+                                               Text="{Binding DrawerSubtitle}"
+                                               Foreground="{DynamicResource BrandTextSecondaryBrush}"
+                                               TextWrapping="Wrap" />
+                                </StackPanel>
+                                <WrapPanel DockPanel.Dock="Right">
+                                    <Button Content="Refresh Workspace"
+                                            Margin="0,0,8,0"
+                                            Style="{StaticResource GoldActionButton}"
+                                            Command="{Binding RefreshWorkspaceCommand}" />
+                                    <Button Content="Back to List"
+                                            Style="{StaticResource SecondaryActionButton}"
+                                            Command="{Binding ClosePanelCommand}" />
+                                </WrapPanel>
+                            </DockPanel>
+
+                            <TextBlock Margin="0,18,0,0"
+                                       Text="Open announcements stay here so staff can quickly jump back into active events."
+                                       Foreground="{DynamicResource BrandTextSecondaryBrush}"
+                                       TextWrapping="Wrap" />
+
+                            <ItemsControl Margin="0,18,0,0"
+                                          ItemsSource="{Binding OpenAnnouncements}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Margin="0,0,0,14"
+                                                Padding="18"
+                                                CornerRadius="16"
+                                                Background="{DynamicResource ThemeCardBrush}"
+                                                BorderBrush="{DynamicResource BrandBorderBrush}"
+                                                BorderThickness="1">
+                                            <StackPanel>
+                                                <DockPanel LastChildFill="False">
+                                                    <StackPanel DockPanel.Dock="Left"
+                                                                Width="560">
+                                                        <TextBlock Text="{Binding Title}"
+                                                                   FontSize="18"
+                                                                   FontWeight="Bold"
+                                                                   Foreground="{DynamicResource BrandMidnightBrush}"
+                                                                   TextWrapping="Wrap" />
+                                                        <TextBlock Margin="0,6,0,0"
+                                                                   Text="{Binding Summary}"
+                                                                   Foreground="{DynamicResource BrandTextSecondaryBrush}"
+                                                                   TextWrapping="Wrap" />
+                                                    </StackPanel>
+                                                    <Button DockPanel.Dock="Right"
+                                                            Content="Load Event"
+                                                            Style="{StaticResource SecondaryActionButton}"
+                                                            Command="{Binding DataContext.SelectAnnouncementEventCommand, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
+                                                            CommandParameter="{Binding EventId}" />
+                                                </DockPanel>
+
+                                                <WrapPanel Margin="0,16,0,0">
+                                                    <Border Style="{StaticResource MetricCardStyle}">
+                                                        <StackPanel>
+                                                            <TextBlock Text="{Binding Kind}"
+                                                                       FontWeight="Bold"
+                                                                       Foreground="{DynamicResource BrandMidnightBrush}" />
+                                                            <TextBlock Text="TYPE"
+                                                                       FontSize="10"
+                                                                       Foreground="{DynamicResource BrandTextSecondaryBrush}" />
+                                                        </StackPanel>
+                                                    </Border>
+                                                    <Border Style="{StaticResource MetricCardStyle}">
+                                                        <StackPanel>
+                                                            <TextBlock Text="{Binding DateLabel}"
+                                                                       FontWeight="Bold"
+                                                                       Foreground="{DynamicResource BrandMidnightBrush}" />
+                                                            <TextBlock Text="DATE"
+                                                                       FontSize="10"
+                                                                       Foreground="{DynamicResource BrandTextSecondaryBrush}" />
+                                                        </StackPanel>
+                                                    </Border>
+                                                    <Border Style="{StaticResource MetricCardStyle}">
+                                                        <StackPanel>
+                                                            <TextBlock Text="{Binding Location}"
+                                                                       FontWeight="Bold"
+                                                                       Foreground="{DynamicResource BrandMidnightBrush}"
+                                                                       TextWrapping="Wrap" />
+                                                            <TextBlock Text="LOCATION"
+                                                                       FontSize="10"
+                                                                       Foreground="{DynamicResource BrandTextSecondaryBrush}" />
+                                                        </StackPanel>
+                                                    </Border>
+                                                    <Border Style="{StaticResource MetricCardStyle}">
+                                                        <StackPanel>
+                                                            <TextBlock Text="{Binding Status}"
+                                                                       FontWeight="Bold"
+                                                                       Foreground="{DynamicResource BrandMidnightBrush}" />
+                                                            <TextBlock Text="STATUS"
+                                                                       FontSize="10"
+                                                                       Foreground="{DynamicResource BrandTextSecondaryBrush}" />
+                                                        </StackPanel>
+                                                    </Border>
+                                                </WrapPanel>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <TextBlock Margin="0,4,0,0"
+                                       Text="No open cash-for-work announcements are available right now."
+                                       Foreground="{DynamicResource BrandTextSecondaryBrush}"
+                                       TextWrapping="Wrap">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding HasOpenAnnouncements}" Value="False">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
                         </StackPanel>
                     </Border>
                 </StackPanel>
