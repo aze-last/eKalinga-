@@ -49,7 +49,7 @@ namespace AttendanceShiftingManagement.Services
             var normalizedOptions = Normalize(options);
 
             await using var context = new AppDbContext();
-            var programLabel = await ResolveProgramLabelAsync(context, normalizedOptions.AyudaProgramId, cancellationToken);
+            var programLabel = await ResolveProgramLabelAsync(context, normalizedOptions.ReportType, normalizedOptions.AyudaProgramId, cancellationToken);
 
             return normalizedOptions.ReportType switch
             {
@@ -179,11 +179,11 @@ namespace AttendanceShiftingManagement.Services
             };
         }
 
-        private static async Task<string> ResolveProgramLabelAsync(AppDbContext context, int? ayudaProgramId, CancellationToken cancellationToken)
+        private static async Task<string> ResolveProgramLabelAsync(AppDbContext context, ReportsReportType reportType, int? ayudaProgramId, CancellationToken cancellationToken)
         {
             if (!ayudaProgramId.HasValue)
             {
-                return "All Programs";
+                return reportType == ReportsReportType.BudgetUtilization ? "All Budgets" : "All Programs";
             }
 
             var program = await context.AyudaPrograms
@@ -222,12 +222,16 @@ namespace AttendanceShiftingManagement.Services
                     Beneficiary = item.ValidatedBeneficiaryName ?? "--",
                     item.AssistanceType,
                     Status = item.Status.ToString(),
-                    Program = item.AyudaProgram != null ? item.AyudaProgram.ProgramName : "--",
+                Program = item.AssistanceCaseBudget != null
+                    ? item.AssistanceCaseBudget.BudgetName
+                    : item.AyudaProgram != null
+                        ? item.AyudaProgram.ProgramName
+                        : "--",
                     Amount = item.ApprovedAmount ?? item.RequestedAmount ?? 0m
                 })
                 .ToListAsync(cancellationToken);
 
-            var table = CreateTable(("Case Number", typeof(string)), ("Requested On", typeof(string)), ("Beneficiary", typeof(string)), ("Assistance Type", typeof(string)), ("Status", typeof(string)), ("Program", typeof(string)), ("Amount", typeof(string)));
+            var table = CreateTable(("Case Number", typeof(string)), ("Requested On", typeof(string)), ("Beneficiary", typeof(string)), ("Assistance Type", typeof(string)), ("Status", typeof(string)), ("Budget", typeof(string)), ("Amount", typeof(string)));
             foreach (var row in rows)
             {
                 table.Rows.Add(row.CaseNumber, row.RequestedOn.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), row.Beneficiary, row.AssistanceType, row.Status, row.Program, row.Amount.ToString("N2", CultureInfo.InvariantCulture));
@@ -322,22 +326,46 @@ namespace AttendanceShiftingManagement.Services
             string programLabel,
             CancellationToken cancellationToken)
         {
-            var programsQuery = context.AyudaPrograms.AsNoTracking();
-            if (options.AyudaProgramId.HasValue)
-            {
-                programsQuery = programsQuery.Where(item => item.Id == options.AyudaProgramId.Value);
-            }
+            var rangeEndExclusive = options.DateTo.AddDays(1);
+            var programs = await context.AyudaPrograms
+                .AsNoTracking()
+                .Where(item => item.IsActive && item.BudgetCap.HasValue && item.BudgetCap.Value > 0)
+                .OrderBy(item => item.ProgramName)
+                .ToListAsync(cancellationToken);
+            var assistanceBudgets = await context.AssistanceCaseBudgets
+                .AsNoTracking()
+                .Where(item => item.IsActive && item.BudgetCap.HasValue && item.BudgetCap.Value > 0)
+                .OrderBy(item => item.BudgetName)
+                .ToListAsync(cancellationToken);
+            var cashForWorkBudgets = await context.CashForWorkBudgets
+                .AsNoTracking()
+                .Where(item => item.IsActive && item.BudgetCap.HasValue && item.BudgetCap.Value > 0)
+                .OrderBy(item => item.BudgetName)
+                .ToListAsync(cancellationToken);
 
-            var programs = await programsQuery.OrderBy(item => item.ProgramName).ToListAsync(cancellationToken);
             var releasedByProgram = await context.BudgetLedgerEntries
                 .AsNoTracking()
-                .Where(item => item.EntryDate >= options.DateFrom && item.EntryDate < options.DateTo.AddDays(1))
+                .Where(item => item.EntryDate >= options.DateFrom && item.EntryDate < rangeEndExclusive)
                 .Where(item => item.ProgramId != null)
                 .GroupBy(item => item.ProgramId)
                 .Select(group => new { ProgramId = group.Key!.Value, Released = group.Sum(item => item.TotalAmount) })
                 .ToDictionaryAsync(item => item.ProgramId, item => item.Released, cancellationToken);
+            var releasedByAssistanceBudget = await context.BudgetLedgerEntries
+                .AsNoTracking()
+                .Where(item => item.EntryDate >= options.DateFrom && item.EntryDate < rangeEndExclusive)
+                .Where(item => item.AssistanceCaseBudgetId != null)
+                .GroupBy(item => item.AssistanceCaseBudgetId)
+                .Select(group => new { BudgetId = group.Key!.Value, Released = group.Sum(item => item.TotalAmount) })
+                .ToDictionaryAsync(item => item.BudgetId, item => item.Released, cancellationToken);
+            var releasedByCashForWorkBudget = await context.BudgetLedgerEntries
+                .AsNoTracking()
+                .Where(item => item.EntryDate >= options.DateFrom && item.EntryDate < rangeEndExclusive)
+                .Where(item => item.CashForWorkBudgetId != null)
+                .GroupBy(item => item.CashForWorkBudgetId)
+                .Select(group => new { BudgetId = group.Key!.Value, Released = group.Sum(item => item.TotalAmount) })
+                .ToDictionaryAsync(item => item.BudgetId, item => item.Released, cancellationToken);
 
-            var table = CreateTable(("Program", typeof(string)), ("Type", typeof(string)), ("Status", typeof(string)), ("Budget Cap", typeof(string)), ("Released", typeof(string)), ("Balance", typeof(string)), ("Utilization", typeof(string)));
+            var table = CreateTable(("Bucket", typeof(string)), ("Type", typeof(string)), ("Status", typeof(string)), ("Budget Cap", typeof(string)), ("Released", typeof(string)), ("Balance", typeof(string)), ("Utilization", typeof(string)));
             decimal totalBudgetCap = 0m;
             decimal totalReleased = 0m;
             var alertCount = 0;
@@ -357,10 +385,40 @@ namespace AttendanceShiftingManagement.Services
                 table.Rows.Add(program.ProgramName, program.ProgramType.ToString(), program.DistributionStatus.ToString(), budgetCap.ToString("N2", CultureInfo.InvariantCulture), released.ToString("N2", CultureInfo.InvariantCulture), (budgetCap - released).ToString("N2", CultureInfo.InvariantCulture), budgetCap <= 0m ? "--" : $"{utilization:P0}");
             }
 
+            foreach (var budget in assistanceBudgets)
+            {
+                var released = releasedByAssistanceBudget.TryGetValue(budget.Id, out var releasedValue) ? releasedValue : 0m;
+                var budgetCap = budget.BudgetCap ?? 0m;
+                var utilization = budgetCap <= 0m ? 0m : released / budgetCap;
+                if (budgetCap > 0m && utilization >= 0.80m)
+                {
+                    alertCount++;
+                }
+
+                totalBudgetCap += budgetCap;
+                totalReleased += released;
+                table.Rows.Add(budget.BudgetName, "Aid Request Budget", budget.AssistanceType ?? "--", budgetCap.ToString("N2", CultureInfo.InvariantCulture), released.ToString("N2", CultureInfo.InvariantCulture), (budgetCap - released).ToString("N2", CultureInfo.InvariantCulture), budgetCap <= 0m ? "--" : $"{utilization:P0}");
+            }
+
+            foreach (var budget in cashForWorkBudgets)
+            {
+                var released = releasedByCashForWorkBudget.TryGetValue(budget.Id, out var releasedValue) ? releasedValue : 0m;
+                var budgetCap = budget.BudgetCap ?? 0m;
+                var utilization = budgetCap <= 0m ? 0m : released / budgetCap;
+                if (budgetCap > 0m && utilization >= 0.80m)
+                {
+                    alertCount++;
+                }
+
+                totalBudgetCap += budgetCap;
+                totalReleased += released;
+                table.Rows.Add(budget.BudgetName, "Cash-for-Work Budget", "--", budgetCap.ToString("N2", CultureInfo.InvariantCulture), released.ToString("N2", CultureInfo.InvariantCulture), (budgetCap - released).ToString("N2", CultureInfo.InvariantCulture), budgetCap <= 0m ? "--" : $"{utilization:P0}");
+            }
+
             return new ReportsSnapshot
             {
                 Title = "Budget Utilization",
-                Subtitle = "Program-level budget caps versus released amounts recorded in the ledger.",
+                Subtitle = "Program, aid request, and cash-for-work budget caps versus released amounts recorded in the ledger.",
                 ExportFilePrefix = "budget-utilization",
                 RangeLabel = BuildRangeLabel(options),
                 ProgramLabel = programLabel,
@@ -368,14 +426,14 @@ namespace AttendanceShiftingManagement.Services
                 Table = table,
                 Metrics = new[]
                 {
-                    CreateMetric("Programs", programs.Count.ToString("N0", CultureInfo.InvariantCulture), "Programs visible in this utilization report"),
-                    CreateMetric("Budget Cap", totalBudgetCap.ToString("N2", CultureInfo.InvariantCulture), "Configured budget caps across selected programs"),
+                    CreateMetric("Buckets", (programs.Count + assistanceBudgets.Count + cashForWorkBudgets.Count).ToString("N0", CultureInfo.InvariantCulture), "Budget buckets visible in this utilization report"),
+                    CreateMetric("Budget Cap", totalBudgetCap.ToString("N2", CultureInfo.InvariantCulture), "Configured budget caps across selected buckets"),
                     CreateMetric("Released", totalReleased.ToString("N2", CultureInfo.InvariantCulture), "Ledger releases recorded inside the selected range"),
-                    CreateMetric("Alerts", alertCount.ToString("N0", CultureInfo.InvariantCulture), "Programs at or above 80% utilization")
+                    CreateMetric("Alerts", alertCount.ToString("N0", CultureInfo.InvariantCulture), "Buckets at or above 80% utilization")
                 },
                 Highlights = BuildHighlights(
-                    programs.Count == 0 ? "No budget programs matched the selected filters." : $"{programs.Count:N0} program(s) are included in the utilization table.",
-                    alertCount == 0 ? "No budget-cap alerts were triggered in the selected range." : $"{alertCount:N0} program(s) are already at or above the alert threshold.")
+                    (programs.Count + assistanceBudgets.Count + cashForWorkBudgets.Count) == 0 ? "No budget buckets matched the selected filters." : $"{(programs.Count + assistanceBudgets.Count + cashForWorkBudgets.Count):N0} bucket(s) are included in the utilization table.",
+                    alertCount == 0 ? "No budget-cap alerts were triggered in the selected range." : $"{alertCount:N0} bucket(s) are already at or above the alert threshold.")
             };
         }
 

@@ -1,0 +1,28 @@
+{
+  "id": "REL-01",
+  "title": "Update installer to version 1.0.5",
+  "status": "done",
+  "owner": "installer-worker@attendance-shifting-management",
+  "goal": "Bump the application version and rebuild the setup installer to include recent feature updates.",
+  "allowedPaths": [
+    "AttendanceShiftingManagement.csproj",
+    "version.json",
+    "scripts/build-installer.ps1",
+    "installer/AttendanceShiftingManagement.iss"
+  ],
+  "dependencies": [
+    "DASH-06"
+  ],
+  "verification": [
+    "dotnet build AttendanceShiftingManagement.sln",
+    ".\\scripts\\build-installer.ps1"
+  ],
+  "notes": [
+    "Bump version to 1.0.5 in .csproj.",
+    "Verify the build script produces a valid installer and version.json."
+  ],
+  "artifacts": [
+    "artifacts/installer/output/eKalingaPlus-Setup-1.0.5.0.exe",
+    "artifacts/installer/output/version.json"
+  ]
+}

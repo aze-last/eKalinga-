@@ -81,6 +81,9 @@ namespace AttendanceShiftingManagement.Models
         [Column("ayuda_program_id")]
         public int? AyudaProgramId { get; set; }
 
+        [Column("assistance_case_budget_id")]
+        public int? AssistanceCaseBudgetId { get; set; }
+
         [Column("budget_ledger_entry_id")]
         public int? BudgetLedgerEntryId { get; set; }
 
@@ -98,6 +101,9 @@ namespace AttendanceShiftingManagement.Models
 
         [ForeignKey(nameof(AyudaProgramId))]
         public AyudaProgram? AyudaProgram { get; set; }
+
+        [ForeignKey(nameof(AssistanceCaseBudgetId))]
+        public AssistanceCaseBudget? AssistanceCaseBudget { get; set; }
 
         [ForeignKey(nameof(BudgetLedgerEntryId))]
         public BudgetLedgerEntry? BudgetLedgerEntry { get; set; }

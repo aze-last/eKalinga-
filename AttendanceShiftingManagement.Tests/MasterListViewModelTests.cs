@@ -23,14 +23,14 @@ public sealed class MasterListViewModelTests
             LastUpdatedAt = new DateTime(2026, 3, 26, 9, 30, 0)
         });
 
-        var viewModel = new MasterListViewModel(queryService, autoLoad: false, autoRefresh: false);
+        var viewModel = new MasterListViewModel(null, queryService, autoLoad: false, autoRefresh: false);
 
         await viewModel.RefreshAsync();
 
         var request = Assert.Single(queryService.Requests);
         Assert.Equal(1, request.PageNumber);
         Assert.Equal(100, request.PageSize);
-        Assert.Equal(MasterListQuickFilters.AllBeneficiaries, request.QuickFilter);
+        Assert.Empty(request.QuickFilters);
         Assert.Equal(string.Empty, request.SearchText);
 
         Assert.Equal(100, viewModel.Beneficiaries.Count);
@@ -74,12 +74,14 @@ public sealed class MasterListViewModelTests
             LastUpdatedAt = new DateTime(2026, 3, 26, 9, 30, 0)
         });
 
-        var viewModel = new MasterListViewModel(queryService, autoLoad: false, autoRefresh: false)
+        var viewModel = new MasterListViewModel(null, queryService, autoLoad: false, autoRefresh: false)
         {
             SearchText = "ana",
-            SelectedQuickFilter = MasterListQuickFilters.SeniorCitizens,
             SelectedPageSize = 50
         };
+        
+        var seniorFilter = viewModel.FilterOptions.First(o => o.Label == MasterListQuickFilters.SeniorCitizens);
+        seniorFilter.IsSelected = true;
 
         await viewModel.RefreshAsync();
         await viewModel.GoToNextPageAsync();
@@ -89,12 +91,12 @@ public sealed class MasterListViewModelTests
         Assert.Equal(1, queryService.Requests[0].PageNumber);
         Assert.Equal(50, queryService.Requests[0].PageSize);
         Assert.Equal("ana", queryService.Requests[0].SearchText);
-        Assert.Equal(MasterListQuickFilters.SeniorCitizens, queryService.Requests[0].QuickFilter);
+        Assert.Contains(MasterListQuickFilters.SeniorCitizens, queryService.Requests[0].QuickFilters);
 
         Assert.Equal(2, queryService.Requests[1].PageNumber);
         Assert.Equal(50, queryService.Requests[1].PageSize);
         Assert.Equal("ana", queryService.Requests[1].SearchText);
-        Assert.Equal(MasterListQuickFilters.SeniorCitizens, queryService.Requests[1].QuickFilter);
+        Assert.Contains(MasterListQuickFilters.SeniorCitizens, queryService.Requests[1].QuickFilters);
 
         Assert.Equal(2, viewModel.CurrentPage);
         Assert.Equal(2, viewModel.TotalPages);
@@ -102,6 +104,20 @@ public sealed class MasterListViewModelTests
         Assert.Equal("Showing 51-70 of 70 validated beneficiaries", viewModel.PageSummary);
         Assert.False(viewModel.NextPageCommand.CanExecute(null));
         Assert.True(viewModel.PreviousPageCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void ProcessScanCommand_PopulatesSearchTextAndClearsScannerInput()
+    {
+        var queryService = new FakeMasterListQueryService();
+        var viewModel = new MasterListViewModel(null, queryService, autoLoad: false, autoRefresh: false);
+
+        viewModel.ScannerInput = "BEN-00123 ";
+        
+        viewModel.ProcessScanCommand.Execute(null);
+
+        Assert.Equal("BEN-00123", viewModel.SearchText);
+        Assert.Equal(string.Empty, viewModel.ScannerInput);
     }
 
     private static IReadOnlyList<MasterListBeneficiary> BuildBeneficiaries(int start, int count)

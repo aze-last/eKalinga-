@@ -68,6 +68,8 @@ namespace AttendanceShiftingManagement.Services
             ApplyBrush("ThemeTabStripBrush", palette.TabStrip);
             ApplyBrush("ThemeTabStripBorderBrush", palette.TabStripBorder);
             ApplyBrush("ThemeSelectionGlowBrush", palette.SelectionGlow);
+            ApplyBrush("ThemeSuccessSurfaceBrush", palette.SuccessSurface);
+            ApplyBrush("ThemeDangerSurfaceBrush", palette.DangerSurface);
         }
 
         private static void ApplyMaterialTheme(AppAppearanceMode mode)
@@ -122,7 +124,9 @@ namespace AttendanceShiftingManagement.Services
             Color WarningBorder,
             Color WarningForeground,
             Color Success,
+            Color SuccessSurface,
             Color Danger,
+            Color DangerSurface,
             Color TabStrip,
             Color TabStripBorder,
             Color SelectionGlow)
@@ -153,7 +157,9 @@ namespace AttendanceShiftingManagement.Services
                 WarningBorder: Parse("#EBCF8B"),
                 WarningForeground: Parse("#7A5717"),
                 Success: Parse("#217650"),
+                SuccessSurface: Parse("#DCFCE7"),
                 Danger: Parse("#B24A4A"),
+                DangerSurface: Parse("#FEE2E2"),
                 TabStrip: Parse("#EFF4FA"),
                 TabStripBorder: Parse("#D5DEEA"),
                 SelectionGlow: Parse("#E2ECFA"));
@@ -162,7 +168,7 @@ namespace AttendanceShiftingManagement.Services
                 WindowShell: Parse("#0E1620"),
                 WindowShellBorder: Parse("#213043"),
                 Surface: Parse("#101823"),
-                Card: Parse("#16202C"),
+                Card: Parse("#1a1d21"),
                 CardRaised: Parse("#1A2533"),
                 CardSubtle: Parse("#202D3C"),
                 Border: Parse("#273447"),
@@ -184,7 +190,9 @@ namespace AttendanceShiftingManagement.Services
                 WarningBorder: Parse("#705A29"),
                 WarningForeground: Parse("#F4D58A"),
                 Success: Parse("#4FB57F"),
+                SuccessSurface: Parse("#162C21"),
                 Danger: Parse("#F07A7A"),
+                DangerSurface: Parse("#3A1C1C"),
                 TabStrip: Parse("#121B26"),
                 TabStripBorder: Parse("#243244"),
                 SelectionGlow: Parse("#1A2940"));

@@ -6,6 +6,7 @@ namespace AttendanceShiftingManagement.Services
     public sealed class FeatureSettingsModel
     {
         public decimal LargeAssistanceWarningThreshold { get; set; } = 10000m;
+        public bool IsOtpEnabled { get; set; } = true;
     }
 
     public static class FeatureSettingsService

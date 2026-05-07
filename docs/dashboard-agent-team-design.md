@@ -50,6 +50,7 @@ Use a repo-local harness rooted at `.agent-team/`.
     dashboard-ui.jsonl
     dashboard-nav.jsonl
     dashboard-data.jsonl
+    ui-ux-auditor-redesigner.jsonl
     verifier.jsonl
   templates/
     coordinator.md
@@ -57,6 +58,7 @@ Use a repo-local harness rooted at `.agent-team/`.
     dashboard-ui.md
     dashboard-nav.md
     dashboard-data.md
+    ui-ux-auditor-redesigner.md
     verifier.md
 ```
 
@@ -79,6 +81,10 @@ Use a repo-local harness rooted at `.agent-team/`.
 - `Dashboard Data Worker`
   - owns `ViewModels/BarangayDashboardViewModel.cs`
   - touches service-facing dashboard shaping only if redesign needs additional existing data exposure
+- `UI/UX Auditor / Redesigner`
+  - audits screenshots, XAML, and screen behavior using explicit usability and accessibility criteria
+  - may produce redesign specs or bounded UI-facing implementation guidance when assigned
+  - should stay idle until a coordinator or user explicitly requests an audit or redesign pass
 - `Verifier`
   - read-only across changed files
   - runs build and test gates
@@ -92,6 +98,7 @@ Use stable IDs to keep ownership and mailbox routing deterministic:
 - `dashboard-ui@attendance-shifting-management`
 - `dashboard-nav@attendance-shifting-management`
 - `dashboard-data@attendance-shifting-management`
+- `ui-ux-auditor-redesigner@attendance-shifting-management`
 - `verifier@attendance-shifting-management`
 
 ### Task Board Model

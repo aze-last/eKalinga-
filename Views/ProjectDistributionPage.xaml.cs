@@ -11,5 +11,14 @@ namespace AttendanceShiftingManagement.Views
             InitializeComponent();
             DataContext = new ProjectDistributionViewModel(currentUser);
         }
+
+        private void ManageButton_Click(object sender, System.Windows.RoutedEventArgs e)
+        {
+            if (sender is System.Windows.Controls.Button button && button.ContextMenu != null)
+            {
+                button.ContextMenu.PlacementTarget = button;
+                button.ContextMenu.IsOpen = true;
+            }
+        }
     }
 }

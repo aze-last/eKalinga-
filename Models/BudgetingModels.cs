@@ -31,6 +31,9 @@ namespace AttendanceShiftingManagement.Models
         [MaxLength(120)]
         public string? AssistanceType { get; set; }
 
+        [Column("release_kind", TypeName = "varchar(32)")]
+        public AssistanceReleaseKind ReleaseKind { get; set; } = AssistanceReleaseKind.Cash;
+
         [Column("unit_amount", TypeName = "decimal(18,2)")]
         public decimal? UnitAmount { get; set; }
 
@@ -49,6 +52,84 @@ namespace AttendanceShiftingManagement.Models
 
         [Column("distribution_status")]
         public AyudaProgramDistributionStatus DistributionStatus { get; set; } = AyudaProgramDistributionStatus.Draft;
+
+        [Column("is_active")]
+        public bool IsActive { get; set; } = true;
+
+        [Column("created_by_user_id")]
+        public int CreatedByUserId { get; set; }
+
+        [Column("created_at")]
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
+
+        [Column("updated_at")]
+        public DateTime UpdatedAt { get; set; } = DateTime.Now;
+    }
+
+    [Table("assistance_case_budgets")]
+    public class AssistanceCaseBudget
+    {
+        [Key]
+        [Column("id")]
+        public int Id { get; set; }
+
+        [Column("budget_code")]
+        [Required]
+        [MaxLength(40)]
+        public string BudgetCode { get; set; } = string.Empty;
+
+        [Column("budget_name")]
+        [Required]
+        [MaxLength(150)]
+        public string BudgetName { get; set; } = string.Empty;
+
+        [Column("description")]
+        [MaxLength(500)]
+        public string? Description { get; set; }
+
+        [Column("assistance_type")]
+        [MaxLength(120)]
+        public string? AssistanceType { get; set; }
+
+        [Column("budget_cap", TypeName = "decimal(18,2)")]
+        public decimal? BudgetCap { get; set; }
+
+        [Column("is_active")]
+        public bool IsActive { get; set; } = true;
+
+        [Column("created_by_user_id")]
+        public int CreatedByUserId { get; set; }
+
+        [Column("created_at")]
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
+
+        [Column("updated_at")]
+        public DateTime UpdatedAt { get; set; } = DateTime.Now;
+    }
+
+    [Table("cash_for_work_budgets")]
+    public class CashForWorkBudget
+    {
+        [Key]
+        [Column("id")]
+        public int Id { get; set; }
+
+        [Column("budget_code")]
+        [Required]
+        [MaxLength(40)]
+        public string BudgetCode { get; set; } = string.Empty;
+
+        [Column("budget_name")]
+        [Required]
+        [MaxLength(150)]
+        public string BudgetName { get; set; } = string.Empty;
+
+        [Column("description")]
+        [MaxLength(500)]
+        public string? Description { get; set; }
+
+        [Column("budget_cap", TypeName = "decimal(18,2)")]
+        public decimal? BudgetCap { get; set; }
 
         [Column("is_active")]
         public bool IsActive { get; set; } = true;
@@ -94,6 +175,19 @@ namespace AttendanceShiftingManagement.Models
         [Required]
         [MaxLength(200)]
         public string FullName { get; set; } = string.Empty;
+
+        [Column("status")]
+        public DistributionBeneficiaryStatus Status { get; set; } = DistributionBeneficiaryStatus.Pending;
+
+        [Column("status_reason")]
+        [MaxLength(1000)]
+        public string? StatusReason { get; set; }
+
+        [Column("status_updated_by_user_id")]
+        public int? StatusUpdatedByUserId { get; set; }
+
+        [Column("status_updated_at")]
+        public DateTime? StatusUpdatedAt { get; set; }
 
         [Column("added_by_user_id")]
         public int AddedByUserId { get; set; }
@@ -279,6 +373,12 @@ namespace AttendanceShiftingManagement.Models
         [Column("program_id")]
         public int? ProgramId { get; set; }
 
+        [Column("assistance_case_budget_id")]
+        public int? AssistanceCaseBudgetId { get; set; }
+
+        [Column("cash_for_work_budget_id")]
+        public int? CashForWorkBudgetId { get; set; }
+
         [Column("recipient_count")]
         public int RecipientCount { get; set; }
 
@@ -321,6 +421,13 @@ namespace AttendanceShiftingManagement.Models
         Draft,
         Open,
         Closed
+    }
+
+    public enum DistributionBeneficiaryStatus
+    {
+        Pending,
+        Released,
+        Rejected
     }
 
     public enum GovernmentBudgetSyncStatus

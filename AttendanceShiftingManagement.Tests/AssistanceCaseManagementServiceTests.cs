@@ -40,7 +40,7 @@ public sealed class AssistanceCaseManagementServiceTests
         Assert.Equal("Medical assistance", assistanceCase.AssistanceType);
         Assert.Equal(AssistanceReleaseKind.Cash, assistanceCase.ReleaseKind);
         Assert.Equal(5000m, assistanceCase.RequestedAmount);
-        Assert.Equal(5000m, assistanceCase.ApprovedAmount);
+        Assert.Null(assistanceCase.ApprovedAmount);
 
         var auditLog = Assert.Single(context.ActivityLogs);
         Assert.Equal("AssistanceCaseCreated", auditLog.Action);
@@ -113,7 +113,7 @@ public sealed class AssistanceCaseManagementServiceTests
         Assert.Equal("Burial assistance", updatedCase.AssistanceType);
         Assert.Equal(AssistanceCasePriority.Critical, updatedCase.Priority);
         Assert.Equal(AssistanceReleaseKind.Goods, updatedCase.ReleaseKind);
-        Assert.Equal(10000m, updatedCase.ApprovedAmount);
+        Assert.Equal(2500m, updatedCase.ApprovedAmount);
         Assert.Equal(10000m, updatedCase.RequestedAmount);
         Assert.Null(updatedCase.Notes);
 
@@ -127,7 +127,13 @@ public sealed class AssistanceCaseManagementServiceTests
         using var context = TestDbContextFactory.CreateContext();
         var admin = SeedAdmin(context);
         var household = SeedHousehold(context);
+        SeedGlobalAidRequestBudget(context, admin.Id);
+        
         var assistanceCase = SeedAssistanceCase(context, household.Id, null, admin.Id);
+        var program = SeedProgram(context, admin.Id, AyudaProgramType.GeneralPurpose);
+        assistanceCase.AyudaProgramId = program.Id;
+        assistanceCase.Status = AssistanceCaseStatus.UnderReview;
+        context.SaveChanges();
         var service = new AssistanceCaseManagementService(context);
 
         var result = await service.ChangeStatusAsync(
@@ -197,6 +203,36 @@ public sealed class AssistanceCaseManagementServiceTests
 
         Assert.False(result.IsSuccess);
         Assert.Single(context.AssistanceCases);
+    }
+
+    [Fact]
+    public async Task CreateAsync_WhenSeminarProgramIsAssigned_ReturnsFailure()
+    {
+        using var context = TestDbContextFactory.CreateContext();
+        var admin = SeedAdmin(context);
+        var seminarProgram = SeedProgram(context, admin.Id, AyudaProgramType.Seminar);
+        var service = new AssistanceCaseManagementService(context);
+
+        var result = await service.CreateAsync(
+            new AssistanceCaseUpsertRequest(
+                null,
+                null,
+                "Ana Ramos",
+                "BEN-ANA-001",
+                "CRS-ANA-001",
+                "Medical assistance",
+                AssistanceCasePriority.High,
+                AssistanceReleaseKind.Cash,
+                5000m,
+                new DateTime(2026, 3, 23),
+                new DateTime(2026, 3, 30),
+                "Hospital confinement support",
+                seminarProgram.Id),
+            admin.Id);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("Seminar", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(context.AssistanceCases);
     }
 
     private static User SeedAdmin(Data.AppDbContext context)
@@ -274,5 +310,38 @@ public sealed class AssistanceCaseManagementServiceTests
         context.AssistanceCases.Add(assistanceCase);
         context.SaveChanges();
         return assistanceCase;
+    }
+
+    private static AyudaProgram SeedProgram(Data.AppDbContext context, int createdByUserId, AyudaProgramType programType)
+    {
+        var program = new AyudaProgram
+        {
+            ProgramCode = $"PGM-{programType}-{Guid.NewGuid():N}"[..20],
+            ProgramName = $"{programType} Program",
+            ProgramType = programType,
+            CreatedByUserId = createdByUserId,
+            IsActive = true,
+            CreatedAt = DateTime.Now,
+            UpdatedAt = DateTime.Now
+        };
+
+        context.AyudaPrograms.Add(program);
+        context.SaveChanges();
+        return program;
+    }
+
+    private static void SeedGlobalAidRequestBudget(Data.AppDbContext context, int adminId)
+    {
+        context.AssistanceCaseBudgets.Add(new AssistanceCaseBudget
+        {
+            BudgetCode = "GLOBAL_AID_BUDGET",
+            BudgetName = "Global Aid Budget",
+            BudgetCap = 100000m,
+            IsActive = true,
+            CreatedByUserId = adminId,
+            CreatedAt = DateTime.Now,
+            UpdatedAt = DateTime.Now
+        });
+        context.SaveChanges();
     }
 }

@@ -1,0 +1,24 @@
+{
+  "id": "CFW-01",
+  "title": "Consolidate CFW/Seminar Workflow and Refine Payout Logic",
+  "status": "completed",
+  "owner": "cash-for-work-worker@attendance-shifting-management",
+  "goal": "Simplify the CFW/Seminar module by unifying event creation, removing redundant UI elements, and ensuring payout logic strictly follows attendance records.",
+  "allowedPaths": [
+    "Views/CashForWorkOcrPage.xaml",
+    "ViewModels/CashForWorkOcrViewModel.cs",
+    "Services/CashForWorkService.cs"
+  ],
+  "dependencies": [],
+  "verification": [
+    "Verify 'Seminar' button is removed from sidebar.",
+    "Verify 'Create Event' panel has an Event Type selector.",
+    "Verify Payout Summary only includes people with attendance records.",
+    "dotnet build AttendanceShiftingManagement.sln"
+  ],
+  "notes": [
+    "Story: User clicks 'Create Event' -> chooses CFW or Seminar -> Assigns people -> Scans them -> Payout calculates ONLY scanned people.",
+    "Terminology: Move away from 'OCR' in UI labels towards 'Attendance & Payouts'."
+  ],
+  "artifacts": []
+}

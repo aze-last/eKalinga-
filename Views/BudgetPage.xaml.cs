@@ -29,5 +29,10 @@ namespace AttendanceShiftingManagement.Views
             _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
             Unloaded -= OnBudgetPageUnloaded;
         }
+
+        private void Button_Click(object sender, System.Windows.RoutedEventArgs e)
+        {
+
+        }
     }
 }

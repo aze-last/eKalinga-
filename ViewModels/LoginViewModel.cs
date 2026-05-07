@@ -244,7 +244,7 @@ namespace AttendanceShiftingManagement.ViewModels
             _toggleShowPasswordCommand = new RelayCommand(ExecuteToggleShowPassword);
             RefreshBranding();
             RefreshConnectionSummary();
-            RefreshStartupState();
+            RefreshStartupStateAsync();
         }
 
         public void RefreshBranding()
@@ -267,14 +267,13 @@ namespace AttendanceShiftingManagement.ViewModels
             ActiveConnectionSummary = ConnectionSettingsService.FormatPresetSummary(preset);
         }
 
-        public void RefreshStartupState()
+        public void RefreshStartupStateAsync()
         {
             RefreshConnectionSummary();
 
             try
             {
                 EnsureDatabaseReady();
-
                 using var context = new AppDbContext();
                 var companySerialCheck = ValidateCompanySerial(context);
                 if (!companySerialCheck.IsSuccess)
@@ -487,7 +486,7 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             return new ConfigurationBuilder()
                 .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
-                .AddJsonFile("appsettings.json", optional: false)
+                .AddJsonFile("appsettings.json", optional: true)
                 .Build();
         }
     }

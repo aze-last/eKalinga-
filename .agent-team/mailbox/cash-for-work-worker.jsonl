@@ -1,0 +1,8 @@
+{
+  "type": "assign_task",
+  "from": "coordinator@attendance-shifting-management",
+  "to": "cash-for-work-worker@attendance-shifting-management",
+  "taskId": "CFW-01",
+  "summary": "Implement the approved CFW workflow refinements: Unify Event/Seminar creation into one panel, remove redundant sidebar buttons, and update the Payout logic to strictly include only scanned attendees. Also, begin moving away from 'OCR' terminology in the UI.",
+  "timestamp": "2026-05-06T14:00:00Z"
+}

@@ -66,7 +66,7 @@ namespace AttendanceShiftingManagement.Services
         {
             var configuration = new ConfigurationBuilder()
                 .SetBasePath(ResolveConfigurationBasePath())
-                .AddJsonFile("appsettings.json", optional: false)
+                .AddJsonFile("appsettings.json", optional: true)
                 .Build();
 
             return Normalize(new AppPreferencesModel

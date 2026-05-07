@@ -19,11 +19,41 @@ namespace AttendanceShiftingManagement.Services
         private WebApplication? _app;
         private int _port;
         private string _baseUrl = string.Empty;
+        
+        // Queue state
+        private string _currentQueueState = "{}";
+        private readonly SemaphoreSlim _queueStateLock = new(1, 1);
 
         public static LocalScannerGatewayService Shared => _shared.Value;
 
         private LocalScannerGatewayService()
         {
+        }
+
+        public async Task UpdateQueueStateAsync(string queueStateJson)
+        {
+            await _queueStateLock.WaitAsync();
+            try
+            {
+                _currentQueueState = queueStateJson;
+            }
+            finally
+            {
+                _queueStateLock.Release();
+            }
+        }
+
+        public async Task<string> GetQueueStateAsync()
+        {
+            await _queueStateLock.WaitAsync();
+            try
+            {
+                return _currentQueueState;
+            }
+            finally
+            {
+                _queueStateLock.Release();
+            }
         }
 
         public async Task<string> EnsureStartedAsync()
@@ -163,14 +193,44 @@ namespace AttendanceShiftingManagement.Services
                 }
 
                 var session = await sessionService.GetActiveSessionAsync(request.SessionToken);
-                if (session == null || session.Mode != ScannerSessionMode.Attendance || !session.CashForWorkEventId.HasValue)
+                if (session == null)
+                {
+                    return Results.Json(new { success = false, message = "The scanner session has expired." });
+                }
+
+                int? eventId = null;
+                if (session.Mode == ScannerSessionMode.Attendance && session.CashForWorkEventId.HasValue)
+                {
+                    eventId = session.CashForWorkEventId.Value;
+                }
+                else if (session.Mode is ScannerSessionMode.Lookup or ScannerSessionMode.Distribution && request.EventId.HasValue)
+                {
+                    var today = DateTime.Today;
+                    var tomorrow = today.AddDays(1);
+                    var activeEvent = await db.CashForWorkEvents
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(item =>
+                            item.Id == request.EventId.Value &&
+                            item.Status == CashForWorkEventStatus.Open &&
+                            item.EventDate >= today &&
+                            item.EventDate < tomorrow);
+
+                    if (activeEvent == null)
+                    {
+                        return Results.Json(new { success = false, message = "Attendance can only be recorded for an open event scheduled today." });
+                    }
+
+                    eventId = activeEvent.Id;
+                }
+
+                if (!eventId.HasValue)
                 {
                     return Results.Json(new { success = false, message = "This scanner session is not allowed to record attendance." });
                 }
 
                 var cashForWorkService = new CashForWorkService(db, new AuditService(db));
                 var wasSaved = await cashForWorkService.SaveScannerAttendanceAsync(
-                    session.CashForWorkEventId.Value,
+                    eventId.Value,
                     session.CreatedByUserId,
                     request.ParticipantId,
                     request.QrPayload ?? string.Empty);
@@ -200,7 +260,10 @@ namespace AttendanceShiftingManagement.Services
                     return Results.Json(new { success = false, message = "This scanner session is not allowed to mark project claims." });
                 }
 
-                var distributionService = new ProjectDistributionService(db, new AuditService(db));
+                var distributionService = new ProjectDistributionService(
+                    db,
+                    new AuditService(db),
+                    new GgmsConsolidatedTransactionService());
                 var result = await distributionService.RecordClaimAsync(
                     session.AyudaProgramId.Value,
                     request.BeneficiaryStagingId,
@@ -233,6 +296,17 @@ namespace AttendanceShiftingManagement.Services
 
                 return Results.File(digitalId.PhotoPath, GetContentType(digitalId.PhotoPath));
             });
+
+            app.MapGet("/queue-monitor", () =>
+            {
+                return Results.Content(RenderQueueMonitorPage(), "text/html; charset=utf-8");
+            });
+
+            app.MapGet("/api/queue/state", async Task<IResult> () =>
+            {
+                var queueState = await GetQueueStateAsync();
+                return Results.Content(queueState, "application/json");
+            });
         }
 
         private static async Task<IResult> LookupAsync(string sessionToken, string pin, string qrPayload)
@@ -257,16 +331,8 @@ namespace AttendanceShiftingManagement.Services
                 return Results.Json(new { success = false, message = "ID not recognized." });
             }
 
-            CashForWorkParticipant? participant = null;
+            var attendance = await BuildAttendanceLookupAsync(db, session, lookup.BeneficiaryStagingId);
             object? distribution = null;
-            if (session.Mode == ScannerSessionMode.Attendance && session.CashForWorkEventId.HasValue)
-            {
-                participant = db.CashForWorkParticipants
-                    .AsNoTracking()
-                    .FirstOrDefault(item =>
-                        item.EventId == session.CashForWorkEventId.Value &&
-                        item.BeneficiaryStagingId == lookup.BeneficiaryStagingId);
-            }
 
             if (session.Mode == ScannerSessionMode.Distribution && session.AyudaProgramId.HasValue)
             {
@@ -281,17 +347,69 @@ namespace AttendanceShiftingManagement.Services
                 {
                     projectId = session.AyudaProgramId.Value,
                     projectName = project?.ProgramName,
+                    releaseKind = project?.ReleaseKind.ToString(),
                     assistanceType = project?.AssistanceType,
                     unitAmount = project?.UnitAmount?.ToString("N2"),
                     itemDescription = project?.ItemDescription,
+                    isIncluded = qualification.IsIncluded,
                     isQualified = qualification.IsQualified,
+                    beneficiaryStatus = qualification.BeneficiaryStatus?.ToString(),
                     alreadyClaimed = qualification.AlreadyClaimed,
-                    canMarkReceived = qualification.IsQualified && !qualification.AlreadyClaimed,
+                    canMarkReceived = qualification.CanRelease,
                     message = qualification.Message
                 };
             }
 
-            var history = lookup.ReleaseHistory
+            var normalizedBeneficiaryId = NormalizeNullable(lookup.BeneficiaryId);
+            var normalizedCivilRegistryId = NormalizeNullable(lookup.CivilRegistryId);
+
+            var projectClaimsQuery = db.AyudaProjectClaims
+                .AsNoTracking()
+                .Include(item => item.AyudaProgram)
+                .Where(item => item.BeneficiaryStagingId == lookup.BeneficiaryStagingId);
+
+            if (!string.IsNullOrWhiteSpace(normalizedBeneficiaryId) || !string.IsNullOrWhiteSpace(normalizedCivilRegistryId))
+            {
+                projectClaimsQuery = db.AyudaProjectClaims
+                    .AsNoTracking()
+                    .Include(item => item.AyudaProgram)
+                    .Where(item =>
+                        item.BeneficiaryStagingId == lookup.BeneficiaryStagingId ||
+                        (!string.IsNullOrWhiteSpace(normalizedBeneficiaryId) && item.BeneficiaryId == normalizedBeneficiaryId) ||
+                        (!string.IsNullOrWhiteSpace(normalizedCivilRegistryId) && item.CivilRegistryId == normalizedCivilRegistryId));
+            }
+
+            var projectClaims = await projectClaimsQuery
+                .OrderByDescending(item => item.ClaimedAt)
+                .ToListAsync();
+
+            var projectClaimTotal = projectClaims.Sum(item => item.UnitAmountSnapshot ?? 0m);
+            var projectClaimHistory = projectClaims
+                .Select(item => new
+                {
+                    claimId = item.Id,
+                    projectName = item.AyudaProgram?.ProgramName,
+                    assistance = item.AssistanceTypeSnapshot ?? item.ItemDescriptionSnapshot,
+                    amount = (item.UnitAmountSnapshot ?? 0m).ToString("N2"),
+                    claimedAt = item.ClaimedAt.ToString("yyyy-MM-dd HH:mm"),
+                    remarks = item.Remarks
+                })
+                .ToArray();
+
+            var aidHistory = lookup.ReleaseHistory
+                .Where(entry => !string.Equals(entry.SourceModule.ToString(), "EquipmentBorrowing", StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(entry => entry.ReleaseDate)
+                .Select(entry => new
+                {
+                    source = entry.SourceModule.ToString(),
+                    amount = entry.Amount.ToString("N2"),
+                    releaseDate = entry.ReleaseDate.ToString("yyyy-MM-dd"),
+                    remarks = entry.Remarks
+                })
+                .ToArray();
+
+            var borrowingHistory = lookup.ReleaseHistory
+                .Where(entry => string.Equals(entry.SourceModule.ToString(), "EquipmentBorrowing", StringComparison.OrdinalIgnoreCase))
                 .OrderByDescending(entry => entry.ReleaseDate)
                 .Select(entry => new
                 {
@@ -317,11 +435,104 @@ namespace AttendanceShiftingManagement.Services
                 cardNumber = lookup.CardNumber,
                 photoUrl,
                 beneficiaryStagingId = lookup.BeneficiaryStagingId,
-                participantId = participant?.Id,
+                participantId = attendance?.ParticipantId,
+                attendance = attendance == null
+                    ? null
+                    : new
+                    {
+                        eventId = attendance.EventId,
+                        eventTitle = attendance.EventTitle,
+                        eventKind = attendance.EventKind,
+                        location = attendance.Location,
+                        eventDate = attendance.EventDate,
+                        timeRange = attendance.TimeRange,
+                        participantId = attendance.ParticipantId,
+                        alreadyRecorded = attendance.AlreadyRecorded,
+                        canMarkAttendance = attendance.CanMarkAttendance
+                    },
                 distribution,
-                releaseHistory = history,
+                claimSummary = new
+                {
+                    count = projectClaims.Count,
+                    totalAmount = projectClaimTotal.ToString("N2"),
+                    latestClaimedAt = projectClaims.Count == 0
+                        ? null
+                        : projectClaims[0].ClaimedAt.ToString("yyyy-MM-dd HH:mm")
+                },
+                claimHistory = projectClaimHistory,
+                releaseHistory = aidHistory,
+                borrowingHistory,
                 qrPayload
             });
+        }
+
+        private static async Task<ScannerAttendanceLookupResult?> BuildAttendanceLookupAsync(AppDbContext db, ScannerSession session, int beneficiaryStagingId)
+        {
+            CashForWorkParticipant? participant = null;
+            CashForWorkEvent? cashForWorkEvent = null;
+
+            if (session.Mode == ScannerSessionMode.Attendance && session.CashForWorkEventId.HasValue)
+            {
+                cashForWorkEvent = await db.CashForWorkEvents
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(item => item.Id == session.CashForWorkEventId.Value);
+
+                participant = await db.CashForWorkParticipants
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(item =>
+                        item.EventId == session.CashForWorkEventId.Value &&
+                        item.BeneficiaryStagingId == beneficiaryStagingId);
+            }
+            else
+            {
+                var today = DateTime.Today;
+                var tomorrow = today.AddDays(1);
+                participant = await db.CashForWorkParticipants
+                    .AsNoTracking()
+                    .Include(item => item.Event)
+                    .Where(item =>
+                        item.BeneficiaryStagingId == beneficiaryStagingId &&
+                        item.Event.Status == CashForWorkEventStatus.Open &&
+                        item.Event.EventDate >= today &&
+                        item.Event.EventDate < tomorrow)
+                    .OrderBy(item => item.Event.StartTime)
+                    .FirstOrDefaultAsync();
+                cashForWorkEvent = participant?.Event;
+            }
+
+            if (cashForWorkEvent == null)
+            {
+                return null;
+            }
+
+            var attendanceDate = cashForWorkEvent.EventDate.Date;
+            var alreadyRecorded = participant != null &&
+                await db.CashForWorkAttendances
+                    .AsNoTracking()
+                    .AnyAsync(item =>
+                        item.ParticipantId == participant.Id &&
+                        item.AttendanceDate == attendanceDate);
+
+            var canMarkAttendance = !alreadyRecorded &&
+                cashForWorkEvent.Status == CashForWorkEventStatus.Open &&
+                cashForWorkEvent.EventDate.Date <= DateTime.Today &&
+                !cashForWorkEvent.BudgetLedgerEntryId.HasValue;
+
+            return new ScannerAttendanceLookupResult(
+                cashForWorkEvent.Id,
+                cashForWorkEvent.Title,
+                cashForWorkEvent.EventKind == CashForWorkEventKind.Seminar ? "Seminar" : "Cash-for-Work",
+                cashForWorkEvent.Location,
+                cashForWorkEvent.EventDate.ToString("yyyy-MM-dd"),
+                $"{cashForWorkEvent.StartTime:hh\\:mm} - {cashForWorkEvent.EndTime:hh\\:mm}",
+                participant?.Id,
+                alreadyRecorded,
+                canMarkAttendance);
+        }
+
+        private static string? NormalizeNullable(string? value)
+        {
+            return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
         }
 
         private static int FindAvailablePort()
@@ -404,6 +615,219 @@ namespace AttendanceShiftingManagement.Services
                 ".webp" => "image/webp",
                 _ => "image/png"
             };
+        }
+
+        private string RenderQueueMonitorPage()
+        {
+            return """
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ayuda Queue Monitor</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #0F172A;
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .header {
+            background: #142033;
+            border-bottom: 2px solid #22324D;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        .header h1 {
+            font-size: 32px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .header p {
+            font-size: 14px;
+            color: #CBD5E1;
+        }
+        .container {
+            display: flex;
+            flex: 1;
+            gap: 24px;
+            padding: 24px;
+            max-width: 1600px;
+            margin: 0 auto;
+            width: 100%;
+        }
+        .current-section {
+            flex: 2;
+        }
+        .queue-section {
+            flex: 1;
+        }
+        .card {
+            background: #142033;
+            border: 2px solid #22324D;
+            border-radius: 28px;
+            padding: 32px;
+            text-align: center;
+        }
+        .card h2 {
+            font-size: 28px;
+            color: #93C5FD;
+            margin-bottom: 16px;
+        }
+        .queue-label {
+            font-size: 20px;
+            color: #93C5FD;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+        .name {
+            font-size: 64px;
+            font-weight: 800;
+            color: #fff;
+            word-break: break-word;
+            margin: 20px 0;
+        }
+        .window-label {
+            font-size: 42px;
+            color: #E2E8F0;
+            font-weight: 600;
+        }
+        .queue-item {
+            background: #0F172A;
+            border: 1px solid #22324D;
+            border-radius: 14px;
+            padding: 14px;
+            margin-bottom: 8px;
+            text-align: left;
+        }
+        .queue-item-window {
+            font-size: 12px;
+            color: #93C5FD;
+            font-weight: 600;
+        }
+        .queue-item-name {
+            font-size: 14px;
+            color: #fff;
+            font-weight: 600;
+            margin-top: 3px;
+        }
+        .status {
+            text-align: center;
+            font-size: 14px;
+            color: #CBD5E1;
+            margin-top: 16px;
+        }
+        .error {
+            color: #FCA5A5;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1 id="program-name">Distribution Queue Monitor</h1>
+        <p id="windows-count">Loading queue...</p>
+    </div>
+
+    <div class="container">
+        <div class="current-section">
+            <div class="card">
+                <h2>Now Serving</h2>
+                <div class="queue-label" id="current-window">Window --</div>
+                <div class="name" id="current-name">--</div>
+                <div class="window-label" id="current-label">Waiting for first call</div>
+            </div>
+        </div>
+
+        <div class="queue-section">
+            <div class="card">
+                <h2>Call Board</h2>
+                <div id="call-board" style="max-height: 300px; overflow-y: auto; margin-bottom: 16px;"></div>
+
+                <h2 style="margin-top: 24px; margin-bottom: 16px;">Next in Queue</h2>
+                <div id="queue-items" style="max-height: 300px; overflow-y: auto;"></div>
+
+                <div class="status" id="status">Connecting...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = '/api/queue/state';
+        const POLL_INTERVAL = 1000; // 1 second
+        let lastCallBoard = [];
+
+        async function fetchQueueState() {
+            try {
+                const response = await fetch(API_URL);
+                if (!response.ok) return;
+                const data = await response.json();
+                updateDisplay(data);
+            } catch (error) {
+                console.error('Queue fetch error:', error);
+                document.getElementById('status').textContent = 'Connection error';
+                document.getElementById('status').classList.add('error');
+            }
+        }
+
+        function updateDisplay(data) {
+            // Update header
+            document.getElementById('program-name').textContent = data.programName || 'No Project Selected';
+            document.getElementById('windows-count').textContent = (data.windowCount || 0) + ' Windows';
+
+            // Update current serving
+            if (data.current) {
+                document.getElementById('current-window').textContent = data.current.windowLabel;
+                document.getElementById('current-name').textContent = data.current.fullName;
+                document.getElementById('current-label').textContent = data.current.details;
+            } else {
+                document.getElementById('current-window').textContent = 'Window --';
+                document.getElementById('current-name').textContent = '--';
+                document.getElementById('current-label').textContent = 'Queue Clear';
+            }
+
+            // Update call board
+            const callBoardDiv = document.getElementById('call-board');
+            if (data.callBoard && data.callBoard.length > 0) {
+                callBoardDiv.innerHTML = data.callBoard.map(entry => `
+                    <div class="queue-item">
+                        <div class="queue-item-window">${entry.windowLabel}</div>
+                        <div class="queue-item-name">${entry.fullName}</div>
+                    </div>
+                `).join('');
+            } else {
+                callBoardDiv.innerHTML = '<div style="color: #888; padding: 12px;">No recent calls</div>';
+            }
+
+            // Update next in queue
+            const queueDiv = document.getElementById('queue-items');
+            if (data.queue && data.queue.length > 0) {
+                queueDiv.innerHTML = data.queue.map(item => `
+                    <div class="queue-item">
+                        <div class="queue-item-window">${item.windowLabel}</div>
+                        <div class="queue-item-name">${item.fullName}</div>
+                    </div>
+                `).join('');
+            } else {
+                queueDiv.innerHTML = '<div style="color: #888; padding: 12px;">No pending beneficiaries</div>';
+            }
+
+            // Update status
+            const pendingCount = (data.queue || []).length;
+            document.getElementById('status').textContent = pendingCount > 0 ? `${pendingCount} pending` : 'Queue clear';
+            document.getElementById('status').classList.remove('error');
+        }
+
+        // Poll for updates
+        setInterval(fetchQueueState, POLL_INTERVAL);
+        fetchQueueState(); // Initial fetch
+    </script>
+</body>
+</html>
+""";
         }
 
         private static string RenderScannerPage(string sessionToken)
@@ -998,6 +1422,11 @@ namespace AttendanceShiftingManagement.Services
             <div class="stat-value" id="cashForWorkCount">0</div>
             <div class="stat-sub" id="cashForWorkAmount">₱0.00</div>
           </div>
+          <div class="stat-card">
+            <div class="info-label">Project Claims</div>
+            <div class="stat-value" id="projectClaimsCount">0</div>
+            <div class="stat-sub" id="projectClaimsAmount">PHP 0.00</div>
+          </div>
           <div class="stat-card stat-card-dark">
             <div class="info-label">Total Aid</div>
             <div class="stat-value" id="totalAidCount">0</div>
@@ -1007,7 +1436,7 @@ namespace AttendanceShiftingManagement.Services
 
         <div class="action-row hidden" id="resultActions">
           <button class="button-accent hidden" id="markAttendance">Mark Attendance</button>
-          <button class="button-warn hidden" id="markReceived">Mark as Received</button>
+          <button class="button-warn hidden" id="markReceived">Mark as Released</button>
         </div>
       </div>
     </section>
@@ -1018,6 +1447,22 @@ namespace AttendanceShiftingManagement.Services
         <div class="history-count" id="historyCountBadge">0 records</div>
       </div>
       <div class="history-list" id="history"></div>
+    </section>
+
+    <section class="history-panel">
+      <div class="history-header">
+        <div class="history-title">Equipment Borrowing</div>
+        <div class="history-count" id="borrowingCountBadge">0 records</div>
+      </div>
+      <div class="history-list" id="borrowingHistory"></div>
+    </section>
+
+    <section class="history-panel">
+      <div class="history-header">
+        <div class="history-title">Beneficiary Claims</div>
+        <div class="history-count" id="claimCountBadge">0 claims</div>
+      </div>
+      <div class="history-list" id="claimHistory"></div>
     </section>
   </div>
 </main>
@@ -1135,8 +1580,12 @@ function humanizeSource(value) {
       return "Assistance Case";
     case "cashforwork":
       return "Cash for Work";
+    case "projectdistribution":
+      return "Project Distribution";
     case "grievance":
       return "Grievance";
+    case "equipmentborrowing":
+      return "Equipment Borrowing";
     default:
       return value || "Unknown";
   }
@@ -1211,18 +1660,24 @@ function renderModeDetails(response) {
 
   const rows = [];
   rows.push(["Scanner Mode", humanizeMode(response.mode)]);
+  label.textContent = "Scanner Result";
 
   if (response.distribution) {
-    label.textContent = "Project Qualification";
     rows.push(["Project", response.distribution.projectName || "--"]);
+    rows.push(["Release Kind", response.distribution.releaseKind || "--"]);
     rows.push(["Assistance", response.distribution.assistanceType || response.distribution.itemDescription || "--"]);
     rows.push(["Unit Amount", response.distribution.unitAmount ? "₱" + response.distribution.unitAmount : "--"]);
-    rows.push(["Project Status", response.distribution.message || "--"]);
+    rows.push(["Project Status", response.distribution.beneficiaryStatus || "--"]);
+    rows.push(["Decision", response.distribution.message || "--"]);
   } else if (response.participantId) {
-    label.textContent = "Attendance Session";
     rows.push(["Attendance", "This beneficiary can be marked present from this phone."]);
-  } else {
-    label.textContent = "Scanner Session";
+  }
+
+  if (response.attendance) {
+    rows.push(["Active Event", response.attendance.eventTitle || "--"]);
+    rows.push(["Event Type", response.attendance.eventKind || "--"]);
+    rows.push(["Schedule", (response.attendance.eventDate || "--") + " " + (response.attendance.timeRange || "")]);
+    rows.push(["Attendance", response.attendance.alreadyRecorded ? "Already recorded" : response.attendance.canMarkAttendance ? "Ready to mark present" : "Not available"]);
   }
 
   rows.forEach(([rowLabel, rowValue]) => {
@@ -1293,6 +1748,108 @@ function renderHistory(entries) {
     item.appendChild(top);
     item.appendChild(note);
     history.appendChild(item);
+  });
+}
+
+function renderBorrowingHistory(entries) {
+  const list = document.getElementById("borrowingHistory");
+  list.innerHTML = "";
+
+  const count = (entries || []).length;
+  document.getElementById("borrowingCountBadge").textContent = count + (count === 1 ? " record" : " records");
+
+  if (!count) {
+    const empty = document.createElement("div");
+    empty.className = "empty-history";
+    empty.textContent = "No equipment borrowing records found for this beneficiary yet.";
+    list.appendChild(empty);
+    return;
+  }
+
+  entries.forEach(entry => {
+    const item = document.createElement("div");
+    item.className = "history-item";
+
+    const top = document.createElement("div");
+    top.className = "history-top";
+
+    const meta = document.createElement("div");
+    const type = document.createElement("div");
+    type.className = "history-type";
+    type.textContent = "Equipment Borrowing";
+
+    const date = document.createElement("div");
+    date.className = "history-date";
+    date.textContent = entry.releaseDate || "--";
+
+    meta.appendChild(type);
+    meta.appendChild(date);
+
+    const amount = document.createElement("div");
+    amount.className = "history-amount";
+    amount.textContent = "₱" + (entry.amount || "0.00");
+
+    top.appendChild(meta);
+    top.appendChild(amount);
+
+    const note = document.createElement("div");
+    note.className = "history-note";
+    note.textContent = entry.remarks || "No notes recorded.";
+
+    item.appendChild(top);
+    item.appendChild(note);
+    list.appendChild(item);
+  });
+}
+
+function renderClaimHistory(entries) {
+  const list = document.getElementById("claimHistory");
+  list.innerHTML = "";
+
+  const count = (entries || []).length;
+  document.getElementById("claimCountBadge").textContent = count + (count === 1 ? " claim" : " claims");
+
+  if (!count) {
+    const empty = document.createElement("div");
+    empty.className = "empty-history";
+    empty.textContent = "No project claims found for this beneficiary yet.";
+    list.appendChild(empty);
+    return;
+  }
+
+  entries.forEach(entry => {
+    const item = document.createElement("div");
+    item.className = "history-item";
+
+    const top = document.createElement("div");
+    top.className = "history-top";
+
+    const meta = document.createElement("div");
+    const project = document.createElement("div");
+    project.className = "history-type";
+    project.textContent = entry.projectName || "Project claim";
+
+    const claimedAt = document.createElement("div");
+    claimedAt.className = "history-date";
+    claimedAt.textContent = entry.claimedAt || "--";
+
+    meta.appendChild(project);
+    meta.appendChild(claimedAt);
+
+    const amount = document.createElement("div");
+    amount.className = "history-amount";
+    amount.textContent = "PHP " + (entry.amount || "0.00");
+
+    top.appendChild(meta);
+    top.appendChild(amount);
+
+    const note = document.createElement("div");
+    note.className = "history-note";
+    note.textContent = entry.assistance || entry.remarks || "No claim details recorded.";
+
+    item.appendChild(top);
+    item.appendChild(note);
+    list.appendChild(item);
   });
 }
 
@@ -1432,15 +1989,21 @@ function cleanupCamera() {
 }
 
 async function markAttendance() {
-  if (!lastLookup || !lastLookup.participantId) return;
+  const activeAttendance = lastLookup && lastLookup.attendance ? lastLookup.attendance : null;
+  const participantId = activeAttendance ? activeAttendance.participantId : lastLookup?.participantId;
+  if (!lastLookup) return;
   const response = await postJson("/api/attendance/mark", {
     sessionToken,
     pin: activePin,
-    participantId: lastLookup.participantId,
-    qrPayload: lastLookup.qrPayload
+    participantId,
+    qrPayload: lastLookup.qrPayload,
+    eventId: activeAttendance ? activeAttendance.eventId : null
   });
   document.getElementById("lookupStatus").textContent = response.message || "";
   setLookupBanner(response.message || "Attendance update finished.", response.success ? "success" : "error");
+  if (response.success && lastLookup.qrPayload) {
+    await handleDetectedPayload(lastLookup.qrPayload, false);
+  }
 }
 
 async function markReceived() {
@@ -1455,10 +2018,15 @@ async function markReceived() {
 
   document.getElementById("lookupStatus").textContent = response.message || "";
   setLookupBanner(response.message || "Project claim update finished.", response.success ? "success" : "error");
+  if (response.success && lastLookup.qrPayload) {
+    await handleDetectedPayload(lastLookup.qrPayload, false);
+    return;
+  }
   if (response.success && lastLookup.distribution) {
     lastLookup.distribution.alreadyClaimed = true;
+    lastLookup.distribution.beneficiaryStatus = "Released";
     lastLookup.distribution.canMarkReceived = false;
-    lastLookup.distribution.message = response.message || "Beneficiary already marked as received.";
+    lastLookup.distribution.message = response.message || "Beneficiary already marked as released.";
     renderLookupResponse(lastLookup);
   }
 }
@@ -1498,15 +2066,28 @@ function renderLookupResponse(response) {
   }
 
   if (response.distribution) {
+    const status = String(response.distribution.beneficiaryStatus || "").toLowerCase();
     if (response.distribution.canMarkReceived) {
-      setStatusChip("Qualified", "success");
+      setStatusChip("Pending Release", "success");
+    } else if (!response.distribution.isIncluded) {
+      setStatusChip("Not Included", "danger");
+    } else if (status === "released" || response.distribution.alreadyClaimed) {
+      setStatusChip("Released", "warn");
+    } else if (status === "rejected") {
+      setStatusChip("Rejected", "danger");
     } else if (response.distribution.alreadyClaimed) {
-      setStatusChip("Already Claimed", "warn");
+      setStatusChip("Released", "warn");
     } else {
-      setStatusChip("Not Qualified", "danger");
+      setStatusChip("Pending Review", "warn");
     }
-  } else if (response.participantId) {
-    setStatusChip("Attendance Ready", "success");
+  } else if (response.attendance) {
+    if (response.attendance.canMarkAttendance) {
+      setStatusChip("Attendance Ready", "success");
+    } else if (response.attendance.alreadyRecorded) {
+      setStatusChip("Attendance Recorded", "warn");
+    } else {
+      setStatusChip("Event Linked", "warn");
+    }
   } else {
     setStatusChip("Lookup Match", "success");
   }
@@ -1517,10 +2098,11 @@ function renderLookupResponse(response) {
   setStat("manual", summary.manual.count, summary.manual.amount);
   setStat("cases", summary.cases.count, summary.cases.amount);
   setStat("cashForWork", summary.cashForWork.count, summary.cashForWork.amount);
+  setStat("projectClaims", response.claimSummary ? response.claimSummary.count : 0, response.claimSummary ? parseAmount(response.claimSummary.totalAmount) : 0);
   setStat("totalAid", summary.total.count, summary.total.amount);
 
   const markButton = document.getElementById("markAttendance");
-  if (response.participantId) {
+  if (response.attendance && response.attendance.canMarkAttendance) {
     markButton.classList.remove("hidden");
   } else {
     markButton.classList.add("hidden");
@@ -1534,13 +2116,15 @@ function renderLookupResponse(response) {
   }
 
   const resultActions = document.getElementById("resultActions");
-  if (response.participantId || (response.distribution && response.distribution.canMarkReceived)) {
+  if ((response.attendance && response.attendance.canMarkAttendance) || (response.distribution && response.distribution.canMarkReceived)) {
     resultActions.classList.remove("hidden");
   } else {
     resultActions.classList.add("hidden");
   }
 
   renderHistory(response.releaseHistory || []);
+  renderBorrowingHistory(response.borrowingHistory || []);
+  renderClaimHistory(response.claimHistory || []);
 }
 
 async function postJson(url, payload) {
@@ -1559,8 +2143,18 @@ async function postJson(url, payload) {
 
         private sealed record ScannerPinRequest(string SessionToken, string Pin);
         private sealed record ScannerLookupRequest(string SessionToken, string Pin, string QrPayload);
-        private sealed record ScannerAttendanceRequest(string SessionToken, string Pin, int ParticipantId, string? QrPayload);
+        private sealed record ScannerAttendanceRequest(string SessionToken, string Pin, int? ParticipantId, string? QrPayload, int? EventId);
         private sealed record ScannerDistributionClaimRequest(string SessionToken, string Pin, int BeneficiaryStagingId, string? QrPayload, string? Remarks);
+        private sealed record ScannerAttendanceLookupResult(
+            int EventId,
+            string EventTitle,
+            string EventKind,
+            string Location,
+            string EventDate,
+            string TimeRange,
+            int? ParticipantId,
+            bool AlreadyRecorded,
+            bool CanMarkAttendance);
         private sealed record LanAddressCandidate(
             string Address,
             string Name,

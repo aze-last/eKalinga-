@@ -1,0 +1,15 @@
+{
+  "id": "generate-mock-demo-data",
+  "title": "Generate Mock Demo Data",
+  "description": "Populate the database with mock activities for presentation: Aid Requests, Distributions, CFW Events, Seminars, and Borrowing records using the 25 mock beneficiaries.",
+  "status": "completed",
+  "assignedTo": "mock-activity-worker@attendance-shifting-management",
+  "subtasks": [
+    { "id": "lookup-beneficiaries", "title": "Lookup Beneficiary IDs", "status": "completed" },
+    { "id": "ensure-global-budgets", "title": "Initialize Global Budgets & Fund Pool", "status": "completed" },
+    { "id": "create-ayuda-programs", "title": "Create Ayuda Programs & Distributions", "status": "completed" },
+    { "id": "create-aid-requests", "title": "Generate Mock Aid Requests", "status": "completed" },
+    { "id": "create-cfw-seminar", "title": "Generate CFW Events & Seminars with Attendance", "status": "completed" },
+    { "id": "create-borrowing", "title": "Generate Equipment Borrowing Records", "status": "completed" }
+  ]
+}

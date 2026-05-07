@@ -44,6 +44,12 @@ namespace AttendanceShiftingManagement.Models
 
         [Column("is_active")]
         public bool IsActive { get; set; } = true;
+
+        [Column("last_scanned_payload")]
+        public string? LastScannedPayload { get; set; }
+
+        [Column("last_scanned_at")]
+        public DateTime? LastScannedAt { get; set; }
     }
 
     public enum ScannerSessionMode

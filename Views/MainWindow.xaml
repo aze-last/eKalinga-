@@ -6,7 +6,11 @@
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         mc:Ignorable="d"
         Title=""
-        WindowState="Maximized"
+        Width="1400"
+        Height="900"
+        MinWidth="1180"
+        MinHeight="760"
+        WindowStartupLocation="CenterScreen"
         Background="Transparent"
         WindowStyle="None"
         AllowsTransparency="True"
@@ -52,29 +56,37 @@
             BorderThickness="1">
         <Grid Margin="18"
               ClipToBounds="True">
-            <ContentControl Content="{Binding CurrentView}" />
+            <Grid.RowDefinitions>
+                <RowDefinition Height="36" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
 
-            <StackPanel Orientation="Horizontal"
-                        HorizontalAlignment="Right"
-                        VerticalAlignment="Top"
-                        Margin="0,12,12,0"
-                        Panel.ZIndex="40">
-                <Button Style="{StaticResource WindowControlButtonStyle}"
-                        Click="Minimize_Click"
-                        ToolTip="Minimize">
-                    <materialDesign:PackIcon Kind="WindowMinimize" Width="18" Height="18" />
-                </Button>
-                <Button Style="{StaticResource WindowControlButtonStyle}"
-                        Click="MaximizeRestore_Click"
-                        ToolTip="Maximize/Restore">
-                    <materialDesign:PackIcon Kind="WindowMaximize" Width="18" Height="18" />
-                </Button>
-                <Button Style="{StaticResource WindowCloseButtonStyle}"
-                        Click="Close_Click"
-                        ToolTip="Close">
-                    <materialDesign:PackIcon Kind="Close" Width="18" Height="18" />
-                </Button>
-            </StackPanel>
+            <Grid Grid.Row="0"
+                  Background="Transparent">
+                <StackPanel Orientation="Horizontal"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            Margin="0,0,6,0">
+                    <Button Style="{StaticResource WindowControlButtonStyle}"
+                            Click="Minimize_Click"
+                            ToolTip="Minimize">
+                        <materialDesign:PackIcon Kind="WindowMinimize" Width="18" Height="18" />
+                    </Button>
+                    <Button Style="{StaticResource WindowControlButtonStyle}"
+                            Click="MaximizeRestore_Click"
+                            ToolTip="Maximize/Restore">
+                        <materialDesign:PackIcon Kind="WindowMaximize" Width="18" Height="18" />
+                    </Button>
+                    <Button Style="{StaticResource WindowCloseButtonStyle}"
+                            Click="Close_Click"
+                            ToolTip="Close">
+                        <materialDesign:PackIcon Kind="Close" Width="18" Height="18" />
+                    </Button>
+                </StackPanel>
+            </Grid>
+
+            <ContentControl Grid.Row="1"
+                            Content="{Binding CurrentView}" />
         </Grid>
     </Border>
 </Window>

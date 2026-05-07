@@ -19,7 +19,12 @@ public sealed class LocalScannerGatewayDistributionSourceTests
         Assert.Contains("/api/distribution/claim", source, StringComparison.Ordinal);
         Assert.Contains("ScannerSessionMode.Distribution", source, StringComparison.Ordinal);
         Assert.Contains("AyudaProgramId", source, StringComparison.Ordinal);
-        Assert.Contains("Mark as Received", source, StringComparison.Ordinal);
+        Assert.Contains("Mark as Released", source, StringComparison.Ordinal);
+        Assert.Contains("claimSummary", source, StringComparison.Ordinal);
+        Assert.Contains("claimHistory", source, StringComparison.Ordinal);
+        Assert.Contains("Beneficiary Claims", source, StringComparison.Ordinal);
+        Assert.Contains("canMarkAttendance", source, StringComparison.Ordinal);
+        Assert.Contains("Attendance can only be recorded for an open event scheduled today.", source, StringComparison.Ordinal);
     }
 
     [Fact]

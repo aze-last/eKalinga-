@@ -47,6 +47,25 @@ public sealed class ProjectDistributionServiceTests
     }
 
     [Fact]
+    public async Task EvaluateQualificationAsync_RecognizesIncludedBeneficiaryByBeneficiaryId_WhenDigitalIdUsesDifferentStagingRow()
+    {
+        using var context = TestDbContextFactory.CreateContext();
+        var admin = SeedAdmin(context);
+        var program = SeedProgram(context, admin.Id);
+        var includedBeneficiary = SeedApprovedBeneficiary(context, 2101, "Bien Josef G. Regidor", beneficiaryId: "BEN-2026-MANUAL-40405", civilRegistryId: null);
+        var scannedBeneficiary = SeedApprovedBeneficiary(context, 2102, "Bien Josef G. Regidor", beneficiaryId: "BEN-2026-MANUAL-40405", civilRegistryId: null);
+
+        var service = CreateService(context);
+        await InvokeAsync(service, "AddBeneficiaryAsync", program.Id, includedBeneficiary.StagingID, admin.Id);
+
+        var qualification = await InvokeAsync(service, "EvaluateQualificationAsync", program.Id, scannedBeneficiary.StagingID);
+
+        Assert.True(GetBool(qualification, "IsQualified"));
+        Assert.True(GetBool(qualification, "IsIncluded"));
+        Assert.True(GetBool(qualification, "CanRelease"));
+    }
+
+    [Fact]
     public async Task RecordClaimAsync_CreatesOneClaimPerProject_AndBlocksDuplicateClaim()
     {
         using var context = TestDbContextFactory.CreateContext();
@@ -90,6 +109,55 @@ public sealed class ProjectDistributionServiceTests
 
         Assert.Equal(0, GetEntityCount(context, "AttendanceShiftingManagement.Models.AyudaProjectClaim"));
         Assert.DoesNotContain(context.BudgetLedgerEntries, entry => entry.EntryType == BudgetLedgerEntryType.Release);
+    }
+
+    [Fact]
+    public async Task RecordClaimAsync_ForNonCashDistribution_StillWritesBeneficiaryHistoryAndMarksReleased()
+    {
+        using var context = TestDbContextFactory.CreateContext();
+        var admin = SeedAdmin(context);
+        var program = SeedProgram(context, admin.Id, unitAmount: 0m, releaseKind: AssistanceReleaseKind.Goods);
+        var beneficiary = SeedApprovedBeneficiary(context, 3001, "Nora Beneficiary");
+
+        var service = CreateService(context);
+        await InvokeAsync(service, "AddBeneficiaryAsync", program.Id, beneficiary.StagingID, admin.Id);
+
+        var claimResult = await InvokeAsync(service, "RecordClaimAsync", program.Id, beneficiary.StagingID, admin.Id, "ASM-BID|003001|ABC", "Rice pack release");
+        Assert.True(GetBool(claimResult, "IsSuccess"));
+
+        Assert.Equal(1, GetEntityCount(context, "AttendanceShiftingManagement.Models.AyudaProjectClaim"));
+        Assert.DoesNotContain(context.BudgetLedgerEntries, entry => entry.EntryType == BudgetLedgerEntryType.Release);
+
+        var membership = context.AyudaProjectBeneficiaries.Single(item =>
+            item.AyudaProgramId == program.Id &&
+            item.BeneficiaryStagingId == beneficiary.StagingID);
+        Assert.Equal(DistributionBeneficiaryStatus.Released, membership.Status);
+
+        var historyEntry = Assert.Single(context.BeneficiaryAssistanceLedgerEntries);
+        Assert.Equal(BeneficiaryAssistanceSourceModule.ProjectDistribution, historyEntry.SourceModule);
+        Assert.Equal(0m, historyEntry.Amount);
+        Assert.Equal("Rice pack release", historyEntry.Remarks);
+    }
+
+    [Fact]
+    public async Task RecordClaimAsync_UsesIncludedMembershipIdentity_WhenScannerStagingDiffers()
+    {
+        using var context = TestDbContextFactory.CreateContext();
+        var admin = SeedAdmin(context);
+        var program = SeedProgram(context, admin.Id, unitAmount: 1200m);
+        SeedGovernmentSnapshot(context, 5000m, 2, "OFF-2026-0007");
+        var includedBeneficiary = SeedApprovedBeneficiary(context, 3101, "Bien Josef G. Regidor", beneficiaryId: "BEN-2026-MANUAL-40405", civilRegistryId: null);
+        var scannedBeneficiary = SeedApprovedBeneficiary(context, 3102, "Bien Josef G. Regidor", beneficiaryId: "BEN-2026-MANUAL-40405", civilRegistryId: null);
+
+        var service = CreateService(context);
+        await InvokeAsync(service, "AddBeneficiaryAsync", program.Id, includedBeneficiary.StagingID, admin.Id);
+
+        var claimResult = await InvokeAsync(service, "RecordClaimAsync", program.Id, scannedBeneficiary.StagingID, admin.Id, "ASM-BID|003102|ABC", "Identity fallback claim");
+        Assert.True(GetBool(claimResult, "IsSuccess"));
+
+        var claim = Assert.Single(context.AyudaProjectClaims);
+        Assert.Equal(includedBeneficiary.StagingID, claim.BeneficiaryStagingId);
+        Assert.Equal("BEN-2026-MANUAL-40405", claim.BeneficiaryId);
     }
 
     private static object CreateService(AppDbContext context)
@@ -154,7 +222,7 @@ public sealed class ProjectDistributionServiceTests
         return user;
     }
 
-    private static AyudaProgram SeedProgram(AppDbContext context, int createdByUserId, decimal unitAmount = 1000m)
+    private static AyudaProgram SeedProgram(AppDbContext context, int createdByUserId, decimal unitAmount = 1000m, AssistanceReleaseKind releaseKind = AssistanceReleaseKind.Cash)
     {
         var program = new AyudaProgram
         {
@@ -162,6 +230,7 @@ public sealed class ProjectDistributionServiceTests
             ProgramName = "Project Distribution Program",
             ProgramType = AyudaProgramType.GeneralPurpose,
             Description = "Distribution workflow seed data",
+            ReleaseKind = releaseKind,
             CreatedByUserId = createdByUserId,
             IsActive = true
         };
@@ -174,13 +243,18 @@ public sealed class ProjectDistributionServiceTests
         return program;
     }
 
-    private static BeneficiaryStaging SeedApprovedBeneficiary(AppDbContext context, int stagingId = 1001, string fullName = "Pedro Beneficiary")
+    private static BeneficiaryStaging SeedApprovedBeneficiary(
+        AppDbContext context,
+        int stagingId = 1001,
+        string fullName = "Pedro Beneficiary",
+        string? beneficiaryId = null,
+        string? civilRegistryId = null)
     {
         var beneficiary = new BeneficiaryStaging
         {
             StagingID = stagingId,
-            BeneficiaryId = $"BEN-{stagingId:D4}",
-            CivilRegistryId = $"CR-{stagingId:D4}",
+            BeneficiaryId = beneficiaryId ?? $"BEN-{stagingId:D4}",
+            CivilRegistryId = civilRegistryId ?? $"CR-{stagingId:D4}",
             FullName = fullName,
             VerificationStatus = VerificationStatus.Approved,
             LinkedHouseholdId = 1,

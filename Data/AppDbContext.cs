@@ -13,6 +13,8 @@ namespace AttendanceShiftingManagement.Data
         public DbSet<Household> Households => Set<Household>();
         public DbSet<HouseholdMember> HouseholdMembers => Set<HouseholdMember>();
         public DbSet<AssistanceCase> AssistanceCases => Set<AssistanceCase>();
+        public DbSet<AssistanceCaseBudget> AssistanceCaseBudgets => Set<AssistanceCaseBudget>();
+        public DbSet<CashForWorkBudget> CashForWorkBudgets => Set<CashForWorkBudget>();
         public DbSet<BeneficiaryStaging> BeneficiaryStaging => Set<BeneficiaryStaging>();
         public DbSet<BeneficiaryAssistanceLedgerEntry> BeneficiaryAssistanceLedgerEntries => Set<BeneficiaryAssistanceLedgerEntry>();
         public DbSet<BeneficiaryDigitalId> BeneficiaryDigitalIds => Set<BeneficiaryDigitalId>();
@@ -26,6 +28,8 @@ namespace AttendanceShiftingManagement.Data
         public DbSet<CashForWorkParticipant> CashForWorkParticipants => Set<CashForWorkParticipant>();
         public DbSet<CashForWorkAttendance> CashForWorkAttendances => Set<CashForWorkAttendance>();
         public DbSet<ScannerSession> ScannerSessions => Set<ScannerSession>();
+        public DbSet<BarangayAsset> BarangayAssets => Set<BarangayAsset>();
+        public DbSet<EquipmentBorrowing> EquipmentBorrowings => Set<EquipmentBorrowing>();
 
         public AppDbContext()
         {
@@ -40,7 +44,10 @@ namespace AttendanceShiftingManagement.Data
             if (!optionsBuilder.IsConfigured)
             {
                 var connectionString = ConnectionSettingsService.GetEffectiveConnectionString();
-                optionsBuilder.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString));
+                // We use a fixed version instead of AutoDetect to prevent the app from crashing 
+                // on startup if the MySQL server is unreachable.
+                var serverVersion = new MySqlServerVersion(new Version(8, 0, 36));
+                optionsBuilder.UseMySql(connectionString, serverVersion);
             }
         }
 
@@ -88,6 +95,10 @@ namespace AttendanceShiftingManagement.Data
                 .Property(session => session.Mode)
                 .HasConversion<string>();
 
+            modelBuilder.Entity<BarangayAsset>()
+                .Property(asset => asset.Status)
+                .HasConversion<string>();
+
             modelBuilder.Entity<BeneficiaryAssistanceLedgerEntry>()
                 .Property(entry => entry.SourceModule)
                 .HasConversion<string>();
@@ -98,6 +109,14 @@ namespace AttendanceShiftingManagement.Data
 
             modelBuilder.Entity<AyudaProgram>()
                 .Property(program => program.DistributionStatus)
+                .HasConversion<string>();
+
+            modelBuilder.Entity<AyudaProgram>()
+                .Property(program => program.ReleaseKind)
+                .HasConversion<string>();
+
+            modelBuilder.Entity<AyudaProjectBeneficiary>()
+                .Property(item => item.Status)
                 .HasConversion<string>();
 
             modelBuilder.Entity<GovernmentBudgetSnapshot>()
@@ -152,6 +171,18 @@ namespace AttendanceShiftingManagement.Data
                 .HasIndex(program => program.ProgramCode)
                 .IsUnique();
 
+            modelBuilder.Entity<BarangayAsset>()
+                .HasIndex(asset => asset.AssetTag)
+                .IsUnique();
+
+            modelBuilder.Entity<AssistanceCaseBudget>()
+                .HasIndex(item => item.BudgetCode)
+                .IsUnique();
+
+            modelBuilder.Entity<CashForWorkBudget>()
+                .HasIndex(item => item.BudgetCode)
+                .IsUnique();
+
             modelBuilder.Entity<AyudaProjectBeneficiary>()
                 .HasIndex(item => new { item.AyudaProgramId, item.BeneficiaryStagingId })
                 .IsUnique();
@@ -192,11 +223,26 @@ namespace AttendanceShiftingManagement.Data
                 .HasIndex(session => session.SessionToken)
                 .IsUnique();
 
+            modelBuilder.Entity<EquipmentBorrowing>()
+                .HasIndex(borrowing => borrowing.BeneficiaryId);
+
             modelBuilder.Entity<AyudaProjectBeneficiary>()
                 .HasOne(item => item.AyudaProgram)
                 .WithMany()
                 .HasForeignKey(item => item.AyudaProgramId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<AssistanceCase>()
+                .HasOne(item => item.AssistanceCaseBudget)
+                .WithMany()
+                .HasForeignKey(item => item.AssistanceCaseBudgetId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<CashForWorkEvent>()
+                .HasOne(item => item.CashForWorkBudget)
+                .WithMany()
+                .HasForeignKey(item => item.CashForWorkBudgetId)
+                .OnDelete(DeleteBehavior.SetNull);
 
             modelBuilder.Entity<AyudaProjectClaim>()
                 .HasOne(item => item.AyudaProgram)

@@ -66,20 +66,112 @@ namespace AttendanceShiftingManagement.Services
             {
                 Width = 324,
                 Height = 204,
-                Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#F8FAFC"))
+                Background = Brushes.White,
+                ClipToBounds = true
             };
 
-            root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(110) });
-            root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            // WATERMARK
+            var watermarkPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Images", "Gemini_Generated_Image_1ivs1t1ivs1t1ivs-removebg-preview.png");
+            // If running in dev, fallback to project path
+            if (!System.IO.File.Exists(watermarkPath))
+            {
+                watermarkPath = "Images/Gemini_Generated_Image_1ivs1t1ivs1t1ivs-removebg-preview.png";
+            }
 
+            var watermarkImage = Helpers.LocalImageLoader.Load(watermarkPath);
+            if (watermarkImage != null)
+            {
+                var watermark = new Image
+                {
+                    Source = watermarkImage,
+                    Width = 220,
+                    Opacity = 0.22,
+                    Stretch = Stretch.Uniform,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Margin = new Thickness(0, 30, 0, 0),
+                    SnapsToDevicePixels = true
+                };
+                RenderOptions.SetBitmapScalingMode(watermark, BitmapScalingMode.HighQuality);
+                
+                Grid.SetRowSpan(watermark, 2); // Span both Header (Row 0) and Body (Row 1)
+                root.Children.Add(watermark);
+            }
+
+            root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(38) });
+            root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+
+            // HEADER with GRADIENT
+            var header = new Border
+            {
+                Background = new LinearGradientBrush(
+                    BrushFromHex("#1E3A8A").Color,
+                    BrushFromHex("#3B82F6").Color,
+                    0),
+                Padding = new Thickness(14, 0, 14, 0)
+            };
+            var headerContent = new Grid();
+            headerContent.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            headerContent.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            headerContent.Children.Add(new TextBlock
+            {
+                Text = "eKalinga+",
+                FontSize = 15,
+                FontWeight = FontWeights.ExtraBold,
+                Foreground = Brushes.White,
+                VerticalAlignment = VerticalAlignment.Center
+            });
+
+            var cardTypeBadge = new Border
+            {
+                Background = new SolidColorBrush(Color.FromArgb(51, 255, 255, 255)), // rgba(255,255,255,0.2)
+                CornerRadius = new CornerRadius(4),
+                Padding = new Thickness(8, 3, 8, 3),
+                VerticalAlignment = VerticalAlignment.Center,
+                Child = new TextBlock
+                {
+                    Text = "Barangay Beneficiary ID".ToUpper(),
+                    FontSize = 8,
+                    FontWeight = FontWeights.Bold,
+                    Foreground = Brushes.White
+                }
+            };
+            Grid.SetColumn(cardTypeBadge, 1);
+            headerContent.Children.Add(cardTypeBadge);
+            header.Child = headerContent;
+            root.Children.Add(header);
+
+            // BODY
+            var body = new Grid
+            {
+                Margin = new Thickness(14, 12, 14, 12)
+            };
+            body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(78) });
+            body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(14) });
+            body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            Grid.SetRow(body, 1);
+            root.Children.Add(body);
+
+            // PHOTO
             var photoBorder = new Border
             {
-                Margin = new Thickness(12),
-                CornerRadius = new CornerRadius(12),
-                Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#DBEAFE")),
-                BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#1D4ED8")),
-                BorderThickness = new Thickness(1),
-                ClipToBounds = true
+                Width = 78,
+                Height = 104,
+                CornerRadius = new CornerRadius(8),
+                Background = BrushFromHex("#F8FAFC"),
+                BorderBrush = Brushes.White,
+                BorderThickness = new Thickness(3),
+                ClipToBounds = true,
+                VerticalAlignment = VerticalAlignment.Top,
+                Effect = new System.Windows.Media.Effects.DropShadowEffect
+                {
+                    BlurRadius = 10,
+                    ShadowDepth = 6,
+                    Direction = 315,
+                    Opacity = 0.15,
+                    Color = Colors.Black
+                }
             };
 
             photoBorder.Child = request.PhotoImage == null
@@ -88,112 +180,139 @@ namespace AttendanceShiftingManagement.Services
                     Text = "NO PHOTO",
                     HorizontalAlignment = HorizontalAlignment.Center,
                     VerticalAlignment = VerticalAlignment.Center,
-                    FontWeight = FontWeights.SemiBold,
-                    Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#1D4ED8"))
+                    FontSize = 10,
+                    FontWeight = FontWeights.Bold,
+                    Foreground = BrushFromHex("#94A3B8")
                 }
-                : new Grid
+                : new Image
                 {
-                    Background = Brushes.White,
-                    Children =
-                    {
-                        new Image
-                        {
-                            Source = request.PhotoImage,
-                            Stretch = Stretch.Uniform,
-                            HorizontalAlignment = HorizontalAlignment.Center,
-                            VerticalAlignment = VerticalAlignment.Center,
-                            Margin = new Thickness(4)
-                        }
-                    }
+                    Source = request.PhotoImage,
+                    Stretch = Stretch.UniformToFill
                 };
 
             Grid.SetColumn(photoBorder, 0);
-            root.Children.Add(photoBorder);
+            body.Children.Add(photoBorder);
 
-            var details = new Grid
+            // DETAILS
+            var details = new StackPanel
             {
-                Margin = new Thickness(0, 12, 12, 12)
+                VerticalAlignment = VerticalAlignment.Top
             };
-            details.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            details.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            details.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            details.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-
-            details.Children.Add(new TextBlock
-            {
-                Text = "BARANGAY DIGITAL ID",
-                FontSize = 11,
-                FontWeight = FontWeights.Bold,
-                Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#1E3A8A"))
-            });
 
             var nameBlock = new TextBlock
             {
-                Margin = new Thickness(0, 8, 0, 0),
-                Text = request.FullName,
-                FontSize = 18,
-                FontWeight = FontWeights.SemiBold,
+                Text = request.FullName.ToUpper(),
+                FontSize = 16,
+                FontWeight = FontWeights.Black,
+                Foreground = BrushFromHex("#0F172A"),
                 TextWrapping = TextWrapping.Wrap,
-                Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#0F172A"))
+                Margin = new Thickness(0, 0, 0, 8),
+                Effect = CreateTextShadow()
             };
-            Grid.SetRow(nameBlock, 1);
             details.Children.Add(nameBlock);
 
-            var idBlock = new TextBlock
-            {
-                Margin = new Thickness(0, 8, 0, 0),
-                Text = $"{request.CardNumber}\nBeneficiary ID: {Fallback(request.BeneficiaryId)}\nCivil Registry ID: {Fallback(request.CivilRegistryId)}",
-                FontSize = 10,
-                TextWrapping = TextWrapping.Wrap,
-                Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#334155"))
-            };
-            Grid.SetRow(idBlock, 2);
-            details.Children.Add(idBlock);
+            details.Children.Add(CreateDetailGroup("Beneficiary ID", request.BeneficiaryId));
+            details.Children.Add(CreateDetailGroup("Civil Registry ID", request.CivilRegistryId));
 
-            var qrContainer = new StackPanel
-            {
-                Margin = new Thickness(0, 10, 0, 0),
-                Orientation = Orientation.Horizontal,
-                VerticalAlignment = VerticalAlignment.Bottom
-            };
+            Grid.SetColumn(details, 2);
+            body.Children.Add(details);
 
-            qrContainer.Children.Add(new Border
+            // FOOTER - Card Number Badge
+            var cardNumberBadge = new Border
             {
-                Width = 88,
-                Height = 88,
-                Background = Brushes.White,
-                BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#CBD5E1")),
+                HorizontalAlignment = HorizontalAlignment.Left,
+                VerticalAlignment = VerticalAlignment.Bottom,
+                Margin = new Thickness(14, 0, 0, 12),
+                Padding = new Thickness(10, 4, 10, 4),
+                CornerRadius = new CornerRadius(6),
+                Background = new SolidColorBrush(Color.FromArgb(230, 241, 245, 249)), // rgba(241, 245, 249, 0.9)
+                BorderBrush = BrushFromHex("#CBD5E1"),
                 BorderThickness = new Thickness(1),
-                Child = request.QrImage == null
-                    ? null
-                    : BuildQrImage(request.QrImage)
-            });
+                Child = new TextBlock
+                {
+                    Text = request.CardNumber,
+                    FontSize = 9.5,
+                    FontWeight = FontWeights.ExtraBold,
+                    Foreground = BrushFromHex("#334155")
+                }
+            };
+            Grid.SetRow(cardNumberBadge, 1);
+            root.Children.Add(cardNumberBadge);
 
-            qrContainer.Children.Add(new TextBlock
+            // QR CODE
+            var qrBorder = new Border
             {
-                Margin = new Thickness(8, 0, 0, 0),
-                VerticalAlignment = VerticalAlignment.Center,
-                Text = "Show this ID for\nlookup, attendance,\nand release\nverification.",
-                FontSize = 9,
-                Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#475569"))
-            });
-
-            Grid.SetRow(qrContainer, 3);
-            details.Children.Add(qrContainer);
-
-            Grid.SetColumn(details, 1);
-            root.Children.Add(details);
+                Width = 54,
+                Height = 54,
+                HorizontalAlignment = HorizontalAlignment.Right,
+                VerticalAlignment = VerticalAlignment.Bottom,
+                Margin = new Thickness(0, 0, 14, 12),
+                Padding = new Thickness(2),
+                Background = Brushes.White,
+                BorderBrush = BrushFromHex("#CBD5E1"),
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(6),
+                Effect = new System.Windows.Media.Effects.DropShadowEffect
+                {
+                    BlurRadius = 4,
+                    ShadowDepth = 2,
+                    Opacity = 0.05,
+                    Color = Colors.Black
+                },
+                Child = request.QrImage == null ? null : BuildQrImage(request.QrImage)
+            };
+            Grid.SetRow(qrBorder, 1);
+            root.Children.Add(qrBorder);
 
             return new Border
             {
                 Width = 324,
                 Height = 204,
-                CornerRadius = new CornerRadius(18),
-                Background = root.Background,
-                BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#CBD5E1")),
+                CornerRadius = new CornerRadius(12),
+                Background = Brushes.White,
+                BorderBrush = BrushFromHex("#CBD5E1"),
                 BorderThickness = new Thickness(1),
+                ClipToBounds = true,
                 Child = root
             };
+        }
+
+        private static StackPanel CreateDetailGroup(string label, string? value)
+        {
+            var panel = new StackPanel { Margin = new Thickness(0, 0, 0, 6) };
+            panel.Children.Add(new TextBlock
+            {
+                Text = label.ToUpper(),
+                FontSize = 7.5,
+                FontWeight = FontWeights.Bold,
+                Foreground = BrushFromHex("#64748B")
+            });
+            panel.Children.Add(new TextBlock
+            {
+                Text = Fallback(value),
+                FontSize = 10.5,
+                FontWeight = FontWeights.Bold,
+                Foreground = BrushFromHex("#1E293B"),
+                Effect = CreateTextShadow()
+            });
+            return panel;
+        }
+
+        private static System.Windows.Media.Effects.DropShadowEffect CreateTextShadow()
+        {
+            return new System.Windows.Media.Effects.DropShadowEffect
+            {
+                Color = Colors.White,
+                Opacity = 0.8,
+                BlurRadius = 0,
+                ShadowDepth = 1,
+                Direction = 315
+            };
+        }
+
+        private static SolidColorBrush BrushFromHex(string value)
+        {
+            return new SolidColorBrush((Color)ColorConverter.ConvertFromString(value));
         }
 
         private static string Fallback(string? value)

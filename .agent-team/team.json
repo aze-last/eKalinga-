@@ -26,6 +26,15 @@
       ]
     },
     {
+      "id": "manual-writer@attendance-shifting-management",
+      "role": "User Manual Writer / Editor",
+      "allowedPaths": [
+        ".agent-team",
+        "README.md",
+        "docs/User-Manual-Ayuda.docx"
+      ]
+    },
+    {
       "id": "repo-mapper@attendance-shifting-management",
       "role": "Repo Mapper",
       "allowedPaths": [
@@ -60,6 +69,17 @@
       ]
     },
     {
+      "id": "ui-ux-auditor-redesigner@attendance-shifting-management",
+      "role": "UI/UX Auditor / Redesigner",
+      "allowedPaths": [
+        ".agent-team",
+        "docs",
+        "Views",
+        "ViewModels",
+        "Images"
+      ]
+    },
+    {
       "id": "verifier@attendance-shifting-management",
       "role": "Verifier",
       "allowedPaths": [
@@ -68,6 +88,213 @@
         "Views",
         "ViewModels",
         "Services"
+      ]
+    },
+    {
+      "id": "dashboard-worker@attendance-shifting-management",
+      "role": "Dashboard & Notification Worker",
+      "template": "dashboard-worker.md",
+      "allowedPaths": [
+        "Views/BarangayDashboardPage.xaml",
+        "ViewModels/BarangayMainViewModel.cs",
+        "ViewModels/BarangayDashboardViewModel.cs",
+        "Views/SessionAnnouncementWindow.xaml",
+        "Views/SessionAnnouncementWindow.xaml.cs",
+        "ViewModels/SessionAnnouncementViewModel.cs",
+        "Services/SessionAnnouncementService.cs"
+      ]
+    },
+    {
+      "id": "aid-request-worker@attendance-shifting-management",
+      "role": "Aid Request (Assistance Case) Worker",
+      "template": "aid-request-worker.md",
+      "allowedPaths": [
+        "Views/AssistanceCaseManagementPage.xaml",
+        "ViewModels/AssistanceCaseManagementViewModel.cs",
+        "Services/AssistanceCaseManagementService.cs",
+        "Models/AssistanceCase.cs",
+        "AttendanceShiftingManagement.Tests/AssistanceCaseManagementServiceTests.cs",
+        "AttendanceShiftingManagement.Tests/AssistanceCaseManagementPageBindingTests.cs",
+        "AttendanceShiftingManagement.Tests/AssistanceCaseBudgetIntegrationTests.cs"
+      ]
+    },
+    {
+      "id": "masterlist-worker@attendance-shifting-management",
+      "role": "Masterlist (Validated Beneficiaries) Worker",
+      "template": "masterlist-worker.md",
+      "allowedPaths": [
+        "Views/MasterListPage.xaml",
+        "ViewModels/MasterListViewModel.cs",
+        "Services/MasterListService.cs",
+        "Services/BeneficiaryVerificationService.cs",
+        "Models/MasterListBeneficiary.cs",
+        "Models/BeneficiaryStaging.cs",
+        "AttendanceShiftingManagement.Tests/MasterListViewModelTests.cs",
+        "AttendanceShiftingManagement.Tests/MasterListPageBindingTests.cs",
+        "AttendanceShiftingManagement.Tests/BeneficiaryVerificationServiceTests.cs"
+      ]
+    },
+    {
+      "id": "budget-worker@attendance-shifting-management",
+      "role": "Budget Management Worker",
+      "template": "budget-worker.md",
+      "allowedPaths": [
+        "Views/BudgetPage.xaml",
+        "ViewModels/BudgetViewModel.cs",
+        "Services/BudgetManagementService.cs",
+        "Services/GgmsBudgetSyncService.cs",
+        "Models/BudgetingModels.cs",
+        "AttendanceShiftingManagement.Tests/BudgetManagementServiceTests.cs",
+        "AttendanceShiftingManagement.Tests/BudgetPageBindingTests.cs"
+      ]
+    },
+    {
+      "id": "cash-for-work-worker@attendance-shifting-management",
+      "role": "Cash-for-Work Worker",
+      "template": "cash-for-work-worker.md",
+      "allowedPaths": [
+        "Views/CashForWorkOcrPage.xaml",
+        "ViewModels/CashForWorkOcrViewModel.cs",
+        "Services/CashForWorkService.cs",
+        "Models/CashForWorkAttendance.cs",
+        "Models/CashForWorkEvent.cs",
+        "Models/CashForWorkParticipant.cs",
+        "AttendanceShiftingManagement.Tests/CashForWorkServiceTests.cs",
+        "AttendanceShiftingManagement.Tests/CashForWorkOcrViewModelTests.cs"
+      ]
+    },
+    {
+      "id": "reports-worker@attendance-shifting-management",
+      "role": "Reports Worker",
+      "template": "reports-worker.md",
+      "allowedPaths": [
+        "Views/ReportsPage.xaml",
+        "ViewModels/ReportsViewModel.cs",
+        "Services/ReportsService.cs",
+        "Services/ReportDocumentService.cs",
+        "AttendanceShiftingManagement.Tests/ReportsPageBindingTests.cs",
+        "AttendanceShiftingManagement.Tests/ReportDocumentServiceTests.cs"
+      ]
+    },
+    {
+      "id": "distribution-worker@attendance-shifting-management",
+      "role": "Project Distribution Worker",
+      "template": "distribution-worker.md",
+      "allowedPaths": [
+        "Views/ProjectDistribution*.xaml",
+        "Views/ProjectDistribution*.xaml.cs",
+        "ViewModels/ProjectDistributionViewModel.cs",
+        "Services/ProjectDistributionService.cs",
+        "AttendanceShiftingManagement.Tests/ProjectDistribution*.cs"
+      ]
+    },
+    {
+      "id": "borrowing-worker@attendance-shifting-management",
+      "role": "Equipment Borrowing Worker",
+      "template": "borrowing-worker.md",
+      "allowedPaths": [
+        "Views/BorrowingPage.xaml",
+        "ViewModels/BorrowingViewModel.cs",
+        "Services/EquipmentBorrowingService.cs",
+        "Models/BarangayAsset.cs",
+        "Models/EquipmentBorrowing.cs",
+        "AttendanceShiftingManagement.Tests/EquipmentBorrowingServiceTests.cs"
+      ]
+    },
+    {
+      "id": "installer-worker@attendance-shifting-management",
+      "role": "Installer & Deployment Worker",
+      "template": "installer-worker.md",
+      "allowedPaths": [
+        "scripts/build-installer.ps1",
+        "scripts/publish-update-manifest.ps1",
+        "installer/AttendanceShiftingManagement.iss",
+        "version.json"
+      ]
+    },
+    {
+      "id": "database-worker@attendance-shifting-management",
+      "role": "Core Database Infrastructure Worker",
+      "template": "database-worker.md",
+      "allowedPaths": [
+        "Data/AppDbContext.cs",
+        "Data/AppDbContextFactory.cs",
+        "Data/DatabaseInitializer.cs",
+        "Data/StartupMigrationCoordinator.cs",
+        "Services/ConnectionSettingsService.cs",
+        "Services/RemotePhaseOneSyncService.cs",
+        "AttendanceShiftingManagement.Tests/AppDbContextFactoryTests.cs",
+        "AttendanceShiftingManagement.Tests/StartupMigrationCoordinatorTests.cs",
+        "AttendanceShiftingManagement.Tests/RemotePhaseOneSyncServiceSourceTests.cs"
+      ]
+    },
+    {
+      "id": "digital-id-worker@attendance-shifting-management",
+      "role": "Digital ID & Scanner Workflow Worker",
+      "template": "digital-id-worker.md",
+      "allowedPaths": [
+        "Models/BeneficiaryDigitalId.cs",
+        "Services/BeneficiaryDigitalIdService.cs",
+        "Services/DigitalIdPrintService.cs",
+        "Services/QrCodeToolkitService.cs",
+        "Views/DigitalIdPrintPreviewWindow.xaml",
+        "Views/DigitalIdPrintPreviewWindow.xaml.cs",
+        "ViewModels/BeneficiaryVerificationViewModel.cs",
+        "ViewModels/CashForWorkOcrViewModel.cs",
+        "ViewModels/ProjectDistributionViewModel.cs",
+        "ViewModels/BorrowingViewModel.cs",
+        "Services/CashForWorkService.cs",
+        "Services/ProjectDistributionService.cs",
+        "Services/EquipmentBorrowingService.cs",
+        "Services/LocalScannerGatewayService.cs",
+        "AttendanceShiftingManagement.Tests/BeneficiaryDigitalIdServiceTests.cs",
+        "AttendanceShiftingManagement.Tests/DigitalIdPrintPreviewSourceTests.cs",
+        "AttendanceShiftingManagement.Tests/QrCodeToolkitServiceTests.cs"
+      ]
+    },
+    {
+      "id": "mock-activity-worker@attendance-shifting-management",
+      "role": "Demo Content Generator (Mock Activity)",
+      "template": "mock-activity-worker.md",
+      "allowedPaths": [
+        "docs/mock-beneficiaries-added.txt",
+        "Services/AssistanceCaseManagementService.cs",
+        "Services/ProjectDistributionService.cs",
+        "Services/CashForWorkService.cs",
+        "Services/BudgetManagementService.cs",
+        "Models/AssistanceCase.cs",
+        "Models/CashForWorkEvent.cs",
+        "Models/CashForWorkAttendance.cs",
+        "Models/BudgetingModels.cs",
+        "Data/AppDbContext.cs"
+      ]
+    },
+    {
+      "id": "workflow-reviewer@attendance-shifting-management",
+      "role": "Workflow & Logic Reviewer",
+      "template": "workflow-reviewer.md",
+      "allowedPaths": [
+        ".agent-team",
+        "docs",
+        "Services",
+        "Models",
+        "ViewModels"
+      ]
+    },
+    {
+      "id": "permissions-officer@attendance-shifting-management",
+      "role": "User Access & Permissions Officer",
+      "template": "permissions-officer.md",
+      "allowedPaths": [
+        "Models/User.cs",
+        "Models/UserPermission.cs",
+        "Data/AppDbContext.cs",
+        "Data/RuntimeSchemaBootstrapper.cs",
+        "Services/UserPermissionService.cs",
+        "ViewModels/LoginViewModel.cs",
+        "ViewModels/BarangayMainViewModel.cs",
+        "Views/MainWindow.xaml",
+        "Views/BarangayDashboardPage.xaml"
       ]
     }
   ]

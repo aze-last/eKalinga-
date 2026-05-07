@@ -1664,6 +1664,11 @@
                                      Style="{StaticResource MaterialDesignOutlinedTextBox}"
                                      materialDesign:HintAssist.Hint="Warning threshold amount" />
 
+                            <CheckBox Margin="0,16,0,0"
+                                      Content="Enable OTP security verification (Disable for debugging)"
+                                      IsChecked="{Binding IsOtpEnabled}"
+                                      Foreground="{DynamicResource BrandMidnightBrush}" />
+
                             <Button Margin="0,18,0,0"
                                     Width="220"
                                     HorizontalAlignment="Left"

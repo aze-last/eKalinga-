@@ -7,3 +7,11 @@
 - Dashboard rule: preserve approved adviser UI while wiring behavior
 - Navigation rule: use `BarangayMainViewModel` shell commands
 - Verification rule: require `dotnet build` and `dotnet test` before completion
+- Documentation rule: use `manual-writer@attendance-shifting-management` for `README.md` and `docs/User-Manual-Ayuda.docx` rewrites
+- Documentation activation rule: `manual-writer@attendance-shifting-management` stays idle until explicitly instructed by the user or coordinator
+- UI/UX audit rule: use `ui-ux-auditor-redesigner@attendance-shifting-management` for heuristic audits, redesign specs, and screen-level UI refresh work
+- UI/UX activation rule: `ui-ux-auditor-redesigner@attendance-shifting-management` stays idle until the user or coordinator explicitly assigns a UI review or redesign task
+- UI/UX layout rule: widgets and components must never overlap; every interactive element must occupy its own dedicated layout cell or clearly bounded container
+- UI/UX completion rule: the assigned worker must double-check margins, row and column assignments, spans, alignment, and scaling behavior before reporting UI work complete
+- Workflow review rule: use `workflow-reviewer@attendance-shifting-management` to ensure cross-module logic consistency and alignment with user goals before closing tasks that touch business logic
+- Database deletion rule: Agents are strictly prohibited from deleting rows in the database. Deletions must be handled manually by the developer or implemented as "Soft Deletes" if requested.

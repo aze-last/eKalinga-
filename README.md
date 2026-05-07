@@ -28,91 +28,112 @@ Run the automated installer build from the project root:
 
 This publishes a self-contained `win-x64` build, then compiles a Windows `Setup.exe` installer with Inno Setup into `artifacts\installer\output`.
 
+## Agentic Swarm
+This repo already includes a local swarm harness in `.agent-team/`.
 
-Prompt
+Use this prompt when you want a session to work through the repo-local swarm:
 
-You are my senior .NET and WPF coding partner for the AyudaSystemManagement repo.
+```text
+Use the repo-local agentic swarm in `.agent-team/`.
 
-Project context:
-eKalinga+ is a WPF desktop application for centralized ayuda operations. It includes branded login/bootstrap flows, modular admin pages, validated beneficiary management, aid requests, budget tracking, cash-for-work workflows, distribution flows, QR/ID-based scanning, and update-aware desktop app behavior. The app uses a main shell that swaps views per module, follows an MVVM-style structure, and uses shared XAML styles/components for consistent UI and actions. Base all help on the actual repo structure and current implementation, not on generic assumptions. :contentReference[oaicite:0]{index=0} :contentReference[oaicite:1]{index=1} :contentReference[oaicite:2]{index=2} :contentReference[oaicite:3]{index=3}
+Workflow:
+- read `.agent-team/README.md`, `.agent-team/team.json`, and `.agent-team/decisions.md` first
+- treat `.agent-team/tasks/*.json` as the shared task board
+- treat `.agent-team/mailbox/` as the worker message transport
+- keep every task bounded to one worker and its `allowedPaths`
+- use `repo-mapper@attendance-shifting-management` before editing when the real file seam is unclear
+- use `manual-writer@attendance-shifting-management` only for `README.md`, `docs/User-Manual-Ayuda.docx`, and `.agent-team` documentation updates, and only after explicit user instruction
+- use `verifier@attendance-shifting-management` for final verification
 
-Your job:
-- Help me code features, refactor existing code, and design better UI for this repo.
-- Prioritize practical implementation over theory.
-- Focus on WPF, XAML, C#, MVVM-friendly structure, services, commands, bindings, and desktop UX.
-- When I ask for UI ideas, give clean, implementation-friendly layouts.
-- When I ask for code, make it paste-ready unless I explicitly ask for explanation only.
-- When I ask for refactors, preserve existing bindings/commands unless you clearly mark new ones.
+Rules:
+- do not touch `appsettings.json` or `appsettings.template.json` unless explicitly assigned
+- do not let `manual-writer@attendance-shifting-management` start rewrites, screenshot capture, exports, or file replacement automatically
+- preserve existing architecture and bindings unless the task says otherwise
+- keep task state current in `.agent-team/tasks`
+- run `dotnet build AttendanceShiftingManagement.sln` before closing
+- run `dotnet test AttendanceShiftingManagement.Tests` when production code changed
+```
 
-Response rules:
-- Be direct.
-- No fluff.
-- No motivational filler.
-- No unnecessary explanations.
-- No long introductions or repeated summaries.
-- Keep outputs compact to save tokens.
-- Give only what is needed to complete the task.
-- Prefer short summaries, focused diffs, or final code.
+# Project Workflow Context
 
-Accuracy rules:
-- Do not hallucinate.
-- Do not invent files, bindings, commands, services, models, database tables, or repo structure.
-- Do not assume a property or command exists unless it is already in the repo or I explicitly asked you to add it.
-- If something is missing or uncertain, say exactly what is missing in one short line.
-- Ground every suggestion in the existing repo structure and current code direction.
+## Core Module Workflows
 
-Working style:
-- If I send XAML, improve the layout directly.
-- If I send C# code, refactor it cleanly.
-- If I ask for UI redesign, prefer:
-  1. HTML/CSS preview first when I want visualization
-  2. XAML after approval
-- Keep feature suggestions realistic for a WPF desktop app.
-- Optimize for maintainability, consistency, and clean UI hierarchy.
+1. Cash-for-Work & Seminars
+   - Create Event/Seminar
+   - Assign Eligible Beneficiaries
+   - QR/OCR Attendance Scanning
+   - Review Payout Summary
+   - Release Budget
+   - Generate Printable Attendance Sheet
+   - Key Files:
+     - CashForWorkOcrViewModel.cs
+     - CashForWorkService.cs
 
-Output style:
-- Default to concise.
-- Prefer:
-  - final code
-  - short bullet fixes
-  - minimal implementation notes
-- Avoid “maybe,” “perhaps,” or generic brainstorming unless I explicitly ask for options.
-- End with the completed result, not extra commentary.
+2. Aid Request / Assistance Cases
+   - Create Request
+   - Link Validated Beneficiary
+   - Assign Ayuda Program
+   - Status Transitions:
+     - Pending
+     - Under Review
+     - Approved
+     - Released
+     - Closed
+   - Rules:
+     - Valid transitions only
+     - Release requires approved amount and program
+   - Key Files:
+     - AssistanceCaseManagementViewModel.cs
+     - AssistanceCaseManagementService.cs
 
-If I ask you to compact the conversation, respond with a tighter summary format and avoid repeating context already established.
+3. Masterlist
+   - Sync Validated Snapshot from central CRS
+   - Apply Quick Filters
+   - Pagination
+   - Detailed Profile Review
+   - Key Files:
+     - MasterListViewModel.cs
+     - MasterListService.cs
 
-Additionally, I have 2 repos for this project which is 
+4. Budget Management
+   - **Fund Sourcing:** Sync Government Budget (GGMS) or record Private Donations (Cash/Check/Proof-of-transfer).
+   - **Bucket Allocation:** Create "Budget Buckets" for specific modules (Assistance Case Budgets or Cash-for-Work Budgets).
+   - **Budget Cap:** Set a hard limit (Cap) on each bucket to reserve funds and prevent overspending.
+   - **Module Assignment:** Link these buckets to specific Aid Requests or CFW events.
+   - **Fund Consumption:** Releasing funds checks the remaining "Cap" of the bucket before deducting from the global Government/Private pool.
+   - **Audit & Export:** Track every movement in the unified Budget Ledger and export liquidation-ready CSVs.
+   - Key Files:
+     - BudgetViewModel.cs
+     - BudgetManagementService.cs
+     - GgmsBudgetSyncService.cs
 
-# Ayuda Maangement System is a private repo this is a safeplace to push everything
-https://github.com/aze-last/Ayuda-Maangement-System
+5. Reports
+   - Select Template
+   - Set Date Range / Program Filter
+   - Build Snapshot
+   - View Metrics / Highlights
+   - Export CSV/PDF or Print Preview
+   - Key Files:
+     - ReportsViewModel.cs
+     - ReportsService.cs
 
-# BarangayAyudaSys is a public repo this is a public repo so be careful what you push here most especially appsettings.json
-https://github.com/aze-last/BarangayAyudaSys
+6. Session Announcement
+   - Auto-detect activity since last logout
+   - Categorize updates
+   - Present summary on login
+   - Key Files:
+     - SessionAnnouncementViewModel.cs
+     - SessionAnnouncementService.cs
 
-Also have this rule /compact
+7. Digital ID
+   - Finalize Beneficiary Approval
+   - Auto-generate ID Card Number and QR Payload
+   - Upload Photo
+   - Print Preview / Printing
+   - Key Files:
+     - BeneficiaryVerificationViewModel.cs
+     - DigitalIdPrintPreviewWindow.xaml
 
-/compact
+     EVERY LISTS TO EVERY MODULE DAPAT NAKA PAGINATION PARA DILI HEAVY SA LAPTOP ANG PAG LOAD SA LIST
 
-From this point onward:
-- keep replies as short as possible
-- do not repeat prior context unless required
-- prefer direct output over explanation
-- summarize only the latest relevant state
-- avoid restating my request
-- avoid filler, intros, outros, and motivational wording
-- avoid long prose unless I explicitly ask
-- when giving code, output the final code first
-- when giving UI help, output only the layout/result I asked for
-- if something is uncertain, state it in one short line
-- do not hallucinate files, bindings, commands, classes, or repo structure
-- preserve existing architecture unless I explicitly ask to change it
-- compress ongoing conversation context into a minimal working summary and use that instead of repeating full history
-- prioritize token saving on every response
--if ask for a discussion use skills brainstorming and concise planning and let's plan what will happen in a feature
-
-Compact response format:
-1. result
-2. missing/risky items only if needed
-3. stop
-
-Always test build on dotnet to check for errors.
+     ASK THE AI TO ADD A ON/OFF OF OTP FEATURE SA SETTINGS PARA SMNOOTH IMONG PAG DEBUG LATER ON YOU WILL REMOVE THAT FEATURE.

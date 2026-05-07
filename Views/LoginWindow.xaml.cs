@@ -28,16 +28,6 @@ namespace AttendanceShiftingManagement.Views
             }
         }
 
-        private void TogglePasswordVisibility_Click(object sender, RoutedEventArgs e)
-        {
-            ViewModel.IsShowingPassword = !ViewModel.IsShowingPassword;
-
-            if (!ViewModel.IsShowingPassword)
-            {
-                PasswordBox.Password = ViewModel.Password;
-            }
-        }
-
         private void BootstrapPasswordBox_PasswordChanged(object sender, RoutedEventArgs e)
         {
             if (sender is PasswordBox passwordBox)
@@ -63,7 +53,7 @@ namespace AttendanceShiftingManagement.Views
 
             window.ShowDialog();
             ViewModel.RefreshConnectionSummary();
-            ViewModel.RefreshStartupState();
+            ViewModel.RefreshStartupStateAsync();
         }
 
         private void Minimize_Click(object sender, RoutedEventArgs e)

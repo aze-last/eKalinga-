@@ -148,6 +148,7 @@ public sealed class BudgetManagementServiceTests
                 AyudaProgramType.GeneralPurpose,
                 "Quarterly rice support",
                 "Rice Assistance",
+                AssistanceReleaseKind.Cash,
                 2500m,
                 "1 sack of rice",
                 null,

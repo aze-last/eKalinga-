@@ -1,0 +1,278 @@
+<UserControl x:Class="AttendanceShiftingManagement.Views.ProjectDistributionScannerConfigPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             Background="Transparent">
+
+    <UserControl.Resources>
+        <DropShadowEffect x:Key="BrandElevationShadowEffect"
+                          BlurRadius="18"
+                          ShadowDepth="6"
+                          Color="#22000000"
+                          Opacity="0.55" />
+    </UserControl.Resources>
+
+    <Grid Background="#00000000">
+        <Border Background="#660F172A" />
+
+        <Border Width="860"
+                MaxHeight="780"
+                Padding="28"
+                Background="White"
+                BorderBrush="#D7E0EA"
+                BorderThickness="1"
+                CornerRadius="22"
+                VerticalAlignment="Center"
+                HorizontalAlignment="Center"
+                Effect="{StaticResource BrandElevationShadowEffect}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="18" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="18" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <Grid Grid.Row="0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel>
+                        <TextBlock Text="Scanner Configuration"
+                                   FontSize="25"
+                                   FontWeight="SemiBold"
+                                   Foreground="#0F172A" />
+                        <TextBlock Margin="0,8,0,0"
+                                   Text="{Binding SelectedProgram.ProgramName, TargetNullValue='No project selected'}"
+                                   FontSize="14"
+                                   FontWeight="SemiBold"
+                                   Foreground="#1D4ED8" />
+                        <TextBlock Margin="0,4,0,0"
+                                   Text="Configure phone scanning for Digital ID release."
+                                   FontSize="12"
+                                   Foreground="#64748B" />
+                    </StackPanel>
+
+                    <Button Grid.Column="1"
+                            Width="36"
+                            Height="36"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Foreground="#64748B"
+                            Command="{Binding CloseScannerPanelCommand}">
+                        <TextBlock FontFamily="Segoe MDL2 Assets"
+                                   FontSize="16"
+                                   Text="&#xE711;" />
+                    </Button>
+                </Grid>
+
+                <Grid Grid.Row="2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="1.05*" />
+                        <ColumnDefinition Width="18" />
+                        <ColumnDefinition Width="0.95*" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel>
+                        <Border Background="#F8FAFC"
+                                BorderBrush="#E2E8F0"
+                                BorderThickness="1"
+                                CornerRadius="16"
+                                Padding="18">
+                            <StackPanel>
+                                <TextBlock Text="Session Setup"
+                                           FontSize="13"
+                                           FontWeight="SemiBold"
+                                           Foreground="#0F172A" />
+                                <TextBlock Margin="0,10,0,0"
+                                           Text="Generate a Digital ID release scanner session for this selected project."
+                                           FontSize="12"
+                                           Foreground="#475569"
+                                           TextWrapping="Wrap" />
+
+                                <TextBlock Margin="0,18,0,0"
+                                           Text="Session Duration"
+                                           FontSize="12"
+                                           FontWeight="SemiBold"
+                                           Foreground="#0F172A" />
+                                <ComboBox Margin="0,8,0,0"
+                                          Width="180"
+                                          ItemsSource="{Binding ScannerSessionDurationOptions}"
+                                          SelectedItem="{Binding SelectedScannerSessionDurationMinutes}"
+                                          Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                          materialDesign:HintAssist.Hint="Duration (minutes)" />
+
+                                <Border Margin="0,18,0,0"
+                                        Background="White"
+                                        BorderBrush="#E2E8F0"
+                                        BorderThickness="1"
+                                        CornerRadius="12"
+                                        Padding="14">
+                                    <StackPanel>
+                                        <TextBlock Text="Project Snapshot"
+                                                   FontSize="12"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="#0F172A" />
+                                        <TextBlock Margin="0,10,0,0"
+                                                   Text="{Binding SelectedProgram.DistributionStatus, StringFormat='Distribution Status: {0}'}"
+                                                   FontSize="12"
+                                                   Foreground="#475569" />
+                                        <TextBlock Margin="0,4,0,0"
+                                                   Text="{Binding PendingTotalCount, StringFormat='Pending Releases: {0}'}"
+                                                   FontSize="12"
+                                                   Foreground="#475569" />
+                                        <TextBlock Margin="0,4,0,0"
+                                                   Text="{Binding ReleasedTotalCount, StringFormat='Released Claims: {0}'}"
+                                                   FontSize="12"
+                                                   Foreground="#475569" />
+                                    </StackPanel>
+                                </Border>
+
+                                <WrapPanel Margin="0,18,0,0">
+                                    <Button Content="CREATE NEW SESSION"
+                                            Width="180"
+                                            Height="42"
+                                            Margin="0,0,10,0"
+                                            Style="{StaticResource PrimaryActionButton}"
+                                            Command="{Binding CreateDistributionScannerSessionCommand}" />
+                                    <Button Content="REFRESH SESSION"
+                                            Width="160"
+                                            Height="42"
+                                            Style="{StaticResource SecondaryActionButton}"
+                                            Command="{Binding CreateDistributionScannerSessionCommand}" />
+                                </WrapPanel>
+
+                                <TextBlock Margin="0,18,0,0"
+                                           Text="{Binding ScannerStatusMessage}"
+                                           FontSize="12"
+                                           FontWeight="SemiBold"
+                                           Foreground="{Binding ScannerStatusBrush}"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Margin="0,18,0,0"
+                                Background="#F8FAFC"
+                                BorderBrush="#E2E8F0"
+                                BorderThickness="1"
+                                CornerRadius="16"
+                                Padding="18">
+                            <StackPanel>
+                                <TextBlock Text="How to Use"
+                                           FontSize="13"
+                                           FontWeight="SemiBold"
+                                           Foreground="#0F172A" />
+                                <TextBlock Margin="0,12,0,0"
+                                           Text="1. Open the generated URL on a phone or tablet."
+                                           FontSize="12"
+                                           Foreground="#475569"
+                                           TextWrapping="Wrap" />
+                                <TextBlock Margin="0,6,0,0"
+                                           Text="2. Enter the PIN to unlock the scanning session."
+                                           FontSize="12"
+                                           Foreground="#475569"
+                                           TextWrapping="Wrap" />
+                                <TextBlock Margin="0,6,0,0"
+                                           Text="3. Scan the beneficiary Digital ID QR code."
+                                           FontSize="12"
+                                           Foreground="#475569"
+                                           TextWrapping="Wrap" />
+                                <TextBlock Margin="0,6,0,0"
+                                           Text="4. Review the result and confirm the release."
+                                           FontSize="12"
+                                           Foreground="#475569"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <Border Grid.Column="2"
+                            Background="White"
+                            BorderBrush="#E2E8F0"
+                            BorderThickness="1"
+                            CornerRadius="16"
+                            Padding="18">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="16" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="16" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="16" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Text="Scanner Access"
+                                       FontSize="13"
+                                       FontWeight="SemiBold"
+                                       Foreground="#0F172A" />
+
+                            <Border Grid.Row="2"
+                                    Width="220"
+                                    Height="220"
+                                    HorizontalAlignment="Center"
+                                    Background="#F8FAFC"
+                                    BorderBrush="#E2E8F0"
+                                    BorderThickness="1"
+                                    CornerRadius="18">
+                                <Image Source="{Binding DistributionScannerQrImage}"
+                                       Stretch="Uniform"
+                                       RenderOptions.BitmapScalingMode="NearestNeighbor"
+                                       SnapsToDevicePixels="True" />
+                            </Border>
+
+                            <Border Grid.Row="4"
+                                    Background="#F8FAFC"
+                                    BorderBrush="#E2E8F0"
+                                    BorderThickness="1"
+                                    CornerRadius="14"
+                                    Padding="16">
+                                <StackPanel>
+                                    <TextBlock Text="PIN"
+                                               FontSize="11"
+                                               FontWeight="Bold"
+                                               Foreground="#64748B" />
+                                    <TextBlock Text="{Binding DistributionScannerSessionPin, TargetNullValue='----'}"
+                                               Margin="0,8,0,0"
+                                               FontSize="30"
+                                               FontWeight="Bold"
+                                               Foreground="#0F172A" />
+                                    <TextBlock Margin="0,10,0,0"
+                                               Text="{Binding DistributionScannerSessionExpiresAtText, TargetNullValue='No active session yet.'}"
+                                               FontSize="12"
+                                               Foreground="#475569"
+                                               TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+
+                            <StackPanel Grid.Row="6">
+                                <TextBlock Text="Scanner URL"
+                                           FontSize="11"
+                                           FontWeight="Bold"
+                                           Foreground="#64748B" />
+                                <TextBox Margin="0,8,0,0"
+                                         IsReadOnly="True"
+                                         Text="{Binding DistributionScannerSessionUrl, Mode=OneWay}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="Scanner URL" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </Grid>
+
+                <WrapPanel Grid.Row="4"
+                           HorizontalAlignment="Right">
+                    <Button Content="CLOSE"
+                            Width="120"
+                            Height="40"
+                            Style="{StaticResource SecondaryActionButton}"
+                            Command="{Binding CloseScannerPanelCommand}" />
+                </WrapPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

@@ -11,11 +11,11 @@ public sealed class CashForWorkBudgetIntegrationTests
         using var context = TestDbContextFactory.CreateContext();
         var admin = SeedAdmin(context);
         var beneficiary = SeedApprovedBeneficiary(context);
-        var program = SeedProgram(context, admin.Id);
+        var budget = SeedGlobalBudget(context, admin.Id);
         SeedGovernmentSnapshot(context, 5000m);
         var service = new CashForWorkService(context);
 
-        var cashForWorkEvent = service.CreateEvent(
+        var cashForWorkEvent = await service.CreateEventAsync(
             "Canal Clearing",
             "Sitio Uno",
             new DateTime(2026, 3, 27),
@@ -30,7 +30,6 @@ public sealed class CashForWorkBudgetIntegrationTests
 
         var result = await service.ReleaseEventAsync(
             cashForWorkEvent.Id,
-            program.Id,
             3000m,
             admin.Id,
             "First payout batch");
@@ -54,11 +53,11 @@ public sealed class CashForWorkBudgetIntegrationTests
         using var context = TestDbContextFactory.CreateContext();
         var admin = SeedAdmin(context);
         var beneficiary = SeedApprovedBeneficiary(context, 2002, "Blocked Beneficiary");
-        var program = SeedProgram(context, admin.Id);
+        var budget = SeedGlobalBudget(context, admin.Id);
         SeedGovernmentSnapshot(context, 1000m);
         var service = new CashForWorkService(context);
 
-        var cashForWorkEvent = service.CreateEvent(
+        var cashForWorkEvent = await service.CreateEventAsync(
             "Road Clearing",
             "Purok 2",
             new DateTime(2026, 3, 27),
@@ -73,7 +72,6 @@ public sealed class CashForWorkBudgetIntegrationTests
 
         var result = await service.ReleaseEventAsync(
             cashForWorkEvent.Id,
-            program.Id,
             3000m,
             admin.Id,
             "Blocked payout");
@@ -116,23 +114,23 @@ public sealed class CashForWorkBudgetIntegrationTests
         return beneficiary;
     }
 
-    private static AyudaProgram SeedProgram(Data.AppDbContext context, int createdByUserId)
+    private static CashForWorkBudget SeedGlobalBudget(Data.AppDbContext context, int createdByUserId)
     {
-        var program = new AyudaProgram
+        var budget = new CashForWorkBudget
         {
-            ProgramCode = "C4W-2026",
-            ProgramName = "Cash for Work 2026",
-            ProgramType = AyudaProgramType.CashForWork,
-            Description = "Cash-for-work release program",
+            BudgetCode = "GLOBAL_CFW_BUDGET",
+            BudgetName = "Global Cash for Work",
+            Description = "Unified CFW bucket",
+            BudgetCap = 10000m,
             CreatedByUserId = createdByUserId,
             IsActive = true,
             CreatedAt = DateTime.Now,
             UpdatedAt = DateTime.Now
         };
 
-        context.AyudaPrograms.Add(program);
+        context.CashForWorkBudgets.Add(budget);
         context.SaveChanges();
-        return program;
+        return budget;
     }
 
     private static void SeedGovernmentSnapshot(Data.AppDbContext context, decimal allocatedAmount)

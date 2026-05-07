@@ -3,7 +3,7 @@ namespace AttendanceShiftingManagement.Tests;
 public sealed class ProjectDistributionPageBindingTests
 {
     [Fact]
-    public void ProjectDistributionPage_BindsProjectMembershipScannerAndClaimLists()
+    public void ProjectDistributionPage_BindsPaginatedThreeColumnManualDistributionLayout()
     {
         var pagePath = Path.GetFullPath(Path.Combine(
             AppContext.BaseDirectory,
@@ -16,15 +16,27 @@ public sealed class ProjectDistributionPageBindingTests
 
         var xaml = File.ReadAllText(pagePath);
 
-        Assert.Contains("Text=\"Project Distribution\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("ItemsSource=\"{Binding Programs}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("SelectedItem=\"{Binding SelectedProgram}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("ItemsSource=\"{Binding ApprovedBeneficiaries}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("SelectedItem=\"{Binding SelectedApprovedBeneficiary}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Command=\"{Binding AddBeneficiaryToProjectCommand}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Command=\"{Binding CreateDistributionScannerSessionCommand}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"{Binding DistributionScannerSessionUrl, Mode=OneWay}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("ItemsSource=\"{Binding ProjectBeneficiaries}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("ItemsSource=\"{Binding ProjectClaims}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"Manual Project Distribution\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("ItemsSource=\"{Binding ProgramSummaries}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("SelectedItem=\"{Binding SelectedProgramSummary}\"", xaml, StringComparison.Ordinal);
+        
+        Assert.Contains("Text=\"UNRELEASED\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("ItemsSource=\"{Binding PendingBeneficiaries}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("SelectedItem=\"{Binding SelectedPendingBeneficiary}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding PendingPaginationText}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding PrevPendingPageCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding NextPendingPageCommand}\"", xaml, StringComparison.Ordinal);
+
+        Assert.Contains("Text=\"DIGITAL ID\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding SelectedPendingBeneficiary.FullName}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding SelectedPendingDigitalIdCardNumber}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding ConfirmReleaseCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Content=\"CONFIRM RELEASE\"", xaml, StringComparison.Ordinal);
+
+        Assert.Contains("Text=\"RELEASED\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("ItemsSource=\"{Binding ReleasedClaims}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding ReleasedPaginationText}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding PrevReleasedPageCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding NextReleasedPageCommand}\"", xaml, StringComparison.Ordinal);
     }
 }

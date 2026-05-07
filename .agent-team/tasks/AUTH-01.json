@@ -1,0 +1,29 @@
+{
+  "id": "AUTH-01",
+  "title": "Implement Per-User Permission Overrides (MVVM + EF Core)",
+  "status": "todo",
+  "owner": "permissions-officer@attendance-shifting-management",
+  "goal": "Build the backend logic and MVVM bindings to hide specific modules from specific staff members based on SuperAdmin configuration.",
+  "allowedPaths": [
+    "Models/User.cs",
+    "Models/UserPermission.cs",
+    "Data/AppDbContext.cs",
+    "Data/RuntimeSchemaBootstrapper.cs",
+    "Services/UserPermissionService.cs",
+    "ViewModels/LoginViewModel.cs",
+    "ViewModels/BarangayMainViewModel.cs",
+    "Views/MainWindow.xaml",
+    "Views/BarangayDashboardPage.xaml"
+  ],
+  "dependencies": [],
+  "verification": [
+    "dotnet build AttendanceShiftingManagement.sln"
+  ],
+  "notes": [
+    "LOCKED PLAN: Must use EF Core (AppDbContext) and RuntimeSchemaBootstrapper. NO raw SQL.",
+    "LOCKED PLAN: Must use BooleanToVisibilityConverter for sidebar buttons. NO code-behind toggles.",
+    "LOCKED PLAN: SuperAdmin is exempt. Default access is true if no row exists.",
+    "LOCKED PLAN: UI for editing permissions must use DialogHost overlay, not a new popup window."
+  ],
+  "artifacts": []
+}

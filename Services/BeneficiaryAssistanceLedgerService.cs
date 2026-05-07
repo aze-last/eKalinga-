@@ -139,10 +139,51 @@ namespace AttendanceShiftingManagement.Services
             var normalizedCivilRegistryId = NormalizeNullable(civilRegistryId);
             var normalizedBeneficiaryId = NormalizeNullable(beneficiaryId);
 
-            return await QueryByIdentity(normalizedCivilRegistryId, normalizedBeneficiaryId)
+            var ledgerEntries = await QueryByIdentity(normalizedCivilRegistryId, normalizedBeneficiaryId)
                 .OrderByDescending(item => item.ReleaseDate)
                 .ThenByDescending(item => item.CreatedAt)
                 .ToListAsync();
+
+            // Fetch Equipment Borrowings
+            var borrowingQuery = _context.EquipmentBorrowings
+                .Include(b => b.Asset)
+                .AsNoTracking();
+
+            List<EquipmentBorrowing> borrowings;
+            if (normalizedBeneficiaryId != null)
+            {
+                borrowings = await borrowingQuery.Where(b => b.BeneficiaryId == normalizedBeneficiaryId).ToListAsync();
+            }
+            else
+            {
+                borrowings = new List<EquipmentBorrowing>();
+            }
+
+            foreach (var b in borrowings)
+            {
+                var status = b.ReturnDate.HasValue ? "RETURNED" : "OUTSTANDING";
+                var dateInfo = b.ReturnDate.HasValue 
+                    ? $"Returned on {b.ReturnDate.Value:MMM dd, yyyy}" 
+                    : $"Due on {b.DueDate:MMM dd, yyyy}";
+
+                ledgerEntries.Add(new BeneficiaryAssistanceLedgerEntry
+                {
+                    Id = -b.Id, // Use negative ID for virtual entries
+                    CivilRegistryId = normalizedCivilRegistryId,
+                    BeneficiaryId = normalizedBeneficiaryId,
+                    SourceModule = BeneficiaryAssistanceSourceModule.EquipmentBorrowing,
+                    SourceRecordId = $"borrow:{b.Id}",
+                    ReleaseDate = b.BorrowDate.Date,
+                    Amount = 0,
+                    Remarks = $"Borrowed {b.Asset?.AssetTag ?? "Equipment"}. Status: {status}. {dateInfo}",
+                    CreatedAt = b.BorrowDate
+                });
+            }
+
+            return ledgerEntries
+                .OrderByDescending(item => item.ReleaseDate)
+                .ThenByDescending(item => item.CreatedAt)
+                .ToList();
         }
 
         public async Task<IReadOnlyList<BeneficiaryAssistanceLedgerEntry>> GetEntriesForStagingAsync(int stagingId)

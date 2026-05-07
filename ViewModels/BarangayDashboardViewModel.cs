@@ -29,15 +29,93 @@ namespace AttendanceShiftingManagement.ViewModels
         private int _openEventCount;
         private int _todayAttendanceCount;
         private int _completedEventsThisMonthCount;
+        private int _overdueBorrowingCount;
 
         public BarangayDashboardViewModel()
+            : this(loadImmediately: true)
+        {
+        }
+
+        private BarangayDashboardViewModel(bool loadImmediately)
         {
             _dashboardService = new BarangayDashboardService();
             RecentActivities = new ObservableCollection<BarangayDashboardRecentActivityItem>();
             TodaySummaries = new ObservableCollection<BarangayDashboardTodaySummaryItem>();
             _refreshCommand = new RelayCommand(async _ => await LoadAsync(), _ => !IsBusy);
 
-            _ = LoadAsync();
+            if (loadImmediately)
+            {
+                _ = LoadAsync();
+            }
+        }
+
+        public static BarangayDashboardViewModel CreateDesignTime()
+        {
+            var viewModel = new BarangayDashboardViewModel(loadImmediately: false)
+            {
+                _todayLabel = "Thursday, April 23, 2026",
+                _timeLabel = "05:32 PM",
+                _activeDatabaseLabel = "Local: 127.0.0.1:3306 / attendance_shifting_db",
+                _lastRefreshLabel = "Updated April 23, 2026 05:32 PM",
+                _statusMessage = "Dashboard preview is ready.",
+                _statusBrush = CreateBrush("#1A7A4A"),
+                _aidRequestCount = 14,
+                _pendingReviewCount = 7,
+                _budgetAlertCount = 2,
+                _distributionCount = 9,
+                _householdCount = 128,
+                _masterListCount = 412,
+                _approvedBeneficiaryCount = 365,
+                _rejectedBeneficiaryCount = 11,
+                _cashForWorkBeneficiaryCount = 26,
+                _openEventCount = 3,
+                _todayAttendanceCount = 18,
+                _completedEventsThisMonthCount = 4
+            };
+
+            viewModel.RecentActivities.Add(new BarangayDashboardRecentActivityItem
+            {
+                Title = "Aid request approved",
+                Detail = "Funeral assistance release prepared for household CRZ-021.",
+                TimeLabel = "04:50 PM"
+            });
+
+            viewModel.RecentActivities.Add(new BarangayDashboardRecentActivityItem
+            {
+                Title = "Budget ledger updated",
+                Detail = "Rice support allocation posted to April release ledger.",
+                TimeLabel = "03:40 PM"
+            });
+
+            viewModel.TodaySummaries.Add(new BarangayDashboardTodaySummaryItem
+            {
+                Label = "Aid Requests Today",
+                Value = "12",
+                Note = "New requests recorded today"
+            });
+
+            viewModel.TodaySummaries.Add(new BarangayDashboardTodaySummaryItem
+            {
+                Label = "Distributions Today",
+                Value = "9",
+                Note = "Claimed project distributions"
+            });
+
+            viewModel.TodaySummaries.Add(new BarangayDashboardTodaySummaryItem
+            {
+                Label = "Attendance Logged",
+                Value = "18",
+                Note = "Cash-for-work attendance entries"
+            });
+
+            viewModel.TodaySummaries.Add(new BarangayDashboardTodaySummaryItem
+            {
+                Label = "Released Amount",
+                Value = "PHP 48,250.00",
+                Note = "Total release ledger amount for today"
+            });
+
+            return viewModel;
         }
 
         public ObservableCollection<BarangayDashboardRecentActivityItem> RecentActivities { get; }
@@ -164,6 +242,12 @@ namespace AttendanceShiftingManagement.ViewModels
             private set => SetProperty(ref _completedEventsThisMonthCount, value);
         }
 
+        public int OverdueBorrowingCount
+        {
+            get => _overdueBorrowingCount;
+            private set => SetProperty(ref _overdueBorrowingCount, value);
+        }
+
         public bool HasRecentActivities => RecentActivities.Count > 0;
 
         public ICommand RefreshCommand => _refreshCommand;
@@ -199,6 +283,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 OpenEventCount = snapshot.OpenCashForWorkEvents;
                 TodayAttendanceCount = snapshot.TodayAttendanceCount;
                 CompletedEventsThisMonthCount = snapshot.CompletedEventsThisMonth;
+                OverdueBorrowingCount = snapshot.OverdueBorrowingCount;
 
                 BuildRecentActivities(snapshot);
                 BuildTodaySummaries(snapshot);

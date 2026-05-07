@@ -1,0 +1,166 @@
+<Window x:Class="AttendanceShiftingManagement.Views.PhotoCropDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+        Title="Crop Photo"
+        Height="560" Width="460"
+        Background="Transparent"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize">
+
+    <shell:WindowChrome.WindowChrome>
+        <shell:WindowChrome CaptionHeight="40" ResizeBorderThickness="0"
+                            GlassFrameThickness="0" CornerRadius="0"/>
+    </shell:WindowChrome.WindowChrome>
+
+    <Border Background="#F8FAFC" CornerRadius="20"
+            BorderBrush="#CBD5E1" BorderThickness="1">
+        <Grid Margin="24">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Close button -->
+            <Button Grid.Row="0"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Top"
+                    Margin="0,-8,-8,0"
+                    Width="36" Height="36"
+                    Style="{StaticResource MaterialDesignFlatButton}"
+                    shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                    Click="Close_Click">
+                <materialDesign:PackIcon Kind="Close" Width="18" Height="18" Foreground="#475569"/>
+            </Button>
+
+            <!-- Title -->
+            <StackPanel Grid.Row="0" Margin="0,0,40,0">
+                <TextBlock Text="Crop Photo"
+                           FontSize="22" FontWeight="SemiBold"
+                           Foreground="#0F172A"/>
+                <TextBlock Text="Drag to reposition · Scroll or use slider to zoom"
+                           FontSize="12" Foreground="#64748B" Margin="0,4,0,0"/>
+            </StackPanel>
+
+            <!-- Crop canvas area -->
+            <Border Grid.Row="2"
+                    Margin="0,20,0,0"
+                    Background="#1E293B"
+                    CornerRadius="12"
+                    ClipToBounds="True">
+                <Grid>
+                    <!-- Infinite drag canvas -->
+                    <Canvas x:Name="DragCanvas"
+                            Background="Transparent"
+                            MouseLeftButtonDown="Canvas_MouseDown"
+                            MouseLeftButtonUp="Canvas_MouseUp"
+                            MouseMove="Canvas_MouseMove"
+                            MouseWheel="Canvas_MouseWheel"
+                            Cursor="SizeAll">
+
+                        <Image x:Name="DragImage"
+                               RenderTransformOrigin="0,0">
+                            <Image.RenderTransform>
+                                <TranslateTransform x:Name="ImageTranslate"/>
+                            </Image.RenderTransform>
+                        </Image>
+                    </Canvas>
+
+                    <!-- Crop frame overlay (78:104 ratio, scaled up for visibility) -->
+                    <Grid IsHitTestVisible="False">
+                        <!-- Dimmed sides -->
+                        <Rectangle Fill="#99000000"/>
+                        <!-- Clear crop window -->
+                        <Border x:Name="CropFrame"
+                                Width="156" Height="208"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Background="Transparent"
+                                BorderBrush="White"
+                                BorderThickness="2"
+                                CornerRadius="8">
+                            <Border.Effect>
+                                <DropShadowEffect Color="White" BlurRadius="6"
+                                                  ShadowDepth="0" Opacity="0.4"/>
+                            </Border.Effect>
+                        </Border>
+                        <!-- Corner handles -->
+                        <Canvas IsHitTestVisible="False"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Width="156" Height="208">
+                            <!-- TL -->
+                            <Rectangle Canvas.Left="0" Canvas.Top="0" Width="20" Height="3" Fill="#3B82F6"/>
+                            <Rectangle Canvas.Left="0" Canvas.Top="0" Width="3" Height="20" Fill="#3B82F6"/>
+                            <!-- TR -->
+                            <Rectangle Canvas.Right="0" Canvas.Top="0" Width="20" Height="3" Fill="#3B82F6"/>
+                            <Rectangle Canvas.Right="0" Canvas.Top="0" Width="3" Height="20" Fill="#3B82F6"/>
+                            <!-- BL -->
+                            <Rectangle Canvas.Left="0" Canvas.Bottom="0" Width="20" Height="3" Fill="#3B82F6"/>
+                            <Rectangle Canvas.Left="0" Canvas.Bottom="0" Width="3" Height="20" Fill="#3B82F6"/>
+                            <!-- BR -->
+                            <Rectangle Canvas.Right="0" Canvas.Bottom="0" Width="20" Height="3" Fill="#3B82F6"/>
+                            <Rectangle Canvas.Right="0" Canvas.Bottom="0" Width="3" Height="20" Fill="#3B82F6"/>
+                        </Canvas>
+                    </Grid>
+                </Grid>
+            </Border>
+
+            <!-- Zoom slider -->
+            <StackPanel Grid.Row="3" Margin="0,16,0,0" Orientation="Horizontal">
+                <materialDesign:PackIcon Kind="MagnifyMinus" VerticalAlignment="Center"
+                                         Foreground="#64748B" Width="18" Height="18"/>
+                <Slider x:Name="ZoomSlider"
+                        Minimum="0.5" Maximum="3.0" Value="1.0"
+                        Width="320" Margin="10,0"
+                        VerticalAlignment="Center"
+                        ValueChanged="ZoomSlider_ValueChanged"/>
+                <materialDesign:PackIcon Kind="MagnifyPlus" VerticalAlignment="Center"
+                                         Foreground="#64748B" Width="18" Height="18"/>
+            </StackPanel>
+
+            <!-- Live preview -->
+            <StackPanel Grid.Row="4" Margin="0,16,0,0" Orientation="Horizontal"
+                        HorizontalAlignment="Center">
+                <TextBlock Text="Preview:" VerticalAlignment="Center"
+                           Foreground="#64748B" FontSize="12" Margin="0,0,12,0"/>
+                <Border Width="78" Height="104"
+                        CornerRadius="8" ClipToBounds="True"
+                        BorderBrush="#CBD5E1" BorderThickness="1">
+                    <Image x:Name="PreviewImage" Stretch="UniformToFill"/>
+                </Border>
+            </StackPanel>
+
+            <!-- Buttons -->
+            <Grid Grid.Row="5" Margin="0,20,0,0">
+                <Button Content="CHANGE PHOTO"
+                        HorizontalAlignment="Left"
+                        Width="130" Height="40"
+                        Style="{StaticResource MaterialDesignOutlinedButton}"
+                        BorderBrush="#94A3B8"
+                        Foreground="#475569"
+                        shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                        Click="ChangePhoto_Click"/>
+                
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Content="CANCEL"
+                            Width="110" Height="40" Margin="0,0,12,0"
+                            shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                            Click="Cancel_Click"/>
+                    <Button Content="CONFIRM"
+                            Width="130" Height="40"
+                            Background="#1D4ED8" Foreground="White"
+                            shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                            Click="Confirm_Click"/>
+                </StackPanel>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>

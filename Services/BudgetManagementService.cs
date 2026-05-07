@@ -10,6 +10,7 @@ namespace AttendanceShiftingManagement.Services
         AyudaProgramType ProgramType,
         string? Description,
         string? AssistanceType,
+        AssistanceReleaseKind ReleaseKind,
         decimal? UnitAmount,
         string? ItemDescription,
         DateTime? StartDate,
@@ -18,6 +19,23 @@ namespace AttendanceShiftingManagement.Services
         AyudaProgramDistributionStatus DistributionStatus);
 
     public sealed record AyudaProgramOperationResult(bool IsSuccess, string Message, int? ProgramId = null);
+
+    public sealed record AssistanceCaseBudgetRequest(
+        string BudgetCode,
+        string BudgetName,
+        string? Description,
+        string? AssistanceType,
+        decimal? BudgetCap);
+
+    public sealed record AssistanceCaseBudgetOperationResult(bool IsSuccess, string Message, int? AssistanceCaseBudgetId = null);
+
+    public sealed record CashForWorkBudgetRequest(
+        string BudgetCode,
+        string BudgetName,
+        string? Description,
+        decimal? BudgetCap);
+
+    public sealed record CashForWorkBudgetOperationResult(bool IsSuccess, string Message, int? CashForWorkBudgetId = null);
 
     public sealed record GovernmentBudgetSnapshotRequest(
         string OfficeCode,
@@ -45,14 +63,16 @@ namespace AttendanceShiftingManagement.Services
     public sealed record PrivateDonationOperationResult(bool IsSuccess, string Message, int? DonationId = null, int? LedgerEntryId = null);
 
     public sealed record BudgetReleaseRequest(
-        int AyudaProgramId,
+        int? AyudaProgramId,
         BudgetLedgerFeatureSource FeatureSource,
         string SourceRecordId,
         int RecipientCount,
         AssistanceReleaseKind ReleaseKind,
         decimal TotalAmount,
         DateTime ReleasedAt,
-        string? Remarks);
+        string? Remarks,
+        int? AssistanceCaseBudgetId = null,
+        int? CashForWorkBudgetId = null);
 
     public sealed record BudgetReleaseOperationResult(bool IsSuccess, string Message, int? LedgerEntryId = null);
 
@@ -86,6 +106,129 @@ namespace AttendanceShiftingManagement.Services
                 .AsNoTracking()
                 .OrderBy(program => program.ProgramName)
                 .ToListAsync();
+        }
+
+        public async Task<IReadOnlyList<AssistanceCaseBudget>> GetAssistanceCaseBudgetsAsync()
+        {
+            return await _context.AssistanceCaseBudgets
+                .AsNoTracking()
+                .Where(item => item.IsActive)
+                .OrderBy(item => item.BudgetName)
+                .ThenBy(item => item.BudgetCode)
+                .ToListAsync();
+        }
+
+        public async Task<IReadOnlyList<CashForWorkBudget>> GetCashForWorkBudgetsAsync()
+        {
+            return await _context.CashForWorkBudgets
+                .AsNoTracking()
+                .Where(item => item.IsActive)
+                .OrderBy(item => item.BudgetName)
+                .ThenBy(item => item.BudgetCode)
+                .ToListAsync();
+        }
+
+        public async Task<AssistanceCaseBudget?> GetGlobalAssistanceCaseBudgetAsync()
+        {
+            return await _context.AssistanceCaseBudgets
+                .AsNoTracking()
+                .FirstOrDefaultAsync(item => item.BudgetCode == "GLOBAL_AID_BUDGET");
+        }
+
+        public async Task<AssistanceCaseBudgetOperationResult> CreateAssistanceCaseBudgetAsync(AssistanceCaseBudgetRequest request, int createdByUserId)
+        {
+            var budgetCap = request.BudgetCap ?? 0m;
+            if (budgetCap < 0)
+            {
+                return new AssistanceCaseBudgetOperationResult(false, "Aid request budget cap cannot be negative.");
+            }
+
+            var budget = await _context.AssistanceCaseBudgets
+                .FirstOrDefaultAsync(item => item.BudgetCode == "GLOBAL_AID_BUDGET");
+
+            if (budget == null)
+            {
+                budget = new AssistanceCaseBudget
+                {
+                    BudgetCode = "GLOBAL_AID_BUDGET",
+                    BudgetName = "Global Aid Request Budget",
+                    Description = "The unified budget cap for all walk-in and individual assistance cases.",
+                    AssistanceType = "General Assistance",
+                    BudgetCap = budgetCap,
+                    IsActive = true,
+                    CreatedByUserId = createdByUserId,
+                    CreatedAt = DateTime.Now,
+                    UpdatedAt = DateTime.Now
+                };
+                _context.AssistanceCaseBudgets.Add(budget);
+            }
+            else
+            {
+                budget.BudgetCap = budgetCap;
+                budget.UpdatedAt = DateTime.Now;
+            }
+
+            await _context.SaveChangesAsync();
+
+            await _auditService.LogActivityAsync(
+                createdByUserId,
+                "AssistanceCaseBudgetUpdated",
+                nameof(AssistanceCaseBudget),
+                budget.Id,
+                $"Updated global assistance case budget cap to {budgetCap:N2}.");
+
+            return new AssistanceCaseBudgetOperationResult(true, "Updated global aid request budget.", budget.Id);
+        }
+
+        public async Task<CashForWorkBudget?> GetGlobalCashForWorkBudgetAsync()
+        {
+            return await _context.CashForWorkBudgets
+                .AsNoTracking()
+                .FirstOrDefaultAsync(item => item.BudgetCode == "GLOBAL_CFW_BUDGET");
+        }
+
+        public async Task<CashForWorkBudgetOperationResult> CreateCashForWorkBudgetAsync(CashForWorkBudgetRequest request, int createdByUserId)
+        {
+            var budgetCap = request.BudgetCap ?? 0m;
+            if (budgetCap < 0)
+            {
+                return new CashForWorkBudgetOperationResult(false, "Cash-for-work budget cap cannot be negative.");
+            }
+
+            var budget = await _context.CashForWorkBudgets
+                .FirstOrDefaultAsync(item => item.BudgetCode == "GLOBAL_CFW_BUDGET");
+
+            if (budget == null)
+            {
+                budget = new CashForWorkBudget
+                {
+                    BudgetCode = "GLOBAL_CFW_BUDGET",
+                    BudgetName = "Global Cash-for-Work Budget",
+                    Description = "The unified budget cap for all cash-for-work events and activities.",
+                    BudgetCap = budgetCap,
+                    IsActive = true,
+                    CreatedByUserId = createdByUserId,
+                    CreatedAt = DateTime.Now,
+                    UpdatedAt = DateTime.Now
+                };
+                _context.CashForWorkBudgets.Add(budget);
+            }
+            else
+            {
+                budget.BudgetCap = budgetCap;
+                budget.UpdatedAt = DateTime.Now;
+            }
+
+            await _context.SaveChangesAsync();
+
+            await _auditService.LogActivityAsync(
+                createdByUserId,
+                "CashForWorkBudgetUpdated",
+                nameof(CashForWorkBudget),
+                budget.Id,
+                $"Updated global cash-for-work budget cap to {budgetCap:N2}.");
+
+            return new CashForWorkBudgetOperationResult(true, "Updated global cash-for-work budget.", budget.Id);
         }
 
         public async Task<IReadOnlyList<PrivateDonation>> GetPrivateDonationsAsync(int take = 50)
@@ -138,6 +281,18 @@ namespace AttendanceShiftingManagement.Services
                 return new AyudaProgramOperationResult(false, "Project end date cannot be earlier than the start date.");
             }
 
+            if (request.ReleaseKind == AssistanceReleaseKind.Cash &&
+                request.UnitAmount is not > 0)
+            {
+                return new AyudaProgramOperationResult(false, "Cash distribution projects require a unit amount greater than zero.");
+            }
+
+            if (request.ReleaseKind == AssistanceReleaseKind.Goods &&
+                string.IsNullOrWhiteSpace(itemDescription))
+            {
+                return new AyudaProgramOperationResult(false, "Goods distribution projects require an item description or package detail.");
+            }
+
             var ayudaProgram = new AyudaProgram
             {
                 ProgramCode = programCode,
@@ -145,6 +300,7 @@ namespace AttendanceShiftingManagement.Services
                 ProgramType = request.ProgramType,
                 Description = NormalizeNullable(request.Description),
                 AssistanceType = assistanceType,
+                ReleaseKind = request.ReleaseKind,
                 UnitAmount = request.UnitAmount,
                 ItemDescription = itemDescription,
                 StartDate = request.StartDate?.Date,
@@ -291,13 +447,57 @@ namespace AttendanceShiftingManagement.Services
                 return new BudgetReleaseOperationResult(false, "This release already has a budget ledger entry.", existingRelease.Id);
             }
 
-            var ayudaProgram = await _context.AyudaPrograms
-                .AsNoTracking()
-                .FirstOrDefaultAsync(program => program.Id == request.AyudaProgramId);
+            AyudaProgram? ayudaProgram = null;
+            AssistanceCaseBudget? assistanceCaseBudget = null;
+            CashForWorkBudget? cashForWorkBudget = null;
+            string budgetOwnerLabel;
+            decimal? budgetCap;
 
-            if (ayudaProgram == null || !ayudaProgram.IsActive)
+            if (request.CashForWorkBudgetId.HasValue)
             {
-                return new BudgetReleaseOperationResult(false, "Select an active ayuda program before releasing funds.");
+                cashForWorkBudget = await _context.CashForWorkBudgets
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(item => item.Id == request.CashForWorkBudgetId.Value);
+
+                if (cashForWorkBudget == null || !cashForWorkBudget.IsActive)
+                {
+                    return new BudgetReleaseOperationResult(false, "Select an active cash-for-work budget before releasing funds.");
+                }
+
+                budgetOwnerLabel = cashForWorkBudget.BudgetName;
+                budgetCap = cashForWorkBudget.BudgetCap;
+            }
+            else if (request.AyudaProgramId.HasValue)
+            {
+                ayudaProgram = await _context.AyudaPrograms
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(program => program.Id == request.AyudaProgramId.Value);
+
+                if (ayudaProgram == null || !ayudaProgram.IsActive)
+                {
+                    return new BudgetReleaseOperationResult(false, "Select an active ayuda program before releasing funds.");
+                }
+
+                budgetOwnerLabel = ayudaProgram.ProgramName;
+                budgetCap = ayudaProgram.BudgetCap;
+            }
+            else if (request.AssistanceCaseBudgetId.HasValue)
+            {
+                assistanceCaseBudget = await _context.AssistanceCaseBudgets
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(item => item.Id == request.AssistanceCaseBudgetId.Value);
+
+                if (assistanceCaseBudget == null || !assistanceCaseBudget.IsActive)
+                {
+                    return new BudgetReleaseOperationResult(false, "Select an active assistance case budget before releasing funds.");
+                }
+
+                budgetOwnerLabel = assistanceCaseBudget.BudgetName;
+                budgetCap = assistanceCaseBudget.BudgetCap;
+            }
+            else
+            {
+                return new BudgetReleaseOperationResult(false, "A release must be assigned to a distribution program, cash-for-work budget, or assistance case budget.");
             }
 
             var overview = await GetOverviewAsync();
@@ -307,6 +507,23 @@ namespace AttendanceShiftingManagement.Services
                 return new BudgetReleaseOperationResult(false, $"Release cannot continue. Budget short by {shortfall:N2}.");
             }
 
+            if (budgetCap.HasValue)
+            {
+                var existingBudgetSpend = await _context.BudgetLedgerEntries
+                    .AsNoTracking()
+                    .Where(entry =>
+                        entry.EntryType == BudgetLedgerEntryType.Release &&
+                        entry.ProgramId == request.AyudaProgramId &&
+                        entry.AssistanceCaseBudgetId == request.AssistanceCaseBudgetId &&
+                        entry.CashForWorkBudgetId == request.CashForWorkBudgetId)
+                    .SumAsync(entry => (decimal?)entry.TotalAmount) ?? 0m;
+
+                if (existingBudgetSpend + request.TotalAmount > budgetCap.Value)
+                {
+                    return new BudgetReleaseOperationResult(false, "Budget cap would be exceeded by this release.");
+                }
+            }
+
             var governmentPortion = Math.Min(request.TotalAmount, overview.GovernmentAvailable);
             var privatePortion = request.TotalAmount - governmentPortion;
             var ledgerEntry = new BudgetLedgerEntry
@@ -314,13 +531,15 @@ namespace AttendanceShiftingManagement.Services
                 EntryType = BudgetLedgerEntryType.Release,
                 FeatureSource = request.FeatureSource,
                 SourceRecordId = sourceRecordId,
-                ProgramId = ayudaProgram.Id,
+                ProgramId = ayudaProgram?.Id,
+                AssistanceCaseBudgetId = assistanceCaseBudget?.Id,
+                CashForWorkBudgetId = cashForWorkBudget?.Id,
                 RecipientCount = request.RecipientCount,
                 TotalAmount = request.TotalAmount,
                 GovernmentPortion = governmentPortion,
                 PrivatePortion = privatePortion,
                 EntryDate = request.ReleasedAt,
-                Remarks = NormalizeNullable(request.Remarks) ?? $"Released for {ayudaProgram.ProgramName}.",
+                Remarks = NormalizeNullable(request.Remarks) ?? $"Released for {budgetOwnerLabel}.",
                 ReleaseKind = request.ReleaseKind,
                 RecordedByUserId = recordedByUserId,
                 CreatedAt = DateTime.Now
@@ -334,7 +553,7 @@ namespace AttendanceShiftingManagement.Services
                 "BudgetReleaseRecorded",
                 "BudgetLedgerEntry",
                 ledgerEntry.Id,
-                $"Recorded release of {ledgerEntry.TotalAmount:N2} for '{ayudaProgram.ProgramName}' from {request.FeatureSource}.");
+                $"Recorded release of {ledgerEntry.TotalAmount:N2} for '{budgetOwnerLabel}' from {request.FeatureSource}.");
 
             return new BudgetReleaseOperationResult(true, "Recorded release budget entry.", ledgerEntry.Id);
         }

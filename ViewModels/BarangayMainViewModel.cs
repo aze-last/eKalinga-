@@ -3,6 +3,7 @@ using AttendanceShiftingManagement.Models;
 using AttendanceShiftingManagement.Services;
 using AttendanceShiftingManagement.Views;
 using System.IO;
+using System.Windows.Input;
 using System.Windows.Media;
 
 namespace AttendanceShiftingManagement.ViewModels
@@ -33,6 +34,7 @@ namespace AttendanceShiftingManagement.ViewModels
             ShowDistributionCommand = new RelayCommand(_ => SwitchSection("Distribution"));
             ShowMasterListCommand = new RelayCommand(_ => SwitchSection("MasterList"));
             ShowAssistanceCasesCommand = new RelayCommand(_ => SwitchSection("AssistanceCases"));
+            ShowBorrowingCommand = new RelayCommand(_ => SwitchSection("Borrowing"));
             ShowReportsCommand = new RelayCommand(_ => SwitchSection("Reports"));
             RefreshBranding();
             RefreshConnectionSummary();
@@ -132,8 +134,9 @@ namespace AttendanceShiftingManagement.ViewModels
         public RelayCommand ShowBudgetCommand { get; }
         public RelayCommand ShowDistributionCommand { get; }
         public RelayCommand ShowMasterListCommand { get; }
-        public RelayCommand ShowAssistanceCasesCommand { get; }
-        public RelayCommand ShowReportsCommand { get; }
+        public ICommand ShowAssistanceCasesCommand { get; }
+        public ICommand ShowBorrowingCommand { get; }
+        public ICommand ShowReportsCommand { get; }
 
         public void RefreshConnectionSummary()
         {
@@ -199,19 +202,23 @@ namespace AttendanceShiftingManagement.ViewModels
                     return new ProjectDistributionPage(_currentUser);
                 case "MasterList":
                     CurrentSectionTitle = "Validated Beneficiaries";
-                    CurrentSectionSubtitle = "Read the local val_beneficiaries snapshot, keep new rows pending by default, and approve or reject them before downstream use.";
-                    return new BeneficiaryVerificationPage(_currentUser);
+                    CurrentSectionSubtitle = "Browse the full registry of validated beneficiaries, search by name or ID, and view individual profiles.";
+                    return new MasterListPage(_currentUser);
                 case "AssistanceCases":
                     CurrentSectionTitle = "Aid Request";
                     CurrentSectionSubtitle = "Create requests, choose a validated beneficiary or household, and release approved aid against budget.";
                     return new AssistanceCaseManagementPage(_currentUser);
+                case "Borrowing":
+                    CurrentSectionTitle = "Equipment Borrowing";
+                    CurrentSectionSubtitle = "Track barangay assets (tents, chairs, projectors), manage borrower records, and monitor overdue returns.";
+                    return new BorrowingPage(_currentUser);
                 case "Reports":
                     CurrentSectionTitle = "Reports";
                     CurrentSectionSubtitle = "Generate centralized summaries, export CSV tables, and print polished reports for PDF output.";
                     return new ReportsPage(_currentUser);
                 default:
-                    CurrentSectionTitle = "Cash-for-work";
-                    CurrentSectionSubtitle = "Create work events, assign participants, and save attendance.";
+                    CurrentSectionTitle = "Attendance & Payouts";
+                    CurrentSectionSubtitle = "Create work events or seminars, assign participants, and save attendance to release payouts.";
                     return new CashForWorkOcrPage(_currentUser);
             }
         }

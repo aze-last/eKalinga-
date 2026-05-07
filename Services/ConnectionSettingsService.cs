@@ -53,7 +53,8 @@ namespace AttendanceShiftingManagement.Services
 
         private static readonly HashSet<string> RuntimeEditablePresetKeys = new(StringComparer.OrdinalIgnoreCase)
         {
-            LanPresetKey
+            LanPresetKey,
+            RemotePresetKey
         };
 
         private static readonly JsonSerializerOptions JsonOptions = new()
@@ -196,7 +197,7 @@ namespace AttendanceShiftingManagement.Services
                 : preset.DisplayName.Trim();
 
             return IsPresetConfigured(preset)
-                ? $"{displayName}: {preset.Server}:{preset.Port} / {preset.Database}"
+                ? $"Target: {displayName}"
                 : $"{displayName}: not configured yet.";
         }
 
@@ -225,7 +226,7 @@ namespace AttendanceShiftingManagement.Services
         {
             var configuration = new ConfigurationBuilder()
                 .SetBasePath(ResolveConfigurationBasePath())
-                .AddJsonFile("appsettings.json", optional: false)
+                .AddJsonFile("appsettings.json", optional: true)
                 .Build();
 
             var settings = new ConnectionSettingsModel

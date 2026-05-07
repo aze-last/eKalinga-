@@ -28,6 +28,7 @@ namespace AttendanceShiftingManagement.Services
         public int OpenCashForWorkEvents { get; init; }
         public int CompletedEventsThisMonth { get; init; }
         public int TodayAttendanceCount { get; init; }
+        public int OverdueBorrowingCount { get; init; }
         public IReadOnlyList<DashboardRecentActivitySnapshot> RecentActivities { get; init; } = Array.Empty<DashboardRecentActivitySnapshot>();
         public IReadOnlyList<DashboardUpcomingEventSnapshot> UpcomingEvents { get; init; } = Array.Empty<DashboardUpcomingEventSnapshot>();
         public IReadOnlyList<DashboardRecentImportSnapshot> RecentImports { get; init; } = Array.Empty<DashboardRecentImportSnapshot>();
@@ -115,6 +116,10 @@ namespace AttendanceShiftingManagement.Services
                     attendance.AttendanceDate < tomorrow,
                     cancellationToken);
 
+            var overdueBorrowingCount = await context.EquipmentBorrowings
+                .AsNoTracking()
+                .CountAsync(b => b.ReturnDate == null && b.DueDate < DateTime.Now, cancellationToken);
+
             var distributionCount = await context.AyudaProjectClaims
                 .AsNoTracking()
                 .CountAsync(cancellationToken);
@@ -145,6 +150,26 @@ namespace AttendanceShiftingManagement.Services
                 })
                 .ToListAsync(cancellationToken);
 
+            var cappedAssistanceBudgets = await context.AssistanceCaseBudgets
+                .AsNoTracking()
+                .Where(item => item.IsActive && item.BudgetCap.HasValue && item.BudgetCap.Value > 0)
+                .Select(item => new
+                {
+                    item.Id,
+                    BudgetCap = item.BudgetCap!.Value
+                })
+                .ToListAsync(cancellationToken);
+
+            var cappedCashForWorkBudgets = await context.CashForWorkBudgets
+                .AsNoTracking()
+                .Where(item => item.IsActive && item.BudgetCap.HasValue && item.BudgetCap.Value > 0)
+                .Select(item => new
+                {
+                    item.Id,
+                    BudgetCap = item.BudgetCap!.Value
+                })
+                .ToListAsync(cancellationToken);
+
             var releasedByProgram = await context.BudgetLedgerEntries
                 .AsNoTracking()
                 .Where(item =>
@@ -158,9 +183,43 @@ namespace AttendanceShiftingManagement.Services
                 })
                 .ToDictionaryAsync(item => item.ProgramId, item => item.ReleasedTotal, cancellationToken);
 
+            var releasedByAssistanceBudget = await context.BudgetLedgerEntries
+                .AsNoTracking()
+                .Where(item =>
+                    item.EntryType == BudgetLedgerEntryType.Release &&
+                    item.AssistanceCaseBudgetId.HasValue)
+                .GroupBy(item => item.AssistanceCaseBudgetId!.Value)
+                .Select(group => new
+                {
+                    BudgetId = group.Key,
+                    ReleasedTotal = group.Sum(entry => entry.TotalAmount)
+                })
+                .ToDictionaryAsync(item => item.BudgetId, item => item.ReleasedTotal, cancellationToken);
+
+            var releasedByCashForWorkBudget = await context.BudgetLedgerEntries
+                .AsNoTracking()
+                .Where(item =>
+                    item.EntryType == BudgetLedgerEntryType.Release &&
+                    item.CashForWorkBudgetId.HasValue)
+                .GroupBy(item => item.CashForWorkBudgetId!.Value)
+                .Select(group => new
+                {
+                    BudgetId = group.Key,
+                    ReleasedTotal = group.Sum(entry => entry.TotalAmount)
+                })
+                .ToDictionaryAsync(item => item.BudgetId, item => item.ReleasedTotal, cancellationToken);
+
             var budgetAlertCount = cappedPrograms.Count(item =>
             {
                 releasedByProgram.TryGetValue(item.Id, out var releasedTotal);
+                return releasedTotal >= item.BudgetCap * 0.8m;
+            }) + cappedAssistanceBudgets.Count(item =>
+            {
+                releasedByAssistanceBudget.TryGetValue(item.Id, out var releasedTotal);
+                return releasedTotal >= item.BudgetCap * 0.8m;
+            }) + cappedCashForWorkBudgets.Count(item =>
+            {
+                releasedByCashForWorkBudget.TryGetValue(item.Id, out var releasedTotal);
                 return releasedTotal >= item.BudgetCap * 0.8m;
             });
 
@@ -233,6 +292,7 @@ namespace AttendanceShiftingManagement.Services
                 OpenCashForWorkEvents = openCashForWorkEvents,
                 CompletedEventsThisMonth = completedEventsThisMonth,
                 TodayAttendanceCount = todayAttendanceCount,
+                OverdueBorrowingCount = overdueBorrowingCount,
                 RecentActivities = recentActivities,
                 UpcomingEvents = upcomingEvents,
                 RecentImports = recentImports

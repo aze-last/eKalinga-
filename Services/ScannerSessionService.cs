@@ -124,5 +124,38 @@ namespace AttendanceShiftingManagement.Services
         {
             return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
         }
+
+        public async Task UpdateLastScanAsync(string sessionToken, string payload)
+        {
+            var session = await _context.ScannerSessions
+                .FirstOrDefaultAsync(s => s.SessionToken == sessionToken && s.IsActive);
+
+            if (session != null)
+            {
+                session.LastScannedPayload = payload;
+                session.LastScannedAt = DateTime.Now;
+                await _context.SaveChangesAsync();
+            }
+        }
+
+        public async Task<string?> TryPopScanAsync(string sessionToken)
+        {
+            var session = await _context.ScannerSessions
+                .FirstOrDefaultAsync(s => s.SessionToken == sessionToken && s.IsActive);
+
+            if (session != null && !string.IsNullOrEmpty(session.LastScannedPayload))
+            {
+                var payload = session.LastScannedPayload;
+
+                // Clear the payload so it doesn't "pop" again
+                session.LastScannedPayload = null;
+                session.LastScannedAt = null;
+                await _context.SaveChangesAsync();
+
+                return payload;
+            }
+
+            return null;
+        }
     }
 }

@@ -55,7 +55,7 @@ public sealed class ConnectionSettingsViewModelTests
     }
 
     [Fact]
-    public void AdminMode_OnlyLanPresetIsEditable()
+    public void AdminMode_LanAndRemotePresetsAreEditable()
     {
         var viewModel = new ConnectionSettingsViewModel(selectionOnly: false);
 
@@ -73,10 +73,11 @@ public sealed class ConnectionSettingsViewModelTests
         Assert.False(viewModel.ShowFixedPresetNotice);
 
         viewModel.SelectRemotePresetCommand.Execute(null);
-        Assert.False(viewModel.CanEditSelectedPresetCredentials);
-        Assert.False(viewModel.ShowCredentialEditor);
+        Assert.True(viewModel.IsRemoteSelected);
+        Assert.True(viewModel.CanEditSelectedPresetCredentials);
+        Assert.True(viewModel.ShowCredentialEditor);
         Assert.False(viewModel.ShowLanCredentialEditor);
-        Assert.True(viewModel.ShowFixedPresetNotice);
+        Assert.False(viewModel.ShowFixedPresetNotice);
     }
 
     [Fact]

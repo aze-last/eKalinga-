@@ -136,7 +136,9 @@ namespace AttendanceShiftingManagement.ViewModels
         public bool IsLocalSelected => string.Equals(SelectedPresetKey, LocalPresetKey, StringComparison.OrdinalIgnoreCase);
         public bool IsLanSelected => string.Equals(SelectedPresetKey, LanPresetKey, StringComparison.OrdinalIgnoreCase);
         public bool IsRemoteSelected => string.Equals(SelectedPresetKey, RemotePresetKey, StringComparison.OrdinalIgnoreCase);
-        public bool CanEditSelectedPresetCredentials => IsLanSelected;
+        public bool CanEditSelectedPresetCredentials => IsSelectionOnly
+            ? IsLanSelected
+            : IsLanSelected || IsRemoteSelected;
         public bool ShowCredentialEditor => CanEditSelectedPresetCredentials;
         public bool ShowLanCredentialEditor => IsLanSelected;
         public bool ShowFixedPresetNotice => !CanEditSelectedPresetCredentials;
@@ -146,10 +148,10 @@ namespace AttendanceShiftingManagement.ViewModels
             : _settings.GetPreset(SelectedPresetKey).DisplayName;
         public string HeaderDescription => IsSelectionOnly
             ? "Choose which app database is active for login, startup, dashboard data, and snapshots. Network (LAN) can be configured here before sign-in so users can point the app to an available LAN server anytime."
-            : "Select the active app database here. Local and Remote are fixed by the shipped app configuration, while Network (LAN) is the only editable preset on this screen.";
+            : "Select the active app database here. Local stays fixed by the shipped app configuration, while Network (LAN) and Remote can be updated on this screen.";
         public string FooterDescription => IsSelectionOnly
             ? "Use Test Connection to verify the selected preset. If Network (LAN) is selected, update the host and database fields here, then save to return to the login form."
-            : "Save to apply the active app database. Network (LAN) credentials are stored in your Windows user profile, while Local and Remote stay fixed.";
+            : "Save to apply the active app database. Network (LAN) and Remote credentials are stored in your Windows user profile, while Local stays fixed.";
         public string SaveButtonText => IsSelectionOnly ? "SAVE AND CONTINUE" : "SAVE SETTINGS";
         public string PasswordStatusText => string.IsNullOrWhiteSpace(Password) ? "Not configured" : "Configured";
         public string PresetHelpText => IsSelectionOnly
@@ -158,7 +160,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 : $"{CurrentPresetDisplayName} is selection-only before sign-in. Switch to Network (LAN) if you need to configure connection details here."
             : CanEditSelectedPresetCredentials
                 ? $"Update the {CurrentPresetDisplayName} host and database credentials here. This preset is stored in your Windows user profile."
-                : $"{CurrentPresetDisplayName} is fixed by the shipped app configuration and is read-only here. Select an editable preset if you need editable connection details.";
+                : $"{CurrentPresetDisplayName} is fixed by the shipped app configuration and is read-only here. Select Network (LAN) or Remote if you need editable connection details.";
 
         public bool ShowSaveOtpPanel
         {
@@ -745,7 +747,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
             return CanEditSelectedPresetCredentials
                 ? $"{CurrentPresetDisplayName} is selected. You can update its host and database credentials here."
-                : $"{CurrentPresetDisplayName} is selected. This preset is fixed by app settings; only Network (LAN) is editable here.";
+                : $"{CurrentPresetDisplayName} is selected. This preset is fixed by app settings; use Network (LAN) or Remote for editable connection details.";
         }
 
         private void SetNeutralStatus(string message)

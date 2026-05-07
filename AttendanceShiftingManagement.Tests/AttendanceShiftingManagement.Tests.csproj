@@ -5,6 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
+    <DefaultItemExcludes>$(DefaultItemExcludes);bin_*\**;obj_*\**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>

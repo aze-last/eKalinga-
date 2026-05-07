@@ -24,8 +24,10 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly User _currentUser;
         private readonly ReportsService _reportsService;
         private readonly ReportDocumentService _documentService;
+        private readonly ReportPdfExportService _pdfExportService;
         private readonly RelayCommand _refreshReportCommand;
         private readonly RelayCommand _exportCsvCommand;
+        private readonly RelayCommand _savePdfCommand;
         private readonly RelayCommand _printReportCommand;
         private ReportsReportTypeOption? _selectedReportType;
         private AyudaProgramFilterOption? _selectedProgramFilter;
@@ -39,7 +41,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _rangeSummary = string.Empty;
         private string _programSummary = "All Programs";
         private string _layoutSummary = "Suggested layout: Portrait";
-        private string _exportHint = "Print and choose Microsoft Print to PDF when a PDF file is needed.";
+        private string _exportHint = "Use Save PDF to write the report file, or Print Preview for paper output.";
         private string _templateDescription = string.Empty;
         private ReportsSnapshot? _currentSnapshot;
         private bool _isBusy;
@@ -49,6 +51,7 @@ namespace AttendanceShiftingManagement.ViewModels
             _currentUser = currentUser;
             _reportsService = new ReportsService();
             _documentService = new ReportDocumentService();
+            _pdfExportService = new ReportPdfExportService();
             ReportTypeOptions = new ObservableCollection<ReportsReportTypeOption>
             {
                 new(ReportsReportType.AidRequests, "Aid Request Summary", "Case volume, status mix, and assistance totals.", true),
@@ -65,6 +68,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
             _refreshReportCommand = new RelayCommand(async _ => await LoadReportAsync(), _ => !IsBusy);
             _exportCsvCommand = new RelayCommand(_ => ExportCsv(), _ => !IsBusy && CurrentSnapshotHasRows);
+            _savePdfCommand = new RelayCommand(_ => SavePdf(), _ => !IsBusy && _currentSnapshot != null);
             _printReportCommand = new RelayCommand(_ => PrintReport(), _ => !IsBusy && _currentSnapshot != null);
 
             _ = InitializeAsync();
@@ -180,6 +184,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 {
                     _refreshReportCommand.RaiseCanExecuteChanged();
                     _exportCsvCommand.RaiseCanExecuteChanged();
+                    _savePdfCommand.RaiseCanExecuteChanged();
                     _printReportCommand.RaiseCanExecuteChanged();
                 }
             }
@@ -189,6 +194,7 @@ namespace AttendanceShiftingManagement.ViewModels
         public bool CurrentSnapshotHasRows => _currentSnapshot?.Table.Rows.Count > 0;
         public ICommand RefreshReportCommand => _refreshReportCommand;
         public ICommand ExportCsvCommand => _exportCsvCommand;
+        public ICommand SavePdfCommand => _savePdfCommand;
         public ICommand PrintReportCommand => _printReportCommand;
 
         private async Task InitializeAsync()
@@ -270,8 +276,8 @@ namespace AttendanceShiftingManagement.ViewModels
             ProgramSummary = snapshot.ProgramLabel;
             LayoutSummary = $"Suggested layout: A4 {snapshot.SuggestedOrientation}";
             ExportHint = string.Equals(snapshot.SuggestedOrientation, "Landscape", StringComparison.OrdinalIgnoreCase)
-                ? "Use landscape when printing or choosing Microsoft Print to PDF."
-                : "Portrait layout is suitable for printing or saving through Microsoft Print to PDF.";
+                ? "Save PDF creates a landscape report file. Print Preview stays available for paper copies."
+                : "Save PDF creates a portrait report file. Print Preview stays available for paper copies.";
 
             Metrics.Clear();
             foreach (var metric in snapshot.Metrics)
@@ -287,6 +293,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
             PreviewRows = snapshot.Table.DefaultView;
             _exportCsvCommand.RaiseCanExecuteChanged();
+            _savePdfCommand.RaiseCanExecuteChanged();
             _printReportCommand.RaiseCanExecuteChanged();
         }
 
@@ -322,6 +329,43 @@ namespace AttendanceShiftingManagement.ViewModels
             SetSuccessStatus($"Exported {_currentSnapshot.Table.Rows.Count:N0} row(s) to {Path.GetFileName(dialog.FileName)}.");
         }
 
+        private void SavePdf()
+        {
+            if (_currentSnapshot == null)
+            {
+                return;
+            }
+
+            var dialog = new SaveFileDialog
+            {
+                Filter = "PDF files (*.pdf)|*.pdf",
+                FileName = $"{_currentSnapshot.ExportFilePrefix}-{DateTime.Now:yyyyMMdd-HHmm}.pdf"
+            };
+
+            if (dialog.ShowDialog() != true)
+            {
+                return;
+            }
+
+            try
+            {
+                _pdfExportService.Save(_currentSnapshot, dialog.FileName, new ReportPdfExportOptions
+                {
+                    PreparedBy = GetPreparedByLabel()
+                });
+
+                SetSuccessStatus($"Saved PDF report to {Path.GetFileName(dialog.FileName)}.");
+            }
+            catch (IOException)
+            {
+                SetErrorStatus($"Unable to save {Path.GetFileName(dialog.FileName)} because it is open in another application. Close the PDF viewer and try again.");
+            }
+            catch (Exception ex)
+            {
+                SetErrorStatus($"Unable to save the PDF report: {ex.Message}");
+            }
+        }
+
         private void PrintReport()
         {
             if (_currentSnapshot == null)
@@ -331,7 +375,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
             var document = _documentService.BuildDocument(_currentSnapshot, new ReportDocumentOptions
             {
-                PreparedBy = string.IsNullOrWhiteSpace(_currentUser.Username) ? _currentUser.Email : _currentUser.Username,
+                PreparedBy = GetPreparedByLabel(),
                 IncludeLogo = true
             });
 
@@ -341,6 +385,11 @@ namespace AttendanceShiftingManagement.ViewModels
             };
 
             previewWindow.ShowDialog();
+        }
+
+        private string GetPreparedByLabel()
+        {
+            return string.IsNullOrWhiteSpace(_currentUser.Username) ? _currentUser.Email : _currentUser.Username;
         }
 
         private void SetNeutralStatus(string message)

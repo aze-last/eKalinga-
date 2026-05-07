@@ -229,6 +229,7 @@ public sealed class CashForWorkOcrViewModelTests
                 2,
                 3,
                 1,
+                0m,
                 Array.Empty<CashForWorkReleaseReadyParticipant>())
         ]);
 
@@ -265,6 +266,7 @@ public sealed class CashForWorkOcrViewModelTests
                 0,
                 5,
                 2,
+                0m,
                 Array.Empty<CashForWorkReleaseReadyParticipant>())
         ]);
 

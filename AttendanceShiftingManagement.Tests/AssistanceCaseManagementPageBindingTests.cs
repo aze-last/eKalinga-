@@ -22,8 +22,7 @@ public sealed class AssistanceCaseManagementPageBindingTests
 
         Assert.Contains("Text=\"Aid Request\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Content=\"REFRESH\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"TOTAL REQUESTS\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"Aid Requests\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"Aid Request Registry\"", xaml, StringComparison.Ordinal);
         Assert.Contains("ItemsSource=\"{Binding CasesView}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("SelectedItem=\"{Binding SelectedCase}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("AutoGenerateColumns=\"False\"", xaml, StringComparison.Ordinal);
@@ -33,10 +32,13 @@ public sealed class AssistanceCaseManagementPageBindingTests
         Assert.Contains("Command=\"{Binding OpenCasePanelCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Visibility=\"{Binding IsCasePanelOpen, Converter={StaticResource BooleanToVisibilityConverter}}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding CloseCasePanelCommand}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"{Binding UnderReviewCount, StringFormat=N0}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding UnderReviewCount}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("ItemsSource=\"{Binding ValidatedBeneficiaries}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("SelectedItem=\"{Binding SelectedValidatedBeneficiary}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"Selected Request\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding NextPageCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding PreviousPageCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding CurrentPage}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding TotalPages}\"", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("ItemsSource=\"{Binding Households}\"", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("ItemsSource=\"{Binding AvailableHouseholdMembers}\"", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Hint=\"Household\"", xaml, StringComparison.Ordinal);
@@ -44,8 +46,10 @@ public sealed class AssistanceCaseManagementPageBindingTests
         Assert.DoesNotContain("household/member from the registry", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Text=\"Aid request command center\"", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Text=\"Request Queue\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("ItemsSource=\"{Binding AyudaPrograms}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("SelectedItem=\"{Binding SelectedAyudaProgram}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("ItemsSource=\"{Binding AssistanceCaseBudgets}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("SelectedItem=\"{Binding SelectedAssistanceCaseBudget}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("ToolTip=\"{Binding AssistanceCaseBudgetErrorMessage}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Visibility=\"{Binding HasAssistanceCaseBudgetError, Converter={StaticResource BooleanToVisibilityConverter}}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("ItemsSource=\"{Binding ReleaseKindOptions}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("SelectedItem=\"{Binding SelectedReleaseKind}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding DeleteCommand}\"", xaml, StringComparison.Ordinal);
@@ -72,7 +76,9 @@ public sealed class AssistanceCaseManagementPageBindingTests
                     "AssistanceCaseManagementPage.xaml"));
 
                 var xaml = File.ReadAllText(pagePath)
-                    .Replace("x:Class=\"AttendanceShiftingManagement.Views.AssistanceCaseManagementPage\"", string.Empty, StringComparison.Ordinal);
+                    .Replace("x:Class=\"AttendanceShiftingManagement.Views.AssistanceCaseManagementPage\"", string.Empty, StringComparison.Ordinal)
+                    .Replace("<helpers:NullToHiddenConverter x:Key=\"NullToHiddenConverter\" />", string.Empty, StringComparison.Ordinal)
+                    .Replace("Converter={StaticResource NullToHiddenConverter}", string.Empty, StringComparison.Ordinal);
 
                 _ = XamlReader.Parse(xaml);
             }

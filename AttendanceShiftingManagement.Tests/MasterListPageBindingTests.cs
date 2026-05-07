@@ -24,21 +24,12 @@ public sealed class MasterListPageBindingTests
         Assert.Contains("Text=\"{Binding PageSummary}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("SelectedItem=\"{Binding SelectedPageSize}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"{Binding SearchText, UpdateSourceTrigger=PropertyChanged, Delay=250}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("ScrollViewer.HorizontalScrollBarVisibility=\"Visible\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("HorizontalScrollBarVisibility=\"Auto\"", xaml, StringComparison.Ordinal);
     }
 
     [Fact]
     public void NavigationLabels_UseValidatedBeneficiariesTerminology()
     {
-        var mainWindowPath = Path.GetFullPath(Path.Combine(
-            AppContext.BaseDirectory,
-            "..",
-            "..",
-            "..",
-            "..",
-            "Views",
-            "MainWindow.xaml"));
-
         var dashboardPath = Path.GetFullPath(Path.Combine(
             AppContext.BaseDirectory,
             "..",
@@ -48,15 +39,9 @@ public sealed class MasterListPageBindingTests
             "Views",
             "BarangayDashboardPage.xaml"));
 
-        var mainWindowXaml = File.ReadAllText(mainWindowPath);
         var dashboardXaml = File.ReadAllText(dashboardPath);
 
-        Assert.DoesNotContain("Text=\"Beneficiary Review\"", mainWindowXaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("Text=\"Grievance / Corrections\"", mainWindowXaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("Text=\"Masterlist\"", mainWindowXaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("Text=\"Household registry\"", mainWindowXaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"Validated Beneficiaries\"", mainWindowXaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"Validated Beneficiaries\"", dashboardXaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"MASTERLIST\"", dashboardXaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding DataContext.ShowMasterListCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}\"", dashboardXaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Content=\"OPEN VALIDATED BENEFICIARIES\"", dashboardXaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Content=\"BROWSE HOUSEHOLDS\"", dashboardXaml, StringComparison.Ordinal);

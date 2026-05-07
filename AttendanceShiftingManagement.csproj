@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -6,11 +6,11 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
-    <DefaultItemExcludes>$(DefaultItemExcludes);artifacts\**</DefaultItemExcludes>
-    <Version>1.0.4</Version>
-    <AssemblyVersion>1.0.4.0</AssemblyVersion>
-    <FileVersion>1.0.4.0</FileVersion>
-    <InformationalVersion>1.0.4</InformationalVersion>
+    <DefaultItemExcludes>$(DefaultItemExcludes);artifacts\**;bin_*\**;obj_*\**</DefaultItemExcludes>
+    <Version>1.0.5</Version>
+    <AssemblyVersion>1.0.5.0</AssemblyVersion>
+    <FileVersion>1.0.5.0</FileVersion>
+    <InformationalVersion>1.0.5</InformationalVersion>
     <ApplicationIcon>Images\municipal-house.ico</ApplicationIcon>
     <AssemblyTitle>eKalinga+</AssemblyTitle>
     <Product>eKalinga+</Product>
@@ -54,12 +54,16 @@
   <ItemGroup>
     <Compile Remove="AttendanceShiftingManagement.Tests\**\*.cs" />
     <Compile Remove="artifacts\**\*.cs" />
+    <Compile Remove="unofficial\**\*.cs" />
     <EmbeddedResource Remove="AttendanceShiftingManagement.Tests\**\*" />
     <EmbeddedResource Remove="artifacts\**\*" />
+    <EmbeddedResource Remove="unofficial\**\*" />
     <None Remove="AttendanceShiftingManagement.Tests\**\*" />
     <None Remove="artifacts\**\*" />
+    <None Remove="unofficial\**\*" />
     <Page Remove="AttendanceShiftingManagement.Tests\**\*" />
     <Page Remove="artifacts\**\*" />
+    <Page Remove="unofficial\**\*" />
     <ApplicationDefinition Remove="artifacts\**\*" />
     <Resource Remove="artifacts\**\*" />
     <Content Remove="artifacts\**\*" />

@@ -22,6 +22,7 @@ namespace AttendanceShiftingManagement.Models
         public string SeniorIdNo { get; set; } = string.Empty;
         public string DisabilityType { get; set; } = string.Empty;
         public string CauseOfDisability { get; set; } = string.Empty;
+        public VerificationStatus VerificationStatus { get; set; } = VerificationStatus.Pending;
         public DateTime? CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
 
@@ -29,6 +30,25 @@ namespace AttendanceShiftingManagement.Models
             !string.IsNullOrWhiteSpace(FullName)
                 ? FullName
                 : string.Join(" ", new[] { FirstName, MiddleName, LastName }.Where(part => !string.IsNullOrWhiteSpace(part))).Trim();
+
+        public string Initials
+        {
+            get
+            {
+                var parts = new List<string>();
+                if (!string.IsNullOrWhiteSpace(FirstName)) parts.Add(FirstName[..1]);
+                if (!string.IsNullOrWhiteSpace(LastName)) parts.Add(LastName[..1]);
+                
+                if (parts.Count == 0 && !string.IsNullOrWhiteSpace(FullName))
+                {
+                    var nameParts = FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    if (nameParts.Length > 0) parts.Add(nameParts[0][..1]);
+                    if (nameParts.Length > 1) parts.Add(nameParts[^1][..1]);
+                }
+
+                return string.Join("", parts).ToUpperInvariant();
+            }
+        }
 
         public string FlagsSummary
         {
@@ -50,7 +70,12 @@ namespace AttendanceShiftingManagement.Models
         }
 
         public string CivilRegistryStatus => string.IsNullOrWhiteSpace(CivilRegistryId) ? "No civil registry link" : "Civil registry linked";
+        public bool HasCivilRegistryLink => !string.IsNullOrWhiteSpace(CivilRegistryId);
         public string SexAgeSummary => string.Join(" / ", new[] { Sex, Age }.Where(value => !string.IsNullOrWhiteSpace(value)));
         public string UpdatedAtDisplay => UpdatedAt?.ToString("MMM dd, yyyy hh:mm tt") ?? "--";
+
+        public string VerificationStatusLabel => VerificationStatus.ToString();
+        public bool IsApproved => VerificationStatus == VerificationStatus.Approved;
+        public bool IsPending => VerificationStatus == VerificationStatus.Pending;
     }
 }

@@ -219,6 +219,12 @@ namespace AttendanceShiftingManagement.Data
             EnsureColumnExists(
                 connection,
                 "ayuda_programs",
+                "release_kind",
+                "ALTER TABLE `ayuda_programs` ADD COLUMN `release_kind` varchar(32) NOT NULL DEFAULT 'Cash';");
+
+            EnsureColumnExists(
+                connection,
+                "ayuda_programs",
                 "unit_amount",
                 "ALTER TABLE `ayuda_programs` ADD COLUMN `unit_amount` decimal(18,2) NULL;");
 
@@ -338,6 +344,24 @@ namespace AttendanceShiftingManagement.Data
                 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
                 """);
 
+            EnsureColumnExists(
+                connection,
+                "cash_for_work_events",
+                "is_deleted",
+                "ALTER TABLE `cash_for_work_events` ADD COLUMN `is_deleted` tinyint(1) NOT NULL DEFAULT 0;");
+
+            EnsureColumnExists(
+                connection,
+                "cash_for_work_participants",
+                "is_deleted",
+                "ALTER TABLE `cash_for_work_participants` ADD COLUMN `is_deleted` tinyint(1) NOT NULL DEFAULT 0;");
+
+            EnsureColumnExists(
+                connection,
+                "cash_for_work_attendance",
+                "is_deleted",
+                "ALTER TABLE `cash_for_work_attendance` ADD COLUMN `is_deleted` tinyint(1) NOT NULL DEFAULT 0;");
+
             ExecuteNonQuery(
                 connection,
                 """
@@ -363,6 +387,18 @@ namespace AttendanceShiftingManagement.Data
                 SET `distribution_status` = 'Draft'
                 WHERE `distribution_status` IS NULL
                    OR `distribution_status` = '';
+                """);
+
+            ExecuteNonQuery(
+                connection,
+                """
+                UPDATE `ayuda_programs`
+                SET `release_kind` = CASE
+                    WHEN `item_description` IS NULL OR TRIM(`item_description`) = '' THEN 'Cash'
+                    ELSE 'Goods'
+                END
+                WHERE `release_kind` IS NULL
+                   OR `release_kind` = '';
                 """);
 
             ExecuteNonQuery(
@@ -667,6 +703,7 @@ namespace AttendanceShiftingManagement.Data
                     `released_at` datetime(6) NULL,
                     `created_at` datetime(6) NOT NULL,
                     `updated_at` datetime(6) NOT NULL,
+                    `is_deleted` tinyint(1) NOT NULL DEFAULT 0,
                     PRIMARY KEY (`id`),
                     KEY `IX_cash_for_work_events_created_by_user_id` (`created_by_user_id`)
                 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -679,6 +716,7 @@ namespace AttendanceShiftingManagement.Data
                     `household_member_id` int NULL,
                     `added_by_user_id` int NOT NULL,
                     `added_at` datetime(6) NOT NULL,
+                    `is_deleted` tinyint(1) NOT NULL DEFAULT 0,
                     PRIMARY KEY (`id`),
                     UNIQUE KEY `IX_cash_for_work_participants_event_beneficiary` (`event_id`, `beneficiary_staging_id`),
                     KEY `IX_cash_for_work_participants_added_by_user_id` (`added_by_user_id`),
@@ -696,6 +734,7 @@ namespace AttendanceShiftingManagement.Data
                     `ocr_extracted_name` varchar(150) NULL,
                     `recorded_by_user_id` int NOT NULL,
                     `recorded_at` datetime(6) NOT NULL,
+                    `is_deleted` tinyint(1) NOT NULL DEFAULT 0,
                     PRIMARY KEY (`id`),
                     KEY `IX_cash_for_work_attendance_participant_id` (`participant_id`),
                     KEY `IX_cash_for_work_attendance_recorded_by_user_id` (`recorded_by_user_id`)

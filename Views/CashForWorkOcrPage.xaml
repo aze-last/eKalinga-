@@ -17,12 +17,16 @@
         </Style>
 
         <Style x:Key="PanelCardStyle" TargetType="Border">
-            <Setter Property="Padding" Value="20" />
-            <Setter Property="Margin" Value="0,0,0,18" />
-            <Setter Property="CornerRadius" Value="18" />
-            <Setter Property="Background" Value="{DynamicResource ThemeCardSubtleBrush}" />
+            <Setter Property="Padding" Value="24" />
+            <Setter Property="CornerRadius" Value="24" />
+            <Setter Property="Background" Value="{DynamicResource ThemeCardBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource BrandBorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect BlurRadius="25" ShadowDepth="4" Opacity="0.15" />
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <Style x:Key="MetricCardStyle" TargetType="Border">
@@ -34,11 +38,15 @@
             <Setter Property="BorderThickness" Value="1" />
         </Style>
 
-        <Style x:Key="OverviewPanelStyle" TargetType="Border" BasedOn="{StaticResource PanelCardStyle}">
-            <Setter Property="Visibility" Value="Visible" />
+        <!-- Blurred Background Style -->
+        <Style x:Key="BlurredContentStyle" TargetType="ScrollViewer">
             <Style.Triggers>
-                <DataTrigger Binding="{Binding DrawerVisibility}" Value="Visible">
-                    <Setter Property="Visibility" Value="Collapsed" />
+                <DataTrigger Binding="{Binding IsDrawerOpen}" Value="True">
+                    <Setter Property="Effect">
+                        <Setter.Value>
+                            <BlurEffect Radius="15" RenderingBias="Quality" />
+                        </Setter.Value>
+                    </Setter>
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -51,6 +59,7 @@
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
+        <!-- Left Action Rail -->
         <Border Grid.Column="0"
                 Margin="24"
                 Padding="20"
@@ -84,17 +93,16 @@
                 <Button Content="Create Event"
                         Style="{StaticResource RailButtonStyle}"
                         Command="{Binding OpenCreateEventPanelCommand}" />
-                <Button Content="Seminar"
-                        Style="{StaticResource RailButtonStyle}"
-                        Command="{Binding OpenSeminarPanelCommand}" />
                 <Button Content="Add Beneficiaries"
                         Style="{StaticResource RailButtonStyle}"
+                        Visibility="{Binding AddBeneficiariesRailVisibility}"
                         Command="{Binding OpenAddBeneficiariesPanelCommand}" />
                 <Button Content="Scan Attendance"
                         Style="{StaticResource RailButtonStyle}"
                         Command="{Binding OpenScanAttendancePanelCommand}" />
                 <Button Content="Payout"
                         Style="{StaticResource RailButtonStyle}"
+                        Visibility="{Binding PayoutRailVisibility}"
                         Command="{Binding OpenPayoutPanelCommand}" />
                 <Button Content="Announcements"
                         Style="{StaticResource RailButtonStyle}"
@@ -102,88 +110,103 @@
             </StackPanel>
         </Border>
 
-        <ScrollViewer Grid.Column="2"
-                      Margin="0,24,24,24"
-                      VerticalScrollBarVisibility="Auto">
-            <Border Padding="20"
-                    CornerRadius="22"
-                    Background="{DynamicResource ThemeCardBrush}"
-                    BorderBrush="{DynamicResource BrandBorderBrush}"
-                    BorderThickness="1">
-                <StackPanel>
-                    <Grid Margin="0,0,0,18">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="1.6*" />
-                            <ColumnDefinition Width="1*" />
-                        </Grid.ColumnDefinitions>
+        <!-- Center Viewport (Layered for Blur/Overlay) -->
+        <Grid Grid.Column="2">
+            <!-- Background Layer (Attendance List) -->
+            <ScrollViewer Margin="0,24,24,24"
+                          VerticalScrollBarVisibility="Auto"
+                          Style="{StaticResource BlurredContentStyle}">
+                <Border Padding="20"
+                        CornerRadius="22"
+                        Background="{DynamicResource ThemeCardBrush}"
+                        BorderBrush="{DynamicResource BrandBorderBrush}"
+                        BorderThickness="1">
+                    <StackPanel>
+                        <Grid Margin="0,0,0,18">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="1.6*" />
+                                <ColumnDefinition Width="1*" />
+                            </Grid.ColumnDefinitions>
 
-                        <ComboBox Grid.Column="0"
-                                  Margin="0,0,16,0"
-                                  ItemsSource="{Binding Events}"
-                                  SelectedItem="{Binding SelectedEvent}"
-                                  Style="{StaticResource MaterialDesignOutlinedComboBox}"
-                                  materialDesign:HintAssist.Hint="Select Event">
-                            <ComboBox.ItemTemplate>
-                                <DataTemplate>
-                                    <StackPanel>
-                                        <TextBlock Text="{Binding Title}"
-                                                   FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource BrandMidnightBrush}" />
-                                        <TextBlock Text="{Binding WorkspaceLabel}"
-                                                   FontSize="11"
-                                                   Foreground="{DynamicResource BrandTextSecondaryBrush}" />
+                            <ComboBox Grid.Column="0"
+                                      Margin="0,0,16,0"
+                                      ItemsSource="{Binding Events}"
+                                      SelectedItem="{Binding SelectedEvent}"
+                                      Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                      materialDesign:HintAssist.Hint="Select Event">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Title}"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource BrandMidnightBrush}" />
+                                            <TextBlock Text="{Binding WorkspaceLabel}"
+                                                       FontSize="11"
+                                                       Foreground="{DynamicResource BrandTextSecondaryBrush}" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+
+                            <Border Grid.Column="1"
+                                    Padding="16"
+                                    CornerRadius="16"
+                                    Background="{DynamicResource ThemeAccentSoftBrush}"
+                                    BorderBrush="{DynamicResource ThemeAccentBorderBrush}"
+                                    BorderThickness="1">
+                                <DockPanel LastChildFill="False">
+                                    <StackPanel DockPanel.Dock="Left"
+                                                Width="240">
+                                        <TextBlock Text="{Binding SelectedEventLabel}"
+                                                   FontWeight="Bold"
+                                                   Foreground="{DynamicResource BrandMidnightBrush}"
+                                                   TextWrapping="Wrap" />
+                                        <TextBlock Margin="0,8,0,0"
+                                                   Text="{Binding AttendanceSummary}"
+                                                   Foreground="{DynamicResource BrandTextSecondaryBrush}"
+                                                   TextWrapping="Wrap" />
+                                        <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                            <TextBlock Text="Global CFW Budget: "
+                                                       FontSize="11"
+                                                       Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
+                                            <TextBlock Text="{Binding GlobalCfwBudgetCapRemaining, StringFormat='PHP {0:N2}'}"
+                                                       FontSize="11"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource BrandMidnightBrush}"/>
+                                        </StackPanel>
                                     </StackPanel>
-                                </DataTemplate>
-                            </ComboBox.ItemTemplate>
-                        </ComboBox>
 
-                        <Border Grid.Column="1"
-                                Padding="16"
-                                CornerRadius="16"
-                                Background="{DynamicResource ThemeAccentSoftBrush}"
-                                BorderBrush="{DynamicResource ThemeAccentBorderBrush}"
-                                BorderThickness="1">
-                            <DockPanel LastChildFill="False">
-                                <StackPanel DockPanel.Dock="Left"
-                                            Width="220">
-                                    <TextBlock Text="{Binding SelectedEventLabel}"
-                                               FontWeight="Bold"
-                                               Foreground="{DynamicResource BrandMidnightBrush}"
-                                               TextWrapping="Wrap" />
-                                    <TextBlock Margin="0,8,0,0"
-                                               Text="{Binding AttendanceSummary}"
-                                               Foreground="{DynamicResource BrandTextSecondaryBrush}"
-                                               TextWrapping="Wrap" />
-                                </StackPanel>
+                                    <WrapPanel DockPanel.Dock="Right"
+                                               HorizontalAlignment="Right"
+                                               VerticalAlignment="Top"
+                                               Visibility="{Binding SelectedEventVisibility}">
+                                        <Button Content="Edit Event"
+                                                Margin="0,0,8,8"
+                                                Style="{StaticResource SecondaryActionButton}"
+                                                Command="{Binding OpenEditEventPanelCommand}" />
+                                        <Button Content="Delete Event"
+                                                Margin="0,0,8,8"
+                                                Style="{StaticResource SecondaryActionButton}"
+                                                Command="{Binding DeleteEventCommand}" />
+                                        <Button Content="Save PDF"
+                                                Margin="0,0,8,8"
+                                                Style="{StaticResource GoldActionButton}"
+                                                Command="{Binding SaveAttendanceSheetPdfCommand}" />
+                                        <Button Content="Print Preview"
+                                                Margin="0,0,0,8"
+                                                Style="{StaticResource SecondaryActionButton}"
+                                                Command="{Binding PrintAttendanceSheetCommand}" />
+                                    </WrapPanel>
+                                </DockPanel>
+                            </Border>
+                        </Grid>
 
-                                <WrapPanel DockPanel.Dock="Right"
-                                           HorizontalAlignment="Right"
-                                           VerticalAlignment="Top"
-                                           Visibility="{Binding SelectedEventVisibility}">
-                                    <Button Content="Edit Event"
-                                            Margin="0,0,8,8"
-                                            Style="{StaticResource SecondaryActionButton}"
-                                            Command="{Binding OpenEditEventPanelCommand}" />
-                                    <Button Content="Delete Event"
-                                            Margin="0,0,8,8"
-                                            Style="{StaticResource SecondaryActionButton}"
-                                            Command="{Binding DeleteEventCommand}" />
-                                    <Button Content="Print Attendance Sheet"
-                                            Margin="0,0,0,8"
-                                            Style="{StaticResource GoldActionButton}"
-                                            Command="{Binding PrintAttendanceSheetCommand}" />
-                                </WrapPanel>
-                            </DockPanel>
-                        </Border>
-                    </Grid>
+                        <TextBlock Margin="0,0,0,18"
+                                   Text="{Binding StatusMessage}"
+                                   FontWeight="SemiBold"
+                                   Foreground="{Binding StatusBrush}"
+                                   TextWrapping="Wrap" />
 
-                    <TextBlock Margin="0,0,0,18"
-                               Text="{Binding StatusMessage}"
-                               FontWeight="SemiBold"
-                               Foreground="{Binding StatusBrush}"
-                               TextWrapping="Wrap" />
-
-                    <Border Style="{StaticResource OverviewPanelStyle}">
                         <StackPanel>
                             <DockPanel LastChildFill="False">
                                 <StackPanel DockPanel.Dock="Left">
@@ -192,7 +215,7 @@
                                                FontWeight="Bold"
                                                Foreground="{DynamicResource BrandMidnightBrush}" />
                                     <TextBlock Margin="0,6,0,0"
-                                               Text="Use the left rail to switch workflows. The selected event attendance stays here by default."
+                                               Text="Operational panels now appear as an overlay. The background is blurred to keep focus on the active task."
                                                Foreground="{DynamicResource BrandTextSecondaryBrush}"
                                                TextWrapping="Wrap" />
                                 </StackPanel>
@@ -237,548 +260,683 @@
                                     <DataGridTextColumn Header="Recorded" Binding="{Binding RecordedAt, StringFormat='{}{0:MMM dd, yyyy hh:mm tt}'}" Width="180" />
                                 </DataGrid.Columns>
                             </DataGrid>
-                        </StackPanel>
-                    </Border>
 
-                    <Border Style="{StaticResource PanelCardStyle}"
-                            Visibility="{Binding EventEditorVisibility}">
-                        <StackPanel>
-                            <DockPanel LastChildFill="False">
-                                <StackPanel DockPanel.Dock="Left">
-                                    <TextBlock Text="{Binding DrawerTitle}"
-                                               FontSize="22"
-                                               FontWeight="Bold"
-                                               Foreground="{DynamicResource BrandMidnightBrush}" />
-                                    <TextBlock Margin="0,6,0,0"
-                                               Text="{Binding DrawerSubtitle}"
-                                               Foreground="{DynamicResource BrandTextSecondaryBrush}"
-                                               TextWrapping="Wrap" />
-                                </StackPanel>
-                                <Button DockPanel.Dock="Right"
-                                        Content="Back to List"
-                                        Style="{StaticResource SecondaryActionButton}"
-                                        Command="{Binding ClosePanelCommand}" />
-                            </DockPanel>
-
-                            <Grid Margin="0,18,0,0">
+                            <Grid Margin="0,16,0,0" Visibility="{Binding SelectedEventVisibility}">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                </Grid.RowDefinitions>
 
-                                <TextBox Grid.Row="0"
-                                         Grid.Column="0"
-                                         Margin="0,0,12,12"
-                                         Text="{Binding EventTitle, UpdateSourceTrigger=PropertyChanged}"
-                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                         materialDesign:HintAssist.Hint="Event Title" />
-                                <TextBox Grid.Row="0"
-                                         Grid.Column="1"
-                                         Margin="12,0,0,12"
-                                         Text="{Binding EventLocation, UpdateSourceTrigger=PropertyChanged}"
-                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                         materialDesign:HintAssist.Hint="Location" />
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding AttendancePageSummary}"
+                                               VerticalAlignment="Center"
+                                               Margin="0,0,16,0"
+                                               Foreground="{DynamicResource BrandTextSecondaryBrush}" />
+                                </StackPanel>
 
-                                <DatePicker Grid.Row="1"
-                                            Grid.Column="0"
-                                            Margin="0,0,12,12"
-                                            SelectedDate="{Binding EventDate}"
-                                            Style="{StaticResource MaterialDesignOutlinedDatePicker}"
-                                            materialDesign:HintAssist.Hint="Event Date" />
-                                <Grid Grid.Row="1"
-                                      Grid.Column="1"
-                                      Margin="12,0,0,12">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBox Grid.Column="0"
-                                             Margin="0,0,6,0"
-                                             Text="{Binding EventStartTime, UpdateSourceTrigger=PropertyChanged}"
-                                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                             materialDesign:HintAssist.Hint="Start Time (HH:mm)" />
-                                    <TextBox Grid.Column="1"
-                                             Margin="6,0,0,0"
-                                             Text="{Binding EventEndTime, UpdateSourceTrigger=PropertyChanged}"
-                                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                             materialDesign:HintAssist.Hint="End Time (HH:mm)" />
-                                </Grid>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                    <Button Command="{Binding PreviousAttendancePageCommand}"
+                                            Style="{StaticResource MaterialDesignFlatButton}"
+                                            Padding="8,4"
+                                            Height="32"
+                                            Foreground="{DynamicResource BrandMidnightBrush}">
+                                        <materialDesign:PackIcon Kind="ChevronLeft" />
+                                    </Button>
 
-                                <TextBox Grid.Row="2"
-                                         Grid.ColumnSpan="2"
-                                         MinHeight="120"
-                                         AcceptsReturn="True"
-                                         TextWrapping="Wrap"
-                                         VerticalScrollBarVisibility="Auto"
-                                         Text="{Binding EventNotes, UpdateSourceTrigger=PropertyChanged}"
-                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                         materialDesign:HintAssist.Hint="Notes" />
+                                    <TextBlock Text="{Binding AttendancePageIndicator}"
+                                               VerticalAlignment="Center"
+                                               Margin="8,0"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource BrandMidnightBrush}" />
+
+                                    <Button Command="{Binding NextAttendancePageCommand}"
+                                            Style="{StaticResource MaterialDesignFlatButton}"
+                                            Padding="8,4"
+                                            Height="32"
+                                            Foreground="{DynamicResource BrandMidnightBrush}">
+                                        <materialDesign:PackIcon Kind="ChevronRight" />
+                                    </Button>
+                                </StackPanel>
                             </Grid>
-
-                            <Button Content="{Binding EventEditorSubmitLabel}"
-                                    Margin="0,18,0,0"
-                                    HorizontalAlignment="Left"
-                                    Style="{StaticResource GoldActionButton}"
-                                    Command="{Binding SaveEventCommand}" />
                         </StackPanel>
-                    </Border>
+                    </StackPanel>
+                </Border>
+            </ScrollViewer>
 
-                    <Border Style="{StaticResource PanelCardStyle}"
-                            Visibility="{Binding BeneficiariesVisibility}">
-                        <StackPanel>
-                            <DockPanel LastChildFill="False">
-                                <StackPanel DockPanel.Dock="Left">
-                                    <TextBlock Text="{Binding DrawerTitle}"
-                                               FontSize="22"
-                                               FontWeight="Bold"
-                                               Foreground="{DynamicResource BrandMidnightBrush}" />
-                                    <TextBlock Margin="0,6,0,0"
-                                               Text="{Binding DrawerSubtitle}"
-                                               Foreground="{DynamicResource BrandTextSecondaryBrush}"
-                                               TextWrapping="Wrap" />
-                                </StackPanel>
-                                <Button DockPanel.Dock="Right"
-                                        Content="Back to List"
-                                        Style="{StaticResource SecondaryActionButton}"
-                                        Command="{Binding ClosePanelCommand}" />
-                            </DockPanel>
+            <!-- Overlay Layer (Operational Panels) -->
+            <Grid Background="#1A000000"
+                  Visibility="{Binding DrawerVisibility}">
+                <Grid.Style>
+                    <Style TargetType="Grid">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsDrawerOpen}" Value="False">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Grid.Style>
 
-                            <TextBlock Margin="0,18,0,0"
-                                       Visibility="{Binding NoSelectedEventVisibility}"
-                                       Text="Select an event first before assigning beneficiaries."
-                                       Foreground="{DynamicResource BrandTextSecondaryBrush}" />
-
-                            <StackPanel Margin="0,18,0,0"
-                                        Visibility="{Binding SelectedEventVisibility}">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <ComboBox Grid.Column="0"
-                                              Margin="0,0,16,0"
-                                              ItemsSource="{Binding EligibleBeneficiaries}"
-                                              SelectedItem="{Binding SelectedEligibleBeneficiary}"
-                                              Style="{StaticResource MaterialDesignOutlinedComboBox}"
-                                              materialDesign:HintAssist.Hint="Approved Beneficiary">
-                                        <ComboBox.ItemTemplate>
-                                            <DataTemplate>
-                                                <TextBlock Text="{Binding DisplayLabel}" TextWrapping="Wrap" />
-                                            </DataTemplate>
-                                        </ComboBox.ItemTemplate>
-                                    </ComboBox>
-                                    <Button Grid.Column="1"
-                                            Content="Add Beneficiary"
-                                            Style="{StaticResource GoldActionButton}"
-                                            Command="{Binding AddParticipantCommand}" />
-                                </Grid>
-
-                                <DataGrid Margin="0,18,0,0"
-                                          ItemsSource="{Binding Participants}"
-                                          AutoGenerateColumns="False"
-                                          CanUserAddRows="False"
-                                          CanUserDeleteRows="False"
-                                          IsReadOnly="True"
-                                          HeadersVisibility="Column"
-                                          RowHeaderWidth="0"
-                                          MinHeight="260"
-                                          Background="{DynamicResource ThemeCardSubtleBrush}"
-                                          BorderBrush="{DynamicResource BrandBorderBrush}">
-                                    <DataGrid.Columns>
-                                        <DataGridTextColumn Header="Name" Binding="{Binding FullName}" Width="*" />
-                                        <DataGridTextColumn Header="Beneficiary ID" Binding="{Binding BeneficiaryId}" Width="150" />
-                                        <DataGridTextColumn Header="Civil Registry ID" Binding="{Binding CivilRegistryId}" Width="170" />
-                                    </DataGrid.Columns>
-                                </DataGrid>
-                            </StackPanel>
-                        </StackPanel>
-                    </Border>
-
-                    <Border Style="{StaticResource PanelCardStyle}"
-                            Visibility="{Binding ScanAttendanceVisibility}">
-                        <StackPanel>
-                            <DockPanel LastChildFill="False">
-                                <StackPanel DockPanel.Dock="Left">
-                                    <TextBlock Text="{Binding DrawerTitle}"
-                                               FontSize="22"
-                                               FontWeight="Bold"
-                                               Foreground="{DynamicResource BrandMidnightBrush}" />
-                                    <TextBlock Margin="0,6,0,0"
-                                               Text="{Binding DrawerSubtitle}"
-                                               Foreground="{DynamicResource BrandTextSecondaryBrush}"
-                                               TextWrapping="Wrap" />
-                                </StackPanel>
-                                <Button DockPanel.Dock="Right"
-                                        Content="Back to List"
-                                        Style="{StaticResource SecondaryActionButton}"
-                                        Command="{Binding ClosePanelCommand}" />
-                            </DockPanel>
-
-                            <TextBlock Margin="0,18,0,0"
-                                       Visibility="{Binding NoSelectedEventVisibility}"
-                                       Text="Select an event first before capturing attendance."
-                                       Foreground="{DynamicResource BrandTextSecondaryBrush}" />
-
-                            <Grid Margin="0,18,0,0"
-                                  Visibility="{Binding SelectedEventVisibility}">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="1.05*" />
-                                    <ColumnDefinition Width="18" />
-                                    <ColumnDefinition Width="1.2*" />
-                                </Grid.ColumnDefinitions>
-
-                                <Border Grid.Column="0"
-                                        Padding="18"
-                                        CornerRadius="16"
-                                        Background="{DynamicResource ThemeAccentSoftBrush}"
-                                        BorderBrush="{DynamicResource ThemeAccentBorderBrush}"
-                                        BorderThickness="1">
-                                    <StackPanel>
-                                        <TextBlock Text="Scanner Session"
-                                                   FontSize="18"
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              Margin="40">
+                    <StackPanel VerticalAlignment="Center"
+                                MaxWidth="1000">
+                        
+                        <!-- Event Editor Panel -->
+                        <Border Style="{StaticResource PanelCardStyle}"
+                                Visibility="{Binding EventEditorVisibility}">
+                            <StackPanel>
+                                <DockPanel LastChildFill="False">
+                                    <StackPanel DockPanel.Dock="Left">
+                                        <TextBlock Text="{Binding DrawerTitle}"
+                                                   FontSize="22"
                                                    FontWeight="Bold"
                                                    Foreground="{DynamicResource BrandMidnightBrush}" />
                                         <TextBlock Margin="0,6,0,0"
-                                                   Text="Open a phone scanner session using the shared scanner gateway."
+                                                   Text="{Binding DrawerSubtitle}"
                                                    Foreground="{DynamicResource BrandTextSecondaryBrush}"
                                                    TextWrapping="Wrap" />
-
-                                        <Button Margin="0,16,0,0"
-                                                Content="Start Scanner Session"
-                                                HorizontalAlignment="Left"
-                                                Style="{StaticResource GoldActionButton}"
-                                                Command="{Binding CreateAttendanceScannerSessionCommand}" />
-
-                                        <TextBox Margin="0,16,0,0"
-                                                 IsReadOnly="True"
-                                                 Text="{Binding AttendanceScannerSessionUrl, Mode=OneWay}"
-                                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                                 materialDesign:HintAssist.Hint="Scanner URL" />
-
-                                        <Border Margin="0,12,0,0"
-                                                Padding="16"
-                                                CornerRadius="14"
-                                                Background="{DynamicResource ThemeCardBrush}"
-                                                BorderBrush="{DynamicResource BrandBorderBrush}"
-                                                BorderThickness="1">
-                                            <StackPanel>
-                                                <TextBlock Text="Session PIN"
-                                                           FontSize="11"
-                                                           FontWeight="Bold"
-                                                           Foreground="{DynamicResource BrandTextSecondaryBrush}" />
-                                                <TextBlock Margin="0,8,0,0"
-                                                           Text="{Binding AttendanceScannerSessionPin}"
-                                                           FontSize="28"
-                                                           FontWeight="Bold"
-                                                           HorizontalAlignment="Center"
-                                                           Foreground="{DynamicResource BrandMidnightBrush}" />
-                                                <TextBlock Margin="0,8,0,0"
-                                                           Text="{Binding AttendanceScannerSessionExpiresAtText}"
-                                                           HorizontalAlignment="Center"
-                                                           Foreground="{DynamicResource BrandTextSecondaryBrush}"
-                                                           TextWrapping="Wrap" />
-                                            </StackPanel>
-                                        </Border>
-
-                                        <Border Margin="0,12,0,0"
-                                                Padding="14"
-                                                CornerRadius="14"
-                                                Background="{DynamicResource ThemeCardBrush}"
-                                                BorderBrush="{DynamicResource BrandBorderBrush}"
-                                                BorderThickness="1">
-                                            <Viewbox Stretch="Uniform">
-                                                <Border Width="180"
-                                                        Height="180"
-                                                        Background="{DynamicResource ThemeCardSubtleBrush}"
-                                                        BorderBrush="{DynamicResource BrandBorderBrush}"
-                                                        BorderThickness="1"
-                                                        CornerRadius="12">
-                                                    <Image Source="{Binding AttendanceScannerQrImage}"
-                                                           Stretch="Uniform" />
-                                                </Border>
-                                            </Viewbox>
-                                        </Border>
                                     </StackPanel>
-                                </Border>
-
-                                <Border Grid.Column="2"
-                                        Padding="18"
-                                        CornerRadius="16"
-                                        Background="{DynamicResource ThemeCardSubtleBrush}"
-                                        BorderBrush="{DynamicResource BrandBorderBrush}"
-                                        BorderThickness="1">
-                                    <StackPanel>
-                                        <DockPanel LastChildFill="False">
-                                            <StackPanel DockPanel.Dock="Left">
-                                                <TextBlock Text="Manual Attendance"
-                                                           FontSize="18"
-                                                           FontWeight="Bold"
-                                                           Foreground="{DynamicResource BrandMidnightBrush}" />
-                                                <TextBlock Margin="0,6,0,0"
-                                                           Text="Mark assigned beneficiaries as present when attendance is captured manually."
-                                                           Foreground="{DynamicResource BrandTextSecondaryBrush}"
-                                                           TextWrapping="Wrap" />
-                                            </StackPanel>
-                                            <Button DockPanel.Dock="Right"
-                                                    Content="Save Manual Attendance"
-                                                    Style="{StaticResource SecondaryActionButton}"
-                                                    Command="{Binding SaveManualAttendanceCommand}" />
-                                        </DockPanel>
-
-                                        <TextBlock Margin="0,16,0,0"
-                                                   Text="Add beneficiaries from the left rail first if the attendance list is empty."
-                                                   Foreground="{DynamicResource BrandTextSecondaryBrush}"
-                                                   TextWrapping="Wrap" />
-
-                                        <DataGrid Margin="0,16,0,0"
-                                                  ItemsSource="{Binding Participants}"
-                                                  AutoGenerateColumns="False"
-                                                  CanUserAddRows="False"
-                                                  CanUserDeleteRows="False"
-                                                  HeadersVisibility="Column"
-                                                  RowHeaderWidth="0"
-                                                  MinHeight="300"
-                                                  Background="{DynamicResource ThemeCardBrush}"
-                                                  BorderBrush="{DynamicResource BrandBorderBrush}">
-                                            <DataGrid.Columns>
-                                                <DataGridCheckBoxColumn Header="Present"
-                                                                        Binding="{Binding IsMarkedPresent}"
-                                                                        Width="90" />
-                                                <DataGridTextColumn Header="Name"
-                                                                    Binding="{Binding FullName}"
-                                                                    Width="*" />
-                                                <DataGridTextColumn Header="Beneficiary ID"
-                                                                    Binding="{Binding BeneficiaryId}"
-                                                                    Width="140" />
-                                                <DataGridTextColumn Header="Civil Registry ID"
-                                                                    Binding="{Binding CivilRegistryId}"
-                                                                    Width="160" />
-                                            </DataGrid.Columns>
-                                        </DataGrid>
-                                    </StackPanel>
-                                </Border>
-                            </Grid>
-                        </StackPanel>
-                    </Border>
-
-                    <Border Style="{StaticResource PanelCardStyle}"
-                            Visibility="{Binding PayoutVisibility}">
-                        <StackPanel>
-                            <DockPanel LastChildFill="False">
-                                <StackPanel DockPanel.Dock="Left">
-                                    <TextBlock Text="{Binding DrawerTitle}"
-                                               FontSize="22"
-                                               FontWeight="Bold"
-                                               Foreground="{DynamicResource BrandMidnightBrush}" />
-                                    <TextBlock Margin="0,6,0,0"
-                                               Text="{Binding DrawerSubtitle}"
-                                               Foreground="{DynamicResource BrandTextSecondaryBrush}"
-                                               TextWrapping="Wrap" />
-                                </StackPanel>
-                                <Button DockPanel.Dock="Right"
-                                        Content="Back to List"
-                                        Style="{StaticResource SecondaryActionButton}"
-                                        Command="{Binding ClosePanelCommand}" />
-                            </DockPanel>
-
-                            <TextBlock Margin="0,18,0,0"
-                                       Visibility="{Binding NoSelectedEventVisibility}"
-                                       Text="Select an event first before releasing funds."
-                                       Foreground="{DynamicResource BrandTextSecondaryBrush}" />
-
-                            <StackPanel Margin="0,18,0,0"
-                                        Visibility="{Binding SelectedEventVisibility}">
-                                <Border Padding="18"
-                                        CornerRadius="16"
-                                        Background="{DynamicResource ThemeAccentSoftBrush}"
-                                        BorderBrush="{DynamicResource ThemeAccentBorderBrush}"
-                                        BorderThickness="1">
-                                    <StackPanel>
-                                        <TextBlock Text="{Binding ReleaseSummaryEventLabel}"
-                                                   FontSize="18"
-                                                   FontWeight="Bold"
-                                                   Foreground="{DynamicResource BrandMidnightBrush}"
-                                                   TextWrapping="Wrap" />
-                                        <TextBlock Margin="0,8,0,0"
-                                                   Text="{Binding ReleaseSummaryStatusText}"
-                                                   FontWeight="SemiBold"
-                                                   Foreground="{Binding ReleaseSummaryStatusBrush}"
-                                                   TextWrapping="Wrap" />
-                                        <TextBlock Margin="0,6,0,0"
-                                                   Text="{Binding ReleaseSummaryDetail}"
-                                                   Foreground="{DynamicResource BrandTextSecondaryBrush}"
-                                                   TextWrapping="Wrap" />
-
-                                        <UniformGrid Margin="0,16,0,0"
-                                                     Columns="4">
-                                            <Border Style="{StaticResource MetricCardStyle}">
-                                                <StackPanel>
-                                                    <TextBlock Text="{Binding ApprovedParticipantCount, StringFormat=N0}"
-                                                               FontSize="24"
-                                                               FontWeight="Bold"
-                                                               Foreground="{DynamicResource BrandMidnightBrush}" />
-                                                    <TextBlock Text="APPROVED"
-                                                               FontSize="10"
-                                                               Foreground="{DynamicResource BrandTextSecondaryBrush}" />
-                                                </StackPanel>
-                                            </Border>
-                                            <Border Style="{StaticResource MetricCardStyle}">
-                                                <StackPanel>
-                                                    <TextBlock Text="{Binding PresentParticipantCount, StringFormat=N0}"
-                                                               FontSize="24"
-                                                               FontWeight="Bold"
-                                                               Foreground="{DynamicResource BrandSuccessBrush}" />
-                                                    <TextBlock Text="PRESENT"
-                                                               FontSize="10"
-                                                               Foreground="{DynamicResource BrandTextSecondaryBrush}" />
-                                                </StackPanel>
-                                            </Border>
-                                            <Border Style="{StaticResource MetricCardStyle}">
-                                                <StackPanel>
-                                                    <TextBlock Text="{Binding PendingParticipantCount, StringFormat=N0}"
-                                                               FontSize="24"
-                                                               FontWeight="Bold"
-                                                               Foreground="#92400E" />
-                                                    <TextBlock Text="PENDING"
-                                                               FontSize="10"
-                                                               Foreground="{DynamicResource BrandTextSecondaryBrush}" />
-                                                </StackPanel>
-                                            </Border>
-                                            <Border Padding="14"
-                                                    Margin="0,0,0,12"
-                                                    CornerRadius="14"
-                                                    Background="{DynamicResource ThemeCardBrush}"
-                                                    BorderBrush="{DynamicResource BrandBorderBrush}"
-                                                    BorderThickness="1">
-                                                <StackPanel>
-                                                    <TextBlock Text="{Binding ManualAttendanceCount, StringFormat=N0}"
-                                                               FontSize="24"
-                                                               FontWeight="Bold"
-                                                               Foreground="{DynamicResource BrandMidnightBrush}" />
-                                                    <TextBlock Text="MANUAL"
-                                                               FontSize="10"
-                                                               Foreground="{DynamicResource BrandTextSecondaryBrush}" />
-                                                </StackPanel>
-                                            </Border>
-                                        </UniformGrid>
-                                    </StackPanel>
-                                </Border>
+                                    <Button DockPanel.Dock="Right"
+                                            Content="Close Panel"
+                                            Style="{StaticResource SecondaryActionButton}"
+                                            Command="{Binding ClosePanelCommand}" />
+                                </DockPanel>
 
                                 <Grid Margin="0,18,0,0">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
 
-                                    <ComboBox Grid.Column="0"
-                                              Margin="0,0,12,0"
-                                              ItemsSource="{Binding AyudaPrograms}"
-                                              SelectedItem="{Binding SelectedAyudaProgram}"
-                                              DisplayMemberPath="ProgramName"
+                                    <ComboBox Grid.Row="0"
+                                              Grid.ColumnSpan="2"
+                                              Margin="0,0,0,12"
+                                              ItemsSource="{Binding EventKinds}"
+                                              SelectedItem="{Binding EventEditorKind}"
                                               Style="{StaticResource MaterialDesignOutlinedComboBox}"
-                                              materialDesign:HintAssist.Hint="Ayuda Program" />
+                                              materialDesign:HintAssist.Hint="Event Type" />
 
-                                    <TextBox Grid.Column="1"
-                                             Margin="12,0,12,0"
-                                             Text="{Binding ReleaseAmountText, UpdateSourceTrigger=PropertyChanged}"
+                                    <TextBox Grid.Row="1"
+                                             Grid.Column="0"
+                                             Margin="0,0,12,12"
+                                             Text="{Binding EventTitle, UpdateSourceTrigger=PropertyChanged}"
                                              Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                             materialDesign:HintAssist.Hint="Release Amount" />
+                                             materialDesign:HintAssist.Hint="Event Title" />
+                                    <TextBox Grid.Row="1"
+                                             Grid.Column="1"
+                                             Margin="12,0,0,12"
+                                             Text="{Binding EventLocation, UpdateSourceTrigger=PropertyChanged}"
+                                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                             materialDesign:HintAssist.Hint="Location" />
 
-                                    <Button Grid.Column="2"
-                                            Content="Release Budget"
-                                            Style="{StaticResource GoldActionButton}"
-                                            Command="{Binding ReleaseBudgetCommand}" />
+                                    <DatePicker Grid.Row="2"
+                                                Grid.Column="0"
+                                                Margin="0,0,12,12"
+                                                SelectedDate="{Binding EventDate}"
+                                                Style="{StaticResource MaterialDesignOutlinedDatePicker}"
+                                                materialDesign:HintAssist.Hint="Event Date" />
+                                    <Grid Grid.Row="2"
+                                          Grid.Column="1"
+                                          Margin="12,0,0,12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox Grid.Column="0"
+                                                 Margin="0,0,6,0"
+                                                 Text="{Binding EventStartTime, UpdateSourceTrigger=PropertyChanged}"
+                                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                                 materialDesign:HintAssist.Hint="Start Time (HH:mm)" />
+                                        <TextBox Grid.Column="1"
+                                                 Margin="6,0,0,0"
+                                                 Text="{Binding EventEndTime, UpdateSourceTrigger=PropertyChanged}"
+                                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                                 materialDesign:HintAssist.Hint="End Time (HH:mm)" />
+                                    </Grid>
+
+                                    <TextBox Grid.Row="3"
+                                             Grid.ColumnSpan="2"
+                                             MinHeight="120"
+                                             AcceptsReturn="True"
+                                             TextWrapping="Wrap"
+                                             VerticalScrollBarVisibility="Auto"
+                                             Text="{Binding EventNotes, UpdateSourceTrigger=PropertyChanged}"
+                                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                             materialDesign:HintAssist.Hint="Notes" />
                                 </Grid>
-                            </StackPanel>
-                        </StackPanel>
-                    </Border>
 
-                    <Border Style="{StaticResource PanelCardStyle}"
-                            Visibility="{Binding AnnouncementsVisibility}">
-                        <StackPanel>
-                            <DockPanel LastChildFill="False">
-                                <StackPanel DockPanel.Dock="Left">
-                                    <TextBlock Text="{Binding DrawerTitle}"
-                                               FontSize="22"
-                                               FontWeight="Bold"
-                                               Foreground="{DynamicResource BrandMidnightBrush}" />
-                                    <TextBlock Margin="0,6,0,0"
-                                               Text="{Binding DrawerSubtitle}"
-                                               Foreground="{DynamicResource BrandTextSecondaryBrush}"
-                                               TextWrapping="Wrap" />
-                                </StackPanel>
-                                <WrapPanel DockPanel.Dock="Right">
-                                    <Button Content="Refresh Workspace"
-                                            Margin="0,0,8,0"
-                                            Style="{StaticResource GoldActionButton}"
-                                            Command="{Binding RefreshWorkspaceCommand}" />
-                                    <Button Content="Back to List"
+                                <Button Content="{Binding EventEditorSubmitLabel}"
+                                        Margin="0,18,0,0"
+                                        HorizontalAlignment="Left"
+                                        Style="{StaticResource GoldActionButton}"
+                                        Command="{Binding SaveEventCommand}" />
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Beneficiaries Panel -->
+                        <Border Style="{StaticResource PanelCardStyle}"
+                                Visibility="{Binding BeneficiariesVisibility}">
+                            <StackPanel>
+                                <DockPanel LastChildFill="False">
+                                    <StackPanel DockPanel.Dock="Left">
+                                        <TextBlock Text="{Binding DrawerTitle}"
+                                                   FontSize="22"
+                                                   FontWeight="Bold"
+                                                   Foreground="{DynamicResource BrandMidnightBrush}" />
+                                        <TextBlock Margin="0,6,0,0"
+                                                   Text="{Binding DrawerSubtitle}"
+                                                   Foreground="{DynamicResource BrandTextSecondaryBrush}"
+                                                   TextWrapping="Wrap" />
+                                    </StackPanel>
+                                    <Button DockPanel.Dock="Right"
+                                            Content="Close Panel"
                                             Style="{StaticResource SecondaryActionButton}"
                                             Command="{Binding ClosePanelCommand}" />
-                                </WrapPanel>
-                            </DockPanel>
+                                </DockPanel>
 
-                            <TextBlock Margin="0,18,0,0"
-                                       Text="Open announcements stay here so staff can quickly jump back into active events."
-                                       Foreground="{DynamicResource BrandTextSecondaryBrush}"
-                                       TextWrapping="Wrap" />
+                                <StackPanel Margin="0,18,0,0">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <ComboBox Grid.Column="0"
+                                                  Margin="0,0,16,0"
+                                                  ItemsSource="{Binding EligibleBeneficiaries}"
+                                                  SelectedItem="{Binding SelectedEligibleBeneficiary}"
+                                                  Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                                  materialDesign:HintAssist.Hint="Approved Beneficiary">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding DisplayLabel}" TextWrapping="Wrap" />
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
+                                        <Button Grid.Column="1"
+                                                Content="Add Beneficiary"
+                                                Style="{StaticResource GoldActionButton}"
+                                                Command="{Binding AddParticipantCommand}" />
+                                    </Grid>
 
-                            <ItemsControl Margin="0,18,0,0"
-                                          ItemsSource="{Binding OpenAnnouncements}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border Margin="0,0,0,14"
-                                                Padding="18"
-                                                CornerRadius="16"
-                                                Background="{DynamicResource ThemeCardBrush}"
-                                                BorderBrush="{DynamicResource BrandBorderBrush}"
-                                                BorderThickness="1">
-                                            <StackPanel>
-                                                <DockPanel LastChildFill="False">
-                                                    <StackPanel DockPanel.Dock="Left"
-                                                                Width="560">
-                                                        <TextBlock Text="{Binding Title}"
-                                                                   FontSize="18"
-                                                                   FontWeight="Bold"
-                                                                   Foreground="{DynamicResource BrandMidnightBrush}"
-                                                                   TextWrapping="Wrap" />
-                                                        <TextBlock Margin="0,6,0,0"
-                                                                   Text="{Binding Summary}"
-                                                                   Foreground="{DynamicResource BrandTextSecondaryBrush}"
-                                                                   TextWrapping="Wrap" />
-                                                    </StackPanel>
-                                                    <Button DockPanel.Dock="Right"
-                                                            Content="Load Event"
-                                                            Style="{StaticResource SecondaryActionButton}"
-                                                            Command="{Binding DataContext.SelectAnnouncementEventCommand, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
-                                                            CommandParameter="{Binding EventId}" />
-                                                </DockPanel>
+                                    <DataGrid Margin="0,18,0,0"
+                                              ItemsSource="{Binding Participants}"
+                                              AutoGenerateColumns="False"
+                                              CanUserAddRows="False"
+                                              CanUserDeleteRows="False"
+                                              IsReadOnly="True"
+                                              HeadersVisibility="Column"
+                                              RowHeaderWidth="0"
+                                              MinHeight="260"
+                                              Background="{DynamicResource ThemeCardSubtleBrush}"
+                                              BorderBrush="{DynamicResource BrandBorderBrush}">
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Header="Name" Binding="{Binding FullName}" Width="*" />
+                                            <DataGridTextColumn Header="Beneficiary ID" Binding="{Binding BeneficiaryId}" Width="150" />
+                                            <DataGridTextColumn Header="Civil Registry ID" Binding="{Binding CivilRegistryId}" Width="170" />
+                                        </DataGrid.Columns>
+                                    </DataGrid>
 
-                                                <WrapPanel Margin="0,16,0,0">
-                                                    <Border Style="{StaticResource MetricCardStyle}">
-                                                        <StackPanel>
-                                                            <TextBlock Text="{Binding Kind}"
-                                                                       FontWeight="Bold"
-                                                                       Foreground="{DynamicResource BrandMidnightBrush}" />
-                                                            <TextBlock Text="TYPE"
-                                                                       FontSize="10"
-                                                                       Foreground="{DynamicResource BrandTextSecondaryBrush}" />
-                                                        </StackPanel>
+                                    <!-- Pagination Footer -->
+                                    <Grid Margin="0,16,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding ParticipantPageSummary}"
+                                                       VerticalAlignment="Center"
+                                                       Margin="0,0,16,0"
+                                                       Foreground="{DynamicResource BrandTextSecondaryBrush}" />
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                            <Button Command="{Binding PreviousParticipantPageCommand}"
+                                                    Style="{StaticResource MaterialDesignFlatButton}"
+                                                    Padding="8,4"
+                                                    Height="32"
+                                                    Foreground="{DynamicResource BrandMidnightBrush}">
+                                                <materialDesign:PackIcon Kind="ChevronLeft" />
+                                            </Button>
+
+                                            <TextBlock Text="{Binding ParticipantPageIndicator}"
+                                                       VerticalAlignment="Center"
+                                                       Margin="8,0"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource BrandMidnightBrush}" />
+
+                                            <Button Command="{Binding NextParticipantPageCommand}"
+                                                    Style="{StaticResource MaterialDesignFlatButton}"
+                                                    Padding="8,4"
+                                                    Height="32"
+                                                    Foreground="{DynamicResource BrandMidnightBrush}">
+                                                <materialDesign:PackIcon Kind="ChevronRight" />
+                                            </Button>
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Scan Attendance Panel -->
+                        <Border Style="{StaticResource PanelCardStyle}"
+                                Visibility="{Binding ScanAttendanceVisibility}">
+                            <StackPanel>
+                                <DockPanel LastChildFill="False">
+                                    <StackPanel DockPanel.Dock="Left">
+                                        <TextBlock Text="{Binding DrawerTitle}"
+                                                   FontSize="22"
+                                                   FontWeight="Bold"
+                                                   Foreground="{DynamicResource BrandMidnightBrush}" />
+                                        <TextBlock Margin="0,6,0,0"
+                                                   Text="{Binding DrawerSubtitle}"
+                                                   Foreground="{DynamicResource BrandTextSecondaryBrush}"
+                                                   TextWrapping="Wrap" />
+                                    </StackPanel>
+                                    <Button DockPanel.Dock="Right"
+                                            Content="Close Panel"
+                                            Style="{StaticResource SecondaryActionButton}"
+                                            Command="{Binding ClosePanelCommand}" />
+                                </DockPanel>
+
+                                <Grid Margin="0,18,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="1.05*" />
+                                        <ColumnDefinition Width="18" />
+                                        <ColumnDefinition Width="1.2*" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <Border Grid.Column="0"
+                                            Padding="18"
+                                            CornerRadius="16"
+                                            Background="{DynamicResource ThemeAccentSoftBrush}"
+                                            BorderBrush="{DynamicResource ThemeAccentBorderBrush}"
+                                            BorderThickness="1">
+                                        <StackPanel>
+                                            <TextBlock Text="Scanner Session"
+                                                       FontSize="18"
+                                                       FontWeight="Bold"
+                                                       Foreground="{DynamicResource BrandMidnightBrush}" />
+                                            <TextBlock Margin="0,6,0,0"
+                                                       Text="Open a phone scanner session using the shared scanner gateway."
+                                                       Foreground="{DynamicResource BrandTextSecondaryBrush}"
+                                                       TextWrapping="Wrap" />
+
+                                            <Button Margin="0,16,0,0"
+                                                    Content="Start Scanner Session"
+                                                    HorizontalAlignment="Left"
+                                                    Style="{StaticResource GoldActionButton}"
+                                                    Command="{Binding CreateAttendanceScannerSessionCommand}" />
+
+                                            <TextBox Margin="0,16,0,0"
+                                                     IsReadOnly="True"
+                                                     Text="{Binding AttendanceScannerSessionUrl, Mode=OneWay}"
+                                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                                     materialDesign:HintAssist.Hint="Scanner URL" />
+
+                                            <Border Margin="0,12,0,0"
+                                                    Padding="16"
+                                                    CornerRadius="14"
+                                                    Background="{DynamicResource ThemeCardBrush}"
+                                                    BorderBrush="{DynamicResource BrandBorderBrush}"
+                                                    BorderThickness="1">
+                                                <StackPanel>
+                                                    <TextBlock Text="Session PIN"
+                                                               FontSize="11"
+                                                               FontWeight="Bold"
+                                                               Foreground="{DynamicResource BrandTextSecondaryBrush}" />
+                                                    <TextBlock Margin="0,8,0,0"
+                                                               Text="{Binding AttendanceScannerSessionPin}"
+                                                               FontSize="28"
+                                                               FontWeight="Bold"
+                                                               HorizontalAlignment="Center"
+                                                               Foreground="{DynamicResource BrandMidnightBrush}" />
+                                                    <TextBlock Margin="0,8,0,0"
+                                                               Text="{Binding AttendanceScannerSessionExpiresAtText}"
+                                                               HorizontalAlignment="Center"
+                                                               Foreground="{DynamicResource BrandTextSecondaryBrush}"
+                                                               TextWrapping="Wrap" />
+                                                </StackPanel>
+                                            </Border>
+
+                                            <Border Margin="0,12,0,0"
+                                                    Padding="14"
+                                                    CornerRadius="14"
+                                                    Background="{DynamicResource ThemeCardBrush}"
+                                                    BorderBrush="{DynamicResource BrandBorderBrush}"
+                                                    BorderThickness="1">
+                                                <Viewbox Stretch="Uniform">
+                                                    <Border Width="180"
+                                                            Height="180"
+                                                            Background="{DynamicResource ThemeCardSubtleBrush}"
+                                                            BorderBrush="{DynamicResource BrandBorderBrush}"
+                                                            BorderThickness="1"
+                                                            CornerRadius="12">
+                                                        <Image Source="{Binding AttendanceScannerQrImage}"
+                                                               Stretch="Uniform" />
                                                     </Border>
-                                                    <Border Style="{StaticResource MetricCardStyle}">
-                                                        <StackPanel>
-                                                            <TextBlock Text="{Binding DateLabel}"
+                                                </Viewbox>
+                                            </Border>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <Border Grid.Column="2"
+                                            Padding="18"
+                                            CornerRadius="16"
+                                            Visibility="{Binding ManualAttendanceVisibility}"
+                                            Background="{DynamicResource ThemeCardSubtleBrush}"
+                                            BorderBrush="{DynamicResource BrandBorderBrush}"
+                                            BorderThickness="1">
+                                        <StackPanel>
+                                            <DockPanel LastChildFill="False">
+                                                <StackPanel DockPanel.Dock="Left">
+                                                    <TextBlock Text="Manual Attendance"
+                                                               FontSize="18"
+                                                               FontWeight="Bold"
+                                                               Foreground="{DynamicResource BrandMidnightBrush}" />
+                                                    <TextBlock Margin="0,6,0,0"
+                                                               Text="Mark assigned beneficiaries as present when attendance is captured manually."
+                                                               Foreground="{DynamicResource BrandTextSecondaryBrush}"
+                                                               TextWrapping="Wrap" />
+                                                </StackPanel>
+                                                <Button DockPanel.Dock="Right"
+                                                        Content="Save Manual Attendance"
+                                                        Style="{StaticResource SecondaryActionButton}"
+                                                        Command="{Binding SaveManualAttendanceCommand}" />
+                                            </DockPanel>
+
+                                            <TextBlock Margin="0,16,0,0"
+                                                       Text="Add beneficiaries from the left rail first if the attendance list is empty."
+                                                       Foreground="{DynamicResource BrandTextSecondaryBrush}"
+                                                       TextWrapping="Wrap" />
+
+                                            <DataGrid Margin="0,16,0,0"
+                                                      ItemsSource="{Binding Participants}"
+                                                      AutoGenerateColumns="False"
+                                                      CanUserAddRows="False"
+                                                      CanUserDeleteRows="False"
+                                                      HeadersVisibility="Column"
+                                                      RowHeaderWidth="0"
+                                                      MinHeight="300"
+                                                      Background="{DynamicResource ThemeCardBrush}"
+                                                      BorderBrush="{DynamicResource BrandBorderBrush}">
+                                                <DataGrid.Columns>
+                                                    <DataGridCheckBoxColumn Header="Present"
+                                                                            Binding="{Binding IsMarkedPresent}"
+                                                                            Width="90" />
+                                                    <DataGridTextColumn Header="Name"
+                                                                        Binding="{Binding FullName}"
+                                                                        Width="*" />
+                                                    <DataGridTextColumn Header="Beneficiary ID"
+                                                                        Binding="{Binding BeneficiaryId}"
+                                                                        Width="140" />
+                                                    <DataGridTextColumn Header="Civil Registry ID"
+                                                                        Binding="{Binding CivilRegistryId}"
+                                                                        Width="160" />
+                                                </DataGrid.Columns>
+                                            </DataGrid>
+
+                                            <Grid Margin="0,16,0,0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+
+                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding ParticipantPageSummary}"
+                                                               VerticalAlignment="Center"
+                                                               Margin="0,0,16,0"
+                                                               Foreground="{DynamicResource BrandTextSecondaryBrush}" />
+                                                </StackPanel>
+
+                                                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                                    <Button Command="{Binding PreviousParticipantPageCommand}"
+                                                            Style="{StaticResource MaterialDesignFlatButton}"
+                                                            Padding="8,4"
+                                                            Height="32"
+                                                            Foreground="{DynamicResource BrandMidnightBrush}">
+                                                        <materialDesign:PackIcon Kind="ChevronLeft" />
+                                                    </Button>
+
+                                                    <TextBlock Text="{Binding ParticipantPageIndicator}"
+                                                               VerticalAlignment="Center"
+                                                               Margin="8,0"
+                                                               FontWeight="SemiBold"
+                                                               Foreground="{DynamicResource BrandMidnightBrush}" />
+
+                                                    <Button Command="{Binding NextParticipantPageCommand}"
+                                                            Style="{StaticResource MaterialDesignFlatButton}"
+                                                            Padding="8,4"
+                                                            Height="32"
+                                                            Foreground="{DynamicResource BrandMidnightBrush}">
+                                                        <materialDesign:PackIcon Kind="ChevronRight" />
+                                                    </Button>
+                                                </StackPanel>
+                                            </Grid>
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+
+                                <Border Margin="0,18,0,0"
+                                        Padding="16"
+                                        CornerRadius="14"
+                                        Visibility="{Binding SeminarScannerHintVisibility}"
+                                        Background="{DynamicResource ThemeCardSubtleBrush}"
+                                        BorderBrush="{DynamicResource BrandBorderBrush}"
+                                        BorderThickness="1">
+                                    <TextBlock Text="Seminar attendance is open scan-based. Beneficiaries do not need to be pre-assigned to the event before scanning their QR IDs."
+                                               Foreground="{DynamicResource BrandTextSecondaryBrush}"
+                                               TextWrapping="Wrap" />
+                                </Border>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Payout Panel -->
+                        <Border Style="{StaticResource PanelCardStyle}"
+                                Visibility="{Binding PayoutVisibility}">
+                            <StackPanel>
+                                <DockPanel LastChildFill="False">
+                                    <StackPanel DockPanel.Dock="Left">
+                                        <TextBlock Text="{Binding DrawerTitle}"
+                                                   FontSize="22"
+                                                   FontWeight="Bold"
+                                                   Foreground="{DynamicResource BrandMidnightBrush}" />
+                                        <TextBlock Margin="0,6,0,0"
+                                                   Text="{Binding DrawerSubtitle}"
+                                                   Foreground="{DynamicResource BrandTextSecondaryBrush}"
+                                                   TextWrapping="Wrap" />
+                                    </StackPanel>
+                                    <Button DockPanel.Dock="Right"
+                                            Content="Close Panel"
+                                            Style="{StaticResource SecondaryActionButton}"
+                                            Command="{Binding ClosePanelCommand}" />
+                                </DockPanel>
+
+                                <StackPanel Margin="0,18,0,0">
+                                    <Border Padding="18"
+                                            CornerRadius="16"
+                                            Background="{DynamicResource ThemeAccentSoftBrush}"
+                                            BorderBrush="{DynamicResource ThemeAccentBorderBrush}"
+                                            BorderThickness="1">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding ReleaseSummaryEventLabel}"
+                                                       FontSize="18"
+                                                       FontWeight="Bold"
+                                                       Foreground="{DynamicResource BrandMidnightBrush}"
+                                                       TextWrapping="Wrap" />
+                                            <TextBlock Margin="0,8,0,0"
+                                                       Text="{Binding ReleaseSummaryStatusText}"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{Binding ReleaseSummaryStatusBrush}"
+                                                       TextWrapping="Wrap" />
+                                            <TextBlock Margin="0,6,0,0"
+                                                       Text="{Binding ReleaseSummaryDetail}"
+                                                       Foreground="{DynamicResource BrandTextSecondaryBrush}"
+                                                       TextWrapping="Wrap" />
+
+                                            <UniformGrid Margin="0,16,0,0"
+                                                         Columns="4">
+                                                <Border Style="{StaticResource MetricCardStyle}">
+                                                    <StackPanel>
+                                                        <TextBlock Text="{Binding ApprovedParticipantCount, StringFormat=N0}"
+                                                                   FontSize="24"
+                                                                   FontWeight="Bold"
+                                                                   Foreground="{DynamicResource BrandMidnightBrush}" />
+                                                        <TextBlock Text="APPROVED"
+                                                                   FontSize="10"
+                                                                   Foreground="{DynamicResource BrandTextSecondaryBrush}" />
+                                                    </StackPanel>
+                                                </Border>
+                                                <Border Style="{StaticResource MetricCardStyle}">
+                                                    <StackPanel>
+                                                        <TextBlock Text="{Binding PresentParticipantCount, StringFormat=N0}"
+                                                                   FontSize="24"
+                                                                   FontWeight="Bold"
+                                                                   Foreground="{DynamicResource BrandSuccessBrush}" />
+                                                        <TextBlock Text="PRESENT"
+                                                                   FontSize="10"
+                                                                   Foreground="{DynamicResource BrandTextSecondaryBrush}" />
+                                                    </StackPanel>
+                                                </Border>
+                                                <Border Style="{StaticResource MetricCardStyle}">
+                                                    <StackPanel>
+                                                        <TextBlock Text="{Binding PendingParticipantCount, StringFormat=N0}"
+                                                                   FontSize="24"
+                                                                   FontWeight="Bold"
+                                                                   Foreground="#92400E" />
+                                                        <TextBlock Text="PENDING"
+                                                                   FontSize="10"
+                                                                   Foreground="{DynamicResource BrandTextSecondaryBrush}" />
+                                                    </StackPanel>
+                                                </Border>
+                                                <Border Padding="14"
+                                                        Margin="0,0,0,12"
+                                                        CornerRadius="14"
+                                                        Background="{DynamicResource ThemeCardBrush}"
+                                                        BorderBrush="{DynamicResource BrandBorderBrush}"
+                                                        BorderThickness="1">
+                                                    <StackPanel>
+                                                        <TextBlock Text="{Binding ManualAttendanceCount, StringFormat=N0}"
+                                                                   FontSize="24"
+                                                                   FontWeight="Bold"
+                                                                   Foreground="{DynamicResource BrandMidnightBrush}" />
+                                                        <TextBlock Text="MANUAL"
+                                                                   FontSize="10"
+                                                                   Foreground="{DynamicResource BrandTextSecondaryBrush}" />
+                                                    </StackPanel>
+                                                </Border>
+                                            </UniformGrid>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <Grid Margin="0,18,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <TextBox Grid.Column="0"
+                                                 Margin="0,0,12,0"
+                                                 Text="{Binding ReleaseAmountText, UpdateSourceTrigger=PropertyChanged}"
+                                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                                 materialDesign:HintAssist.Hint="Release Amount (PHP)" />
+
+                                        <Button Grid.Column="1"
+                                                Content="Release Budget"
+                                                Style="{StaticResource GoldActionButton}"
+                                                Command="{Binding ReleaseBudgetCommand}" />
+                                    </Grid>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Announcements Panel -->
+                        <Border Style="{StaticResource PanelCardStyle}"
+                                Visibility="{Binding AnnouncementsVisibility}">
+                            <StackPanel>
+                                <DockPanel LastChildFill="False">
+                                    <StackPanel DockPanel.Dock="Left">
+                                        <TextBlock Text="{Binding DrawerTitle}"
+                                                   FontSize="22"
+                                                   FontWeight="Bold"
+                                                   Foreground="{DynamicResource BrandMidnightBrush}" />
+                                        <TextBlock Margin="0,6,0,0"
+                                                   Text="{Binding DrawerSubtitle}"
+                                                   Foreground="{DynamicResource BrandTextSecondaryBrush}"
+                                                   TextWrapping="Wrap" />
+                                    </StackPanel>
+                                    <WrapPanel DockPanel.Dock="Right">
+                                        <Button Content="Refresh Workspace"
+                                                Margin="0,0,8,0"
+                                                Style="{StaticResource GoldActionButton}"
+                                                Command="{Binding RefreshWorkspaceCommand}" />
+                                        <Button Content="Close Panel"
+                                                Style="{StaticResource SecondaryActionButton}"
+                                                Command="{Binding ClosePanelCommand}" />
+                                    </WrapPanel>
+                                </DockPanel>
+
+                                <TextBlock Margin="0,18,0,0"
+                                           Text="Open announcements stay here so staff can quickly jump back into active events."
+                                           Foreground="{DynamicResource BrandTextSecondaryBrush}"
+                                           TextWrapping="Wrap" />
+
+                                <ItemsControl Margin="0,18,0,0"
+                                              ItemsSource="{Binding OpenAnnouncements}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Margin="0,0,0,14"
+                                                    Padding="18"
+                                                    CornerRadius="16"
+                                                    Background="{DynamicResource ThemeCardBrush}"
+                                                    BorderBrush="{DynamicResource BrandBorderBrush}"
+                                                    BorderThickness="1">
+                                                <StackPanel>
+                                                    <DockPanel LastChildFill="False">
+                                                        <StackPanel DockPanel.Dock="Left"
+                                                                    Width="560">
+                                                            <TextBlock Text="{Binding Title}"
+                                                                       FontSize="18"
                                                                        FontWeight="Bold"
-                                                                       Foreground="{DynamicResource BrandMidnightBrush}" />
-                                                            <TextBlock Text="DATE"
-                                                                       FontSize="10"
-                                                                       Foreground="{DynamicResource BrandTextSecondaryBrush}" />
+                                                                       Foreground="{DynamicResource BrandMidnightBrush}"
+                                                                       TextWrapping="Wrap" />
+                                                            <TextBlock Margin="0,6,0,0"
+                                                                       Text="{Binding Summary}"
+                                                                       Foreground="{DynamicResource BrandTextSecondaryBrush}"
+                                                                       TextWrapping="Wrap" />
+                                                        </StackPanel>
+                                                        <Button DockPanel.Dock="Right"
+                                                                Content="Load Event"
+                                                                Style="{StaticResource SecondaryActionButton}"
+                                                                Command="{Binding DataContext.SelectAnnouncementEventCommand, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
+                                                                CommandParameter="{Binding EventId}" />
+                                                    </DockPanel>
+
+                                                    <WrapPanel Margin="0,16,0,0">
+                                                        <Border Style="{StaticResource MetricCardStyle}">
+                                                            <StackPanel>
+                                                                <TextBlock Text="{Binding Kind}"
+                                                                           FontWeight="Bold"
+                                                                           Foreground="{DynamicResource BrandMidnightBrush}" />
+                                                                <TextBlock Text="TYPE"
+                                                                           FontSize="10"
+                                                                           Foreground="{DynamicResource BrandTextSecondaryBrush}" />
+                                                            </StackPanel>
+                                                        </Border>
+                                                        <Border Style="{StaticResource MetricCardStyle}">
+                                                            <StackPanel>
+                                                                <TextBlock Text="{Binding DateLabel}"
+                                                                           FontWeight="Bold"
+                                                                           Foreground="{DynamicResource BrandMidnightBrush}" />
+                                                                <TextBlock Text="DATE"
+                                                                           FontSize="10"
+                                                                           Foreground="{DynamicResource BrandTextSecondaryBrush}" />
                                                         </StackPanel>
                                                     </Border>
                                                     <Border Style="{StaticResource MetricCardStyle}">
@@ -826,8 +984,9 @@
                             </TextBlock>
                         </StackPanel>
                     </Border>
-                </StackPanel>
-            </Border>
-        </ScrollViewer>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+        </Grid>
     </Grid>
 </UserControl>

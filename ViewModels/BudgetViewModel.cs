@@ -11,50 +11,77 @@ using System.Windows;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
+using Microsoft.EntityFrameworkCore;
 
 namespace AttendanceShiftingManagement.ViewModels
 {
+    internal enum BudgetWorkspacePanel
+    {
+        Dashboard,
+        GovernmentSync,
+        Ledger,
+        Donation,
+        Program,
+        Seminar
+    }
+
+    public enum BudgetSetupSection
+    {
+        AyudaProjects,
+        AssistanceCaseBudgets,
+        CashForWorkBudgets
+    }
+
+    internal enum OtpPendingAction
+    {
+        None,
+        UpdateGlobalAidBudget,
+        UpdateGlobalCfwBudget
+    }
+
     public sealed class BudgetViewModel : ObservableObject
     {
         private const string AllLedgerSourceFilter = "All Sources";
         private readonly User _currentUser;
-        private readonly AppDbContext _context;
-        private readonly BudgetManagementService _budgetService;
+        private readonly RelayCommand _openDashboardPanelCommand;
+        private readonly RelayCommand _openGovernmentSyncPanelCommand;
+        private readonly RelayCommand _openLedgerPanelCommand;
         private readonly RelayCommand _refreshCommand;
         private readonly RelayCommand _syncGovernmentBudgetCommand;
         private readonly RelayCommand _recordDonationCommand;
         private readonly RelayCommand _createProgramCommand;
+        private readonly RelayCommand _createAssistanceCaseBudgetCommand;
+        private readonly RelayCommand _createCashForWorkBudgetCommand;
         private readonly RelayCommand _openDonationPanelCommand;
         private readonly RelayCommand _closeDonationPanelCommand;
         private readonly RelayCommand _openProgramPanelCommand;
+        private readonly RelayCommand _openAssistanceCaseBudgetsPanelCommand;
+        private readonly RelayCommand _openCashForWorkBudgetsPanelCommand;
         private readonly RelayCommand _closeProgramPanelCommand;
         private readonly RelayCommand _openSeminarPanelCommand;
         private readonly RelayCommand _closeSeminarPanelCommand;
         private readonly RelayCommand _createSeminarCommand;
+        private readonly RelayCommand _closePanelCommand;
         private readonly RelayCommand _closeLedgerHistoryCardCommand;
         private readonly RelayCommand _browseProofCommand;
         private readonly RelayCommand _exportLedgerCommand;
-        private readonly RelayCommand _openDashboardPanelCommand;
-        private readonly RelayCommand _openLedgerPanelCommand;
-        private readonly RelayCommand _closePanelCommand;
-        private readonly RelayCommand _closeHistoryDetailCommand;
+        private readonly RelayCommand _verifyOtpCommand;
+        private readonly RelayCommand _resendOtpCommand;
+        private readonly RelayCommand _closeOtpPanelCommand;
+        private BudgetWorkspacePanel _activePanel = BudgetWorkspacePanel.Ledger;
+        private BudgetSetupSection _selectedSetupSection = BudgetSetupSection.AyudaProjects;
+        private string _currentPanelTitle = "Budget Ledger";
+        private string _currentPanelSubtitle = "Search the unified release history, export liquidation-ready rows, and inspect the full detail of the selected entry.";
         private string _statusMessage = "Loading budget controls...";
         private Brush _statusBrush = Brushes.DimGray;
-        private bool _dashboardVisibility = true;
-        private bool _ledgerVisibility = false;
-        private bool _donationPanelVisibility = false;
-        private bool _programPanelVisibility = false;
-        private bool _seminarPanelVisibility = false;
-        private bool _historyDetailVisibility = false;
-        private string _currentPanelTitle = "Budget Overview";
-        private string _currentPanelSubtitle = "Use left rail to switch between budget operations.";
-        private string _drawerVisibility = "Collapsed";
         private decimal _combinedAvailable;
         private decimal _governmentAvailable;
         private decimal _privateAvailable;
         private decimal _releasedTotal;
         private decimal _governmentAllocated;
         private decimal _governmentSpentReference;
+        private decimal _assistanceCaseBudgetCapTotal;
+        private decimal _cashForWorkBudgetCapTotal;
         private string _governmentOfficeCode = "Not configured";
         private string _governmentOfficeName = "Not configured";
         private string _latestGovernmentSyncLabel = "No government sync yet.";
@@ -69,15 +96,18 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _proofFilePath = string.Empty;
         private string _programCode = string.Empty;
         private string _programName = string.Empty;
-        private AyudaProgramType _selectedProgramType = AyudaProgramType.AssistanceCase;
+        private AyudaProgramType _selectedProgramType = AyudaProgramType.GeneralPurpose;
         private string _programDescription = string.Empty;
         private string _programAssistanceType = string.Empty;
+        private AssistanceReleaseKind _selectedProgramReleaseKind = AssistanceReleaseKind.Cash;
         private string _programUnitAmountText = string.Empty;
         private string _programItemDescription = string.Empty;
         private DateTime? _programStartDate;
         private DateTime? _programEndDate;
         private string _programBudgetCapText = string.Empty;
         private AyudaProgramDistributionStatus _selectedProgramDistributionStatus = AyudaProgramDistributionStatus.Draft;
+        private string _assistanceCaseBudgetCapText = string.Empty;
+        private string _cashForWorkBudgetCapText = string.Empty;
         private string _seminarCode = string.Empty;
         private string _seminarTitle = string.Empty;
         private string _seminarCredentials = string.Empty;
@@ -95,42 +125,58 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _ledgerSearchText = string.Empty;
         private string _selectedLedgerSourceFilter = AllLedgerSourceFilter;
 
+        private OtpChallengeSession? _otpSession;
+        private OtpPendingAction _pendingAction = OtpPendingAction.None;
+        private bool _showOtpPanel;
+        private string _otpCode = string.Empty;
+        private string _otpStatusMessage = "Enter the 6-digit code sent to your official email.";
+        private Brush _otpStatusBrush = Brushes.DimGray;
+        private string _resendOtpButtonText = "RESEND OTP";
+        private static readonly TimeSpan OtpExpiry = TimeSpan.FromMinutes(3);
+        private static readonly TimeSpan OtpResendCooldown = TimeSpan.FromSeconds(45);
+
         public BudgetViewModel(User currentUser)
         {
             _currentUser = currentUser;
-            _context = new AppDbContext();
-            _budgetService = new BudgetManagementService(_context);
             DonorTypes = new ObservableCollection<PrivateDonationDonorType>(Enum.GetValues<PrivateDonationDonorType>());
             ProofTypes = new ObservableCollection<DonationProofType>(Enum.GetValues<DonationProofType>());
             ProgramTypes = new ObservableCollection<AyudaProgramType>(
-                Enum.GetValues<AyudaProgramType>()
-                    .Where(type => type != AyudaProgramType.Seminar));
+                Enum.GetValues<AyudaProgramType>().Where(type => type != AyudaProgramType.AssistanceCase));
             ProgramDistributionStatuses = new ObservableCollection<AyudaProgramDistributionStatus>(Enum.GetValues<AyudaProgramDistributionStatus>());
+            ProgramReleaseKinds = new ObservableCollection<AssistanceReleaseKind>(Enum.GetValues<AssistanceReleaseKind>());
             SeminarSupportKinds = new ObservableCollection<AssistanceReleaseKind>(Enum.GetValues<AssistanceReleaseKind>());
             Programs = new ObservableCollection<AyudaProgram>();
+            CashForWorkBudgets = new ObservableCollection<CashForWorkBudget>();
             Donations = new ObservableCollection<PrivateDonation>();
             LedgerEntries = new ObservableCollection<BudgetLedgerEntryListItem>();
             LedgerSourceFilters = new ObservableCollection<string> { AllLedgerSourceFilter };
             _ledgerEntriesView = CollectionViewSource.GetDefaultView(LedgerEntries);
             _ledgerEntriesView.Filter = FilterLedgerEntry;
+            _openDashboardPanelCommand = new RelayCommand(_ => OpenLedgerPanel(), _ => !IsBusy && _activePanel != BudgetWorkspacePanel.Ledger);
+            _openGovernmentSyncPanelCommand = new RelayCommand(_ => OpenLedgerPanel(), _ => !IsBusy && _activePanel != BudgetWorkspacePanel.Ledger);
+            _openLedgerPanelCommand = new RelayCommand(_ => OpenLedgerPanel(), _ => !IsBusy && _activePanel != BudgetWorkspacePanel.Ledger);
             _refreshCommand = new RelayCommand(async _ => await LoadAsync(), _ => !IsBusy);
             _syncGovernmentBudgetCommand = new RelayCommand(async _ => await SyncGovernmentBudgetAsync(), _ => !IsBusy);
             _recordDonationCommand = new RelayCommand(async _ => await RecordDonationAsync(), _ => !IsBusy);
             _createProgramCommand = new RelayCommand(async _ => await CreateProgramAsync(), _ => !IsBusy);
+            _createAssistanceCaseBudgetCommand = new RelayCommand(async _ => await RequestUpdateGlobalBudgetAsync(), _ => !IsBusy);
+            _createCashForWorkBudgetCommand = new RelayCommand(async _ => await RequestUpdateGlobalCfwBudgetAsync(), _ => !IsBusy);
             _openDonationPanelCommand = new RelayCommand(_ => OpenDonationPanel(), _ => !IsBusy && !IsDonationPanelOpen);
             _closeDonationPanelCommand = new RelayCommand(_ => CloseDonationPanel(), _ => IsDonationPanelOpen);
-            _openProgramPanelCommand = new RelayCommand(_ => OpenProgramPanel(), _ => !IsBusy && !IsProgramPanelOpen);
+            _openProgramPanelCommand = new RelayCommand(_ => OpenAyudaProjectsPanel(), _ => !IsBusy);
+            _openAssistanceCaseBudgetsPanelCommand = new RelayCommand(_ => OpenAssistanceCaseBudgetsPanel(), _ => !IsBusy);
+            _openCashForWorkBudgetsPanelCommand = new RelayCommand(_ => OpenCashForWorkBudgetsPanel(), _ => !IsBusy);
             _closeProgramPanelCommand = new RelayCommand(_ => CloseProgramPanel(), _ => IsProgramPanelOpen);
             _openSeminarPanelCommand = new RelayCommand(_ => OpenSeminarPanel(), _ => !IsBusy && !IsSeminarPanelOpen);
             _closeSeminarPanelCommand = new RelayCommand(_ => CloseSeminarPanel(), _ => IsSeminarPanelOpen);
             _createSeminarCommand = new RelayCommand(async _ => await CreateSeminarAsync(), _ => !IsBusy);
+            _closePanelCommand = new RelayCommand(_ => ClosePanel(), _ => !IsBusy && _activePanel != BudgetWorkspacePanel.Ledger);
             _closeLedgerHistoryCardCommand = new RelayCommand(_ => CloseLedgerHistoryCard(), _ => SelectedLedgerEntry != null);
             _browseProofCommand = new RelayCommand(_ => BrowseProof());
             _exportLedgerCommand = new RelayCommand(async _ => await ExportLedgerAsync(), _ => !IsBusy && LedgerEntriesView.Cast<object>().Any());
-            _openDashboardPanelCommand = new RelayCommand(_ => OpenDashboardPanel());
-            _openLedgerPanelCommand = new RelayCommand(_ => OpenLedgerPanel());
-            _closePanelCommand = new RelayCommand(_ => ClosePanel());
-            _closeHistoryDetailCommand = new RelayCommand(_ => CloseHistoryDetail());
+            _verifyOtpCommand = new RelayCommand(_ => VerifyOtp(), _ => !IsBusy && _otpSession != null && !string.IsNullOrWhiteSpace(OtpCode));
+            _resendOtpCommand = new RelayCommand(async _ => await SendOtpAsync(isResend: true), _ => !IsBusy && OtpChallengeService.CanResend(_otpSession, DateTimeOffset.UtcNow));
+            _closeOtpPanelCommand = new RelayCommand(_ => CloseOtpPanel());
             _ = LoadAsync();
         }
 
@@ -138,30 +184,40 @@ namespace AttendanceShiftingManagement.ViewModels
         public ObservableCollection<DonationProofType> ProofTypes { get; }
         public ObservableCollection<AyudaProgramType> ProgramTypes { get; }
         public ObservableCollection<AyudaProgramDistributionStatus> ProgramDistributionStatuses { get; }
+        public ObservableCollection<AssistanceReleaseKind> ProgramReleaseKinds { get; }
         public ObservableCollection<AssistanceReleaseKind> SeminarSupportKinds { get; }
         public ObservableCollection<AyudaProgram> Programs { get; }
+        public ObservableCollection<CashForWorkBudget> CashForWorkBudgets { get; }
         public ObservableCollection<PrivateDonation> Donations { get; }
         public ObservableCollection<BudgetLedgerEntryListItem> LedgerEntries { get; }
         public ObservableCollection<string> LedgerSourceFilters { get; }
 
+        public ICommand OpenDashboardPanelCommand => _openDashboardPanelCommand;
+        public ICommand OpenGovernmentSyncPanelCommand => _openGovernmentSyncPanelCommand;
+        public ICommand OpenLedgerPanelCommand => _openLedgerPanelCommand;
         public ICommand RefreshCommand => _refreshCommand;
         public ICommand SyncGovernmentBudgetCommand => _syncGovernmentBudgetCommand;
         public ICommand RecordDonationCommand => _recordDonationCommand;
         public ICommand CreateProgramCommand => _createProgramCommand;
+        public ICommand CreateAssistanceCaseBudgetCommand => _createAssistanceCaseBudgetCommand;
+        public ICommand CreateCashForWorkBudgetCommand => _createCashForWorkBudgetCommand;
         public ICommand OpenDonationPanelCommand => _openDonationPanelCommand;
         public ICommand CloseDonationPanelCommand => _closeDonationPanelCommand;
         public ICommand OpenProgramPanelCommand => _openProgramPanelCommand;
+        public ICommand OpenAssistanceCaseBudgetsPanelCommand => _openAssistanceCaseBudgetsPanelCommand;
+        public ICommand OpenCashForWorkBudgetsPanelCommand => _openCashForWorkBudgetsPanelCommand;
         public ICommand CloseProgramPanelCommand => _closeProgramPanelCommand;
         public ICommand OpenSeminarPanelCommand => _openSeminarPanelCommand;
         public ICommand CloseSeminarPanelCommand => _closeSeminarPanelCommand;
         public ICommand CreateSeminarCommand => _createSeminarCommand;
+        public ICommand ClosePanelCommand => _closePanelCommand;
         public ICommand CloseLedgerHistoryCardCommand => _closeLedgerHistoryCardCommand;
+        public ICommand CloseHistoryDetailCommand => _closeLedgerHistoryCardCommand;
         public ICommand BrowseProofCommand => _browseProofCommand;
         public ICommand ExportLedgerCommand => _exportLedgerCommand;
-        public ICommand OpenDashboardPanelCommand => _openDashboardPanelCommand;
-        public ICommand OpenLedgerPanelCommand => _openLedgerPanelCommand;
-        public ICommand ClosePanelCommand => _closePanelCommand;
-        public ICommand CloseHistoryDetailCommand => _closeHistoryDetailCommand;
+        public ICommand VerifyOtpCommand => _verifyOtpCommand;
+        public ICommand ResendOtpCommand => _resendOtpCommand;
+        public ICommand CloseOtpPanelCommand => _closeOtpPanelCommand;
 
         public bool IsBusy
         {
@@ -170,18 +226,28 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 if (SetProperty(ref _isBusy, value))
                 {
+                    _openDashboardPanelCommand.RaiseCanExecuteChanged();
+                    _openGovernmentSyncPanelCommand.RaiseCanExecuteChanged();
+                    _openLedgerPanelCommand.RaiseCanExecuteChanged();
                     _refreshCommand.RaiseCanExecuteChanged();
                     _syncGovernmentBudgetCommand.RaiseCanExecuteChanged();
                     _recordDonationCommand.RaiseCanExecuteChanged();
                     _createProgramCommand.RaiseCanExecuteChanged();
+                    _createAssistanceCaseBudgetCommand.RaiseCanExecuteChanged();
+                    _createCashForWorkBudgetCommand.RaiseCanExecuteChanged();
                     _openDonationPanelCommand.RaiseCanExecuteChanged();
                     _closeDonationPanelCommand.RaiseCanExecuteChanged();
                     _openProgramPanelCommand.RaiseCanExecuteChanged();
+                    _openAssistanceCaseBudgetsPanelCommand.RaiseCanExecuteChanged();
+                    _openCashForWorkBudgetsPanelCommand.RaiseCanExecuteChanged();
                     _closeProgramPanelCommand.RaiseCanExecuteChanged();
                     _openSeminarPanelCommand.RaiseCanExecuteChanged();
                     _closeSeminarPanelCommand.RaiseCanExecuteChanged();
                     _createSeminarCommand.RaiseCanExecuteChanged();
+                    _closePanelCommand.RaiseCanExecuteChanged();
                     _exportLedgerCommand.RaiseCanExecuteChanged();
+                    _verifyOtpCommand.RaiseCanExecuteChanged();
+                    _resendOtpCommand.RaiseCanExecuteChanged();
                 }
             }
         }
@@ -234,58 +300,16 @@ namespace AttendanceShiftingManagement.ViewModels
             private set => SetProperty(ref _governmentSpentReference, value);
         }
 
-        public bool DashboardVisibility
+        public decimal AssistanceCaseBudgetCapTotal
         {
-            get => _dashboardVisibility;
-            private set => SetProperty(ref _dashboardVisibility, value);
+            get => _assistanceCaseBudgetCapTotal;
+            private set => SetProperty(ref _assistanceCaseBudgetCapTotal, value);
         }
 
-        public bool LedgerVisibility
+        public decimal CashForWorkBudgetCapTotal
         {
-            get => _ledgerVisibility;
-            private set => SetProperty(ref _ledgerVisibility, value);
-        }
-
-        public bool DonationPanelVisibility
-        {
-            get => _donationPanelVisibility;
-            private set => SetProperty(ref _donationPanelVisibility, value);
-        }
-
-        public bool ProgramPanelVisibility
-        {
-            get => _programPanelVisibility;
-            private set => SetProperty(ref _programPanelVisibility, value);
-        }
-
-        public bool SeminarPanelVisibility
-        {
-            get => _seminarPanelVisibility;
-            private set => SetProperty(ref _seminarPanelVisibility, value);
-        }
-
-        public bool HistoryDetailVisibility
-        {
-            get => _historyDetailVisibility;
-            private set => SetProperty(ref _historyDetailVisibility, value);
-        }
-
-        public string CurrentPanelTitle
-        {
-            get => _currentPanelTitle;
-            private set => SetProperty(ref _currentPanelTitle, value);
-        }
-
-        public string CurrentPanelSubtitle
-        {
-            get => _currentPanelSubtitle;
-            private set => SetProperty(ref _currentPanelSubtitle, value);
-        }
-
-        public string DrawerVisibility
-        {
-            get => _drawerVisibility;
-            private set => SetProperty(ref _drawerVisibility, value);
+            get => _cashForWorkBudgetCapTotal;
+            private set => SetProperty(ref _cashForWorkBudgetCapTotal, value);
         }
 
         public string GovernmentOfficeCode
@@ -306,6 +330,64 @@ namespace AttendanceShiftingManagement.ViewModels
             private set => SetProperty(ref _latestGovernmentSyncLabel, value);
         }
 
+        public string CurrentPanelTitle
+        {
+            get => _currentPanelTitle;
+            private set => SetProperty(ref _currentPanelTitle, value);
+        }
+
+        public string CurrentPanelSubtitle
+        {
+            get => _currentPanelSubtitle;
+            private set => SetProperty(ref _currentPanelSubtitle, value);
+        }
+
+        public BudgetSetupSection SelectedSetupSection
+        {
+            get => _selectedSetupSection;
+            set
+            {
+                if (SetProperty(ref _selectedSetupSection, value))
+                {
+                    OnPropertyChanged(nameof(AyudaProjectsSectionVisibility));
+                    OnPropertyChanged(nameof(AssistanceCaseBudgetsSectionVisibility));
+                    OnPropertyChanged(nameof(CashForWorkBudgetsSectionVisibility));
+                }
+            }
+        }
+
+        public Visibility DashboardVisibility => GetPanelVisibility(BudgetWorkspacePanel.Dashboard);
+
+        public Visibility GovernmentSyncVisibility => GetPanelVisibility(BudgetWorkspacePanel.GovernmentSync);
+
+        public Visibility LedgerVisibility => GetPanelVisibility(BudgetWorkspacePanel.Ledger);
+
+        public Visibility DonationPanelVisibility => GetPanelVisibility(BudgetWorkspacePanel.Donation);
+
+        public Visibility ProgramPanelVisibility => GetPanelVisibility(BudgetWorkspacePanel.Program);
+
+        public Visibility SeminarPanelVisibility => GetPanelVisibility(BudgetWorkspacePanel.Seminar);
+
+        public Visibility AyudaProjectsSectionVisibility => _selectedSetupSection == BudgetSetupSection.AyudaProjects
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
+        public Visibility AssistanceCaseBudgetsSectionVisibility => _selectedSetupSection == BudgetSetupSection.AssistanceCaseBudgets
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
+        public Visibility CashForWorkBudgetsSectionVisibility => _selectedSetupSection == BudgetSetupSection.CashForWorkBudgets
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
+        public Visibility BackToDashboardVisibility => _activePanel == BudgetWorkspacePanel.Ledger
+            ? Visibility.Collapsed
+            : Visibility.Visible;
+
+        public Visibility HistoryDetailVisibility => _activePanel == BudgetWorkspacePanel.Ledger && SelectedLedgerEntry != null
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
         public ICollectionView LedgerEntriesView
         {
             get => _ledgerEntriesView;
@@ -320,6 +402,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 if (SetProperty(ref _selectedLedgerEntry, value))
                 {
                     OnPropertyChanged(nameof(IsLedgerHistoryCardOpen));
+                    OnPropertyChanged(nameof(HistoryDetailVisibility));
                     _closeLedgerHistoryCardCommand.RaiseCanExecuteChanged();
                 }
             }
@@ -435,6 +518,20 @@ namespace AttendanceShiftingManagement.ViewModels
             set => SetProperty(ref _programAssistanceType, value);
         }
 
+        public AssistanceReleaseKind SelectedProgramReleaseKind
+        {
+            get => _selectedProgramReleaseKind;
+            set
+            {
+                if (SetProperty(ref _selectedProgramReleaseKind, value))
+                {
+                    OnPropertyChanged(nameof(ProgramCashAmountVisibility));
+                    OnPropertyChanged(nameof(ProgramGoodsDescriptionVisibility));
+                    OnPropertyChanged(nameof(ProgramReleaseHint));
+                }
+            }
+        }
+
         public string ProgramUnitAmountText
         {
             get => _programUnitAmountText;
@@ -469,6 +566,18 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             get => _selectedProgramDistributionStatus;
             set => SetProperty(ref _selectedProgramDistributionStatus, value);
+        }
+
+        public string AssistanceCaseBudgetCapText
+        {
+            get => _assistanceCaseBudgetCapText;
+            set => SetProperty(ref _assistanceCaseBudgetCapText, value);
+        }
+
+        public string CashForWorkBudgetCapText
+        {
+            get => _cashForWorkBudgetCapText;
+            set => SetProperty(ref _cashForWorkBudgetCapText, value);
         }
 
         public string SeminarCode
@@ -578,6 +687,61 @@ namespace AttendanceShiftingManagement.ViewModels
             ? Visibility.Visible
             : Visibility.Collapsed;
 
+        public Visibility ProgramCashAmountVisibility => SelectedProgramReleaseKind == AssistanceReleaseKind.Cash
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
+        public Visibility ProgramGoodsDescriptionVisibility => SelectedProgramReleaseKind == AssistanceReleaseKind.Goods
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
+        public string ProgramReleaseHint => SelectedProgramReleaseKind == AssistanceReleaseKind.Cash
+            ? "Cash release: every beneficiary claim will use the cash amount below."
+            : "Goods release: describe the package or item detail clearly for beneficiary release records.";
+
+        public bool ShowOtpPanel
+        {
+            get => _showOtpPanel;
+            private set
+            {
+                if (SetProperty(ref _showOtpPanel, value))
+                {
+                    _verifyOtpCommand.RaiseCanExecuteChanged();
+                    _resendOtpCommand.RaiseCanExecuteChanged();
+                }
+            }
+        }
+
+        public string OtpCode
+        {
+            get => _otpCode;
+            set
+            {
+                if (SetProperty(ref _otpCode, value))
+                {
+                    _verifyOtpCommand.RaiseCanExecuteChanged();
+                }
+            }
+        }
+
+        public string OtpStatusMessage
+        {
+            get => _otpStatusMessage;
+            private set => SetProperty(ref _otpStatusMessage, value);
+        }
+
+        public Brush OtpStatusBrush
+        {
+            get => _otpStatusBrush;
+            private set => SetProperty(ref _otpStatusBrush, value);
+        }
+
+        public string ResendOtpButtonText
+        {
+            get => _resendOtpButtonText;
+            private set => SetProperty(ref _resendOtpButtonText, value);
+        }
+
         private async Task LoadAsync()
         {
             if (IsBusy)
@@ -591,6 +755,8 @@ namespace AttendanceShiftingManagement.ViewModels
             try
             {
                 await LoadProgramsAsync();
+                await LoadAssistanceCaseBudgetsAsync();
+                await LoadCashForWorkBudgetsAsync();
                 await LoadOverviewAsync();
                 await LoadDonationsAsync();
                 await LoadLedgerAsync();
@@ -608,16 +774,40 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private async Task LoadProgramsAsync()
         {
+            await using var context = new AppDbContext();
+            var budgetService = new BudgetManagementService(context);
             Programs.Clear();
-            foreach (var program in await _budgetService.GetProgramsAsync())
+            foreach (var program in await budgetService.GetProgramsAsync())
             {
                 Programs.Add(program);
             }
         }
 
+        private async Task LoadAssistanceCaseBudgetsAsync()
+        {
+            await using var context = new AppDbContext();
+            var budgetService = new BudgetManagementService(context);
+            var globalBudget = await budgetService.GetGlobalAssistanceCaseBudgetAsync();
+            
+            AssistanceCaseBudgetCapTotal = globalBudget?.BudgetCap ?? 0m;
+            AssistanceCaseBudgetCapText = globalBudget?.BudgetCap?.ToString("N2", CultureInfo.InvariantCulture) ?? string.Empty;
+        }
+
+        private async Task LoadCashForWorkBudgetsAsync()
+        {
+            await using var context = new AppDbContext();
+            var budgetService = new BudgetManagementService(context);
+            var globalBudget = await budgetService.GetGlobalCashForWorkBudgetAsync();
+            
+            CashForWorkBudgetCapTotal = globalBudget?.BudgetCap ?? 0m;
+            CashForWorkBudgetCapText = globalBudget?.BudgetCap?.ToString("N2", CultureInfo.InvariantCulture) ?? string.Empty;
+        }
+
         private async Task LoadOverviewAsync()
         {
-            var overview = await _budgetService.GetOverviewAsync();
+            await using var context = new AppDbContext();
+            var budgetService = new BudgetManagementService(context);
+            var overview = await budgetService.GetOverviewAsync();
             CombinedAvailable = overview.CombinedAvailable;
             GovernmentAvailable = overview.GovernmentAvailable;
             PrivateAvailable = overview.PrivateAvailable;
@@ -633,8 +823,10 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private async Task LoadDonationsAsync()
         {
+            await using var context = new AppDbContext();
+            var budgetService = new BudgetManagementService(context);
             Donations.Clear();
-            foreach (var donation in await _budgetService.GetPrivateDonationsAsync())
+            foreach (var donation in await budgetService.GetPrivateDonationsAsync())
             {
                 Donations.Add(donation);
             }
@@ -642,10 +834,12 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private async Task LoadLedgerAsync()
         {
+            await using var context = new AppDbContext();
+            var budgetService = new BudgetManagementService(context);
             LedgerEntries.Clear();
             var programsById = Programs.ToDictionary(program => program.Id, program => program.ProgramName);
 
-            foreach (var entry in await _budgetService.GetRecentLedgerEntriesAsync())
+            foreach (var entry in await budgetService.GetRecentLedgerEntriesAsync())
             {
                 LedgerEntries.Add(new BudgetLedgerEntryListItem
                 {
@@ -655,7 +849,11 @@ namespace AttendanceShiftingManagement.ViewModels
                     ReleaseKind = entry.ReleaseKind?.ToString() ?? "--",
                     ProgramName = entry.ProgramId.HasValue && programsById.TryGetValue(entry.ProgramId.Value, out var programName)
                         ? programName
-                        : "--",
+                        : entry.AssistanceCaseBudgetId.HasValue
+                            ? "Global Aid Request Budget"
+                            : entry.CashForWorkBudgetId.HasValue
+                                ? "Global Cash-for-Work Budget"
+                            : "--",
                     RecipientCount = entry.RecipientCount,
                     TotalAmount = entry.TotalAmount,
                     GovernmentPortion = entry.GovernmentPortion,
@@ -681,7 +879,8 @@ namespace AttendanceShiftingManagement.ViewModels
 
             try
             {
-                var result = await new GgmsBudgetSyncService().SyncAyudaBudgetAsync(_context, _currentUser.Id);
+                await using var context = new AppDbContext();
+                var result = await new GgmsBudgetSyncService().SyncAyudaBudgetAsync(context, _currentUser.Id);
                 if (!result.IsSuccess)
                 {
                     SetErrorStatus(result.Message);
@@ -719,7 +918,9 @@ namespace AttendanceShiftingManagement.ViewModels
 
             try
             {
-                var result = await _budgetService.RecordPrivateDonationAsync(
+                await using var context = new AppDbContext();
+                var budgetService = new BudgetManagementService(context);
+                var result = await budgetService.RecordPrivateDonationAsync(
                     new PrivateDonationRequest(
                         SelectedDonorType,
                         DonorName,
@@ -774,18 +975,35 @@ namespace AttendanceShiftingManagement.ViewModels
                 return;
             }
 
+            if (SelectedProgramReleaseKind == AssistanceReleaseKind.Cash &&
+                unitAmount is not > 0)
+            {
+                SetErrorStatus("Cash distribution projects require a unit amount greater than zero.");
+                return;
+            }
+
+            if (SelectedProgramReleaseKind == AssistanceReleaseKind.Goods &&
+                string.IsNullOrWhiteSpace(ProgramItemDescription))
+            {
+                SetErrorStatus("Goods distribution projects require an item description or package detail.");
+                return;
+            }
+
             IsBusy = true;
-            SetNeutralStatus("Creating ayuda program...");
+            SetNeutralStatus("Creating distribution or cash-for-work budget program...");
 
             try
             {
-                var result = await _budgetService.CreateProgramAsync(
+                await using var context = new AppDbContext();
+                var budgetService = new BudgetManagementService(context);
+                var result = await budgetService.CreateProgramAsync(
                     new AyudaProgramRequest(
                         ProgramCode,
                         ProgramName,
                         SelectedProgramType,
                         NormalizeNullable(ProgramDescription),
                         NormalizeNullable(ProgramAssistanceType),
+                        SelectedProgramReleaseKind,
                         unitAmount,
                         NormalizeNullable(ProgramItemDescription),
                         ProgramStartDate,
@@ -813,6 +1031,270 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 IsBusy = false;
             }
+        }
+
+        private async Task RequestUpdateGlobalBudgetAsync()
+        {
+            if (IsBusy)
+            {
+                return;
+            }
+
+            if (!TryParseOptionalAmount(AssistanceCaseBudgetCapText, out var budgetCap))
+            {
+                SetErrorStatus("Enter a valid global aid request budget cap.");
+                return;
+            }
+
+            var settings = FeatureSettingsService.Load();
+            if (!settings.IsOtpEnabled)
+            {
+                await ExecuteUpdateGlobalBudgetAsync();
+                return;
+            }
+
+            _pendingAction = OtpPendingAction.UpdateGlobalAidBudget;
+            await SendOtpAsync(isResend: false);
+        }
+
+        private async Task RequestUpdateGlobalCfwBudgetAsync()
+        {
+            if (IsBusy)
+            {
+                return;
+            }
+
+            if (!TryParseOptionalAmount(CashForWorkBudgetCapText, out var budgetCap))
+            {
+                SetErrorStatus("Enter a valid global cash-for-work budget cap.");
+                return;
+            }
+
+            var settings = FeatureSettingsService.Load();
+            if (!settings.IsOtpEnabled)
+            {
+                await ExecuteUpdateGlobalCfwBudgetAsync();
+                return;
+            }
+
+            _pendingAction = OtpPendingAction.UpdateGlobalCfwBudget;
+            await SendOtpAsync(isResend: false);
+        }
+
+        private async Task SendOtpAsync(bool isResend)
+        {
+            string? officialEmail;
+            try
+            {
+                var profile = SystemProfileSettingsService.Load();
+                officialEmail = profile?.Email;
+            }
+            catch
+            {
+                SetErrorStatus("Unable to access system profile for OTP verification.");
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(officialEmail))
+            {
+                SetErrorStatus("An official email must be configured in System Profile before updating the budget.");
+                return;
+            }
+
+            if (isResend && _otpSession != null && !OtpChallengeService.CanResend(_otpSession, DateTimeOffset.UtcNow))
+            {
+                SetOtpError("Wait for the cooldown before resending.");
+                return;
+            }
+
+            IsBusy = true;
+            ShowOtpPanel = true;
+            SetOtpNeutral("Requesting OTP...");
+
+            try
+            {
+                var issued = OtpChallengeService.IssueCode(
+                    "Global Budget Update",
+                    officialEmail,
+                    DateTimeOffset.UtcNow,
+                    OtpExpiry,
+                    OtpResendCooldown);
+
+                var sendResult = await OtpEmailService.SendOtpAsync(
+                    officialEmail,
+                    issued.Code,
+                    "Global Budget Update",
+                    OtpExpiry);
+
+                if (!sendResult.IsSuccess)
+                {
+                    SetOtpError(sendResult.Message);
+                    return;
+                }
+
+                _otpSession = issued.Session;
+                OtpCode = string.Empty;
+                SetOtpSuccess($"OTP sent to {officialEmail}.");
+                StartResendCooldown();
+            }
+            catch (Exception ex)
+            {
+                SetOtpError($"Failed to send OTP: {ex.Message}");
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
+        private void VerifyOtp()
+        {
+            if (_otpSession == null)
+            {
+                SetOtpError("OTP session expired. Request a new code.");
+                return;
+            }
+
+            var result = OtpChallengeService.VerifyCode(_otpSession, OtpCode, DateTimeOffset.UtcNow);
+            if (!result.IsSuccess)
+            {
+                if (result.RequiresNewCode)
+                {
+                    _otpSession = null;
+                }
+                SetOtpError(result.Message);
+                return;
+            }
+
+            var action = _pendingAction;
+            _otpSession = null;
+            _pendingAction = OtpPendingAction.None;
+            ShowOtpPanel = false;
+
+            if (action == OtpPendingAction.UpdateGlobalAidBudget)
+            {
+                _ = ExecuteUpdateGlobalBudgetAsync();
+            }
+            else if (action == OtpPendingAction.UpdateGlobalCfwBudget)
+            {
+                _ = ExecuteUpdateGlobalCfwBudgetAsync();
+            }
+        }
+
+        private void CloseOtpPanel()
+        {
+            _otpSession = null;
+            _pendingAction = OtpPendingAction.None;
+            ShowOtpPanel = false;
+            OtpCode = string.Empty;
+        }
+
+        private void StartResendCooldown()
+        {
+            _ = Task.Run(async () =>
+            {
+                var remaining = (int)OtpResendCooldown.TotalSeconds;
+                while (remaining > 0 && _showOtpPanel)
+                {
+                    ResendOtpButtonText = $"RESEND ({remaining}s)";
+                    await Task.Delay(1000);
+                    remaining--;
+                }
+                ResendOtpButtonText = "RESEND OTP";
+                _resendOtpCommand.RaiseCanExecuteChanged();
+            });
+        }
+
+        private async Task ExecuteUpdateGlobalBudgetAsync()
+        {
+            if (!TryParseOptionalAmount(AssistanceCaseBudgetCapText, out var budgetCap))
+            {
+                SetErrorStatus("Enter a valid global aid request budget cap.");
+                return;
+            }
+
+            IsBusy = true;
+            SetNeutralStatus("Updating global aid request budget...");
+
+            try
+            {
+                await using var context = new AppDbContext();
+                var budgetService = new BudgetManagementService(context);
+                var result = await budgetService.CreateAssistanceCaseBudgetAsync(
+                    new AssistanceCaseBudgetRequest(
+                        "GLOBAL_AID_BUDGET",
+                        "Global Aid Request Budget",
+                        null,
+                        null,
+                        budgetCap),
+                    _currentUser.Id);
+
+                if (!result.IsSuccess)
+                {
+                    SetErrorStatus(result.Message);
+                    return;
+                }
+
+                await LoadAssistanceCaseBudgetsAsync();
+                await LoadOverviewAsync();
+                SetSuccessStatus(result.Message);
+            }
+            catch (Exception ex)
+            {
+                SetErrorStatus($"Unable to update global aid request budget: {ex.Message}");
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
+        private async Task ExecuteUpdateGlobalCfwBudgetAsync()
+        {
+            if (!TryParseOptionalAmount(CashForWorkBudgetCapText, out var budgetCap))
+            {
+                SetErrorStatus("Enter a valid global cash-for-work budget cap.");
+                return;
+            }
+
+            IsBusy = true;
+            SetNeutralStatus("Updating global cash-for-work budget...");
+
+            try
+            {
+                await using var context = new AppDbContext();
+                var budgetService = new BudgetManagementService(context);
+                var result = await budgetService.CreateCashForWorkBudgetAsync(
+                    new CashForWorkBudgetRequest(
+                        "GLOBAL_CFW_BUDGET",
+                        "Global Cash-for-Work Budget",
+                        null,
+                        budgetCap),
+                    _currentUser.Id);
+
+                if (!result.IsSuccess)
+                {
+                    SetErrorStatus(result.Message);
+                    return;
+                }
+
+                await LoadCashForWorkBudgetsAsync();
+                await LoadOverviewAsync();
+                SetSuccessStatus(result.Message);
+            }
+            catch (Exception ex)
+            {
+                SetErrorStatus($"Unable to update global cash-for-work budget: {ex.Message}");
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
+        private async Task CreateCashForWorkBudgetAsync()
+        {
+            await Task.CompletedTask;
         }
 
         private async Task CreateSeminarAsync()
@@ -862,13 +1344,16 @@ namespace AttendanceShiftingManagement.ViewModels
 
             try
             {
-                var result = await _budgetService.CreateProgramAsync(
+                await using var context = new AppDbContext();
+                var budgetService = new BudgetManagementService(context);
+                var result = await budgetService.CreateProgramAsync(
                     new AyudaProgramRequest(
                         SeminarCode,
                         SeminarTitle,
                         AyudaProgramType.Seminar,
                         BuildSeminarDescription(),
                         SelectedSeminarSupportKind == AssistanceReleaseKind.Cash ? "Seminar Amount" : "Seminar Goods",
+                        SelectedSeminarSupportKind,
                         unitAmount,
                         NormalizeNullable(SeminarGoodsDescription),
                         SeminarDate?.Date,
@@ -900,18 +1385,184 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private void OpenSeminarPanel()
         {
-            HideAllPanels();
-            SeminarPanelVisibility = true;
-            CurrentPanelTitle = "Seminar Setup";
-            CurrentPanelSubtitle = "Record seminar events, participant counts, and associated costs.";
-            IsSeminarPanelOpen = true;
+            if (IsBusy)
+            {
+                return;
+            }
+
+            SetActivePanel(BudgetWorkspacePanel.Seminar);
         }
 
         private void CloseSeminarPanel()
         {
-            SeminarPanelVisibility = false;
-            IsSeminarPanelOpen = false;
             ClosePanel();
+        }
+
+        private void OpenDonationPanel()
+        {
+            if (IsBusy)
+            {
+                return;
+            }
+
+            SetActivePanel(BudgetWorkspacePanel.Donation);
+        }
+
+        private void CloseDonationPanel()
+        {
+            ClosePanel();
+        }
+
+        private void OpenAyudaProjectsPanel()
+        {
+            if (IsBusy)
+            {
+                return;
+            }
+
+            SelectedSetupSection = BudgetSetupSection.AyudaProjects;
+            SetActivePanel(BudgetWorkspacePanel.Program);
+        }
+
+        private void OpenAssistanceCaseBudgetsPanel()
+        {
+            if (IsBusy)
+            {
+                return;
+            }
+
+            SelectedSetupSection = BudgetSetupSection.AssistanceCaseBudgets;
+            SetActivePanel(BudgetWorkspacePanel.Program);
+        }
+
+        private void OpenCashForWorkBudgetsPanel()
+        {
+            if (IsBusy)
+            {
+                return;
+            }
+
+            SelectedSetupSection = BudgetSetupSection.CashForWorkBudgets;
+            SetActivePanel(BudgetWorkspacePanel.Program);
+        }
+
+        private void CloseProgramPanel()
+        {
+            ClosePanel();
+        }
+
+        private void OpenGovernmentSyncPanel()
+        {
+            if (IsBusy)
+            {
+                return;
+            }
+
+            SetActivePanel(BudgetWorkspacePanel.Ledger);
+        }
+
+        private void OpenLedgerPanel()
+        {
+            if (IsBusy)
+            {
+                return;
+            }
+
+            SetActivePanel(BudgetWorkspacePanel.Ledger);
+        }
+
+        private void ClosePanel()
+        {
+            SetActivePanel(BudgetWorkspacePanel.Ledger);
+        }
+
+        private void CloseAllSetupPanels()
+        {
+            IsDonationPanelOpen = false;
+            IsProgramPanelOpen = false;
+            IsSeminarPanelOpen = false;
+        }
+
+        private void CloseLedgerHistoryCard()
+        {
+            SelectedLedgerEntry = null;
+        }
+
+        private void SetActivePanel(BudgetWorkspacePanel panel)
+        {
+            if (_activePanel == panel &&
+                IsDonationPanelOpen == (panel == BudgetWorkspacePanel.Donation) &&
+                IsProgramPanelOpen == (panel == BudgetWorkspacePanel.Program) &&
+                IsSeminarPanelOpen == (panel == BudgetWorkspacePanel.Seminar))
+            {
+                return;
+            }
+
+            _activePanel = panel;
+            CloseAllSetupPanels();
+
+            if (panel == BudgetWorkspacePanel.Donation)
+            {
+                IsDonationPanelOpen = true;
+            }
+            else if (panel == BudgetWorkspacePanel.Program)
+            {
+                IsProgramPanelOpen = true;
+            }
+            else if (panel == BudgetWorkspacePanel.Seminar)
+            {
+                IsSeminarPanelOpen = true;
+            }
+
+            (CurrentPanelTitle, CurrentPanelSubtitle) = panel switch
+            {
+                BudgetWorkspacePanel.Dashboard => (
+                    "Budget Ledger",
+                    "Search the unified release history, export liquidation-ready rows, and inspect the full detail of the selected entry."),
+                BudgetWorkspacePanel.GovernmentSync => (
+                    "Budget Ledger",
+                    "Search the unified release history, export liquidation-ready rows, and inspect the full detail of the selected entry."),
+                BudgetWorkspacePanel.Ledger => (
+                    "Budget Ledger",
+                    "Search the unified release history, export liquidation-ready rows, and inspect the full detail of the selected entry."),
+                BudgetWorkspacePanel.Donation => (
+                    "Private Donations",
+                    "Reuse the existing donation entry workflow to record donors, proof details, and supporting files in one dedicated panel."),
+                BudgetWorkspacePanel.Program => (
+                    "Ayuda Projects",
+                    "Use the section dropdown to switch between Ayuda Projects, Aid Request budgets, and Cash-for-Work budgets."),
+                BudgetWorkspacePanel.Seminar => (
+                    "Seminars",
+                    "Keep seminar setup inside Budget so seminar records continue using the existing program codebase and release definitions."),
+                _ => (CurrentPanelTitle, CurrentPanelSubtitle)
+            };
+
+            OnPropertyChanged(nameof(DashboardVisibility));
+            OnPropertyChanged(nameof(GovernmentSyncVisibility));
+            OnPropertyChanged(nameof(LedgerVisibility));
+            OnPropertyChanged(nameof(DonationPanelVisibility));
+            OnPropertyChanged(nameof(ProgramPanelVisibility));
+            OnPropertyChanged(nameof(SeminarPanelVisibility));
+            OnPropertyChanged(nameof(BackToDashboardVisibility));
+            OnPropertyChanged(nameof(HistoryDetailVisibility));
+
+            _openDashboardPanelCommand.RaiseCanExecuteChanged();
+            _openGovernmentSyncPanelCommand.RaiseCanExecuteChanged();
+            _openLedgerPanelCommand.RaiseCanExecuteChanged();
+            _openDonationPanelCommand.RaiseCanExecuteChanged();
+            _closeDonationPanelCommand.RaiseCanExecuteChanged();
+            _openProgramPanelCommand.RaiseCanExecuteChanged();
+            _openAssistanceCaseBudgetsPanelCommand.RaiseCanExecuteChanged();
+            _openCashForWorkBudgetsPanelCommand.RaiseCanExecuteChanged();
+            _closeProgramPanelCommand.RaiseCanExecuteChanged();
+            _openSeminarPanelCommand.RaiseCanExecuteChanged();
+            _closeSeminarPanelCommand.RaiseCanExecuteChanged();
+            _closePanelCommand.RaiseCanExecuteChanged();
+        }
+
+        private Visibility GetPanelVisibility(BudgetWorkspacePanel panel)
+        {
+            return _activePanel == panel ? Visibility.Visible : Visibility.Collapsed;
         }
 
         private void BrowseProof()
@@ -1007,9 +1658,10 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             ProgramCode = string.Empty;
             ProgramName = string.Empty;
-            SelectedProgramType = AyudaProgramType.AssistanceCase;
+            SelectedProgramType = AyudaProgramType.GeneralPurpose;
             ProgramDescription = string.Empty;
             ProgramAssistanceType = string.Empty;
+            SelectedProgramReleaseKind = AssistanceReleaseKind.Cash;
             ProgramUnitAmountText = string.Empty;
             ProgramItemDescription = string.Empty;
             ProgramStartDate = null;
@@ -1028,6 +1680,24 @@ namespace AttendanceShiftingManagement.ViewModels
             SeminarGoodsDescription = string.Empty;
             SeminarAgenda = string.Empty;
             SeminarDate = DateTime.Today;
+        }
+
+        private void SetOtpNeutral(string message)
+        {
+            OtpStatusMessage = message;
+            OtpStatusBrush = Brushes.DimGray;
+        }
+
+        private void SetOtpSuccess(string message)
+        {
+            OtpStatusMessage = message;
+            OtpStatusBrush = Brushes.ForestGreen;
+        }
+
+        private void SetOtpError(string message)
+        {
+            OtpStatusMessage = message;
+            OtpStatusBrush = Brushes.Firebrick;
         }
 
         private void SetNeutralStatus(string message)
@@ -1174,88 +1844,6 @@ namespace AttendanceShiftingManagement.ViewModels
             }
 
             return normalized;
-        }
-
-        // C4W Layout Navigation Methods
-        private void OpenDashboardPanel()
-        {
-            HideAllPanels();
-            DashboardVisibility = true;
-            CurrentPanelTitle = "Budget Overview";
-            CurrentPanelSubtitle = "Use left rail to switch between budget operations.";
-        }
-
-        private void OpenLedgerPanel()
-        {
-            HideAllPanels();
-            LedgerVisibility = true;
-            CurrentPanelTitle = "Budget Ledger / Liquidation";
-            CurrentPanelSubtitle = "Complete financial history of all budget transactions and releases.";
-        }
-
-        private void ClosePanel()
-        {
-            HideAllPanels();
-            DashboardVisibility = true;
-            CurrentPanelTitle = "Budget Overview";
-            CurrentPanelSubtitle = "Use left rail to switch between budget operations.";
-        }
-
-        private void CloseHistoryDetail()
-        {
-            HistoryDetailVisibility = false;
-        }
-
-        private void HideAllPanels()
-        {
-            DashboardVisibility = false;
-            LedgerVisibility = false;
-            DonationPanelVisibility = false;
-            ProgramPanelVisibility = false;
-            SeminarPanelVisibility = false;
-            HistoryDetailVisibility = false;
-        }
-
-        // Update existing panel methods to use new C4W system
-        private void OpenDonationPanel()
-        {
-            HideAllPanels();
-            DonationPanelVisibility = true;
-            CurrentPanelTitle = "Private Donation Entry";
-            CurrentPanelSubtitle = "Record private donor contributions with proof attachments and amount details.";
-            _isDonationPanelOpen = true;
-            OnPropertyChanged(nameof(IsDonationPanelOpen));
-        }
-
-        private void CloseDonationPanel()
-        {
-            DonationPanelVisibility = false;
-            _isDonationPanelOpen = false;
-            OnPropertyChanged(nameof(IsDonationPanelOpen));
-            ClosePanel();
-        }
-
-        private void OpenProgramPanel()
-        {
-            HideAllPanels();
-            ProgramPanelVisibility = true;
-            CurrentPanelTitle = "Program Setup";
-            CurrentPanelSubtitle = "Create new ayuda projects, define distribution parameters, and set budget caps.";
-            _isProgramPanelOpen = true;
-            OnPropertyChanged(nameof(IsProgramPanelOpen));
-        }
-
-        private void CloseProgramPanel()
-        {
-            ProgramPanelVisibility = false;
-            _isProgramPanelOpen = false;
-            OnPropertyChanged(nameof(IsProgramPanelOpen));
-            ClosePanel();
-        }
-
-        private void CloseLedgerHistoryCard()
-        {
-            HistoryDetailVisibility = false;
         }
     }
 

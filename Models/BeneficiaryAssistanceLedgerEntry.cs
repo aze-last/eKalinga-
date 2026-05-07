@@ -49,6 +49,7 @@ namespace AttendanceShiftingManagement.Models
         AssistanceCase,
         CashForWork,
         ProjectDistribution,
-        Grievance
+        Grievance,
+        EquipmentBorrowing
     }
 }

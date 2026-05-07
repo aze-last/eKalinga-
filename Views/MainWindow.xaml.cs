@@ -1,3 +1,4 @@
+using AttendanceShiftingManagement.Data;
 using AttendanceShiftingManagement.Models;
 using AttendanceShiftingManagement.Services;
 using AttendanceShiftingManagement.ViewModels;
@@ -12,6 +13,7 @@ namespace AttendanceShiftingManagement.Views
 {
     public partial class MainWindow : Window
     {
+        private bool _hasShownSessionAnnouncements;
         private BarangayMainViewModel ViewModel => (BarangayMainViewModel)DataContext;
 
         public MainWindow(User user)
@@ -19,6 +21,38 @@ namespace AttendanceShiftingManagement.Views
             InitializeComponent();
             DataContext = new BarangayMainViewModel(user);
             WindowBrandingService.ApplyWindowIcon(this);
+            Loaded += MainWindow_Loaded;
+        }
+
+        private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            if (_hasShownSessionAnnouncements)
+            {
+                return;
+            }
+
+            _hasShownSessionAnnouncements = true;
+
+            try
+            {
+                var service = new SessionAnnouncementService();
+                var snapshot = await service.BuildSnapshotAsync(ViewModel.CurrentUser.Id);
+                if (!snapshot.HasUpdates)
+                {
+                    return;
+                }
+
+                var window = new SessionAnnouncementWindow(snapshot)
+                {
+                    Owner = this
+                };
+
+                window.ShowDialog();
+            }
+            catch
+            {
+                // Keep login flow resilient if the popup cannot be loaded.
+            }
         }
 
         public void OpenSettingsFromDashboard()
@@ -29,6 +63,36 @@ namespace AttendanceShiftingManagement.Views
         public Task CheckForUpdateFromDashboardAsync()
         {
             return RunUpdateCheckFlowAsync();
+        }
+
+        public async Task SyncRemoteAndLocalFromDashboardAsync()
+        {
+            try
+            {
+                var result = await RemotePhaseOneSyncService.SyncFromRemoteToLocalAsync();
+                var icon = result.IsSuccess
+                    ? MessageBoxImage.Information
+                    : MessageBoxImage.Warning;
+
+                MessageBox.Show(
+                    result.Message,
+                    "Sync Remote And Local",
+                    MessageBoxButton.OK,
+                    icon);
+
+                if (result.IsSuccess)
+                {
+                    ViewModel.ReloadCurrentView();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"Sync failed. {ex.Message}",
+                    "Sync Remote And Local",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
         }
 
         public void LogoutFromDashboard()
@@ -373,6 +437,25 @@ namespace AttendanceShiftingManagement.Views
             if (result != MessageBoxResult.Yes)
             {
                 return;
+            }
+
+            try
+            {
+                using var context = new AppDbContext();
+                var auditService = new AuditService(context);
+                auditService.LogActivity(
+                    ViewModel.CurrentUser.Id,
+                    "Logout",
+                    "User",
+                    ViewModel.CurrentUser.Id,
+                    $"User '{ViewModel.CurrentUser.Username}' logged out.");
+
+                var service = new SessionAnnouncementService();
+                service.RecordLogoutCheckpoint(ViewModel.CurrentUser.Id);
+            }
+            catch
+            {
+                // Allow logout even if activity tracking fails.
             }
 
             var loginWindow = new LoginWindow();

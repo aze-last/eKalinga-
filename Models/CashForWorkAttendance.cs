@@ -35,6 +35,9 @@ namespace AttendanceShiftingManagement.Models
         [Column("recorded_at")]
         public DateTime RecordedAt { get; set; } = DateTime.Now;
 
+        [Column("is_deleted")]
+        public bool IsDeleted { get; set; }
+
         [ForeignKey(nameof(ParticipantId))]
         public CashForWorkParticipant Participant { get; set; } = null!;
 

@@ -10,6 +10,8 @@ namespace AttendanceShiftingManagement.Services
         public const string PersonsWithDisability = "PWD";
         public const string WithCivilRegistryId = "With civil registry ID";
         public const string MissingCivilRegistryId = "Missing civil registry ID";
+        public const string Approved = "Approved";
+        public const string Pending = "Pending";
 
         public static IReadOnlyList<string> All { get; } = new[]
         {
@@ -17,14 +19,16 @@ namespace AttendanceShiftingManagement.Services
             SeniorCitizens,
             PersonsWithDisability,
             WithCivilRegistryId,
-            MissingCivilRegistryId
+            MissingCivilRegistryId,
+            Approved,
+            Pending
         };
     }
 
     internal sealed class MasterListPageRequest
     {
         public string SearchText { get; init; } = string.Empty;
-        public string QuickFilter { get; init; } = MasterListQuickFilters.AllBeneficiaries;
+        public IReadOnlyList<string> QuickFilters { get; init; } = Array.Empty<string>();
         public int PageNumber { get; init; } = 1;
         public int PageSize { get; init; } = 100;
     }
@@ -73,7 +77,7 @@ namespace AttendanceShiftingManagement.Services
             var normalizedRequest = new MasterListPageRequest
             {
                 SearchText = request.SearchText,
-                QuickFilter = request.QuickFilter,
+                QuickFilters = request.QuickFilters,
                 PageNumber = pageNumber,
                 PageSize = pageSize
             };
@@ -105,11 +109,11 @@ namespace AttendanceShiftingManagement.Services
                 """
                 SELECT
                     COUNT(*) AS total_count,
-                    SUM(CASE WHEN TRIM(COALESCE(civilregistry_id, '')) <> '' THEN 1 ELSE 0 END) AS linked_count,
-                    SUM(CASE WHEN COALESCE(is_senior, 0) <> 0 THEN 1 ELSE 0 END) AS senior_count,
-                    SUM(CASE WHEN COALESCE(is_pwd, 0) <> 0 THEN 1 ELSE 0 END) AS pwd_count,
-                    MAX(updated_at) AS last_updated
-                FROM val_beneficiaries;
+                    SUM(CASE WHEN TRIM(COALESCE(v.civilregistry_id, '')) <> '' THEN 1 ELSE 0 END) AS linked_count,
+                    SUM(CASE WHEN COALESCE(v.is_senior, 0) <> 0 THEN 1 ELSE 0 END) AS senior_count,
+                    SUM(CASE WHEN COALESCE(v.is_pwd, 0) <> 0 THEN 1 ELSE 0 END) AS pwd_count,
+                    MAX(v.updated_at) AS last_updated
+                FROM val_beneficiaries v;
                 """;
 
             await using var command = new MySqlCommand(sql, connection);
@@ -136,7 +140,13 @@ namespace AttendanceShiftingManagement.Services
             command.Connection = connection;
 
             var whereClause = BuildWhereClause(command, request);
-            command.CommandText = $"SELECT COUNT(*) FROM {TableName}{whereClause};";
+            command.CommandText = 
+                $"""
+                SELECT COUNT(*) 
+                FROM {TableName} v
+                LEFT JOIN BeneficiaryStaging s ON v.residents_id = s.ResidentsId
+                {whereClause};
+                """;
 
             var count = await command.ExecuteScalarAsync(cancellationToken);
             return Convert.ToInt32(count);
@@ -153,31 +163,33 @@ namespace AttendanceShiftingManagement.Services
             command.CommandText =
                 $"""
                 SELECT
-                    id,
-                    residents_id,
-                    beneficiary_id,
-                    user_id,
-                    civilregistry_id,
-                    last_name,
-                    first_name,
-                    middle_name,
-                    full_name,
-                    sex,
-                    date_of_birth,
-                    age,
-                    marital_status,
-                    address,
-                    is_pwd,
-                    pwd_id_no,
-                    is_senior,
-                    senior_id_no,
-                    disability_type,
-                    cause_of_disability,
-                    created_at,
-                    updated_at
-                FROM {TableName}
+                    v.id,
+                    v.residents_id,
+                    v.beneficiary_id,
+                    v.user_id,
+                    v.civilregistry_id,
+                    v.last_name,
+                    v.first_name,
+                    v.middle_name,
+                    v.full_name,
+                    v.sex,
+                    v.date_of_birth,
+                    v.age,
+                    v.marital_status,
+                    v.address,
+                    v.is_pwd,
+                    v.pwd_id_no,
+                    v.is_senior,
+                    v.senior_id_no,
+                    v.disability_type,
+                    v.cause_of_disability,
+                    v.created_at,
+                    v.updated_at,
+                    COALESCE(s.VerificationStatus, 0) as verification_status
+                FROM {TableName} v
+                LEFT JOIN BeneficiaryStaging s ON v.residents_id = s.ResidentsId
                 {whereClause}
-                ORDER BY full_name, beneficiary_id
+                ORDER BY v.full_name, v.beneficiary_id
                 LIMIT @pageSize OFFSET @offset;
                 """;
 
@@ -210,6 +222,7 @@ namespace AttendanceShiftingManagement.Services
                     SeniorIdNo = GetString(reader, "senior_id_no"),
                     DisabilityType = GetString(reader, "disability_type"),
                     CauseOfDisability = GetString(reader, "cause_of_disability"),
+                    VerificationStatus = (VerificationStatus)reader.GetInt32(reader.GetOrdinal("verification_status")),
                     CreatedAt = IsDBNull(reader, "created_at") ? null : reader.GetDateTime(reader.GetOrdinal("created_at")),
                     UpdatedAt = IsDBNull(reader, "updated_at") ? null : reader.GetDateTime(reader.GetOrdinal("updated_at"))
                 });
@@ -222,20 +235,29 @@ namespace AttendanceShiftingManagement.Services
         {
             var clauses = new List<string>();
 
-            switch (request.QuickFilter)
+            foreach (var filter in request.QuickFilters)
             {
-                case MasterListQuickFilters.SeniorCitizens:
-                    clauses.Add("COALESCE(is_senior, 0) <> 0");
-                    break;
-                case MasterListQuickFilters.PersonsWithDisability:
-                    clauses.Add("COALESCE(is_pwd, 0) <> 0");
-                    break;
-                case MasterListQuickFilters.WithCivilRegistryId:
-                    clauses.Add("TRIM(COALESCE(civilregistry_id, '')) <> ''");
-                    break;
-                case MasterListQuickFilters.MissingCivilRegistryId:
-                    clauses.Add("TRIM(COALESCE(civilregistry_id, '')) = ''");
-                    break;
+                switch (filter)
+                {
+                    case MasterListQuickFilters.SeniorCitizens:
+                        clauses.Add("COALESCE(v.is_senior, 0) <> 0");
+                        break;
+                    case MasterListQuickFilters.PersonsWithDisability:
+                        clauses.Add("COALESCE(v.is_pwd, 0) <> 0");
+                        break;
+                    case MasterListQuickFilters.WithCivilRegistryId:
+                        clauses.Add("TRIM(COALESCE(v.civilregistry_id, '')) <> ''");
+                        break;
+                    case MasterListQuickFilters.MissingCivilRegistryId:
+                        clauses.Add("TRIM(COALESCE(v.civilregistry_id, '')) = ''");
+                        break;
+                    case MasterListQuickFilters.Approved:
+                        clauses.Add("COALESCE(s.VerificationStatus, 0) = 1");
+                        break;
+                    case MasterListQuickFilters.Pending:
+                        clauses.Add("COALESCE(s.VerificationStatus, 0) = 0");
+                        break;
+                }
             }
 
             var searchText = request.SearchText?.Trim() ?? string.Empty;
@@ -244,11 +266,11 @@ namespace AttendanceShiftingManagement.Services
                 clauses.Add(
                     """
                     (
-                        COALESCE(full_name, '') LIKE @searchPattern
-                        OR COALESCE(beneficiary_id, '') LIKE @searchPattern
-                        OR COALESCE(civilregistry_id, '') LIKE @searchPattern
-                        OR COALESCE(address, '') LIKE @searchPattern
-                        OR COALESCE(sex, '') LIKE @searchPattern
+                        COALESCE(v.full_name, '') LIKE @searchPattern
+                        OR COALESCE(v.beneficiary_id, '') LIKE @searchPattern
+                        OR COALESCE(v.civilregistry_id, '') LIKE @searchPattern
+                        OR COALESCE(v.address, '') LIKE @searchPattern
+                        OR COALESCE(v.sex, '') LIKE @searchPattern
                     )
                     """);
 

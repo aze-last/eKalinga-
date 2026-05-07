@@ -74,7 +74,7 @@ namespace AttendanceShiftingManagement.Services
                 Foreground = CreateBrush("#334155")
             });
 
-            document.Blocks.Add(new Paragraph(new Run("System-generated report. Use Print and choose Microsoft Print to PDF when a PDF file is needed."))
+            document.Blocks.Add(new Paragraph(new Run("System-generated report. Use Save PDF from the report workspace when a file copy is needed."))
             {
                 FontSize = 10,
                 Foreground = CreateBrush("#64748B"),

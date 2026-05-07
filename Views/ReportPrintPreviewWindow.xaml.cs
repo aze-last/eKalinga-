@@ -11,7 +11,10 @@ namespace AttendanceShiftingManagement.Views
         public ReportPrintPreviewWindow(FlowDocument document, string reportTitle)
         {
             InitializeComponent();
-            PreviewViewer.Document = document ?? throw new ArgumentNullException(nameof(document));
+            var previewDocument = document ?? throw new ArgumentNullException(nameof(document));
+            previewDocument.IsOptimalParagraphEnabled = false;
+            previewDocument.ColumnWidth = double.PositiveInfinity;
+            PreviewViewer.Document = previewDocument;
             TitleTextBlock.Text = reportTitle;
             Title = reportTitle;
             WindowBrandingService.ApplyWindowIcon(this);
@@ -19,7 +22,7 @@ namespace AttendanceShiftingManagement.Views
 
         private void PrintButton_Click(object sender, RoutedEventArgs e)
         {
-            if (PreviewViewer.Document == null)
+            if (PreviewViewer.Document is not FlowDocument document)
             {
                 return;
             }
@@ -30,10 +33,10 @@ namespace AttendanceShiftingManagement.Views
                 return;
             }
 
-            PreviewViewer.Document.PageHeight = dialog.PrintableAreaHeight;
-            PreviewViewer.Document.PageWidth = dialog.PrintableAreaWidth;
-            PreviewViewer.Document.ColumnWidth = dialog.PrintableAreaWidth;
-            dialog.PrintDocument(((IDocumentPaginatorSource)PreviewViewer.Document).DocumentPaginator, Title);
+            document.PageHeight = dialog.PrintableAreaHeight;
+            document.PageWidth = dialog.PrintableAreaWidth;
+            document.ColumnWidth = double.PositiveInfinity;
+            dialog.PrintDocument(((IDocumentPaginatorSource)document).DocumentPaginator, Title);
         }
 
         private void CloseButton_Click(object sender, RoutedEventArgs e)

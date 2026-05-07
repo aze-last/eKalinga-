@@ -15,17 +15,23 @@ namespace AttendanceShiftingManagement.Services
     {
         private readonly AppDbContext _context;
         private readonly AuditService? _auditService;
+        private readonly IGgmsConsolidatedTransactionService _ggmsConsolidatedTransactionService;
 
-        public CashForWorkService(AppDbContext context, AuditService? auditService = null)
+        public CashForWorkService(
+            AppDbContext context,
+            AuditService? auditService = null,
+            IGgmsConsolidatedTransactionService? ggmsConsolidatedTransactionService = null)
         {
             _context = context;
             _auditService = auditService;
+            _ggmsConsolidatedTransactionService = ggmsConsolidatedTransactionService ?? NullGgmsConsolidatedTransactionService.Instance;
         }
 
         public List<CashForWorkEvent> GetEvents(CashForWorkEventKind? eventKind = null)
         {
             var query = _context.CashForWorkEvents
                 .AsNoTracking()
+                .Where(cashForWorkEvent => !cashForWorkEvent.IsDeleted)
                 .AsQueryable();
 
             if (eventKind.HasValue)
@@ -43,7 +49,7 @@ namespace AttendanceShiftingManagement.Services
         {
             return _context.CashForWorkEvents
                 .AsNoTracking()
-                .Where(cashForWorkEvent => cashForWorkEvent.Status == CashForWorkEventStatus.Open)
+                .Where(cashForWorkEvent => !cashForWorkEvent.IsDeleted && cashForWorkEvent.Status == CashForWorkEventStatus.Open)
                 .OrderBy(cashForWorkEvent => cashForWorkEvent.EventDate)
                 .ThenBy(cashForWorkEvent => cashForWorkEvent.StartTime)
                 .ThenBy(cashForWorkEvent => cashForWorkEvent.Title)
@@ -70,7 +76,7 @@ namespace AttendanceShiftingManagement.Services
             return _context.CashForWorkParticipants
                 .AsNoTracking()
                 .Include(participant => participant.Beneficiary)
-                .Where(participant => participant.EventId == eventId)
+                .Where(participant => !participant.IsDeleted && participant.EventId == eventId)
                 .ToList()
                 .OrderBy(participant => BuildParticipantDisplayName(participant))
                 .ToList();
@@ -83,7 +89,7 @@ namespace AttendanceShiftingManagement.Services
                 .Include(attendance => attendance.Participant)
                 .ThenInclude(participant => participant.Beneficiary)
                 .Include(attendance => attendance.RecordedByUser)
-                .Where(attendance => attendance.Participant.EventId == eventId)
+                .Where(attendance => !attendance.IsDeleted && attendance.Participant.EventId == eventId)
                 .ToList()
                 .OrderByDescending(attendance => attendance.RecordedAt)
                 .ToList();
@@ -105,7 +111,7 @@ namespace AttendanceShiftingManagement.Services
                 .Select(group => group
                     .OrderByDescending(attendance => attendance.RecordedAt)
                     .First())
-                .Where(attendance => 
+                .Where(attendance =>
                     attendance.Participant.Beneficiary?.VerificationStatus == VerificationStatus.Approved)
                 .OrderBy(attendance => BuildParticipantDisplayName(attendance.Participant))
                 .ToList();
@@ -133,10 +139,11 @@ namespace AttendanceShiftingManagement.Services
                 Math.Max(0, approvedParticipants.Count - releaseReadyParticipantCount),
                 releaseReadyParticipantCount,
                 releaseReadyParticipants.Count(participant => participant.Source == AttendanceCaptureSource.Manual),
+                releaseReadyParticipantCount * (cashForWorkEvent.AyudaProgram?.UnitAmount ?? 0m),
                 releaseReadyParticipants);
         }
 
-        public CashForWorkEvent CreateEvent(
+        public async Task<CashForWorkEvent> CreateEventAsync(
             string title,
             string location,
             DateTime eventDate,
@@ -146,6 +153,8 @@ namespace AttendanceShiftingManagement.Services
             int createdByUserId,
             CashForWorkEventKind eventKind = CashForWorkEventKind.CashForWork)
         {
+            var resolvedBudgetId = await ResolveGlobalBudgetAsync();
+
             var cashForWorkEvent = new CashForWorkEvent
             {
                 Title = title.Trim(),
@@ -157,18 +166,23 @@ namespace AttendanceShiftingManagement.Services
                 CreatedByUserId = createdByUserId,
                 Status = CashForWorkEventStatus.Open,
                 EventKind = eventKind,
+                CashForWorkBudgetId = resolvedBudgetId,
                 CreatedAt = DateTime.Now,
                 UpdatedAt = DateTime.Now
             };
 
             _context.CashForWorkEvents.Add(cashForWorkEvent);
-            _context.SaveChanges();
-            _auditService?.LogActivity(
-                createdByUserId,
-                "CashForWorkEventCreated",
-                "CashForWorkEvent",
-                cashForWorkEvent.Id,
-                $"Created event '{cashForWorkEvent.Title}' on {cashForWorkEvent.EventDate:yyyy-MM-dd} at '{cashForWorkEvent.Location}'.");
+            await _context.SaveChangesAsync();
+
+            if (_auditService != null)
+            {
+                await _auditService.LogActivityAsync(
+                    createdByUserId,
+                    "CashForWorkEventCreated",
+                    "CashForWorkEvent",
+                    cashForWorkEvent.Id,
+                    $"Created event '{cashForWorkEvent.Title}' on {cashForWorkEvent.EventDate:yyyy-MM-dd}.");
+            }
 
             return cashForWorkEvent;
         }
@@ -180,6 +194,11 @@ namespace AttendanceShiftingManagement.Services
                 ?? throw new InvalidOperationException("Cash-for-work event was not found.");
 
             EnsureEventCanBeModified(cashForWorkEvent);
+
+            if (cashForWorkEvent.EventKind == CashForWorkEventKind.Seminar)
+            {
+                throw new InvalidOperationException("Seminar attendance is scan-based and does not use beneficiary assignment.");
+            }
 
             var beneficiary = _context.BeneficiaryStaging
                 .AsNoTracking()
@@ -230,6 +249,11 @@ namespace AttendanceShiftingManagement.Services
 
             EnsureEventCanBeModified(cashForWorkEvent);
 
+            if (cashForWorkEvent.EventKind == CashForWorkEventKind.Seminar)
+            {
+                throw new InvalidOperationException("Seminar attendance is scan-based only.");
+            }
+
             if (cashForWorkEvent.EventDate.Date > DateTime.Today)
             {
                 throw new InvalidOperationException("Attendance cannot be recorded for future events.");
@@ -270,7 +294,7 @@ namespace AttendanceShiftingManagement.Services
             return savedCount;
         }
 
-        public async Task<bool> SaveScannerAttendanceAsync(int eventId, int recordedByUserId, int participantId, string qrPayload)
+        public async Task<bool> SaveScannerAttendanceAsync(int eventId, int recordedByUserId, int? participantId, string qrPayload)
         {
             var cashForWorkEvent = await _context.CashForWorkEvents
                 .AsNoTracking()
@@ -288,29 +312,29 @@ namespace AttendanceShiftingManagement.Services
                 throw new InvalidOperationException("Attendance cannot be recorded for future events.");
             }
 
-            var participant = await _context.CashForWorkParticipants
-                .AsNoTracking()
-                .Include(item => item.Beneficiary)
-                .FirstOrDefaultAsync(item => item.Id == participantId && item.EventId == eventId);
-
-            if (participant == null || participant.Beneficiary?.VerificationStatus != VerificationStatus.Approved)
-            {
-                return false;
-            }
-
             // Verify identity via QR payload
             var digitalIdService = new BeneficiaryDigitalIdService(_context);
             var lookupResult = await digitalIdService.LookupByQrPayloadAsync(qrPayload);
 
-            if (lookupResult == null || lookupResult.BeneficiaryStagingId != participant.BeneficiaryStagingId)
+            if (lookupResult == null)
             {
-                // Identity mismatch or invalid QR
+                return false;
+            }
+
+            var participant = await ResolveScannerParticipantAsync(
+                cashForWorkEvent,
+                participantId,
+                lookupResult.BeneficiaryStagingId,
+                recordedByUserId);
+
+            if (participant == null || participant.BeneficiaryStagingId != lookupResult.BeneficiaryStagingId)
+            {
                 return false;
             }
 
             var attendanceDate = cashForWorkEvent.EventDate.Date;
             var alreadyRecorded = await _context.CashForWorkAttendances
-                .AnyAsync(item => item.ParticipantId == participantId && item.AttendanceDate == attendanceDate);
+                .AnyAsync(item => item.ParticipantId == participant.Id && item.AttendanceDate == attendanceDate);
 
             if (alreadyRecorded)
             {
@@ -319,7 +343,7 @@ namespace AttendanceShiftingManagement.Services
 
             _context.CashForWorkAttendances.Add(new CashForWorkAttendance
             {
-                ParticipantId = participantId,
+                ParticipantId = participant.Id,
                 AttendanceDate = attendanceDate,
                 Status = CashForWorkAttendanceStatus.Present,
                 Source = AttendanceCaptureSource.ScannerSession,
@@ -329,7 +353,7 @@ namespace AttendanceShiftingManagement.Services
             });
 
             await _context.SaveChangesAsync();
-            
+
             _auditService?.LogActivity(
                 recordedByUserId,
                 "CashForWorkScannerAttendanceSaved",
@@ -340,7 +364,78 @@ namespace AttendanceShiftingManagement.Services
             return true;
         }
 
-        public CashForWorkEvent UpdateEvent(
+        private async Task<CashForWorkParticipant?> ResolveScannerParticipantAsync(
+            CashForWorkEvent cashForWorkEvent,
+            int? participantId,
+            int beneficiaryStagingId,
+            int recordedByUserId)
+        {
+            CashForWorkParticipant? participant = null;
+
+            if (participantId.HasValue)
+            {
+                participant = await _context.CashForWorkParticipants
+                    .FirstOrDefaultAsync(item => !item.IsDeleted && item.Id == participantId.Value && item.EventId == cashForWorkEvent.Id);
+            }
+
+            if (participant != null)
+            {
+                var participantBeneficiary = await _context.BeneficiaryStaging
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(item => item.StagingID == participant.BeneficiaryStagingId);
+
+                return participantBeneficiary?.VerificationStatus == VerificationStatus.Approved
+                    ? participant
+                    : null;
+            }
+
+            if (cashForWorkEvent.EventKind != CashForWorkEventKind.Seminar)
+            {
+                return null;
+            }
+
+            var existingParticipant = await _context.CashForWorkParticipants
+                .FirstOrDefaultAsync(item =>
+                    !item.IsDeleted &&
+                    item.EventId == cashForWorkEvent.Id &&
+                    item.BeneficiaryStagingId == beneficiaryStagingId);
+
+            if (existingParticipant != null)
+            {
+                return existingParticipant;
+            }
+
+            var beneficiary = await _context.BeneficiaryStaging
+                .AsNoTracking()
+                .FirstOrDefaultAsync(item => item.StagingID == beneficiaryStagingId);
+
+            if (beneficiary == null || beneficiary.VerificationStatus != VerificationStatus.Approved)
+            {
+                return null;
+            }
+
+            participant = new CashForWorkParticipant
+            {
+                EventId = cashForWorkEvent.Id,
+                BeneficiaryStagingId = beneficiaryStagingId,
+                AddedByUserId = recordedByUserId,
+                AddedAt = DateTime.Now
+            };
+
+            _context.CashForWorkParticipants.Add(participant);
+            await _context.SaveChangesAsync();
+
+            _auditService?.LogActivity(
+                recordedByUserId,
+                "CashForWorkParticipantAutoAdded",
+                "CashForWorkEvent",
+                cashForWorkEvent.Id,
+                $"Auto-registered seminar attendee '{BuildDisplayName(beneficiary)}' for event '{cashForWorkEvent.Title}'.");
+
+            return participant;
+        }
+
+        public async Task<CashForWorkEvent> UpdateEventAsync(
             int eventId,
             string title,
             string location,
@@ -351,11 +446,17 @@ namespace AttendanceShiftingManagement.Services
             int updatedByUserId,
             CashForWorkEventKind eventKind = CashForWorkEventKind.CashForWork)
         {
-            var cashForWorkEvent = _context.CashForWorkEvents
-                .FirstOrDefault(item => item.Id == eventId)
-                ?? throw new InvalidOperationException("Cash-for-work event was not found.");
+            var cashForWorkEvent = await _context.CashForWorkEvents
+                .FirstOrDefaultAsync(item => !item.IsDeleted && item.Id == eventId);
+
+            if (cashForWorkEvent == null)
+            {
+                throw new InvalidOperationException("Cash-for-work event was not found.");
+            }
 
             EnsureEventCanBeModified(cashForWorkEvent);
+
+            var resolvedBudgetId = await ResolveGlobalBudgetAsync();
 
             cashForWorkEvent.Title = title.Trim();
             cashForWorkEvent.Location = location.Trim();
@@ -364,25 +465,30 @@ namespace AttendanceShiftingManagement.Services
             cashForWorkEvent.EndTime = endTime;
             cashForWorkEvent.Notes = string.IsNullOrWhiteSpace(notes) ? null : notes.Trim();
             cashForWorkEvent.EventKind = eventKind;
+            cashForWorkEvent.CashForWorkBudgetId = resolvedBudgetId;
             cashForWorkEvent.UpdatedAt = DateTime.Now;
 
-            var attendanceRows = _context.CashForWorkAttendances
+            var attendanceRows = await _context.CashForWorkAttendances
                 .Include(attendance => attendance.Participant)
-                .Where(attendance => attendance.Participant.EventId == eventId)
-                .ToList();
+                .Where(attendance => !attendance.IsDeleted && attendance.Participant.EventId == eventId)
+                .ToListAsync();
 
             foreach (var attendance in attendanceRows)
             {
                 attendance.AttendanceDate = eventDate.Date;
             }
 
-            _context.SaveChanges();
-            _auditService?.LogActivity(
-                updatedByUserId,
-                "CashForWorkEventUpdated",
-                "CashForWorkEvent",
-                cashForWorkEvent.Id,
-                $"Updated event '{cashForWorkEvent.Title}' scheduled on {cashForWorkEvent.EventDate:yyyy-MM-dd}.");
+            await _context.SaveChangesAsync();
+
+            if (_auditService != null)
+            {
+                await _auditService.LogActivityAsync(
+                    updatedByUserId,
+                    "CashForWorkEventUpdated",
+                    "CashForWorkEvent",
+                    cashForWorkEvent.Id,
+                    $"Updated event '{cashForWorkEvent.Title}' scheduled on {cashForWorkEvent.EventDate:yyyy-MM-dd}.");
+            }
 
             return cashForWorkEvent;
         }
@@ -390,7 +496,7 @@ namespace AttendanceShiftingManagement.Services
         public void DeleteEvent(int eventId, int deletedByUserId)
         {
             var cashForWorkEvent = _context.CashForWorkEvents
-                .FirstOrDefault(item => item.Id == eventId)
+                .FirstOrDefault(item => !item.IsDeleted && item.Id == eventId)
                 ?? throw new InvalidOperationException("Cash-for-work event was not found.");
 
             EnsureEventCanBeModified(cashForWorkEvent);
@@ -402,7 +508,7 @@ namespace AttendanceShiftingManagement.Services
                 .ToList();
 
             var participants = _context.CashForWorkParticipants
-                .Where(participant => participant.EventId == eventId)
+                .Where(participant => !participant.IsDeleted && participant.EventId == eventId)
                 .ToList();
 
             var participantIds = participants
@@ -410,25 +516,25 @@ namespace AttendanceShiftingManagement.Services
                 .ToList();
 
             var attendances = _context.CashForWorkAttendances
-                .Where(attendance => participantIds.Contains(attendance.ParticipantId))
+                .Where(attendance => !attendance.IsDeleted && participantIds.Contains(attendance.ParticipantId))
                 .ToList();
 
-            if (attendances.Count > 0)
+            foreach (var attendance in attendances)
             {
-                _context.CashForWorkAttendances.RemoveRange(attendances);
+                attendance.IsDeleted = true;
             }
 
-            if (participants.Count > 0)
+            foreach (var participant in participants)
             {
-                _context.CashForWorkParticipants.RemoveRange(participants);
+                participant.IsDeleted = true;
             }
 
-            if (scannerSessions.Count > 0)
+            foreach (var session in scannerSessions)
             {
-                _context.ScannerSessions.RemoveRange(scannerSessions);
+                session.IsActive = false;
             }
 
-            _context.CashForWorkEvents.Remove(cashForWorkEvent);
+            cashForWorkEvent.IsDeleted = true;
             _context.SaveChanges();
 
             _auditService?.LogActivity(
@@ -444,7 +550,7 @@ namespace AttendanceShiftingManagement.Services
             var attendance = _context.CashForWorkAttendances
                 .Include(item => item.Participant)
                 .ThenInclude(participant => participant.Event)
-                .FirstOrDefault(item => item.Id == attendanceId)
+                .FirstOrDefault(item => !item.IsDeleted && item.Id == attendanceId)
                 ?? throw new InvalidOperationException("Attendance record was not found.");
 
             EnsureEventCanBeModified(attendance.Participant.Event);
@@ -476,14 +582,14 @@ namespace AttendanceShiftingManagement.Services
             var attendance = _context.CashForWorkAttendances
                 .Include(item => item.Participant)
                 .ThenInclude(participant => participant.Event)
-                .FirstOrDefault(item => item.Id == attendanceId)
+                .FirstOrDefault(item => !item.IsDeleted && item.Id == attendanceId)
                 ?? throw new InvalidOperationException("Attendance record was not found.");
 
             EnsureEventCanBeModified(attendance.Participant.Event);
 
             var eventTitle = attendance.Participant.Event.Title;
 
-            _context.CashForWorkAttendances.Remove(attendance);
+            attendance.IsDeleted = true;
             _context.SaveChanges();
             _auditService?.LogActivity(
                 deletedByUserId,
@@ -495,31 +601,97 @@ namespace AttendanceShiftingManagement.Services
 
         public async Task<CashForWorkReleaseOperationResult> ReleaseEventAsync(
             int eventId,
-            int ayudaProgramId,
             decimal totalAmount,
             int recordedByUserId,
             string? remarks)
         {
+            if (RemoteWriteExecutionService.ShouldRouteToRemote(_context))
+            {
+                var localBudget = await _context.CashForWorkBudgets
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(item => item.BudgetCode == "GLOBAL_CFW_BUDGET" && item.IsActive);
+
+                try
+                {
+                    var remoteResult = await RemoteWriteExecutionService.ExecuteRemoteWriteAsync(
+                        _context,
+                        async remoteContext =>
+                        {
+                            if (localBudget != null)
+                            {
+                                var remoteBudget = await remoteContext.CashForWorkBudgets
+                                    .FirstOrDefaultAsync(item => item.BudgetCode == "GLOBAL_CFW_BUDGET");
+
+                                if (remoteBudget == null)
+                                {
+                                    remoteBudget = new CashForWorkBudget
+                                    {
+                                        BudgetCode = localBudget.BudgetCode,
+                                        BudgetName = localBudget.BudgetName,
+                                        Description = localBudget.Description,
+                                        BudgetCap = localBudget.BudgetCap,
+                                        IsActive = localBudget.IsActive,
+                                        CreatedByUserId = recordedByUserId,
+                                        CreatedAt = DateTime.Now,
+                                        UpdatedAt = DateTime.Now
+                                    };
+                                    remoteContext.CashForWorkBudgets.Add(remoteBudget);
+                                    await remoteContext.SaveChangesAsync();
+                                }
+                            }
+
+                            var remoteService = new CashForWorkService(
+                                remoteContext,
+                                auditService: null,
+                                ggmsConsolidatedTransactionService: _ggmsConsolidatedTransactionService);
+                            return await remoteService.ReleaseEventAsync(eventId, totalAmount, recordedByUserId, remarks);
+                        });
+
+                    if (!remoteResult.IsSuccess)
+                    {
+                        return remoteResult;
+                    }
+
+                    // If remote succeeded, we continue to local update below.
+                }
+                catch (Exception ex)
+                {
+                    return new CashForWorkReleaseOperationResult(false, $"Remote release failed. {ex.Message}");
+                }
+            }
+
             if (totalAmount <= 0)
             {
                 return new CashForWorkReleaseOperationResult(false, "Release amount must be greater than zero.");
             }
 
             var cashForWorkEvent = await _context.CashForWorkEvents
-                .FirstOrDefaultAsync(item => item.Id == eventId);
+                .FirstOrDefaultAsync(item => !item.IsDeleted && item.Id == eventId);
 
             if (cashForWorkEvent == null)
             {
                 return new CashForWorkReleaseOperationResult(false, "Cash-for-work event was not found.");
             }
+
             if (cashForWorkEvent.EventDate.Date > DateTime.Today)
             {
                 return new CashForWorkReleaseOperationResult(false, "Cash-for-work events can only be released on or after the event date.");
             }
 
+            if (cashForWorkEvent.EventKind == CashForWorkEventKind.Seminar)
+            {
+                return new CashForWorkReleaseOperationResult(false, "Seminar events are attendance-only and cannot use the payout workflow.");
+            }
+
             if (cashForWorkEvent.BudgetLedgerEntryId.HasValue)
             {
                 return new CashForWorkReleaseOperationResult(false, "This cash-for-work event already has a recorded release.");
+            }
+
+            var resolvedBudgetId = await ResolveGlobalBudgetAsync();
+            if (!resolvedBudgetId.HasValue)
+            {
+                return new CashForWorkReleaseOperationResult(false, "No active global cash-for-work budget found. Please set one in the Budget module first.");
             }
 
             var releaseReadySummary = GetReleaseReadySummary(eventId);
@@ -531,22 +703,30 @@ namespace AttendanceShiftingManagement.Services
             var budgetService = new BudgetManagementService(_context, _auditService);
             var budgetResult = await budgetService.RecordReleaseAsync(
                 new BudgetReleaseRequest(
-                    ayudaProgramId,
+                    null,
                     BudgetLedgerFeatureSource.CashForWork,
                     $"cash-for-work:{cashForWorkEvent.Id}",
                     releaseReadySummary.ReleaseReadyParticipantCount,
                     AssistanceReleaseKind.Cash,
                     totalAmount,
                     DateTime.Now,
-                    remarks ?? cashForWorkEvent.Title),
+                    remarks ?? cashForWorkEvent.Title,
+                    CashForWorkBudgetId: resolvedBudgetId),
                 recordedByUserId);
 
             if (!budgetResult.IsSuccess)
             {
-                return new CashForWorkReleaseOperationResult(false, budgetResult.Message);
+                if (budgetResult.Message != null && budgetResult.Message.Contains("already has a budget ledger entry", StringComparison.OrdinalIgnoreCase))
+                {
+                    cashForWorkEvent.Status = CashForWorkEventStatus.Completed;
+                    cashForWorkEvent.UpdatedAt = DateTime.Now;
+                    await _context.SaveChangesAsync();
+                    return new CashForWorkReleaseOperationResult(true, "Event was already released. Status synchronized.");
+                }
+                return new CashForWorkReleaseOperationResult(false, budgetResult.Message ?? "Budget recording failed.");
             }
 
-            cashForWorkEvent.AyudaProgramId = ayudaProgramId;
+            cashForWorkEvent.CashForWorkBudgetId = resolvedBudgetId;
             cashForWorkEvent.BudgetLedgerEntryId = budgetResult.LedgerEntryId;
             cashForWorkEvent.ReleaseAmount = totalAmount;
             cashForWorkEvent.ReleasedAt = DateTime.Now;
@@ -558,7 +738,7 @@ namespace AttendanceShiftingManagement.Services
             var participantsToRecord = await _context.CashForWorkParticipants
                 .AsNoTracking()
                 .Include(p => p.Beneficiary)
-                .Where(p => p.EventId == eventId)
+                .Where(p => !p.IsDeleted && p.EventId == eventId)
                 .ToListAsync();
 
             var presentParticipantIds = releaseReadySummary.ReleaseReadyParticipants
@@ -582,6 +762,13 @@ namespace AttendanceShiftingManagement.Services
 
             await _context.SaveChangesAsync();
 
+            var ggmsWarningMessage = await _ggmsConsolidatedTransactionService.TryWriteCashForWorkReleaseAsync(
+                _context,
+                cashForWorkEvent,
+                participantsToRecord,
+                presentParticipantIds,
+                totalAmount);
+
             if (_auditService != null)
             {
                 await _auditService.LogActivityAsync(
@@ -592,14 +779,29 @@ namespace AttendanceShiftingManagement.Services
                     $"Released {totalAmount:N2} for event '{cashForWorkEvent.Title}'.");
             }
 
-            return new CashForWorkReleaseOperationResult(true, "Cash-for-work release recorded.", budgetResult.LedgerEntryId);
+            var successMessage = "Cash-for-work release recorded.";
+            if (!string.IsNullOrWhiteSpace(ggmsWarningMessage))
+            {
+                successMessage = $"{successMessage} GGMS sync warning: {ggmsWarningMessage}";
+            }
+
+            return new CashForWorkReleaseOperationResult(true, successMessage, budgetResult.LedgerEntryId);
+        }
+
+        private async Task<int?> ResolveGlobalBudgetAsync()
+        {
+            var globalBudget = await _context.CashForWorkBudgets
+                .AsNoTracking()
+                .FirstOrDefaultAsync(item => item.BudgetCode == "GLOBAL_CFW_BUDGET" && item.IsActive);
+
+            return globalBudget?.Id;
         }
 
         private string GetEventTitle(int eventId)
         {
             return _context.CashForWorkEvents
                 .AsNoTracking()
-                .Where(cashForWorkEvent => cashForWorkEvent.Id == eventId)
+                .Where(cashForWorkEvent => !cashForWorkEvent.IsDeleted && cashForWorkEvent.Id == eventId)
                 .Select(cashForWorkEvent => cashForWorkEvent.Title)
                 .FirstOrDefault() ?? $"event #{eventId}";
         }
@@ -617,8 +819,10 @@ namespace AttendanceShiftingManagement.Services
             return _context.CashForWorkParticipants
                 .AsNoTracking()
                 .Include(p => p.Beneficiary)
-                .Where(participant => 
-                    participant.EventId == eventId && 
+                .Where(participant =>
+                    !participant.IsDeleted &&
+                    participant.EventId == eventId &&
+                    participant.Beneficiary != null &&
                     participant.Beneficiary.VerificationStatus == VerificationStatus.Approved)
                 .Select(participant => participant.Id)
                 .ToHashSet();
@@ -629,6 +833,7 @@ namespace AttendanceShiftingManagement.Services
             return _context.CashForWorkAttendances
                 .AsNoTracking()
                 .Where(attendance =>
+                    !attendance.IsDeleted &&
                     attendance.Participant.EventId == eventId &&
                     attendance.AttendanceDate.Date == attendanceDate.Date)
                 .Select(attendance => attendance.ParticipantId)
@@ -676,6 +881,7 @@ namespace AttendanceShiftingManagement.Services
         int PendingParticipantCount,
         int ReleaseReadyParticipantCount,
         int ManualAttendanceCount,
+        decimal ProposedAmount,
         IReadOnlyList<CashForWorkReleaseReadyParticipant> ReleaseReadyParticipants);
 
     public sealed record CashForWorkReleaseReadyParticipant(

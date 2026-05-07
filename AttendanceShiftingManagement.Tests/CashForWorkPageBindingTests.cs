@@ -15,7 +15,6 @@ public sealed class CashForWorkPageBindingTests
 
         Assert.Contains("Command=\"{Binding DataContext.ShowDashboardCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding OpenCreateEventPanelCommand}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Command=\"{Binding OpenSeminarPanelCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding OpenAddBeneficiariesPanelCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding OpenScanAttendancePanelCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding OpenPayoutPanelCommand}\"", xaml, StringComparison.Ordinal);
@@ -30,6 +29,10 @@ public sealed class CashForWorkPageBindingTests
         Assert.Contains("Visibility=\"{Binding ScanAttendanceVisibility}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Visibility=\"{Binding PayoutVisibility}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Visibility=\"{Binding AnnouncementsVisibility}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Visibility=\"{Binding AddBeneficiariesRailVisibility}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Visibility=\"{Binding PayoutRailVisibility}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Visibility=\"{Binding ManualAttendanceVisibility}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Visibility=\"{Binding SeminarScannerHintVisibility}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding SaveEventCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding AddParticipantCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding SaveManualAttendanceCommand}\"", xaml, StringComparison.Ordinal);
@@ -40,10 +43,9 @@ public sealed class CashForWorkPageBindingTests
         Assert.Contains("Command=\"{Binding EditAttendanceCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding DeleteAttendanceCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding DataContext.SelectAnnouncementEventCommand, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding SaveAttendanceSheetPdfCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding PrintAttendanceSheetCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("ItemsSource=\"{Binding Participants}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("ItemsSource=\"{Binding AyudaPrograms}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("SelectedItem=\"{Binding SelectedAyudaProgram}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("ItemsSource=\"{Binding OpenAnnouncements}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"{Binding ReleaseAmountText, UpdateSourceTrigger=PropertyChanged}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"{Binding AttendanceScannerSessionUrl, Mode=OneWay}\"", xaml, StringComparison.Ordinal);

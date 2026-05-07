@@ -2,9 +2,9 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
-        Title="Login - SCMS"
-        Height="610"
-        Width="950"
+        Title="Login - eKalinga+"
+        Height="640"
+        Width="968"
         WindowStartupLocation="CenterScreen"
         Background="Transparent"
         WindowStyle="None"
@@ -13,170 +13,320 @@
         FontFamily="Segoe UI">
 
     <WindowChrome.WindowChrome>
-        <WindowChrome CaptionHeight="0" 
-                      ResizeBorderThickness="0" 
-                      GlassFrameThickness="0" 
+        <WindowChrome CaptionHeight="0"
+                      ResizeBorderThickness="0"
+                      GlassFrameThickness="0"
                       CornerRadius="0" />
     </WindowChrome.WindowChrome>
 
     <Window.Resources>
-        <!-- SCMS Light Blue Theme -->
-        <SolidColorBrush x:Key="SCMSBluePrimary" Color="#1D4ED8" />
-        <SolidColorBrush x:Key="SCMSBlueLight" Color="#3B82F6" />
-        <SolidColorBrush x:Key="SCMSBlueAccent" Color="#BFDBFE" />
-        <SolidColorBrush x:Key="SCMSBgGradientStart" Color="#2563EB" />
-        <SolidColorBrush x:Key="SCMSBgGradientEnd" Color="#3B82F6" />
+        <SolidColorBrush x:Key="LoginBluePrimaryBrush" Color="#2563EB" />
+        <SolidColorBrush x:Key="LoginBlueHoverBrush" Color="#1D4ED8" />
+        <SolidColorBrush x:Key="LoginBlueSoftBrush" Color="#DBEAFE" />
+        <SolidColorBrush x:Key="LoginBlueTextBrush" Color="#1E3A8A" />
+        <SolidColorBrush x:Key="LoginPanelBorderBrush" Color="#D9E2EC" />
+        <SolidColorBrush x:Key="LoginMutedBrush" Color="#64748B" />
+        <SolidColorBrush x:Key="LoginTitleBrush" Color="#0F172A" />
 
-        <Style x:Key="SCMSLoginInput" TargetType="TextBox" BasedOn="{StaticResource MaterialDesignOutlinedTextBox}">
-            <Setter Property="Margin" Value="0,8,0,16" />
-            <Setter Property="Height" Value="54" />
+        <Style x:Key="LoginInputLabelStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="#334155" />
+            <Setter Property="Margin" Value="0,0,0,10" />
         </Style>
 
-        <Style x:Key="SCMSPasswordInput" TargetType="PasswordBox" BasedOn="{StaticResource MaterialDesignOutlinedPasswordBox}">
-            <Setter Property="Margin" Value="0,8,0,16" />
-            <Setter Property="Height" Value="54" />
-        </Style>
-
-        <Style x:Key="SCMSLoginButton" TargetType="Button" BasedOn="{StaticResource MaterialDesignFlatMidBgButton}">
-            <Setter Property="Background" Value="#15803D" /> <!-- Or Blue, image shows Green but user said Light Blue theme. I'll use Blue later or Green as seen in photo but follow 'Light Blue theme' text -->
-            <Setter Property="Foreground" Value="White" />
+        <Style x:Key="LoginInputTextBoxStyle" TargetType="TextBox" BasedOn="{StaticResource MaterialDesignOutlinedTextBox}">
             <Setter Property="Height" Value="50" />
+            <Setter Property="Padding" Value="14,0" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Background" Value="White" />
+            <Setter Property="Foreground" Value="#0F172A" />
+            <Setter Property="BorderBrush" Value="#CBD5E1" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+
+        <Style x:Key="LoginInputPasswordStyle" TargetType="PasswordBox" BasedOn="{StaticResource MaterialDesignOutlinedPasswordBox}">
+            <Setter Property="Height" Value="50" />
+            <Setter Property="Padding" Value="14,0" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Background" Value="White" />
+            <Setter Property="Foreground" Value="#0F172A" />
+            <Setter Property="BorderBrush" Value="#CBD5E1" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+
+        <Style x:Key="PrimaryLoginButtonStyle" TargetType="Button" BasedOn="{StaticResource MaterialDesignFlatButton}">
+            <Setter Property="Height" Value="50" />
+            <Setter Property="Background" Value="{StaticResource LoginBluePrimaryBrush}" />
+            <Setter Property="Foreground" Value="White" />
             <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
             <Setter Property="materialDesign:ButtonAssist.CornerRadius" Value="8" />
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#16A34A" />
-                </Trigger>
-            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="GhostActionButtonStyle" TargetType="Button" BasedOn="{StaticResource MaterialDesignOutlinedButton}">
+            <Setter Property="Height" Value="40" />
+            <Setter Property="Padding" Value="18,8" />
+            <Setter Property="Background" Value="White" />
+            <Setter Property="BorderBrush" Value="#D7DEE8" />
+            <Setter Property="Foreground" Value="#64748B" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="materialDesign:ButtonAssist.CornerRadius" Value="18" />
         </Style>
     </Window.Resources>
 
-    <Border CornerRadius="0" Background="White" ClipToBounds="True">
+    <Border Background="White"
+            CornerRadius="0"
+            ClipToBounds="True">
         <Grid>
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="420" />
-                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="58*" />
+                <ColumnDefinition Width="42*" />
             </Grid.ColumnDefinitions>
 
-            <!-- LEFT BRAND PANEL (Light Blue Gradient) -->
             <Grid Grid.Column="0">
                 <Grid.Background>
-                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                        <GradientStop Color="#1E3A8A" Offset="0" />
-                        <GradientStop Color="#2563EB" Offset="1" />
+                    <LinearGradientBrush StartPoint="0,0"
+                                         EndPoint="1,1">
+                        <GradientStop Color="#1E3A8A"
+                                      Offset="0" />
+                        <GradientStop Color="#2563EB"
+                                      Offset="1" />
                     </LinearGradientBrush>
                 </Grid.Background>
 
-                <!-- Optional background overlay/image effect -->
-                <Rectangle Fill="Black" Opacity="0.15" />
+                <Grid.Clip>
+                    <RectangleGeometry Rect="0,0,560,640" />
+                </Grid.Clip>
 
-                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="40">
-                    <Border Width="180" Height="180" Margin="0,0,0,30">
-                        <Border.Effect>
-                            <DropShadowEffect BlurRadius="25" Direction="-90" RenderingBias="Quality" ShadowDepth="6" Opacity="0.2" />
-                        </Border.Effect>
-                        <Image Source="/Images/Gemini_Generated_Image_1ivs1t1ivs1t1ivs-removebg-preview.png" Stretch="Uniform" />
-                    </Border>
+                <Image Source="{Binding BrandBackgroundImage}"
+                       Stretch="UniformToFill"
+                       Opacity="1"
+                       RenderOptions.BitmapScalingMode="HighQuality">
+                    <Image.Effect>
+                        <BlurEffect Radius="18" />
+                    </Image.Effect>
+                </Image>
 
-                    <TextBlock Text="eKalinga+" FontSize="36" FontWeight="Black" Foreground="White" HorizontalAlignment="Center" />
-                    <TextBlock Text="Social Care Management System" FontSize="18" Foreground="#E0E7FF" HorizontalAlignment="Center" Margin="0,5,0,0" />
-                    <TextBlock Text="Municipality of Sulop" FontSize="12" Foreground="#C7D2FE" HorizontalAlignment="Center" Margin="0,2,0,40" />
+                <Rectangle Fill="#C91E40AF" />
+                <Rectangle Fill="#751D4ED8" />
 
-                    <Border BorderBrush="#6366F1" BorderThickness="0,1,0,0" Padding="0,30,0,0">
-                        <StackPanel>
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,10">
-                                <materialDesign:PackIcon Kind="AccountCircleOutline" Foreground="White" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,10,0" />
-                                <TextBlock Text="Bien Josef G. Regidor" Foreground="White" FontSize="14" FontWeight="SemiBold" />
+                <Grid Margin="44">
+                    <StackPanel VerticalAlignment="Center"
+                                HorizontalAlignment="Center"
+                                MaxWidth="320">
+                        <Border Width="122"
+                                Height="122"
+                                Background="#F8FAFC"
+                                CornerRadius="18"
+                                Padding="18"
+                                HorizontalAlignment="Center">
+                            <Border.Effect>
+                                <DropShadowEffect BlurRadius="22"
+                                                  ShadowDepth="6"
+                                                  Opacity="0.18" />
+                            </Border.Effect>
+                            <Image Source="{Binding BrandLogoImage}"
+                                   Stretch="Uniform" />
+                        </Border>
+
+                        <TextBlock Text="{Binding BrandTitle}"
+                                   Margin="0,28,0,0"
+                                   FontSize="28"
+                                   FontWeight="Bold"
+                                   Foreground="White"
+                                   TextAlignment="Center"
+                                   TextWrapping="Wrap" />
+
+                        <TextBlock Text="{Binding BrandSubtitle}"
+                                   Margin="0,8,0,0"
+                                   FontSize="16"
+                                   FontWeight="SemiBold"
+                                   Foreground="#E0E7FF"
+                                   TextAlignment="Center"
+                                   TextWrapping="Wrap" />
+
+                        <TextBlock Text="{Binding BrandAddress}"
+                                   Margin="0,10,0,0"
+                                   FontSize="13"
+                                   Foreground="#DBEAFE"
+                                   TextAlignment="Center"
+                                   TextWrapping="Wrap"
+                                   Visibility="{Binding HasBrandAddress, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+                        <Border Margin="0,34,0,0"
+                                Padding="0,18,0,0"
+                                BorderBrush="#7FB3D7FF"
+                                BorderThickness="0,1,0,0">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal"
+                                            HorizontalAlignment="Center"
+                                            Margin="0,0,0,10">
+                                    <materialDesign:PackIcon Kind="BadgeAccountOutline"
+                                                             Width="16"
+                                                             Height="16"
+                                                             Foreground="White"
+                                                             Margin="0,0,10,0" />
+                                    <TextBlock Text="{Binding BrandInstallSerialLabel}"
+                                               Foreground="#E0E7FF"
+                                               FontSize="12" />
+                                </StackPanel>
+
+                                <StackPanel Orientation="Horizontal"
+                                            HorizontalAlignment="Center"
+                                            Margin="0,0,0,10">
+                                    <materialDesign:PackIcon Kind="EmailOutline"
+                                                             Width="16"
+                                                             Height="16"
+                                                             Foreground="White"
+                                                             Margin="175,0,10,0" />
+                                    <TextBlock Text="{Binding ActiveConnectionSummary}"
+                                               Foreground="#E0E7FF"
+                                               FontSize="12"
+                                               TextWrapping="Wrap"
+                                               Width="240" />
+                                </StackPanel>
                             </StackPanel>
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,10">
-                                <materialDesign:PackIcon Kind="EmailOutline" Foreground="White" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,10,0" />
-                                <TextBlock Text="bernegidor@gmail.com" Foreground="#E0E7FF" FontSize="13" />
-                            </StackPanel>
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                <materialDesign:PackIcon Kind="BadgeAccountOutline" Foreground="White" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,10,0" />
-                                <TextBlock Text="S/N: EKAL-2026-00381947" Foreground="#C7D2FE" FontSize="11" FontStyle="Italic" />
-                            </StackPanel>
-                        </StackPanel>
-                    </Border>
+                        </Border>
 
-                    <TextBlock Text="Better Service, Better Care" Margin="0,50,0,0" HorizontalAlignment="Center" FontStyle="Italic" Foreground="#C7D2FE" FontSize="12" Opacity="0.8" />
-                </StackPanel>
+                        <TextBlock Text="Better Service, Better Care"
+                                   Margin="0,34,0,0"
+                                   HorizontalAlignment="Center"
+                                   FontSize="13"
+                                   FontStyle="Italic"
+                                   Foreground="#DBEAFE"
+                                   Opacity="0.95" />
+                    </StackPanel>
+                </Grid>
             </Grid>
 
-            <!-- RIGHT LOGIN PANEL (White) -->
-            <Grid Grid.Column="1" Background="White">
-                <!-- Window Controls -->
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="10">
-                    <Button Width="40" Height="34"
-                            Style="{StaticResource MaterialDesignFlatButton}"
-                            Click="Minimize_Click">
-                        <materialDesign:PackIcon Kind="WindowMinimize" Foreground="#64748B" Width="18" Height="18" />
-                    </Button>
-                    <Button Width="40" Height="34"
-                            Style="{StaticResource MaterialDesignFlatButton}"
-                            Click="Close_Click">
-                        <materialDesign:PackIcon Kind="Close" Foreground="#64748B" Width="20" Height="20" />
-                    </Button>
-                </StackPanel>
+            <Grid Grid.Column="1"
+                  Background="White">
+                <Button Width="40"
+                        Height="34"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Top"
+                        Margin="20,16,0,0"
+                        Style="{StaticResource MaterialDesignFlatButton}"
+                        Click="Close_Click">
+                    <materialDesign:PackIcon Kind="Close"
+                                             Foreground="#64748B"
+                                             Width="32"
+                                             Height="20" HorizontalAlignment="Center" />
+                </Button>
 
-                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Stretch" Margin="60,0">
-                    <TextBlock Text="Welcome back" FontSize="32" FontWeight="Bold" Foreground="#1E293B" />
-                    <TextBlock Text="Sign in to your account to continue" Foreground="#64748B" Margin="0,5,0,30" />
+                <Grid Margin="48,42,48,42"
+                      VerticalAlignment="Center"
+                      MaxWidth="360">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="20" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="18" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="18" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="22" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="20" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="26" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="22" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
 
-                    <TextBlock Text="Username" FontWeight="SemiBold" Foreground="#334155" />
-                    <TextBox Text="{Binding UsernameOrEmail, UpdateSourceTrigger=PropertyChanged}"
-                             Style="{StaticResource SCMSLoginInput}"
-                             materialDesign:HintAssist.Hint="Enter your username" />
+                    <StackPanel Grid.Row="0">
+                        <TextBlock Text="{Binding FormTitle}"
+                                   FontSize="25"
+                                   FontWeight="Bold"
+                                   Foreground="{StaticResource LoginBlueTextBrush}" />
+                        <TextBlock Text="{Binding FormSubtitle}"
+                                   Margin="0,8,0,0"
+                                   FontSize="14"
+                                   Foreground="{StaticResource LoginMutedBrush}" />
+                    </StackPanel>
 
-                    <TextBlock Text="Password" FontWeight="SemiBold" Foreground="#334155" />
-                    <PasswordBox x:Name="PasswordBox"
-                                 Style="{StaticResource SCMSPasswordInput}"
-                                 materialDesign:HintAssist.Hint="Enter your password"
-                                 PasswordChanged="PasswordBox_PasswordChanged" />
+                    <StackPanel Grid.Row="2">
+                        <TextBlock Text="Username"
+                                   Style="{StaticResource LoginInputLabelStyle}" />
+                        <TextBox x:Name="UsernameInput"
+                                 Text="{Binding UsernameOrEmail, UpdateSourceTrigger=PropertyChanged}"
+                                 Style="{StaticResource LoginInputTextBoxStyle}" />
+                    </StackPanel>
 
-                    <Button Content="LOGIN" 
-                            Style="{StaticResource SCMSLoginButton}"
-                            Background="#2563EB"
-                            Command="{Binding LoginCommand}"
-                            Margin="0,10,0,0" />
+                    <StackPanel Grid.Row="4">
+                        <TextBlock Text="Password"
+                                   Style="{StaticResource LoginInputLabelStyle}" />
+                        <PasswordBox x:Name="PasswordInput"
+                                     Style="{StaticResource LoginInputPasswordStyle}"
+                                     PasswordChanged="PasswordBox_PasswordChanged" />
+                    </StackPanel>
 
-                    <Border Background="#F0FDF4" BorderBrush="#DCFCE7" BorderThickness="1" CornerRadius="8" Margin="0,30,0,0" Padding="15">
+                    <Button Grid.Row="6"
+                            Content="LOGIN"
+                            Style="{StaticResource PrimaryLoginButtonStyle}"
+                            Command="{Binding LoginCommand}" />
+
+                    <Border Grid.Row="8"
+                            Background="#F8FBFF"
+                            BorderBrush="#D8E7FB"
+                            BorderThickness="1"
+                            CornerRadius="10"
+                            Padding="16">
                         <StackPanel>
-                            <TextBlock Text="Demo Accounts" FontWeight="Bold" Foreground="#166534" FontSize="12" />
-                            <StackPanel Orientation="Horizontal" Margin="0,8,0,4">
-                                <materialDesign:PackIcon Kind="ShieldCheckOutline" Foreground="#166534" Width="14" Height="14" VerticalAlignment="Center" Margin="0,0,5,0" />
-                                <TextBlock FontSize="12" Foreground="#166534">
-                                    <Run Text="Admin: " FontWeight="SemiBold" /><Run Text="admin@barangay.local / admin123" Foreground="#15803D" FontWeight="Bold" />
+                            <TextBlock Text="Demo Accounts"
+                                       FontWeight="Bold"
+                                       Foreground="{StaticResource LoginBlueTextBrush}"
+                                       FontSize="12" />
+
+                            <StackPanel Orientation="Horizontal"
+                                        Margin="0,10,0,4">
+                                <materialDesign:PackIcon Kind="ShieldAccountOutline"
+                                                         Foreground="{StaticResource LoginBluePrimaryBrush}"
+                                                         Width="14"
+                                                         Height="14"
+                                                         VerticalAlignment="Center"
+                                                         Margin="0,0,6,0" />
+                                <TextBlock FontSize="12"
+                                           Foreground="#334155">
+                                    <Run Text="Admin: " FontWeight="SemiBold" />
+                                    <Run Text="admin@barangay.local / admin123"
+                                         Foreground="{StaticResource LoginBluePrimaryBrush}"
+                                         FontWeight="Bold" />
                                 </TextBlock>
                             </StackPanel>
                         </StackPanel>
                     </Border>
 
-                    <Button Margin="0,30,0,0" HorizontalAlignment="Center"
-                            Style="{StaticResource MaterialDesignFlatButton}"
-                            Foreground="#64748B" FontSize="12"
+                    <Button Grid.Row="10"
+                            HorizontalAlignment="Center"
+                            Style="{StaticResource GhostActionButtonStyle}"
                             Click="OpenConnectionSettings_Click">
                         <StackPanel Orientation="Horizontal">
-                            <materialDesign:PackIcon Kind="DatabaseSettings" Margin="0,0,8,0" />
+                            <materialDesign:PackIcon Kind="DatabaseSettings"
+                                                     Width="16"
+                                                     Height="16"
+                                                     Margin="0,0,8,0" />
                             <TextBlock Text="Connection Settings" />
                         </StackPanel>
                     </Button>
-                </StackPanel>
 
-                <!-- Status Message Overlay at bottom -->
-                <TextBlock Text="{Binding StatusMessage}"
-                           Foreground="{Binding StatusBrush}"
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Bottom"
-                           Margin="0,0,0,20"
-                           FontSize="12"
-                           TextAlignment="Center"
-                           TextWrapping="Wrap"
-                           MaxWidth="400" />
+                    <TextBlock Grid.Row="14"
+                               Text="{Binding StatusMessage}"
+                               Foreground="{Binding StatusBrush}"
+                               FontSize="12"
+                               TextAlignment="Center"
+                               TextWrapping="Wrap"
+                               MaxWidth="340"
+                               HorizontalAlignment="Center" />
+                </Grid>
             </Grid>
         </Grid>
     </Border>
 </Window>
-
-
-

@@ -131,6 +131,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private bool _isUpdateDownloadInProgress;
         private bool _checkForUpdatesOnStartup = true;
         private bool _isUpdateAvailable;
+        private bool _isOtpEnabled = true;
         private int _masterListRowCount;
         private int _stagingRowCount;
         private bool _isBusy;
@@ -721,6 +722,12 @@ namespace AttendanceShiftingManagement.ViewModels
             set => SetProperty(ref _checkForUpdatesOnStartup, value);
         }
 
+        public bool IsOtpEnabled
+        {
+            get => _isOtpEnabled;
+            set => SetProperty(ref _isOtpEnabled, value);
+        }
+
         public bool IsUpdateAvailable
         {
             get => _isUpdateAvailable;
@@ -887,6 +894,7 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             var settings = FeatureSettingsService.Load();
             LargeAssistanceWarningThresholdText = settings.LargeAssistanceWarningThreshold.ToString("0.##", CultureInfo.InvariantCulture);
+            IsOtpEnabled = settings.IsOtpEnabled;
         }
 
         private void LoadGgmsSettings()
@@ -1413,11 +1421,12 @@ namespace AttendanceShiftingManagement.ViewModels
 
             FeatureSettingsService.Save(new FeatureSettingsModel
             {
-                LargeAssistanceWarningThreshold = threshold
+                LargeAssistanceWarningThreshold = threshold,
+                IsOtpEnabled = IsOtpEnabled
             });
 
             LargeAssistanceWarningThresholdText = threshold.ToString("0.##", CultureInfo.InvariantCulture);
-            SetFeatureRulesSuccess("Saved the large-assistance warning threshold.");
+            SetFeatureRulesSuccess("Saved the feature rules.");
         }
 
         private async Task ExecuteTestGgmsConnectionAsync()

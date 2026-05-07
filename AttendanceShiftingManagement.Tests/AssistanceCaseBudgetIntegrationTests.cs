@@ -12,6 +12,7 @@ public sealed class AssistanceCaseBudgetIntegrationTests
         var admin = SeedAdmin(context);
         var household = SeedHousehold(context);
         var program = SeedProgram(context, admin.Id);
+        SeedGlobalAidRequestBudget(context, admin.Id);
         SeedGovernmentSnapshot(context, 10000m);
         var assistanceCase = SeedApprovedCase(context, household.Id, admin.Id, program.Id, 4000m);
         var service = new AssistanceCaseManagementService(context);
@@ -44,6 +45,7 @@ public sealed class AssistanceCaseBudgetIntegrationTests
         var admin = SeedAdmin(context);
         var household = SeedHousehold(context);
         var program = SeedProgram(context, admin.Id);
+        SeedGlobalAidRequestBudget(context, admin.Id);
         SeedGovernmentSnapshot(context, 1000m);
         var assistanceCase = SeedApprovedCase(context, household.Id, admin.Id, program.Id, 4000m);
         var service = new AssistanceCaseManagementService(context);
@@ -154,5 +156,20 @@ public sealed class AssistanceCaseBudgetIntegrationTests
         context.AssistanceCases.Add(assistanceCase);
         context.SaveChanges();
         return assistanceCase;
+    }
+
+    private static void SeedGlobalAidRequestBudget(Data.AppDbContext context, int adminId)
+    {
+        context.AssistanceCaseBudgets.Add(new AssistanceCaseBudget
+        {
+            BudgetCode = "GLOBAL_AID_BUDGET",
+            BudgetName = "Global Aid Budget",
+            BudgetCap = 100000m,
+            IsActive = true,
+            CreatedByUserId = adminId,
+            CreatedAt = DateTime.Now,
+            UpdatedAt = DateTime.Now
+        });
+        context.SaveChanges();
     }
 }

@@ -1,0 +1,143 @@
+✦ Okay bossing, kani ang draft nako para sa Masterlist
+  Worker agent (.agent-team/templates/masterlist-worker.md).
+
+  This agent handles the "Validated Beneficiaries" snapshot.
+  Kani ang akong i-instruct sa niya para di siya masaag:
+
+  Proposed Instructions for masterlist-worker.md
+
+    1 # Masterlist Worker (Validated Beneficiaries)
+    2
+    3 You are the designated agent for the Masterlist module
+      (Validated Beneficiaries snapshot) in the eKalinga+
+      Ayuda Management System.
+    4
+    5 ## Module Role & Scope
+    6 Your responsibility is strictly limited to viewing,
+      filtering, and printing digital IDs for validated
+      beneficiaries.
+    7 Allowed files: `MasterListPage.xaml`,
+      `MasterListViewModel.cs`, `MasterListService.cs`,
+      `Models/MasterListBeneficiary.cs`, and their
+      corresponding test files.
+    8
+    9 ## Business Logic (CRITICAL)
+   10 1. **Read-Only Snapshot:** The Masterlist is a
+      read-only local snapshot of beneficiaries. You MUST
+      NOT add CRUD (Create, Update, Delete) operations
+      directly to this module. Any data mutations happen in
+      the Staging/Approval module, not here.
+   11 2. **Data Source:** The module queries
+      `AppDbContext.MasterListBeneficiaries` (which is a
+      database view or synchronized table), not the raw
+      staging tables.
+   12 3. **Digital ID Printing:** This module serves as the
+      primary launch point for previewing and printing
+      Beneficiary Digital IDs. Do not break or remove the
+      print command wiring.
+   13
+   14 ## UI/UX Constraints
+   15 You must strictly preserve the recent UI refactoring:
+   16 - **Left Sidebar (Action Panel):** Must contain the
+      "DASHBOARD" navigation button, the Search box, and the
+      toggle chips for filters (Approved, Pending, Senior,
+      PWD). Do not hide these in popups.
+   17 - **Center Content:** The main DataGrid/List of
+      Beneficiaries. **CRITICAL: This list MUST be
+      paginated** to ensure performance on standard laptops.
+   18 - **Right Sidebar:** Contextual details of the
+      selected Beneficiary (Profile, Aid History, Print
+      Actions).
+   19
+   20 ## Known Context & Technical Rules
+   21 - **Component Re-use:** Utilize existing XAML styles
+      (e.g., `FilterChipStyle`, `TableChipStyle` for flags).
+   22 - **Navigation:** The "DASHBOARD" button uses
+      `ShowDashboardCommand` routed to the main shell. Do
+      not change this binding structure.
+   23
+   24 Before making changes, verify that your proposed
+      layout does not violate the Left Sidebar / Center List
+      / Right Details rule.
+
+  Unsay masulti nimo ani?
+  Naa ba kay ipa-add, ipa-usab, o ipa-remove sa iyang
+  instructions before nako i-save ug i-register sa
+  team.json?
+▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+ > Kindly summarize our discussion/conversation para sa     
+   next gemini cli is alam nya san ako nag stop tulog na    
+   kasi ako                                                 
+▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+
+  Saving Session Summary: 
+  Summarizing the session's accomplishments and next
+  steps for the user's project memory.
+
+  ✓  ReadFile  ..\...\memory\memory.md
+
+
+ℹ ⚠️  Response stopped due to unexpected tool call.
+  Session Wrap-up: 
+  Providing the session summary directly to the user for
+  the next session's context.
+
+
+✦ Okay bossing, good night! Kani ang complete summary sa
+  atong nahuman karon na session. Makabasa ra ni ang next na
+  Gemini CLI ig open nimo ugma para kabalo siya asa
+  magsugod.
+
+  ---
+  Session Summary (May 2, 2026)
+
+  1. UI/UX Standardization (Left Sidebar Enforced)
+   - Successfully refactored MasterListPage.xaml. Moved the
+     Search box and all filter toggle chips (Approved,
+     Pending, Flags) into a persistent Left Sidebar to
+     easily manage the 25+ mock-up profiles without using
+     hidden popups.
+
+  2. Agent Swarm Setup (.agent-team)
+   - Updated Gemini.md rules to strictly mandate checking
+     team.json for assigned module agents before starting
+     tasks.
+   - Dashboard Worker: Created dashboard-worker.md to lock
+     the "Launchpad" design (tiles only, no lists) and
+     manage the Session Announcement workflow.
+   - Aid Request Worker: Created aid-request-worker.md to
+     enforce the strict 5-step state machine. Rule Added:
+     Once an Assistance Case is "Released", it is strictly
+     View-Only with a notification banner.
+
+  3. Session Announcement (Notification) Redesign
+   - Redesigned SessionAnnouncementWindow.xaml into a sleek
+     600x650 activity feed.
+   - Removed messy nested cards in favor of a linear
+     timeline with colored module icons.
+   - Updated SessionAnnouncementService.cs logic to strictly
+     filter "High-Value" team actions (e.g., Approvals,
+     Budgets, CFW) and exclude the current user's own
+     actions to reduce noise.
+
+  4. Bug Fix: Aid Request "Unknown Beneficiary"
+   - Identified overly strict lookup in
+     GgmsConsolidatedTransactionService.cs.
+   - Refactored ResolveBeneficiaryAsync to use
+     case-insensitive matching and a highly resilient
+     FullName fallback check.
+   - Wired the missing GLOBAL_AID_BUDGET requirement into
+     the integration tests.
+   - Status: All Aid Request and GGMS release tests are now
+     fully passing (13/13). dotnet build is stable.
+
+  ---
+  📌 NEXT IMMEDIATE TASK FOR GEMINI CLI:
+  Create the masterlist-worker Agent.
+   - Context: The draft instructions have been provided and
+     reviewed.
+   - Action Required: Create
+     .agent-team/templates/masterlist-worker.md enforcing
+     the Read-Only snapshot rule, the Left Sidebar/Paginated
+     List UI layout, and digital ID printing constraints.
+     Then, register it in team.json.

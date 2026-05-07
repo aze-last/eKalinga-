@@ -1,0 +1,37 @@
+{
+  "id": "DASH-06",
+  "title": "Show a login-time session updates popup based on activity since last logout",
+  "status": "done",
+  "owner": "coordinator@attendance-shifting-management",
+  "goal": "Display a clean what's-new popup after login using real activity logs recorded after the last logout checkpoint on this station.",
+  "allowedPaths": [
+    ".agent-team",
+    "Views/MainWindow.xaml.cs",
+    "Views/SessionAnnouncementWindow.xaml",
+    "Views/SessionAnnouncementWindow.xaml.cs",
+    "ViewModels/SessionAnnouncementViewModel.cs",
+    "Services/SessionAnnouncementService.cs",
+    "AttendanceShiftingManagement.Tests/SessionAnnouncementServiceTests.cs",
+    "AttendanceShiftingManagement.Tests/SessionAnnouncementWindowSourceTests.cs"
+  ],
+  "dependencies": [],
+  "verification": [
+    "dotnet build AttendanceShiftingManagement.sln",
+    "dotnet test AttendanceShiftingManagement.Tests --filter \"SessionAnnouncementServiceTests|SessionAnnouncementWindowSourceTests\""
+  ],
+  "notes": [
+    "UI direction reviewed through ui-ux-auditor-redesigner@attendance-shifting-management.",
+    "Use ActivityLog as source of truth and persist a local logout checkpoint file.",
+    "Popup is shown once after successful login when meaningful activity exists after the last logout cutoff.",
+    "Logout now records both an audit entry and the local session-announcement checkpoint."
+  ],
+  "artifacts": [
+    "Services/SessionAnnouncementService.cs",
+    "ViewModels/SessionAnnouncementViewModel.cs",
+    "Views/SessionAnnouncementWindow.xaml",
+    "Views/SessionAnnouncementWindow.xaml.cs",
+    "Views/MainWindow.xaml.cs",
+    "AttendanceShiftingManagement.Tests/SessionAnnouncementServiceTests.cs",
+    "AttendanceShiftingManagement.Tests/SessionAnnouncementWindowSourceTests.cs"
+  ]
+}

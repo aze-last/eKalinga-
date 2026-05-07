@@ -27,6 +27,9 @@ namespace AttendanceShiftingManagement.Models
         [Column("added_at")]
         public DateTime AddedAt { get; set; } = DateTime.Now;
 
+        [Column("is_deleted")]
+        public bool IsDeleted { get; set; }
+
         [ForeignKey(nameof(EventId))]
         public CashForWorkEvent Event { get; set; } = null!;
 

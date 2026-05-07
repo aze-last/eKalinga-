@@ -49,6 +49,9 @@ namespace AttendanceShiftingManagement.Models
         [Column("ayuda_program_id")]
         public int? AyudaProgramId { get; set; }
 
+        [Column("cash_for_work_budget_id")]
+        public int? CashForWorkBudgetId { get; set; }
+
         [Column("budget_ledger_entry_id")]
         public int? BudgetLedgerEntryId { get; set; }
 
@@ -64,11 +67,17 @@ namespace AttendanceShiftingManagement.Models
         [Column("updated_at")]
         public DateTime UpdatedAt { get; set; } = DateTime.Now;
 
+        [Column("is_deleted")]
+        public bool IsDeleted { get; set; }
+
         [ForeignKey(nameof(CreatedByUserId))]
         public User CreatedByUser { get; set; } = null!;
 
         [ForeignKey(nameof(AyudaProgramId))]
         public AyudaProgram? AyudaProgram { get; set; }
+
+        [ForeignKey(nameof(CashForWorkBudgetId))]
+        public CashForWorkBudget? CashForWorkBudget { get; set; }
 
         [ForeignKey(nameof(BudgetLedgerEntryId))]
         public BudgetLedgerEntry? BudgetLedgerEntry { get; set; }

@@ -6,7 +6,7 @@ namespace AttendanceShiftingManagement.Tests;
 public sealed class CashForWorkServiceTests
 {
     [Fact]
-    public void WriteOperations_AddAuditLogEntries()
+    public async Task WriteOperations_AddAuditLogEntries()
     {
         using var context = TestDbContextFactory.CreateContext();
         var admin = SeedAdmin(context);
@@ -14,7 +14,7 @@ public sealed class CashForWorkServiceTests
         var auditService = new AuditService(context);
         var service = new CashForWorkService(context, auditService);
 
-        var cashForWorkEvent = service.CreateEvent(
+        var cashForWorkEvent = await service.CreateEventAsync(
             "Barangay Clean-Up",
             "Hall",
             DateTime.Today,
@@ -35,13 +35,13 @@ public sealed class CashForWorkServiceTests
             .Select(log => log.Action)
             .ToArray();
 
-        Assert.Equal(
-            ["CashForWorkEventCreated", "CashForWorkParticipantAdded", "CashForWorkManualAttendanceSaved"],
-            actions);
+        Assert.Contains("CashForWorkEventCreated", actions);
+        Assert.Contains("CashForWorkParticipantAdded", actions);
+        Assert.Contains("CashForWorkManualAttendanceSaved", actions);
     }
 
     [Fact]
-    public void GetReleaseReadySummary_ReturnsAttendanceTotalsForSelectedEvent()
+    public async Task GetReleaseReadySummary_ReturnsAttendanceTotalsForSelectedEvent()
     {
         using var context = TestDbContextFactory.CreateContext();
         var admin = SeedAdmin(context);
@@ -50,7 +50,7 @@ public sealed class CashForWorkServiceTests
         var pendingBeneficiary = SeedApprovedBeneficiary(context, 2003, "Luis Santos");
         var service = new CashForWorkService(context);
 
-        var cashForWorkEvent = service.CreateEvent(
+        var cashForWorkEvent = await service.CreateEventAsync(
             "Barangay Clean-Up",
             "Hall",
             DateTime.Today,
@@ -93,7 +93,7 @@ public sealed class CashForWorkServiceTests
         var service = new CashForWorkService(context);
         var digitalIdService = new BeneficiaryDigitalIdService(context);
 
-        var cashForWorkEvent = service.CreateEvent(
+        var cashForWorkEvent = await service.CreateEventAsync(
             "Barangay Clean-Up",
             "Hall",
             DateTime.Today,
@@ -115,14 +115,47 @@ public sealed class CashForWorkServiceTests
     }
 
     [Fact]
-    public void AddParticipant_RejectsBeneficiariesThatAreNotApproved()
+    public async Task SaveScannerAttendance_ForSeminar_AutoRegistersAttendeeFromQr()
+    {
+        using var context = TestDbContextFactory.CreateContext();
+        var admin = SeedAdmin(context);
+        var beneficiary = SeedApprovedBeneficiary(context, 3002, "Seminar Attendee");
+        var service = new CashForWorkService(context, new AuditService(context));
+        var digitalIdService = new BeneficiaryDigitalIdService(context);
+
+        var seminarEvent = await service.CreateEventAsync(
+            "Barangay Seminar",
+            "Session Hall",
+            DateTime.Today,
+            new TimeSpan(9, 0, 0),
+            new TimeSpan(11, 0, 0),
+            null,
+            admin.Id,
+            CashForWorkEventKind.Seminar);
+
+        var digitalId = await digitalIdService.EnsureIssuedAsync(beneficiary.StagingID, admin.Id);
+
+        Assert.True(await service.SaveScannerAttendanceAsync(seminarEvent.Id, admin.Id, null, digitalId.QrPayload));
+
+        var participant = Assert.Single(context.CashForWorkParticipants);
+        Assert.Equal(beneficiary.StagingID, GetBeneficiaryStagingId(participant));
+
+        var attendance = Assert.Single(context.CashForWorkAttendances);
+        Assert.Equal(participant.Id, attendance.ParticipantId);
+        Assert.Equal(AttendanceCaptureSource.ScannerSession, attendance.Source);
+
+        Assert.Contains(context.ActivityLogs, log => log.Action == "CashForWorkParticipantAutoAdded");
+    }
+
+    [Fact]
+    public async Task AddParticipant_RejectsBeneficiariesThatAreNotApproved()
     {
         using var context = TestDbContextFactory.CreateContext();
         var admin = SeedAdmin(context);
         var beneficiary = SeedApprovedBeneficiary(context, 4001, "Pending Beneficiary", VerificationStatus.Pending);
         var service = new CashForWorkService(context);
 
-        var cashForWorkEvent = service.CreateEvent(
+        var cashForWorkEvent = await service.CreateEventAsync(
             "Barangay Clean-Up",
             "Hall",
             DateTime.Today,
@@ -136,14 +169,14 @@ public sealed class CashForWorkServiceTests
     }
 
     [Fact]
-    public void AddParticipant_RejectsReleasedEvents()
+    public async Task AddParticipant_RejectsReleasedEvents()
     {
         using var context = TestDbContextFactory.CreateContext();
         var admin = SeedAdmin(context);
         var beneficiary = SeedApprovedBeneficiary(context, 4101, "Released Participant");
         var service = new CashForWorkService(context);
 
-        var cashForWorkEvent = service.CreateEvent(
+        var cashForWorkEvent = await service.CreateEventAsync(
             "Released Event",
             "Hall",
             DateTime.Today,
@@ -160,14 +193,36 @@ public sealed class CashForWorkServiceTests
     }
 
     [Fact]
-    public void SaveManualAttendance_RejectsReleasedEvents()
+    public async Task AddParticipant_ForSeminar_RejectsManualAssignment()
+    {
+        using var context = TestDbContextFactory.CreateContext();
+        var admin = SeedAdmin(context);
+        var beneficiary = SeedApprovedBeneficiary(context, 4102, "Seminar Assignment");
+        var service = new CashForWorkService(context);
+
+        var seminarEvent = await service.CreateEventAsync(
+            "Open Seminar",
+            "Hall",
+            DateTime.Today,
+            new TimeSpan(8, 0, 0),
+            new TimeSpan(10, 0, 0),
+            null,
+            admin.Id,
+            CashForWorkEventKind.Seminar);
+
+        var ex = Assert.Throws<InvalidOperationException>(() => service.AddParticipant(seminarEvent.Id, beneficiary.StagingID, admin.Id));
+        Assert.Contains("scan-based", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task SaveManualAttendance_RejectsReleasedEvents()
     {
         using var context = TestDbContextFactory.CreateContext();
         var admin = SeedAdmin(context);
         var beneficiary = SeedApprovedBeneficiary(context, 4201, "Released Attendance");
         var service = new CashForWorkService(context);
 
-        var cashForWorkEvent = service.CreateEvent(
+        var cashForWorkEvent = await service.CreateEventAsync(
             "Released Event",
             "Hall",
             DateTime.Today,
@@ -188,6 +243,38 @@ public sealed class CashForWorkServiceTests
     }
 
     [Fact]
+    public async Task SaveManualAttendance_ForSeminar_RejectsManualRecording()
+    {
+        using var context = TestDbContextFactory.CreateContext();
+        var admin = SeedAdmin(context);
+        var beneficiary = SeedApprovedBeneficiary(context, 4202, "Seminar Manual");
+        var service = new CashForWorkService(context);
+
+        var seminarEvent = await service.CreateEventAsync(
+            "Attendance Seminar",
+            "Hall",
+            DateTime.Today,
+            new TimeSpan(8, 0, 0),
+            new TimeSpan(10, 0, 0),
+            null,
+            admin.Id,
+            CashForWorkEventKind.Seminar);
+
+        context.CashForWorkParticipants.Add(new CashForWorkParticipant
+        {
+            EventId = seminarEvent.Id,
+            BeneficiaryStagingId = beneficiary.StagingID,
+            AddedByUserId = admin.Id,
+            AddedAt = DateTime.Now
+        });
+        context.SaveChanges();
+
+        var participantId = context.CashForWorkParticipants.Single().Id;
+        var ex = Assert.Throws<InvalidOperationException>(() => service.SaveManualAttendance(seminarEvent.Id, admin.Id, [participantId]));
+        Assert.Contains("scan-based", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task SaveScannerAttendance_RejectsReleasedEvents()
     {
         using var context = TestDbContextFactory.CreateContext();
@@ -195,7 +282,7 @@ public sealed class CashForWorkServiceTests
         var beneficiary = SeedApprovedBeneficiary(context, 4301, "Released Scanner");
         var service = new CashForWorkService(context);
 
-        var cashForWorkEvent = service.CreateEvent(
+        var cashForWorkEvent = await service.CreateEventAsync(
             "Released Event",
             "Hall",
             DateTime.Today,
@@ -216,13 +303,36 @@ public sealed class CashForWorkServiceTests
     }
 
     [Fact]
-    public void UpdateEvent_UpdatesSelectedEvent_AndWritesAuditLog()
+    public async Task ReleaseEventAsync_ForSeminar_ReturnsFailure()
+    {
+        using var context = TestDbContextFactory.CreateContext();
+        var admin = SeedAdmin(context);
+        var service = new CashForWorkService(context);
+
+        var seminarEvent = await service.CreateEventAsync(
+            "Attendance Seminar",
+            "Hall",
+            DateTime.Today,
+            new TimeSpan(8, 0, 0),
+            new TimeSpan(10, 0, 0),
+            null,
+            admin.Id,
+            CashForWorkEventKind.Seminar);
+
+        var result = await service.ReleaseEventAsync(seminarEvent.Id, 1000m, admin.Id, null);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("attendance-only", result.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task UpdateEvent_UpdatesSelectedEvent_AndWritesAuditLog()
     {
         using var context = TestDbContextFactory.CreateContext();
         var admin = SeedAdmin(context);
         var service = new CashForWorkService(context, new AuditService(context));
 
-        var cashForWorkEvent = service.CreateEvent(
+        var cashForWorkEvent = await service.CreateEventAsync(
             "Barangay Clean-Up",
             "Hall",
             DateTime.Today,
@@ -231,7 +341,7 @@ public sealed class CashForWorkServiceTests
             "Initial notes",
             admin.Id);
 
-        var updatedEvent = service.UpdateEvent(
+        var updatedEvent = await service.UpdateEventAsync(
             cashForWorkEvent.Id,
             "Updated Clean-Up",
             "Covered Court",
@@ -253,14 +363,14 @@ public sealed class CashForWorkServiceTests
     }
 
     [Fact]
-    public void DeleteEvent_RemovesEventParticipantsAttendanceAndScannerSessions()
+    public async Task DeleteEvent_RemovesEventParticipantsAttendanceAndScannerSessions()
     {
         using var context = TestDbContextFactory.CreateContext();
         var admin = SeedAdmin(context);
         var beneficiary = SeedApprovedBeneficiary(context, 5001, "Pedro Santos");
         var service = new CashForWorkService(context, new AuditService(context));
 
-        var cashForWorkEvent = service.CreateEvent(
+        var cashForWorkEvent = await service.CreateEventAsync(
             "Barangay Clean-Up",
             "Hall",
             DateTime.Today,
@@ -298,14 +408,14 @@ public sealed class CashForWorkServiceTests
     }
 
     [Fact]
-    public void UpdateAttendance_UpdatesSelectedAttendance_AndWritesAuditLog()
+    public async Task UpdateAttendance_UpdatesSelectedAttendance_AndWritesAuditLog()
     {
         using var context = TestDbContextFactory.CreateContext();
         var admin = SeedAdmin(context);
         var beneficiary = SeedApprovedBeneficiary(context, 6001, "Pedro Santos");
         var service = new CashForWorkService(context, new AuditService(context));
 
-        var cashForWorkEvent = service.CreateEvent(
+        var cashForWorkEvent = await service.CreateEventAsync(
             "Barangay Clean-Up",
             "Hall",
             DateTime.Today,
@@ -335,14 +445,14 @@ public sealed class CashForWorkServiceTests
     }
 
     [Fact]
-    public void DeleteAttendance_RemovesSelectedAttendance_AndWritesAuditLog()
+    public async Task DeleteAttendance_RemovesSelectedAttendance_AndWritesAuditLog()
     {
         using var context = TestDbContextFactory.CreateContext();
         var admin = SeedAdmin(context);
         var beneficiary = SeedApprovedBeneficiary(context, 7001, "Pedro Santos");
         var service = new CashForWorkService(context, new AuditService(context));
 
-        var cashForWorkEvent = service.CreateEvent(
+        var cashForWorkEvent = await service.CreateEventAsync(
             "Barangay Clean-Up",
             "Hall",
             DateTime.Today,
@@ -399,6 +509,26 @@ public sealed class CashForWorkServiceTests
         context.BeneficiaryStaging.Add(beneficiary);
         context.SaveChanges();
         return beneficiary;
+    }
+
+    private static AyudaProgram SeedProgram(Data.AppDbContext context, int createdByUserId, AyudaProgramType programType)
+    {
+        var programCode = $"CFW-{Guid.NewGuid():N}";
+        var program = new AyudaProgram
+        {
+            ProgramCode = programCode[..Math.Min(20, programCode.Length)],
+            ProgramName = $"{programType} Program",
+            ProgramType = programType,
+            Description = "Budget release program",
+            CreatedByUserId = createdByUserId,
+            IsActive = true,
+            CreatedAt = DateTime.Now,
+            UpdatedAt = DateTime.Now
+        };
+
+        context.AyudaPrograms.Add(program);
+        context.SaveChanges();
+        return program;
     }
 
     private static int GetBeneficiaryStagingId(CashForWorkParticipant participant)

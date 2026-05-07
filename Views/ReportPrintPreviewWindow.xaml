@@ -18,18 +18,18 @@
             <DockPanel>
                 <StackPanel>
                     <TextBlock x:Name="TitleTextBlock" Text="Report Preview" FontSize="20" FontWeight="Bold" Foreground="{StaticResource BrandMidnightBrush}" />
-                    <TextBlock Margin="0,6,0,0" Text="Use Print and choose Microsoft Print to PDF if you need a PDF file." Foreground="{StaticResource BrandTextSecondaryBrush}" TextWrapping="Wrap" />
+                    <TextBlock Margin="0,6,0,0" Text="Review the report layout before sending it to the printer." Foreground="{StaticResource BrandTextSecondaryBrush}" TextWrapping="Wrap" />
                 </StackPanel>
 
                 <WrapPanel DockPanel.Dock="Right">
-                    <Button Content="PRINT / SAVE AS PDF" Margin="0,0,10,0" Style="{StaticResource GoldActionButton}" Click="PrintButton_Click" />
+                    <Button Content="PRINT" Margin="0,0,10,0" Style="{StaticResource GoldActionButton}" Click="PrintButton_Click" />
                     <Button Content="CLOSE" Style="{StaticResource SecondaryActionButton}" Click="CloseButton_Click" />
                 </WrapPanel>
             </DockPanel>
         </Border>
 
         <Border Grid.Row="1" Padding="14" CornerRadius="18" Background="White" BorderBrush="{StaticResource BrandBorderBrush}" BorderThickness="1">
-            <FlowDocumentScrollViewer x:Name="PreviewViewer" VerticalScrollBarVisibility="Auto" IsSelectionEnabled="True" />
+            <FlowDocumentPageViewer x:Name="PreviewViewer" />
         </Border>
     </Grid>
 </Window>

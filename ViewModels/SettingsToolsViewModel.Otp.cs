@@ -270,7 +270,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 return;
             }
 
-            if (!HasPasswordChangeAuthorization)
+            if (!HasPasswordChangeAuthorization && IsOtpEnabled)
             {
                 ShowPasswordChangeOtpPanel = true;
                 if (_passwordChangeOtpSession == null)
@@ -315,7 +315,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private bool RequireSensitiveSettingsAuthorization(string actionDescription, Action onAuthorized)
         {
-            if (_hasSensitiveSettingsSaveAuthorization)
+            if (_hasSensitiveSettingsSaveAuthorization || !IsOtpEnabled)
             {
                 return true;
             }
