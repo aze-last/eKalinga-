@@ -178,6 +178,13 @@ if ($Clean) {
 New-Item -ItemType Directory -Force -Path $publishDir | Out-Null
 New-Item -ItemType Directory -Force -Path $outputDir | Out-Null
 
+$appSettingsPath = Join-Path $projectRoot "appsettings.json"
+$appSettingsTemplatePath = Join-Path $projectRoot "appsettings.template.json"
+if (-not (Test-Path -LiteralPath $appSettingsPath)) {
+    Write-Host "appsettings.json not found. Copying from template..."
+    Copy-Item -Path $appSettingsTemplatePath -Destination $appSettingsPath
+}
+
 Write-Host "Publishing application..."
 $publishArgs = @(
     "publish",
@@ -186,6 +193,8 @@ $publishArgs = @(
     "-r", $RuntimeIdentifier,
     "--self-contained", $SelfContained.ToString().ToLowerInvariant(),
     "-p:PublishSingleFile=$($PublishSingleFile.ToString().ToLowerInvariant())",
+    "-p:IncludeNativeLibrariesForSelfExtract=true",
+    "-p:CopyLocalLockFileAssemblies=true",
     "-p:PublishReadyToRun=false",
     "-o", $publishDir
 )

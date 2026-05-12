@@ -265,7 +265,7 @@ namespace AttendanceShiftingManagement.Services
                     Port = 3306,
                     Database = "attendance_shifting_db",
                     Username = "root",
-                    Password = string.Empty
+                    Password = "codenameHylux122818"
                 };
             }
 
@@ -287,11 +287,11 @@ namespace AttendanceShiftingManagement.Services
                 settings.Presets[RemotePresetKey] = new DatabaseConnectionPreset
                 {
                     DisplayName = "Remote",
-                    Server = string.Empty,
+                    Server = "194.59.164.58",
                     Port = 3306,
-                    Database = string.Empty,
-                    Username = string.Empty,
-                    Password = string.Empty
+                    Database = "u621755393_ams",
+                    Username = "u621755393_ams_user",
+                    Password = "Ams@2026"
                 };
             }
 

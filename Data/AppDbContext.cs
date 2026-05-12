@@ -194,6 +194,9 @@ namespace AttendanceShiftingManagement.Data
             modelBuilder.Entity<BeneficiaryStaging>()
                 .HasIndex(row => row.CivilRegistryId);
 
+            modelBuilder.Entity<BeneficiaryStaging>()
+                .HasIndex(row => row.ResidentsId);
+
             modelBuilder.Entity<BeneficiaryDigitalId>()
                 .HasIndex(item => item.BeneficiaryStagingId)
                 .IsUnique();

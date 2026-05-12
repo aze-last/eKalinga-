@@ -409,6 +409,22 @@ namespace AttendanceShiftingManagement.Data
                 WHERE `entry_type` = 'Release'
                   AND (`release_kind` IS NULL OR `release_kind` = '');
                 """);
+
+            ExecuteNonQuery(
+                connection,
+                """
+                SET @dbname = DATABASE();
+                SET @tablename = 'BeneficiaryStaging';
+                SET @indexname = 'IX_BeneficiaryStaging_ResidentsId';
+                SET @preparedStatement = (SELECT IF(
+                    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA = @dbname AND TABLE_NAME = @tablename AND INDEX_NAME = @indexname) > 0,
+                    'SELECT 1',
+                    'CREATE INDEX IX_BeneficiaryStaging_ResidentsId ON BeneficiaryStaging(ResidentsId)'
+                ));
+                PREPARE createIndexStatement FROM @preparedStatement;
+                EXECUTE createIndexStatement;
+                DEALLOCATE PREPARE createIndexStatement;
+                """);
         }
 
         private static IReadOnlyList<string> GetSchemaScripts()
@@ -530,7 +546,8 @@ namespace AttendanceShiftingManagement.Data
                     `ReviewedAt` datetime(6) NULL,
                     `ImportedAt` datetime(6) NOT NULL,
                     PRIMARY KEY (`StagingID`),
-                    KEY `IX_BeneficiaryStaging_CivilRegistryId` (`CivilRegistryId`)
+                    KEY `IX_BeneficiaryStaging_CivilRegistryId` (`CivilRegistryId`),
+                    KEY `IX_BeneficiaryStaging_ResidentsId` (`ResidentsId`)
                 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
                 """,
                 """

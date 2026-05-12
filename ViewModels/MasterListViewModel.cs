@@ -384,25 +384,13 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             if (!changedOption.IsSelected) return;
 
-            if (changedOption.Label == MasterListQuickFilters.WithCivilRegistryId)
+            // Radio-button behavior: deselect all other filters
+            foreach (var option in _filterOptions)
             {
-                var missing = _filterOptions.FirstOrDefault(o => o.Label == MasterListQuickFilters.MissingCivilRegistryId);
-                if (missing != null) missing.IsSelected = false;
-            }
-            else if (changedOption.Label == MasterListQuickFilters.MissingCivilRegistryId)
-            {
-                var withId = _filterOptions.FirstOrDefault(o => o.Label == MasterListQuickFilters.WithCivilRegistryId);
-                if (withId != null) withId.IsSelected = false;
-            }
-            else if (changedOption.Label == MasterListQuickFilters.Approved)
-            {
-                var pending = _filterOptions.FirstOrDefault(o => o.Label == MasterListQuickFilters.Pending);
-                if (pending != null) pending.IsSelected = false;
-            }
-            else if (changedOption.Label == MasterListQuickFilters.Pending)
-            {
-                var approved = _filterOptions.FirstOrDefault(o => o.Label == MasterListQuickFilters.Approved);
-                if (approved != null) approved.IsSelected = false;
+                if (option != changedOption && option.IsSelected)
+                {
+                    option.IsSelected = false;
+                }
             }
         }
 

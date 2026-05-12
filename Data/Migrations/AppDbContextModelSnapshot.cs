@@ -782,6 +782,8 @@ namespace AttendanceShiftingManagement.Data.Migrations
 
                     b.HasIndex("CivilRegistryId");
 
+                    b.HasIndex("ResidentsId");
+
                     b.ToTable("BeneficiaryStaging");
                 });
 
@@ -878,6 +880,10 @@ namespace AttendanceShiftingManagement.Data.Migrations
                     b.Property<DateTime>("AttendanceDate")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("attendance_date");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<string>("OcrExtractedName")
                         .HasMaxLength(150)
@@ -1011,6 +1017,10 @@ namespace AttendanceShiftingManagement.Data.Migrations
                         .HasColumnType("longtext")
                         .HasColumnName("event_kind");
 
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
+
                     b.Property<string>("Location")
                         .IsRequired()
                         .HasMaxLength(150)
@@ -1090,6 +1100,10 @@ namespace AttendanceShiftingManagement.Data.Migrations
                     b.Property<int?>("HouseholdMemberId")
                         .HasColumnType("int")
                         .HasColumnName("household_member_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.HasKey("Id");
 

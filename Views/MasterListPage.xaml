@@ -47,9 +47,14 @@
                                 <Setter TargetName="ChipBorder" Property="BorderBrush" Value="{DynamicResource ThemeAccentBorderBrush}"/>
                                 <Setter TargetName="ChipText" Property="Foreground" Value="White"/>
                             </Trigger>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="ChipBorder" Property="Background" Value="{DynamicResource ThemeSecondaryActionBrush}" />
-                            </Trigger>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsMouseOver" Value="True"/>
+                                    <Condition Property="IsChecked" Value="False"/>
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="ChipBorder" Property="Background" Value="{DynamicResource ThemeSecondaryActionBrush}"/>
+                                <Setter TargetName="ChipText" Property="Foreground" Value="{DynamicResource BrandMidnightBrush}"/>
+                            </MultiTrigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
@@ -210,7 +215,7 @@
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
                                                 <ToggleButton Content="{Binding Label}"
-                                                              IsChecked="{Binding IsSelected}"
+                                                              IsChecked="{Binding IsSelected, Mode=TwoWay}"
                                                               Style="{StaticResource FilterChipStyle}"
                                                               Height="40"
                                                               Margin="0,0,0,6"/>
