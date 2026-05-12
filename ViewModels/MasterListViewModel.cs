@@ -470,7 +470,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 EditableCauseOfDisability = staging?.CauseOfDisability ?? beneficiary.CauseOfDisability ?? string.Empty;
                 EditableReviewNotes = staging?.ReviewNotes ?? string.Empty;
 
-                SyncDigitalIdPreview(digitalId);
+                SyncDigitalIdPreview(digitalId, staging?.PhotoPath);
             }
             catch (Exception ex)
             {
@@ -478,17 +478,21 @@ namespace AttendanceShiftingManagement.ViewModels
             }
         }
 
-        private void SyncDigitalIdPreview(BeneficiaryDigitalId? digitalId)
+        private void SyncDigitalIdPreview(BeneficiaryDigitalId? digitalId, string? stagingPhotoPath = null)
         {
             if (digitalId == null)
             {
                 ResetDigitalIdPreview();
+                if (!string.IsNullOrWhiteSpace(stagingPhotoPath))
+                {
+                    DigitalIdPhotoImage = BuildImage(stagingPhotoPath);
+                }
                 return;
             }
 
             DigitalIdCardNumber = digitalId.CardNumber;
             DigitalIdIssuedAtText = $"Issued on {digitalId.IssuedAt:MMMM dd, yyyy hh:mm tt}";
-            DigitalIdPhotoImage = BuildImage(digitalId.PhotoPath);
+            DigitalIdPhotoImage = BuildImage(digitalId.PhotoPath ?? stagingPhotoPath);
             DigitalIdQrImage = QrCodeToolkitService.GenerateQrImage(digitalId.QrPayload, 14);
 
             LookupScannerSessionUrl = string.Empty;
@@ -849,6 +853,9 @@ namespace AttendanceShiftingManagement.ViewModels
                 var digitalId = await context.BeneficiaryDigitalIds
                     .FirstOrDefaultAsync(d => d.BeneficiaryStagingId == stagingId && d.IsActive);
 
+                var staging = await context.BeneficiaryStaging
+                    .FirstOrDefaultAsync(s => s.StagingID == stagingId);
+
                 if (digitalId != null)
                 {
                     digitalId.PhotoPath = destPath;
@@ -856,8 +863,11 @@ namespace AttendanceShiftingManagement.ViewModels
                     SyncDigitalIdPreview(digitalId);
                     SetSuccessStatus("Cropped photo saved to digital ID.");
                 }
-                else
+                else if (staging != null)
                 {
+                    staging.PhotoPath = destPath;
+                    await context.SaveChangesAsync();
+                    SyncDigitalIdPreview(null, destPath);
                     SetSuccessStatus("Photo cropped. It will be applied when the digital ID is issued.");
                 }
             }
@@ -897,6 +907,9 @@ namespace AttendanceShiftingManagement.ViewModels
                 var digitalId = await context.BeneficiaryDigitalIds
                     .FirstOrDefaultAsync(d => d.BeneficiaryStagingId == stagingId && d.IsActive);
 
+                var staging = await context.BeneficiaryStaging
+                    .FirstOrDefaultAsync(s => s.StagingID == stagingId);
+
                 if (digitalId != null)
                 {
                     digitalId.PhotoPath = photoPath;
@@ -905,11 +918,13 @@ namespace AttendanceShiftingManagement.ViewModels
                     SetSuccessStatus("Photo uploaded and digital ID updated.");
                     SyncDigitalIdPreview(digitalId);
                 }
-                else
+                else if (staging != null)
                 {
-                    // If no digital ID yet, we might need a temporary place or just wait for approval
-                    // For now, let's assume approval is needed to issue the ID
+                    staging.PhotoPath = photoPath;
+                    await context.SaveChangesAsync();
+                    
                     SetSuccessStatus("Photo uploaded. It will be included when the digital ID is issued upon approval.");
+                    SyncDigitalIdPreview(null, photoPath);
                 }
             }
             catch (Exception ex)

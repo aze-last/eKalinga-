@@ -67,6 +67,7 @@ namespace AttendanceShiftingManagement.Services
                 HouseholdMemberId = stagingRow.LinkedHouseholdMemberId,
                 CardNumber = $"BID-{stagingRow.StagingID:D6}",
                 QrPayload = BuildQrPayload(stagingRow.StagingID),
+                PhotoPath = stagingRow.PhotoPath,
                 IssuedByUserId = issuedByUserId,
                 IssuedAt = DateTime.Now,
                 IsActive = true

@@ -38,6 +38,7 @@ namespace AttendanceShiftingManagement.Models
         public int? LinkedHouseholdMemberId { get; set; }
         public int? ReviewedByUserId { get; set; }
         public string? ReviewNotes { get; set; }
+        public string? PhotoPath { get; set; }
         public DateTime? ReviewedAt { get; set; }
         public DateTime ImportedAt { get; set; } = DateTime.Now;
     }

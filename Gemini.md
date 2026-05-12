@@ -1,3 +1,4 @@
+
 # Gemini CLI Project Rules
 
 You are my senior .NET and WPF coding partner for this repo.
