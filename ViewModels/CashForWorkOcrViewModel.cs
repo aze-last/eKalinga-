@@ -770,7 +770,7 @@ namespace AttendanceShiftingManagement.ViewModels
             Events.Clear();
 
             await using var context = new AppDbContext();
-            var cfwService = new CashForWorkService(context);
+            var cfwService = new CashForWorkService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
             foreach (var cashForWorkEvent in cfwService.GetEvents())
             {
                 Events.Add(cashForWorkEvent);
@@ -790,7 +790,7 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             EligibleBeneficiaries.Clear();
             await using var context = new AppDbContext();
-            var cfwService = new CashForWorkService(context);
+            var cfwService = new CashForWorkService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
             foreach (var beneficiary in cfwService.GetEligibleBeneficiaries())
             {
                 EligibleBeneficiaries.Add(CashForWorkEligibleBeneficiaryOption.FromServiceModel(beneficiary));
@@ -801,7 +801,7 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             OpenAnnouncements.Clear();
             await using var context = new AppDbContext();
-            var cfwService = new CashForWorkService(context);
+            var cfwService = new CashForWorkService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
 
             foreach (var cashForWorkEvent in cfwService.GetOpenEvents())
             {
@@ -836,7 +836,7 @@ namespace AttendanceShiftingManagement.ViewModels
             }
 
             await using var context = new AppDbContext();
-            var cfwService = new CashForWorkService(context);
+            var cfwService = new CashForWorkService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
             foreach (var participant in cfwService.GetParticipants(SelectedEvent.Id))
             {
                 _allParticipants.Add(new CashForWorkParticipantListItem
@@ -867,7 +867,7 @@ namespace AttendanceShiftingManagement.ViewModels
             }
 
             await using var context = new AppDbContext();
-            var cfwService = new CashForWorkService(context);
+            var cfwService = new CashForWorkService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
             var attendanceRecords = cfwService.GetAttendanceRecords(SelectedEvent.Id);
             var presentParticipantIds = attendanceRecords
                 .Where(record =>
@@ -954,7 +954,7 @@ namespace AttendanceShiftingManagement.ViewModels
             }
 
             await using var context = new AppDbContext();
-            var cfwService = new CashForWorkService(context);
+            var cfwService = new CashForWorkService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
             var summary = cfwService.GetReleaseReadySummary(SelectedEvent.Id);
             ReleaseSummaryEventLabel = $"{summary.EventTitle} | {summary.EventDate:MMM dd, yyyy} | {summary.Location}";
             ApprovedParticipantCount = summary.ApprovedParticipantCount;
@@ -1277,7 +1277,7 @@ namespace AttendanceShiftingManagement.ViewModels
             try
             {
                 await using var context = new AppDbContext();
-                var cfwService = new CashForWorkService(context);
+                var cfwService = new CashForWorkService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
                 var isEditing = _editingEventId.HasValue;
                 CashForWorkEvent savedEvent;
                 if (_editingEventId is int eventIdToUpdate)
@@ -1348,7 +1348,7 @@ namespace AttendanceShiftingManagement.ViewModels
             try
             {
                 await using var context = new AppDbContext();
-                var cfwService = new CashForWorkService(context);
+                var cfwService = new CashForWorkService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
                 cfwService.DeleteEvent(deletedEvent.Id, _currentUser.Id);
                 await LoadAnnouncementsAsync();
                 await LoadEventsAsync();
@@ -1390,7 +1390,7 @@ namespace AttendanceShiftingManagement.ViewModels
             try
             {
                 await using var context = new AppDbContext();
-                var cfwService = new CashForWorkService(context);
+                var cfwService = new CashForWorkService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
                 cfwService.AddParticipant(SelectedEvent.Id, SelectedEligibleBeneficiary.BeneficiaryStagingId, _currentUser.Id);
                 await LoadParticipantsAsync();
                 await LoadSavedAttendanceAsync();
@@ -1437,7 +1437,7 @@ namespace AttendanceShiftingManagement.ViewModels
             try
             {
                 await using var context = new AppDbContext();
-                var cfwService = new CashForWorkService(context);
+                var cfwService = new CashForWorkService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
                 var savedCount = cfwService.SaveManualAttendance(SelectedEvent.Id, _currentUser.Id, selectedParticipantIds);
                 await LoadSavedAttendanceAsync();
                 await LoadReleaseSummaryAsync();
@@ -1484,7 +1484,7 @@ namespace AttendanceShiftingManagement.ViewModels
             try
             {
                 await using var context = new AppDbContext();
-                var cfwService = new CashForWorkService(context);
+                var cfwService = new CashForWorkService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
                 var updatedAttendance = cfwService.UpdateAttendance(
                     selectedAttendance.AttendanceId,
                     dialog.AttendanceDate.Date,
@@ -1532,7 +1532,7 @@ namespace AttendanceShiftingManagement.ViewModels
             try
             {
                 await using var context = new AppDbContext();
-                var cfwService = new CashForWorkService(context);
+                var cfwService = new CashForWorkService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
                 cfwService.DeleteAttendance(selectedAttendance.AttendanceId, _currentUser.Id);
                 await LoadSavedAttendanceAsync();
                 await LoadReleaseSummaryAsync();
@@ -1670,7 +1670,7 @@ namespace AttendanceShiftingManagement.ViewModels
             try
             {
                 await using var context = new AppDbContext();
-                var cfwService = new CashForWorkService(context);
+                var cfwService = new CashForWorkService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
                 var result = await cfwService.ReleaseEventAsync(
                     SelectedEvent.Id,
                     releaseAmount,

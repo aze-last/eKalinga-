@@ -548,7 +548,7 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 await using var context = new AppDbContext();
                 var budgetService = new BudgetManagementService(context);
-                var distributionService = new ProjectDistributionService(context);
+                var distributionService = new ProjectDistributionService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
 
                 // 1. Create Program
                 var programResult = await budgetService.CreateProgramAsync(
@@ -1369,7 +1369,7 @@ namespace AttendanceShiftingManagement.ViewModels
             try
             {
                 await using var context = new AppDbContext();
-                var service = new ProjectDistributionService(context);
+                var service = new ProjectDistributionService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
                 var result = await ExecuteProgramBeneficiaryAddAsync(service, SelectedProgram.Id, SelectedAvailableBeneficiary.StagingId, _currentUser.Id);
                 if (!result.IsSuccess)
                 {
@@ -1412,7 +1412,7 @@ namespace AttendanceShiftingManagement.ViewModels
             try
             {
                 await using var context = new AppDbContext();
-                var service = new ProjectDistributionService(context);
+                var service = new ProjectDistributionService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
                 var result = await service.UpdateBeneficiaryStatusAsync(
                     SelectedProgram.Id,
                     SelectedProgramBeneficiary.BeneficiaryStagingId,
@@ -1981,7 +1981,7 @@ namespace AttendanceShiftingManagement.ViewModels
             try
             {
                 await using var context = new AppDbContext();
-                var service = new ProjectDistributionService(context);
+                var service = new ProjectDistributionService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
                 var result = await ExecuteProgramBeneficiariesBulkAddAsync(service, selectedProgram.Id, selectedIds, _currentUser.Id);
 
                 if (result.IsSuccess)
@@ -2314,7 +2314,7 @@ namespace AttendanceShiftingManagement.ViewModels
             try
             {
                 await using var context = new AppDbContext();
-                var service = new ProjectDistributionService(context);
+                var service = new ProjectDistributionService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
                 var result = await service.RecordClaimAsync(
                     SelectedProgram.Id,
                     SelectedPendingBeneficiary.BeneficiaryStagingId,
