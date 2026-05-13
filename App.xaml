@@ -26,7 +26,7 @@
             </ResourceDictionary.MergedDictionaries>
 
             <SolidColorBrush x:Key="BrandMidnightBrush" Color="#10203A" />
-            <SolidColorBrush x:Key="BrandYellowBrush" Color="#D1AE68" />
+            <SolidColorBrush x:Key="BrandYellowBrush" Color="#F59E0B" />
             <SolidColorBrush x:Key="BrandGoldBrush" Color="#F9C231" />
             <SolidColorBrush x:Key="BrandGoldTextBrush" Color="#35270B" />
             <SolidColorBrush x:Key="BrandSuccessBrush" Color="#217650" />
@@ -38,7 +38,7 @@
             <SolidColorBrush x:Key="ThemeWindowShellBorderBrush" Color="#D5DDE8" />
             <SolidColorBrush x:Key="ThemeCardBrush" Color="#FFFFFF" />
             <SolidColorBrush x:Key="ThemeCardRaisedBrush" Color="#FAFCFF" />
-            <SolidColorBrush x:Key="ThemeCardSubtleBrush" Color="#F4F8FC" />
+            <SolidColorBrush x:Key="ThemeCardSubtleBrush" Color="#F8FAFC" />
             <SolidColorBrush x:Key="ThemeInputSurfaceBrush" Color="#FFFFFF" />
             <SolidColorBrush x:Key="ThemeInputBorderBrush" Color="#CCD6E3" />
             <SolidColorBrush x:Key="ThemePrimaryActionBrush" Color="#1E4E89" />

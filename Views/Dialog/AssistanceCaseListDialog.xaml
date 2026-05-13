@@ -41,8 +41,8 @@
             <!-- Header -->
             <StackPanel Grid.Row="0" Margin="0,0,40,0">
                 <TextBlock Text="Browse Assistance Cases"
-                           FontSize="24" FontWeight="SemiBold"
-                           Foreground="{DynamicResource BrandMidnightBrush}"/>
+                           FontSize="24" FontWeight="Bold"
+                           Foreground="{DynamicResource ThemePrimaryActionBrush}"/>
                 <TextBlock Text="Select a case from the list below to view or edit details."
                            FontSize="14" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,4,0,0"/>
             </StackPanel>

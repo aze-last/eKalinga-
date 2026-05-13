@@ -1,0 +1,1 @@
+read gemini.md, invoke agents: coordinator, worker-reviewer, ui ux auditor.

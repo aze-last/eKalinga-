@@ -31,7 +31,8 @@ namespace AttendanceShiftingManagement.Views
 
                 if (dialog.ShowDialog() == true)
                 {
-                    // SelectedCase is already updated via binding in the dialog
+                    // SelectedCase is already updated via binding in the dialog.
+                    // The center view will now automatically show the summary of the selected case.
                 }
             }
             finally

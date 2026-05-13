@@ -881,6 +881,7 @@ namespace AttendanceShiftingManagement.ViewModels
             RequestedOnDate = SelectedCase.RequestedOn;
             ScheduledReleaseDate = SelectedCase.ScheduledReleaseDate;
             EditableSummary = SelectedCase.Summary;
+            EditableResolutionNotes = SelectedCase.ResolutionNotes;
 
             if (!string.IsNullOrWhiteSpace(SelectedCase.ValidatedBeneficiaryName))
             {
@@ -1021,6 +1022,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 }
 
                 await LoadCoreAsync(result.AssistanceCaseId);
+                IsCasePanelOpen = false; // Close the panel to show the updated summary in the center
                 SetSuccessStatus(result.Message);
             }
             catch (Exception ex)
@@ -1748,6 +1750,7 @@ namespace AttendanceShiftingManagement.ViewModels
         public DateTime RequestedOn { get; init; }
         public DateTime? ScheduledReleaseDate { get; init; }
         public string Summary { get; init; } = string.Empty;
+        public string ResolutionNotes { get; init; } = string.Empty;
         public string RecipientLabel { get; init; } = string.Empty;
         public string AssistanceCaseBudgetLabel { get; init; } = string.Empty;
 
@@ -1807,6 +1810,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 RequestedOn = assistanceCase.RequestedOn,
                 ScheduledReleaseDate = assistanceCase.ScheduledReleaseDate,
                 Summary = assistanceCase.Summary ?? string.Empty,
+                ResolutionNotes = assistanceCase.ResolutionNotes ?? string.Empty,
                 RecipientLabel = !string.IsNullOrWhiteSpace(assistanceCase.ValidatedBeneficiaryName)
                     ? assistanceCase.ValidatedBeneficiaryName
                     : "Legacy household-linked record",

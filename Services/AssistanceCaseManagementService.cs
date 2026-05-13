@@ -333,6 +333,15 @@ namespace AttendanceShiftingManagement.Services
                 {
                     return new AssistanceCaseOperationResult(false, "Set an approved amount before approving this request.");
                 }
+
+                // NEW: Check "pondo" (Budget Pool) availability during Approval
+                var budgetService = new BudgetManagementService(_context, _auditService);
+                var overview = await budgetService.GetOverviewAsync();
+                if (assistanceCase.ApprovedAmount.Value > overview.CombinedAvailable)
+                {
+                    var shortfall = assistanceCase.ApprovedAmount.Value - overview.CombinedAvailable;
+                    return new AssistanceCaseOperationResult(false, $"Approval denied. The total budget pool (pondo) is insufficient by {shortfall:N2}.");
+                }
             }
 
             var shouldWriteGgmsRelease = false;
