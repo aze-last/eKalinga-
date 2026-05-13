@@ -31,7 +31,7 @@
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsSelected" Value="True">
                                 <Setter TargetName="OuterBorder" Property="Background" Value="{DynamicResource ThemeCardSubtleBrush}" />
-                                <Setter Property="BorderBrush" Value="{DynamicResource BrandMidnightBrush}" />
+                                <Setter Property="BorderBrush" Value="{DynamicResource ThemePrimaryActionBrush}" />
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="OuterBorder" Property="Background" Value="{DynamicResource ThemeCardSubtleBrush}" />
@@ -54,7 +54,7 @@
 
     <Grid>
         <!-- Modal Backdrop -->
-        <Border Background="#990F172A" />
+        <Border Background="#CC0F172A" />
 
         <!-- Main Enrollment Card -->
         <Border Width="920"
@@ -74,7 +74,7 @@
                 <!-- Header: Project Badge Design -->
                 <Border Grid.Row="0"
                         Padding="32,28"
-                        Background="{StaticResource BrandMidnightBrush}"
+                        Background="{DynamicResource ThemePrimaryActionBrush}"
                         CornerRadius="28,28,0,0">
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -84,32 +84,33 @@
 
                         <StackPanel>
                             <WrapPanel VerticalAlignment="Center">
-                                <materialDesign:PackIcon Kind="AccountPlus" Width="24" Height="24" Foreground="{StaticResource BrandGoldBrush}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                <materialDesign:PackIcon Kind="AccountPlus" Width="24" Height="24" Foreground="{DynamicResource BrandGoldBrush}" VerticalAlignment="Center" Margin="0,0,12,0"/>
                                 <TextBlock Text="Project Enrollment Registry"
                                            FontSize="22"
                                            FontWeight="Bold"
-                                           Foreground="White"
+                                           Foreground="{DynamicResource ThemePrimaryActionForegroundBrush}"
                                            VerticalAlignment="Center"/>
                             </WrapPanel>
                             
                             <Border Margin="0,16,0,0"
                                     Padding="16,12"
                                     CornerRadius="16"
-                                    Background="#1E293B"
+                                    Background="{DynamicResource BrandMidnightBrush}"
                                     HorizontalAlignment="Left"
-                                    BorderBrush="#334155"
-                                    BorderThickness="1">
+                                    BorderBrush="{DynamicResource BrandBorderBrush}"
+                                    BorderThickness="1"
+                                    Opacity="0.8">
                                 <StackPanel Orientation="Horizontal">
                                     <StackPanel>
-                                        <TextBlock Text="ACTIVE PROJECT" FontSize="10" FontWeight="Bold" Foreground="#94A3B8"/>
+                                        <TextBlock Text="ACTIVE PROJECT" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
                                         <TextBlock Text="{Binding SelectedProgram.ProgramName, TargetNullValue='No project selected'}"
                                                    FontSize="16" FontWeight="SemiBold" Foreground="White" Margin="0,2,0,0"/>
                                     </StackPanel>
-                                    <Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Margin="20,0" Background="#334155"/>
+                                    <Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Margin="20,0" Background="{DynamicResource BrandBorderBrush}" Opacity="0.3"/>
                                     <StackPanel>
-                                        <TextBlock Text="ALLOCATED BUDGET" FontSize="10" FontWeight="Bold" Foreground="#94A3B8"/>
+                                        <TextBlock Text="ALLOCATED BUDGET" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
                                         <TextBlock Text="{Binding SelectedProgramBudgetCapText}"
-                                                   FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource BrandGoldBrush}" Margin="0,2,0,0"/>
+                                                   FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource BrandGoldBrush}" Margin="0,2,0,0"/>
                                     </StackPanel>
                                 </StackPanel>
                             </Border>
@@ -118,7 +119,7 @@
                         <StackPanel Grid.Column="1" HorizontalAlignment="Right">
                             <Button Width="36" Height="36"
                                     Style="{StaticResource MaterialDesignFlatButton}"
-                                    Foreground="#94A3B8"
+                                    Foreground="{DynamicResource ThemePrimaryActionForegroundBrush}"
                                     Command="{Binding CloseAddBeneficiaryPanelCommand}"
                                     HorizontalAlignment="Right">
                                 <materialDesign:PackIcon Kind="Close" Width="24" Height="24"/>
@@ -203,8 +204,8 @@
 
                                         <!-- Avatar -->
                                         <Grid Grid.Column="1">
-                                            <Ellipse Width="48" Height="48" Fill="{DynamicResource BrandMidnightBrush}"/>
-                                            <TextBlock Text="{Binding Initials}" Foreground="{DynamicResource ThemeCardBrush}" FontWeight="Bold" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            <Ellipse Width="48" Height="48" Fill="{DynamicResource ThemeWindowShellBrush}"/>
+                                            <TextBlock Text="{Binding Initials}" Foreground="{DynamicResource ThemePrimaryActionBrush}" FontWeight="Bold" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                         </Grid>
 
                                         <StackPanel Grid.Column="3" VerticalAlignment="Center">
@@ -228,7 +229,7 @@
 
                     <!-- Right: Membership Card Preview -->
                     <StackPanel Grid.Column="2">
-                        <TextBlock Text="ENROLLMENT PREVIEW" FontSize="11" FontWeight="Bold" Foreground="{StaticResource BrandTextSecondaryBrush}" Margin="0,0,0,16"/>
+                        <TextBlock Text="ENROLLMENT PREVIEW" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,16"/>
                         
                         <!-- Membership "Card" -->
                         <materialDesign:Card UniformCornerRadius="20" Padding="24" Background="{DynamicResource ThemeCardSubtleBrush}" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="1">
@@ -240,7 +241,7 @@
 
                                 <Separator Margin="0,20" Background="{DynamicResource BrandBorderBrush}"/>
 
-                                <Border Margin="0,24,0,0" Padding="14" CornerRadius="12" Background="#26F9C231" BorderBrush="#FFF9C231" BorderThickness="1">
+                                <Border Margin="0,24,0,0" Padding="14" CornerRadius="12" Background="#26F9C231" BorderBrush="{DynamicResource BrandYellowBrush}" BorderThickness="1">
                                     <StackPanel Orientation="Horizontal">
                                         <materialDesign:PackIcon Kind="Information" Width="18" Height="18" Foreground="{DynamicResource BrandGoldBrush}" VerticalAlignment="Center" Margin="0,0,10,0"/>
                                         <TextBlock Text="Selected beneficiaries will be added as PENDING for verification." 
@@ -270,7 +271,7 @@
                         </Grid.ColumnDefinitions>
 
                         <TextBlock VerticalAlignment="Center" 
-                                   Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                   Foreground="{DynamicResource BrandTextSecondaryBrush}"
                                    Text="Confirming enrollment will move the beneficiary into this project's active queue."
                                    FontSize="12"/>
 
@@ -279,7 +280,7 @@
                                     Width="120"
                                     Height="46"
                                     Style="{StaticResource MaterialDesignFlatButton}"
-                                    Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                    Foreground="{DynamicResource BrandTextSecondaryBrush}"
                                     Command="{Binding CloseAddBeneficiaryPanelCommand}"
                                     Margin="0,0,12,0"/>
                             <Button Content="ENROLL IN PROJECT"
