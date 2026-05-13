@@ -30,6 +30,13 @@ namespace AttendanceShiftingManagement.Views
             Unloaded -= OnBudgetPageUnloaded;
         }
 
+        private void Browse_Click(object sender, System.Windows.RoutedEventArgs e)
+        {
+            var dialog = new Views.Dialog.BudgetListDialog(_viewModel);
+            dialog.Owner = System.Windows.Window.GetWindow(this);
+            dialog.ShowDialog();
+        }
+
         private void Button_Click(object sender, System.Windows.RoutedEventArgs e)
         {
 

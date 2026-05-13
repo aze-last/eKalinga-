@@ -1,9 +1,8 @@
 using AttendanceShiftingManagement.Models;
 using AttendanceShiftingManagement.ViewModels;
+using AttendanceShiftingManagement.Views.Dialog;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
-using System.Windows.Media;
 
 namespace AttendanceShiftingManagement.Views
 {
@@ -13,42 +12,24 @@ namespace AttendanceShiftingManagement.Views
         {
             InitializeComponent();
             DataContext = new AssistanceCaseManagementViewModel(currentUser);
-            CasesDataGrid.PreviewMouseLeftButtonUp += CasesDataGrid_PreviewMouseLeftButtonUp;
         }
 
-        private void CasesDataGrid_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        private void Browse_Click(object sender, RoutedEventArgs e)
         {
             if (DataContext is not AssistanceCaseManagementViewModel viewModel)
             {
                 return;
             }
 
-            var row = FindAncestor<DataGridRow>(e.OriginalSource as DependencyObject);
-            if (row?.DataContext is not AssistanceCaseListItem caseItem)
+            var dialog = new AssistanceCaseListDialog(viewModel)
             {
-                return;
-            }
+                Owner = Window.GetWindow(this)
+            };
 
-            if (viewModel.OpenCasePanelCommand.CanExecute(caseItem))
+            if (dialog.ShowDialog() == true)
             {
-                viewModel.OpenCasePanelCommand.Execute(caseItem);
+                // SelectedCase is already updated via binding in the dialog
             }
-        }
-
-        private static T? FindAncestor<T>(DependencyObject? source)
-            where T : DependencyObject
-        {
-            while (source != null)
-            {
-                if (source is T match)
-                {
-                    return match;
-                }
-
-                source = VisualTreeHelper.GetParent(source);
-            }
-
-            return null;
         }
     }
 }

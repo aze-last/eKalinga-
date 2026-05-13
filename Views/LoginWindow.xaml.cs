@@ -2,6 +2,7 @@ using AttendanceShiftingManagement.ViewModels;
 using AttendanceShiftingManagement.Services;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 
 namespace AttendanceShiftingManagement.Views
 {
@@ -28,23 +29,25 @@ namespace AttendanceShiftingManagement.Views
             }
         }
 
-        private void BootstrapPasswordBox_PasswordChanged(object sender, RoutedEventArgs e)
+        private void LeftPanel_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            if (sender is PasswordBox passwordBox)
+            if (e.ChangedButton == MouseButton.Left)
             {
-                ViewModel.BootstrapPassword = passwordBox.Password;
+                this.DragMove();
             }
         }
 
-        private void BootstrapConfirmPasswordBox_PasswordChanged(object sender, RoutedEventArgs e)
+        private void MinimizeButton_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is PasswordBox passwordBox)
-            {
-                ViewModel.BootstrapConfirmPassword = passwordBox.Password;
-            }
+            WindowState = WindowState.Minimized;
         }
 
-        private void OpenConnectionSettings_Click(object sender, RoutedEventArgs e)
+        private void CloseButton_Click(object sender, RoutedEventArgs e)
+        {
+            Application.Current.Shutdown();
+        }
+
+        private void ConnectionSettingsButton_Click(object sender, RoutedEventArgs e)
         {
             var window = new ConnectionSettingsWindow(selectionOnly: true)
             {
@@ -56,14 +59,19 @@ namespace AttendanceShiftingManagement.Views
             ViewModel.RefreshStartupStateAsync();
         }
 
-        private void Minimize_Click(object sender, RoutedEventArgs e)
+        private void RegisterButton_Click(object sender, RoutedEventArgs e)
         {
-            WindowState = WindowState.Minimized;
+            MessageBox.Show("Self-registration is currently disabled. Please contact your administrator.", 
+                "Registration", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
-        private void Close_Click(object sender, RoutedEventArgs e)
+        private void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            Application.Current.Shutdown();
+            // Optional: Auto-focus username
+            if (FindName("UsernameInput") is TextBox usernameInput)
+            {
+                usernameInput.Focus();
+            }
         }
     }
 }

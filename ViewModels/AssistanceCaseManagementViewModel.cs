@@ -70,6 +70,8 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly RelayCommand _nextPageCommand;
         private readonly RelayCommand _previousPageCommand;
         private readonly RelayCommand _toggleAnalyticsCommand;
+        private readonly RelayCommand _navigatePreviousCommand;
+        private readonly RelayCommand _navigateNextCommand;
         private ICollectionView _casesView;
         private AssistanceCaseListItem? _selectedCase;
         private AssistanceValidatedBeneficiaryOption? _selectedValidatedBeneficiary;
@@ -88,6 +90,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private int _pageSize = 20;
         private int _totalPages = 1;
         private int _totalFilteredCount;
+        private int _currentIndex = -1;
         private decimal _budgetCapRemaining;
         private bool _isAnalyticsVisible;
         private string _editableCaseNumber = "New aid request";
@@ -154,6 +157,8 @@ namespace AttendanceShiftingManagement.ViewModels
             _previousPageCommand = new RelayCommand(_ => PreviousPage(), _ => CanPreviousPage());
             _toggleAnalyticsCommand = new RelayCommand(async _ => await ToggleAnalyticsAsync());
             _createLookupScannerSessionCommand = new RelayCommand(async _ => await CreateLookupScannerSessionAsync(), _ => !IsBusy);
+            _navigatePreviousCommand = new RelayCommand(_ => NavigatePrevious(), _ => CanNavigatePrevious());
+            _navigateNextCommand = new RelayCommand(_ => NavigateNext(), _ => CanNavigateNext());
 
             ApplyFilter();
             _ = LoadAsync();
@@ -210,14 +215,46 @@ namespace AttendanceShiftingManagement.ViewModels
                 if (SetProperty(ref _selectedCase, value))
                 {
                     SyncEditorFromSelection();
+                    UpdateCurrentIndex();
                     OnPropertyChanged(nameof(IsSelectedCaseLocked));
                     OnPropertyChanged(nameof(CanEditSelectedCase));
                     OnPropertyChanged(nameof(SelectedCaseLockMessage));
                     OnPropertyChanged(nameof(SelectedCaseNoticeBrush));
                     OnPropertyChanged(nameof(SelectedCaseNoticeBackgroundBrush));
+                    OnPropertyChanged(nameof(CurrentPosition));
                     RaiseCommandStates();
                 }
             }
+        }
+
+        private void UpdateCurrentIndex()
+        {
+            if (SelectedCase == null || CasesView == null)
+            {
+                _currentIndex = -1;
+                return;
+            }
+
+            var list = CasesView.Cast<AssistanceCaseListItem>().ToList();
+            _currentIndex = list.FindIndex(item => item.Id == SelectedCase.Id);
+        }
+
+        private bool CanNavigatePrevious() => _currentIndex > 0;
+
+        private void NavigatePrevious()
+        {
+            if (!CanNavigatePrevious()) return;
+            var list = CasesView.Cast<AssistanceCaseListItem>().ToList();
+            SelectedCase = list[_currentIndex - 1];
+        }
+
+        private bool CanNavigateNext() => CasesView != null && _currentIndex >= 0 && _currentIndex < CasesView.Cast<AssistanceCaseListItem>().Count() - 1;
+
+        private void NavigateNext()
+        {
+            if (!CanNavigateNext()) return;
+            var list = CasesView.Cast<AssistanceCaseListItem>().ToList();
+            SelectedCase = list[_currentIndex + 1];
         }
 
         public AssistanceValidatedBeneficiaryOption? SelectedValidatedBeneficiary
@@ -550,6 +587,17 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand NextPageCommand => _nextPageCommand;
         public ICommand PreviousPageCommand => _previousPageCommand;
         public ICommand ToggleAnalyticsCommand => _toggleAnalyticsCommand;
+        public ICommand NavigatePreviousCommand => _navigatePreviousCommand;
+        public ICommand NavigateNextCommand => _navigateNextCommand;
+
+        public string CurrentPosition
+        {
+            get
+            {
+                if (_currentIndex < 0 || TotalFilteredCount == 0) return "0 / 0";
+                return $"{_currentIndex + 1} / {TotalFilteredCount}";
+            }
+        }
 
         private async Task LoadAsync()
         {
@@ -766,6 +814,8 @@ namespace AttendanceShiftingManagement.ViewModels
             _exportCasesCommand.RaiseCanExecuteChanged();
             _nextPageCommand.RaiseCanExecuteChanged();
             _previousPageCommand.RaiseCanExecuteChanged();
+            _navigatePreviousCommand.RaiseCanExecuteChanged();
+            _navigateNextCommand.RaiseCanExecuteChanged();
         }
 
         private bool CanNextPage() => CurrentPage < TotalPages;

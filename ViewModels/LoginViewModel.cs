@@ -34,6 +34,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private ImageSource? _brandBackgroundImage;
         private bool _isCompanySerialAccessValid = true;
         private bool _isShowingPassword;
+        private bool _isOtpEnabled;
 
         public string UsernameOrEmail
         {

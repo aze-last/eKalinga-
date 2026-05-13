@@ -543,45 +543,26 @@
                 <Button Grid.Row="2"
                         Grid.Column="0"
                         Style="{StaticResource LaunchpadTileButtonStyle}"
-                        Background="#1a1d21"
-                        Command="{Binding DataContext.ShowBorrowingCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}">
-                    <Grid>
-                        <StackPanel>
-                            <materialDesign:PackIcon Kind="HandshakeOutline"
-                                                     Width="42"
-                                                     Height="42"
-                                                     Foreground="White"
-                                                     HorizontalAlignment="Left"/>
-                            <TextBlock Margin="0,26,0,0"
-                                       Text="BORROWING"
-                                       FontSize="18"
-                                       FontWeight="Bold"
-                                       Foreground="White"/>
-                            <TextBlock Margin="0,8,0,0"
-                                       Text="Track barangay assets and borrower records."
-                                       FontSize="13"
-                                       Foreground="#A9B7C9"
-                                       Opacity="0.82"
-                                       TextWrapping="Wrap"/>
-                        </StackPanel>
-
-                        <!-- Overdue Alert Badge -->
-                        <Border Width="32"
-                                Height="32"
-                                Background="{DynamicResource BrandRedBrush}"
-                                CornerRadius="16"
-                                HorizontalAlignment="Right"
-                                VerticalAlignment="Top"
-                                Margin="0,0,-8,-8"
-                                Visibility="{Binding OverdueBorrowingCount, Converter={StaticResource NumericToVisibilityConverter}}">
-                            <TextBlock Text="{Binding OverdueBorrowingCount}"
-                                       Foreground="White"
-                                       FontSize="14"
-                                       FontWeight="Bold"
-                                       HorizontalAlignment="Center"
-                                       VerticalAlignment="Center"/>
-                        </Border>
-                    </Grid>
+                        Background="#4F46E5"
+                        Command="{Binding DataContext.ShowGgmsTransactionsCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}">
+                    <StackPanel>
+                        <materialDesign:PackIcon Kind="DatabaseSync"
+                                                 Width="42"
+                                                 Height="42"
+                                                 Foreground="White"
+                                                 HorizontalAlignment="Left"/>
+                        <TextBlock Margin="0,26,0,0"
+                                   Text="GGMS TRANSACTIONS"
+                                   FontSize="18"
+                                   FontWeight="Bold"
+                                   Foreground="White"/>
+                        <TextBlock Margin="0,8,0,0"
+                                   Text="View and filter all eKalinga+ transactions synced to GGMS."
+                                   FontSize="13"
+                                   Foreground="White"
+                                   Opacity="0.82"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
                 </Button>
 
             </Grid>

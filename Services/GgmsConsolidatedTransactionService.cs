@@ -2,6 +2,10 @@ using AttendanceShiftingManagement.Data;
 using AttendanceShiftingManagement.Models;
 using Microsoft.EntityFrameworkCore;
 using MySqlConnector;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace AttendanceShiftingManagement.Services
 {
@@ -15,35 +19,20 @@ namespace AttendanceShiftingManagement.Services
             IReadOnlyCollection<CashForWorkParticipant> participants,
             IReadOnlyCollection<int> releasedParticipantIds,
             decimal totalAmount);
+        
+        Task<List<GgmsConsolidatedTransaction>> LoadTransactionsAsync(string? projectNameFilter = null);
     }
 
     public sealed class NullGgmsConsolidatedTransactionService : IGgmsConsolidatedTransactionService
     {
         public static readonly NullGgmsConsolidatedTransactionService Instance = new();
 
-        private NullGgmsConsolidatedTransactionService()
-        {
-        }
+        private NullGgmsConsolidatedTransactionService() { }
 
-        public Task<string?> TryWriteAssistanceCaseReleaseAsync(AppDbContext context, AssistanceCase assistanceCase)
-        {
-            return Task.FromResult<string?>(null);
-        }
-
-        public Task<string?> TryWriteProjectDistributionClaimAsync(AppDbContext context, AyudaProgram? program, AyudaProjectClaim claim)
-        {
-            return Task.FromResult<string?>(null);
-        }
-
-        public Task<string?> TryWriteCashForWorkReleaseAsync(
-            AppDbContext context,
-            CashForWorkEvent cashForWorkEvent,
-            IReadOnlyCollection<CashForWorkParticipant> participants,
-            IReadOnlyCollection<int> releasedParticipantIds,
-            decimal totalAmount)
-        {
-            return Task.FromResult<string?>(null);
-        }
+        public Task<string?> TryWriteAssistanceCaseReleaseAsync(AppDbContext context, AssistanceCase assistanceCase) => Task.FromResult<string?>(null);
+        public Task<string?> TryWriteProjectDistributionClaimAsync(AppDbContext context, AyudaProgram? program, AyudaProjectClaim claim) => Task.FromResult<string?>(null);
+        public Task<string?> TryWriteCashForWorkReleaseAsync(AppDbContext context, CashForWorkEvent cashForWorkEvent, IReadOnlyCollection<CashForWorkParticipant> participants, IReadOnlyCollection<int> releasedParticipantIds, decimal totalAmount) => Task.FromResult<string?>(null);
+        public Task<List<GgmsConsolidatedTransaction>> LoadTransactionsAsync(string? projectNameFilter = null) => Task.FromResult(new List<GgmsConsolidatedTransaction>());
     }
 
     public sealed class GgmsConsolidatedTransactionService : IGgmsConsolidatedTransactionService
@@ -77,6 +66,63 @@ namespace AttendanceShiftingManagement.Services
                 : ClonePreset(DefaultConnection);
             _officeId = NormalizeAndLimit(runtimeOptions.AyudaOfficeCode, SharedColumnMaxLength)
                 ?? DefaultOfficeId;
+        }
+
+        public async Task<List<GgmsConsolidatedTransaction>> LoadTransactionsAsync(string? projectNameFilter = null)
+        {
+            var results = new List<GgmsConsolidatedTransaction>();
+            try
+            {
+                await using var connection = new MySqlConnection(ConnectionSettingsService.BuildConnectionString(_ggmsConnection));
+                await connection.OpenAsync();
+
+                var query = $@"
+                    SELECT * FROM {ConsolidatedTransactionsTable}
+                    WHERE office_id = @officeId
+                ";
+
+                if (!string.IsNullOrWhiteSpace(projectNameFilter))
+                {
+                    query += " AND project_name = @projectName";
+                }
+
+                query += " ORDER BY transaction_date DESC LIMIT 1000";
+
+                await using var command = new MySqlCommand(query, connection);
+                command.Parameters.AddWithValue("@officeId", _officeId);
+                if (!string.IsNullOrWhiteSpace(projectNameFilter))
+                {
+                    command.Parameters.AddWithValue("@projectName", projectNameFilter);
+                }
+
+                await using var reader = await command.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    results.Add(new GgmsConsolidatedTransaction
+                    {
+                        BeneficiaryId = reader.IsDBNull(reader.GetOrdinal("beneficiary_id")) ? null : reader.GetString("beneficiary_id"),
+                        CivilRegistryId = reader.IsDBNull(reader.GetOrdinal("civil_registry_id")) ? null : reader.GetString("civil_registry_id"),
+                        ProjectCode = reader.IsDBNull(reader.GetOrdinal("project_code")) ? null : reader.GetString("project_code"),
+                        ProjectName = reader.IsDBNull(reader.GetOrdinal("project_name")) ? null : reader.GetString("project_name"),
+                        OfficeId = reader.IsDBNull(reader.GetOrdinal("office_id")) ? null : reader.GetString("office_id"),
+                        FullName = reader.IsDBNull(reader.GetOrdinal("full_name")) ? null : reader.GetString("full_name"),
+                        FirstName = reader.IsDBNull(reader.GetOrdinal("first_name")) ? null : reader.GetString("first_name"),
+                        MiddleName = reader.IsDBNull(reader.GetOrdinal("middle_name")) ? null : reader.GetString("middle_name"),
+                        LastName = reader.IsDBNull(reader.GetOrdinal("last_name")) ? null : reader.GetString("last_name"),
+                        OfficeName = reader.IsDBNull(reader.GetOrdinal("office_name")) ? null : reader.GetString("office_name"),
+                        TransactionType = reader.IsDBNull(reader.GetOrdinal("transaction_type")) ? null : reader.GetString("transaction_type"),
+                        Amount = reader.IsDBNull(reader.GetOrdinal("amount")) ? null : reader.GetDecimal("amount"),
+                        TransactionDate = reader.GetDateTime("transaction_date"),
+                        Status = reader.IsDBNull(reader.GetOrdinal("status")) ? null : reader.GetString("status")
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"GGMS Read Error: {ex.Message}");
+            }
+
+            return results;
         }
 
         public async Task<string?> TryWriteAssistanceCaseReleaseAsync(AppDbContext context, AssistanceCase assistanceCase)
@@ -160,10 +206,7 @@ namespace AttendanceShiftingManagement.Services
             ArgumentNullException.ThrowIfNull(participants);
             ArgumentNullException.ThrowIfNull(releasedParticipantIds);
 
-            if (releasedParticipantIds.Count <= 0)
-            {
-                return null;
-            }
+            if (releasedParticipantIds.Count <= 0) return null;
 
             var releasedParticipantSet = releasedParticipantIds.ToHashSet();
             var perParticipantAmount = totalAmount / releasedParticipantIds.Count;
@@ -189,10 +232,7 @@ namespace AttendanceShiftingManagement.Services
             var entries = new List<GgmsConsolidatedTransactionEntry>();
             foreach (var participant in participants)
             {
-                if (!releasedParticipantSet.Contains(participant.Id))
-                {
-                    continue;
-                }
+                if (!releasedParticipantSet.Contains(participant.Id)) continue;
 
                 var beneficiary = BuildBeneficiaryIdentity(
                     participant.Beneficiary,
@@ -223,10 +263,7 @@ namespace AttendanceShiftingManagement.Services
 
         private async Task<string?> TryInsertEntriesAsync(IReadOnlyCollection<GgmsConsolidatedTransactionEntry> entries)
         {
-            if (entries.Count == 0)
-            {
-                return null;
-            }
+            if (entries.Count == 0) return null;
 
             try
             {
@@ -245,10 +282,7 @@ namespace AttendanceShiftingManagement.Services
                     command.Parameters.AddWithValue("@beneficiary_id", ToDbValue(entry.BeneficiaryId));
                     command.Parameters.AddWithValue("@civil_registry_id", ToDbValue(entry.CivilRegistryId));
                     command.Parameters.AddWithValue("@project_code", ToDbValue(entry.ProjectCode));
-                    if (hasProjectNameColumn)
-                    {
-                        command.Parameters.AddWithValue("@project_name", ToDbValue(entry.ProjectName));
-                    }
+                    if (hasProjectNameColumn) command.Parameters.AddWithValue("@project_name", ToDbValue(entry.ProjectName));
                     command.Parameters.AddWithValue("@office_id", ToDbValue(entry.OfficeId));
                     command.Parameters.AddWithValue("@full_name", ToDbValue(entry.FullName));
                     command.Parameters.AddWithValue("@first_name", ToDbValue(entry.FirstName));
@@ -327,7 +361,6 @@ namespace AttendanceShiftingManagement.Services
 
             BeneficiaryStaging? beneficiary = null;
 
-            // 1. Try BeneficiaryId (Case-Insensitive)
             if (!string.IsNullOrWhiteSpace(normalizedBeneficiaryId))
             {
                 beneficiary = await context.BeneficiaryStaging
@@ -335,7 +368,6 @@ namespace AttendanceShiftingManagement.Services
                     .FirstOrDefaultAsync(item => item.BeneficiaryId == normalizedBeneficiaryId);
             }
 
-            // 2. Try CivilRegistryId (Case-Insensitive)
             if (beneficiary == null && !string.IsNullOrWhiteSpace(normalizedCivilRegistryId))
             {
                 beneficiary = await context.BeneficiaryStaging
@@ -343,7 +375,6 @@ namespace AttendanceShiftingManagement.Services
                     .FirstOrDefaultAsync(item => item.CivilRegistryId == normalizedCivilRegistryId);
             }
 
-            // 3. Try FullName (Case-Insensitive & Trimmed)
             if (beneficiary == null && !string.IsNullOrWhiteSpace(normalizedFullName))
             {
                 beneficiary = await context.BeneficiaryStaging
@@ -353,7 +384,6 @@ namespace AttendanceShiftingManagement.Services
                         item.FullName == normalizedFullName);
             }
 
-            // 4. Try components if name lookup failed
             if (beneficiary == null && !string.IsNullOrWhiteSpace(normalizedFullName))
             {
                 var parts = ParseNameParts(normalizedFullName);
@@ -429,15 +459,8 @@ namespace AttendanceShiftingManagement.Services
 
         private static string? BuildDisplayName(BeneficiaryStaging? beneficiary)
         {
-            if (beneficiary == null)
-            {
-                return null;
-            }
-
-            if (!string.IsNullOrWhiteSpace(beneficiary.FullName))
-            {
-                return beneficiary.FullName.Trim();
-            }
+            if (beneficiary == null) return null;
+            if (!string.IsNullOrWhiteSpace(beneficiary.FullName)) return beneficiary.FullName.Trim();
 
             return string.Join(
                 " ",
@@ -459,30 +482,16 @@ namespace AttendanceShiftingManagement.Services
             };
         }
 
-        private static object ToDbValue(string? value)
-        {
-            return string.IsNullOrWhiteSpace(value)
-                ? DBNull.Value
-                : value;
-        }
+        private static object ToDbValue(string? value) => string.IsNullOrWhiteSpace(value) ? DBNull.Value : value;
 
         private static string? NormalizeAndLimit(string? value, int maxLength)
         {
             var normalized = NormalizeNullable(value);
-            if (string.IsNullOrWhiteSpace(normalized))
-            {
-                return null;
-            }
-
-            return normalized.Length <= maxLength
-                ? normalized
-                : normalized[..maxLength];
+            if (string.IsNullOrWhiteSpace(normalized)) return null;
+            return normalized.Length <= maxLength ? normalized : normalized[..maxLength];
         }
 
-        private static string? NormalizeNullable(string? value)
-        {
-            return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-        }
+        private static string? NormalizeNullable(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
         private sealed record GgmsConsolidatedTransactionEntry(
             string? BeneficiaryId,

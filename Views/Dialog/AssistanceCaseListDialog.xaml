@@ -1,0 +1,137 @@
+<Window x:Class="AttendanceShiftingManagement.Views.Dialog.AssistanceCaseListDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+        Title="Browse Assistance Cases"
+        Height="700" Width="1000"
+        Background="Transparent"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize">
+
+    <shell:WindowChrome.WindowChrome>
+        <shell:WindowChrome CaptionHeight="40" ResizeBorderThickness="0"
+                            GlassFrameThickness="0" CornerRadius="0"/>
+    </shell:WindowChrome.WindowChrome>
+
+    <Border Background="{DynamicResource ThemeCardBrush}" CornerRadius="20"
+            BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="1">
+        <Grid Margin="24">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Close button -->
+            <Button Grid.Row="0"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Top"
+                    Margin="0,-8,-8,0"
+                    Width="36" Height="36"
+                    Style="{StaticResource MaterialDesignFlatButton}"
+                    shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                    Click="Cancel_Click">
+                <materialDesign:PackIcon Kind="Close" Width="18" Height="18" Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
+            </Button>
+
+            <!-- Header -->
+            <StackPanel Grid.Row="0" Margin="0,0,40,0">
+                <TextBlock Text="Browse Assistance Cases"
+                           FontSize="24" FontWeight="SemiBold"
+                           Foreground="{DynamicResource BrandMidnightBrush}"/>
+                <TextBlock Text="Select a case from the list below to view or edit details."
+                           FontSize="14" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,4,0,0"/>
+            </StackPanel>
+
+            <!-- Filters -->
+            <Grid Grid.Row="1" Margin="0,20,0,16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="200"/>
+                </Grid.ColumnDefinitions>
+                
+                <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" 
+                         Style="{StaticResource MaterialDesignOutlinedTextBox}" 
+                         materialDesign:HintAssist.Hint="Search cases (Case No., Beneficiary, Type...)"
+                         Margin="0,0,12,0"/>
+                
+                <ComboBox Grid.Column="1" 
+                          ItemsSource="{Binding StatusFilters}" 
+                          SelectedItem="{Binding SelectedStatusFilter}" 
+                          Style="{StaticResource MaterialDesignOutlinedComboBox}" 
+                          materialDesign:HintAssist.Hint="Filter by status"/>
+            </Grid>
+
+            <!-- DataGrid -->
+            <materialDesign:Card Grid.Row="2" Padding="0" Background="Transparent" BorderThickness="1" BorderBrush="{DynamicResource BrandBorderBrush}" UniformCornerRadius="12">
+                <DataGrid x:Name="CasesDataGrid" 
+                          ItemsSource="{Binding CasesView}" 
+                          SelectedItem="{Binding SelectedCase}" 
+                          AutoGenerateColumns="False" 
+                          CanUserAddRows="False" 
+                          CanUserDeleteRows="False" 
+                          IsReadOnly="True" 
+                          HeadersVisibility="Column" 
+                          GridLinesVisibility="Horizontal" 
+                          RowHeaderWidth="0" 
+                          BorderThickness="0"
+                          Background="Transparent"
+                          MouseDoubleClick="CasesDataGrid_MouseDoubleClick">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Case No." Binding="{Binding CaseNumber}" Width="130"/>
+                        <DataGridTextColumn Header="Beneficiary" Binding="{Binding RecipientLabel}" Width="*"/>
+                        <DataGridTextColumn Header="Type" Binding="{Binding AssistanceType}" Width="140"/>
+                        <DataGridTextColumn Header="Amount" Binding="{Binding AssistanceAmountText}" Width="110"/>
+                        <DataGridTemplateColumn Header="Status" Width="130">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Border Background="{Binding StatusBrush}" CornerRadius="12" Padding="8,3" HorizontalAlignment="Center">
+                                        <TextBlock Text="{Binding StatusText}" Foreground="{Binding StatusTextBrush}" FontSize="11" FontWeight="SemiBold"/>
+                                    </Border>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTextColumn Header="Requested" Binding="{Binding RequestedOn, StringFormat='{}{0:yyyy-MM-dd}'}" Width="100"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </materialDesign:Card>
+
+            <!-- Footer / Pagination / Actions -->
+            <Grid Grid.Row="3" Margin="0,20,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Style="{StaticResource MaterialDesignFlatButton}" Content="PREVIOUS" Command="{Binding PreviousPageCommand}" Padding="8,0"/>
+                    <TextBlock VerticalAlignment="Center" Margin="12,0">
+                        <Run Text="Page " Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
+                        <Run Text="{Binding CurrentPage, Mode=OneWay}" FontWeight="SemiBold" Foreground="{DynamicResource BrandMidnightBrush}"/>
+                        <Run Text=" of " Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
+                        <Run Text="{Binding TotalPages, Mode=OneWay}" FontWeight="SemiBold" Foreground="{DynamicResource BrandMidnightBrush}"/>
+                    </TextBlock>
+                    <Button Style="{StaticResource MaterialDesignFlatButton}" Content="NEXT" Command="{Binding NextPageCommand}" Padding="8,0"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <Button Content="CANCEL"
+                            Width="120" Height="44" Margin="0,0,12,0"
+                            Style="{StaticResource SecondaryActionButton}"
+                            shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                            Click="Cancel_Click"/>
+                    <Button Content="SELECT CASE"
+                            Width="160" Height="44"
+                            Style="{StaticResource GoldActionButton}"
+                            shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                            Click="Select_Click"
+                            IsEnabled="{Binding SelectedCase, Converter={StaticResource NullToHiddenConverter}, ConverterParameter=NotNull}"/>
+                </StackPanel>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>

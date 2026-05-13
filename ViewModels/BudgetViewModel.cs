@@ -32,6 +32,17 @@ namespace AttendanceShiftingManagement.ViewModels
         CashForWorkBudgets
     }
 
+    public sealed class BudgetRecordListItem
+    {
+        public int Id { get; init; }
+        public string Code { get; init; } = string.Empty;
+        public string Name { get; init; } = string.Empty;
+        public string Category { get; init; } = string.Empty;
+        public decimal? BudgetCap { get; init; }
+        public string Status { get; init; } = string.Empty;
+        public object OriginalItem { get; init; } = default!;
+    }
+
     internal enum OtpPendingAction
     {
         None,
@@ -42,6 +53,7 @@ namespace AttendanceShiftingManagement.ViewModels
     public sealed class BudgetViewModel : ObservableObject
     {
         private const string AllLedgerSourceFilter = "All Sources";
+        private const string AllTypeFilter = "All Categories";
         private readonly User _currentUser;
         private readonly RelayCommand _openDashboardPanelCommand;
         private readonly RelayCommand _openGovernmentSyncPanelCommand;
@@ -68,10 +80,12 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly RelayCommand _verifyOtpCommand;
         private readonly RelayCommand _resendOtpCommand;
         private readonly RelayCommand _closeOtpPanelCommand;
+        private readonly RelayCommand _navigatePreviousCommand;
+        private readonly RelayCommand _navigateNextCommand;
         private BudgetWorkspacePanel _activePanel = BudgetWorkspacePanel.Ledger;
         private BudgetSetupSection _selectedSetupSection = BudgetSetupSection.AyudaProjects;
-        private string _currentPanelTitle = "Budget Ledger";
-        private string _currentPanelSubtitle = "Search the unified release history, export liquidation-ready rows, and inspect the full detail of the selected entry.";
+        private string _currentPanelTitle = "Budget Management";
+        private string _currentPanelSubtitle = "Select a budget project or global cap to view and manage financial details.";
         private string _statusMessage = "Loading budget controls...";
         private Brush _statusBrush = Brushes.DimGray;
         private decimal _combinedAvailable;
@@ -125,6 +139,12 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _ledgerSearchText = string.Empty;
         private string _selectedLedgerSourceFilter = AllLedgerSourceFilter;
 
+        private BudgetRecordListItem? _selectedBudget;
+        private ICollectionView _budgetsView;
+        private string _searchText = string.Empty;
+        private string _selectedTypeFilter = AllTypeFilter;
+        private int _currentIndex = -1;
+
         private OtpChallengeSession? _otpSession;
         private OtpPendingAction _pendingAction = OtpPendingAction.None;
         private bool _showOtpPanel;
@@ -152,6 +172,12 @@ namespace AttendanceShiftingManagement.ViewModels
             LedgerSourceFilters = new ObservableCollection<string> { AllLedgerSourceFilter };
             _ledgerEntriesView = CollectionViewSource.GetDefaultView(LedgerEntries);
             _ledgerEntriesView.Filter = FilterLedgerEntry;
+
+            AllBudgets = new ObservableCollection<BudgetRecordListItem>();
+            TypeFilters = new ObservableCollection<string> { AllTypeFilter, "Ayuda Project", "Global Aid Cap", "Global CFW Cap" };
+            _budgetsView = CollectionViewSource.GetDefaultView(AllBudgets);
+            _budgetsView.Filter = FilterBudgetRecord;
+
             _openDashboardPanelCommand = new RelayCommand(_ => OpenLedgerPanel(), _ => !IsBusy && _activePanel != BudgetWorkspacePanel.Ledger);
             _openGovernmentSyncPanelCommand = new RelayCommand(_ => OpenLedgerPanel(), _ => !IsBusy && _activePanel != BudgetWorkspacePanel.Ledger);
             _openLedgerPanelCommand = new RelayCommand(_ => OpenLedgerPanel(), _ => !IsBusy && _activePanel != BudgetWorkspacePanel.Ledger);
@@ -177,6 +203,10 @@ namespace AttendanceShiftingManagement.ViewModels
             _verifyOtpCommand = new RelayCommand(_ => VerifyOtp(), _ => !IsBusy && _otpSession != null && !string.IsNullOrWhiteSpace(OtpCode));
             _resendOtpCommand = new RelayCommand(async _ => await SendOtpAsync(isResend: true), _ => !IsBusy && OtpChallengeService.CanResend(_otpSession, DateTimeOffset.UtcNow));
             _closeOtpPanelCommand = new RelayCommand(_ => CloseOtpPanel());
+
+            _navigatePreviousCommand = new RelayCommand(_ => NavigatePrevious(), _ => CanNavigatePrevious());
+            _navigateNextCommand = new RelayCommand(_ => NavigateNext(), _ => CanNavigateNext());
+
             _ = LoadAsync();
         }
 
@@ -191,6 +221,9 @@ namespace AttendanceShiftingManagement.ViewModels
         public ObservableCollection<PrivateDonation> Donations { get; }
         public ObservableCollection<BudgetLedgerEntryListItem> LedgerEntries { get; }
         public ObservableCollection<string> LedgerSourceFilters { get; }
+
+        public ObservableCollection<BudgetRecordListItem> AllBudgets { get; }
+        public ObservableCollection<string> TypeFilters { get; }
 
         public ICommand OpenDashboardPanelCommand => _openDashboardPanelCommand;
         public ICommand OpenGovernmentSyncPanelCommand => _openGovernmentSyncPanelCommand;
@@ -218,6 +251,9 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand VerifyOtpCommand => _verifyOtpCommand;
         public ICommand ResendOtpCommand => _resendOtpCommand;
         public ICommand CloseOtpPanelCommand => _closeOtpPanelCommand;
+
+        public ICommand NavigatePreviousCommand => _navigatePreviousCommand;
+        public ICommand NavigateNextCommand => _navigateNextCommand;
 
         public bool IsBusy
         {
@@ -248,6 +284,8 @@ namespace AttendanceShiftingManagement.ViewModels
                     _exportLedgerCommand.RaiseCanExecuteChanged();
                     _verifyOtpCommand.RaiseCanExecuteChanged();
                     _resendOtpCommand.RaiseCanExecuteChanged();
+                    _navigatePreviousCommand.RaiseCanExecuteChanged();
+                    _navigateNextCommand.RaiseCanExecuteChanged();
                 }
             }
         }
@@ -431,6 +469,214 @@ namespace AttendanceShiftingManagement.ViewModels
                 {
                     RefreshLedgerFilters();
                 }
+            }
+        }
+
+        public BudgetRecordListItem? SelectedBudget
+        {
+            get => _selectedBudget;
+            set
+            {
+                if (SetProperty(ref _selectedBudget, value))
+                {
+                    SyncWithSelectedBudget();
+                    UpdateNavigationState();
+                }
+            }
+        }
+
+        public ICollectionView BudgetsView => _budgetsView;
+
+        public Visibility EmptyStateVisibility => SelectedBudget == null ? Visibility.Visible : Visibility.Collapsed;
+        public Visibility DetailVisibility => SelectedBudget != null ? Visibility.Visible : Visibility.Collapsed;
+
+        public string SearchText
+        {
+            get => _searchText;
+            set
+            {
+                if (SetProperty(ref _searchText, value))
+                {
+                    _budgetsView.Refresh();
+                }
+            }
+        }
+
+        public string SelectedTypeFilter
+        {
+            get => _selectedTypeFilter;
+            set
+            {
+                if (SetProperty(ref _selectedTypeFilter, value))
+                {
+                    _budgetsView.Refresh();
+                }
+            }
+        }
+
+        public string CurrentPosition
+        {
+            get
+            {
+                var viewList = _budgetsView.Cast<BudgetRecordListItem>().ToList();
+                if (SelectedBudget == null || !viewList.Contains(SelectedBudget))
+                {
+                    return "0 / 0";
+                }
+                return $"{viewList.IndexOf(SelectedBudget) + 1} / {viewList.Count}";
+            }
+        }
+
+        private void SyncWithSelectedBudget()
+        {
+            if (SelectedBudget == null)
+            {
+                _currentIndex = -1;
+                return;
+            }
+
+            var viewList = _budgetsView.Cast<BudgetRecordListItem>().ToList();
+            _currentIndex = viewList.IndexOf(SelectedBudget);
+
+            if (SelectedBudget.OriginalItem is AyudaProgram program)
+            {
+                OpenAyudaProjectsPanel();
+                // Map program properties to form fields for display/edit
+                ProgramCode = program.ProgramCode;
+                ProgramName = program.ProgramName;
+                SelectedProgramType = program.ProgramType;
+                ProgramDescription = program.Description ?? string.Empty;
+                ProgramAssistanceType = program.AssistanceType ?? string.Empty;
+                SelectedProgramReleaseKind = program.ReleaseKind;
+                ProgramUnitAmountText = program.UnitAmount?.ToString("N2") ?? string.Empty;
+                ProgramItemDescription = program.ItemDescription ?? string.Empty;
+                ProgramStartDate = program.StartDate;
+                ProgramEndDate = program.EndDate;
+                ProgramBudgetCapText = program.BudgetCap?.ToString("N2") ?? string.Empty;
+                SelectedProgramDistributionStatus = program.DistributionStatus;
+            }
+            else if (SelectedBudget.OriginalItem is AssistanceCaseBudget acb)
+            {
+                OpenAssistanceCaseBudgetsPanel();
+                AssistanceCaseBudgetCapText = acb.BudgetCap?.ToString("N2") ?? string.Empty;
+            }
+            else if (SelectedBudget.OriginalItem is CashForWorkBudget cwb)
+            {
+                OpenCashForWorkBudgetsPanel();
+                CashForWorkBudgetCapText = cwb.BudgetCap?.ToString("N2") ?? string.Empty;
+            }
+
+            OnPropertyChanged(nameof(CurrentPosition));
+            OnPropertyChanged(nameof(EmptyStateVisibility));
+            OnPropertyChanged(nameof(DetailVisibility));
+        }
+
+        private void UpdateNavigationState()
+        {
+            _navigatePreviousCommand.RaiseCanExecuteChanged();
+            _navigateNextCommand.RaiseCanExecuteChanged();
+        }
+
+        private bool CanNavigatePrevious() => _currentIndex > 0;
+
+        private void NavigatePrevious()
+        {
+            var viewList = _budgetsView.Cast<BudgetRecordListItem>().ToList();
+            if (_currentIndex > 0)
+            {
+                SelectedBudget = viewList[_currentIndex - 1];
+            }
+        }
+
+        private bool CanNavigateNext()
+        {
+            var viewList = _budgetsView.Cast<BudgetRecordListItem>().ToList();
+            return _currentIndex >= 0 && _currentIndex < viewList.Count - 1;
+        }
+
+        private void NavigateNext()
+        {
+            var viewList = _budgetsView.Cast<BudgetRecordListItem>().ToList();
+            if (_currentIndex >= 0 && _currentIndex < viewList.Count - 1)
+            {
+                SelectedBudget = viewList[_currentIndex + 1];
+            }
+        }
+
+        private bool FilterBudgetRecord(object item)
+        {
+            if (item is not BudgetRecordListItem record) return false;
+
+            if (!string.Equals(SelectedTypeFilter, AllTypeFilter) && !string.Equals(record.Category, SelectedTypeFilter))
+                return false;
+
+            if (string.IsNullOrWhiteSpace(SearchText)) return true;
+
+            var search = SearchText.Trim();
+            return record.Code.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                   record.Name.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                   record.Category.Contains(search, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private async Task LoadBudgetsViewAsync()
+        {
+            await using var context = new AppDbContext();
+            var budgetService = new BudgetManagementService(context);
+            
+            var programs = await budgetService.GetProgramsAsync();
+            var acBudgets = await budgetService.GetAssistanceCaseBudgetsAsync();
+            var cfwBudgets = await budgetService.GetCashForWorkBudgetsAsync();
+
+            var currentSelectedId = SelectedBudget?.Id;
+            var currentCategory = SelectedBudget?.Category;
+
+            AllBudgets.Clear();
+
+            foreach (var p in programs)
+            {
+                AllBudgets.Add(new BudgetRecordListItem
+                {
+                    Id = p.Id,
+                    Code = p.ProgramCode,
+                    Name = p.ProgramName,
+                    Category = "Ayuda Project",
+                    BudgetCap = p.BudgetCap,
+                    Status = p.DistributionStatus.ToString(),
+                    OriginalItem = p
+                });
+            }
+
+            foreach (var b in acBudgets)
+            {
+                AllBudgets.Add(new BudgetRecordListItem
+                {
+                    Id = b.Id,
+                    Code = b.BudgetCode,
+                    Name = b.BudgetName,
+                    Category = "Global Aid Cap",
+                    BudgetCap = b.BudgetCap,
+                    Status = b.IsActive ? "Active" : "Inactive",
+                    OriginalItem = b
+                });
+            }
+
+            foreach (var b in cfwBudgets)
+            {
+                AllBudgets.Add(new BudgetRecordListItem
+                {
+                    Id = b.Id,
+                    Code = b.BudgetCode,
+                    Name = b.BudgetName,
+                    Category = "Global CFW Cap",
+                    BudgetCap = b.BudgetCap,
+                    Status = b.IsActive ? "Active" : "Inactive",
+                    OriginalItem = b
+                });
+            }
+
+            if (currentSelectedId.HasValue)
+            {
+                SelectedBudget = AllBudgets.FirstOrDefault(b => b.Id == currentSelectedId && b.Category == currentCategory);
             }
         }
 
@@ -760,6 +1006,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 await LoadOverviewAsync();
                 await LoadDonationsAsync();
                 await LoadLedgerAsync();
+                await LoadBudgetsViewAsync();
                 SetSuccessStatus("Budget controls refreshed.");
             }
             catch (Exception ex)

@@ -35,6 +35,7 @@ namespace AttendanceShiftingManagement.ViewModels
             ShowMasterListCommand = new RelayCommand(_ => SwitchSection("MasterList"));
             ShowAssistanceCasesCommand = new RelayCommand(_ => SwitchSection("AssistanceCases"));
             ShowBorrowingCommand = new RelayCommand(_ => SwitchSection("Borrowing"));
+            ShowGgmsTransactionsCommand = new RelayCommand(_ => SwitchSection("GgmsTransactions"));
             ShowReportsCommand = new RelayCommand(_ => SwitchSection("Reports"));
             RefreshBranding();
             RefreshConnectionSummary();
@@ -127,6 +128,7 @@ namespace AttendanceShiftingManagement.ViewModels
         public bool IsDistributionSelected => _currentSection == "Distribution";
         public bool IsMasterListSelected => _currentSection == "MasterList";
         public bool IsAssistanceCasesSelected => _currentSection == "AssistanceCases";
+        public bool IsGgmsTransactionsSelected => _currentSection == "GgmsTransactions";
         public bool IsReportsSelected => _currentSection == "Reports";
         public bool IsSecondarySectionVisible => _currentSection != "Dashboard";
         public RelayCommand ShowDashboardCommand { get; }
@@ -136,6 +138,7 @@ namespace AttendanceShiftingManagement.ViewModels
         public RelayCommand ShowMasterListCommand { get; }
         public ICommand ShowAssistanceCasesCommand { get; }
         public ICommand ShowBorrowingCommand { get; }
+        public ICommand ShowGgmsTransactionsCommand { get; }
         public ICommand ShowReportsCommand { get; }
 
         public void RefreshConnectionSummary()
@@ -179,6 +182,7 @@ namespace AttendanceShiftingManagement.ViewModels
             OnPropertyChanged(nameof(IsDistributionSelected));
             OnPropertyChanged(nameof(IsMasterListSelected));
             OnPropertyChanged(nameof(IsAssistanceCasesSelected));
+            OnPropertyChanged(nameof(IsGgmsTransactionsSelected));
             OnPropertyChanged(nameof(IsReportsSelected));
             OnPropertyChanged(nameof(IsSecondarySectionVisible));
             CurrentView = BuildView(section);
@@ -208,6 +212,10 @@ namespace AttendanceShiftingManagement.ViewModels
                     CurrentSectionTitle = "Aid Request";
                     CurrentSectionSubtitle = "Create requests, choose a validated beneficiary or household, and release approved aid against budget.";
                     return new AssistanceCaseManagementPage(_currentUser);
+                case "GgmsTransactions":
+                    CurrentSectionTitle = "GGMS Consolidated Transactions";
+                    CurrentSectionSubtitle = "View and filter all eKalinga+ transactions synced to the Global Government Management System.";
+                    return new GgmsConsolidatedTransactionPage(_currentUser);
                 case "Borrowing":
                     CurrentSectionTitle = "Equipment Borrowing";
                     CurrentSectionSubtitle = "Track barangay assets (tents, chairs, projectors), manage borrower records, and monitor overdue returns.";
