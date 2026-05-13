@@ -497,6 +497,22 @@ namespace AttendanceShiftingManagement.ViewModels
             set => SetProperty(ref _editableResolutionNotes, value);
         }
 
+        private bool _isBrowsePanelOpen;
+
+        public bool IsAnyOverlayOpen => IsCasePanelOpen || IsBrowsePanelOpen;
+
+        public bool IsBrowsePanelOpen
+        {
+            get => _isBrowsePanelOpen;
+            set
+            {
+                if (SetProperty(ref _isBrowsePanelOpen, value))
+                {
+                    OnPropertyChanged(nameof(IsAnyOverlayOpen));
+                }
+            }
+        }
+
         public bool IsCasePanelOpen
         {
             get => _isCasePanelOpen;
@@ -506,6 +522,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 {
                     _openCasePanelCommand.RaiseCanExecuteChanged();
                     _closeCasePanelCommand.RaiseCanExecuteChanged();
+                    OnPropertyChanged(nameof(IsAnyOverlayOpen));
                 }
             }
         }

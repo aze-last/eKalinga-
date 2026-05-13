@@ -21,14 +21,22 @@ namespace AttendanceShiftingManagement.Views
                 return;
             }
 
-            var dialog = new AssistanceCaseListDialog(viewModel)
+            viewModel.IsBrowsePanelOpen = true;
+            try
             {
-                Owner = Window.GetWindow(this)
-            };
+                var dialog = new AssistanceCaseListDialog(viewModel)
+                {
+                    Owner = Window.GetWindow(this)
+                };
 
-            if (dialog.ShowDialog() == true)
+                if (dialog.ShowDialog() == true)
+                {
+                    // SelectedCase is already updated via binding in the dialog
+                }
+            }
+            finally
             {
-                // SelectedCase is already updated via binding in the dialog
+                viewModel.IsBrowsePanelOpen = false;
             }
         }
     }
