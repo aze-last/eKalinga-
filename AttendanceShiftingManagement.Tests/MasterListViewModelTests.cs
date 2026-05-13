@@ -33,7 +33,7 @@ public sealed class MasterListViewModelTests
         Assert.Empty(request.QuickFilters);
         Assert.Equal(string.Empty, request.SearchText);
 
-        Assert.Equal(100, viewModel.Beneficiaries.Count);
+        Assert.Equal(100, viewModel.ApprovedBeneficiaries.Count);
         Assert.Equal(1, viewModel.CurrentPage);
         Assert.Equal(3, viewModel.TotalPages);
         Assert.Equal("Page 1 of 3", viewModel.PageIndicator);

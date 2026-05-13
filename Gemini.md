@@ -167,83 +167,55 @@ If I ask for discussion or planning:
 - mention risks only when relevant
 - do not start coding unless asked
 
-## UI/UX Theme Lock
+## UI/UX Theme Lock (eKalinga+ Design System)
 
-Keep the dashboard UI stable.
+All modules must strictly adhere to the following unified design system to ensure visual consistency across the entire application.
 
-Dashboard rules:
-- Do not redesign the dashboard unless explicitly asked.
-- Dashboard is only for module entry points and high-level summary cards.
-- Keep the existing dashboard module set:
-  - Validated Beneficiaries
-  - Aid Request
-  - Budget
-  - Distribution
-  - Cash-for-Work
-  - Reports
-- Do not add random widgets, recent activity feeds, unrelated sections, or experimental layouts to the dashboard.
-- Do not change dashboard visual direction when modifying module pages.
+### 1. Dashboard Stability (LOCKED)
+Keep the dashboard UI stable. **Do not redesign the dashboard unless explicitly asked.**
+*   **Dashboard Scope:** Only for module entry points and high-level summary cards.
+*   **Module Set:** Keep the existing dashboard module set (Validated Beneficiaries, Aid Request, Budget, Distribution, Cash-for-Work, Reports).
+*   **Visual Direction:** Do not change dashboard visual direction when modifying module pages. Do not add random widgets or unrelated sections.
 
-Module page rules:
-- All operational module actions must stay inside the left sidebar or left action panel.
-- The center area must show the main list, table, records, or module information.
-- Details, preview, selected item info, history, and summaries should appear in the center/right content area.
-- Do not scatter primary actions across the whole screen.
-- Do not move core operations into dashboard tiles.
-- Do not redesign module structure unless I explicitly request a redesign.
+### 2. Core Color Palette
+*   **Primary Brand (`BrandBrush`):** `#1E4E89` (Midnight Blue) - Used for headers, primary icons, and section titles.
+*   **Action Accent:** `#F59E0B` (Amber/Gold) - Reserved for high-priority operational buttons and specific CTAs.
+*   **Sidebar Background:** `#F8FAFC` (Light Slate/Off-white) - Use this lighter shade for the left action panels to maintain a clean, professional "Institutional" look. Avoid dark/Midnight sidebars.
+*   **Main Surface:** `#FFFFFF` (Pure White) for cards; `#F1F5F9` for the main page background.
+*   **Feedback Colors:**
+    *   *Success:* `#15803D` (Forest Green)
+    *   *Error/Alert:* `#BE123C` (Crimson)
+    *   *Warning:* `#854D0E` (Ochre)
 
-Default module layout:
-- Left side:
-  - filters
-  - search
-  - create/add buttons
-  - workflow actions
-  - scanner/session controls
-  - module navigation/actions
-- Center:
-  - main list/table
-  - selected module data
-  - records
-  - information cards
-- Right side only when needed:
-  - selected item details
-  - history
-  - preview
-  - audit/summary
+### 3. Typography Standards
+*   **Module Header:** `24px` Bold, `BrandBrush`.
+*   **Section Headers (Sidebar):** `13px` Bold, All-Caps, `BrandBrush`.
+*   **Sidebar Buttons:** `14px` Regular/Medium, Body Foreground.
+*   **Table/DataGrid Text:** `12px` or `13px` for high density.
+*   **Card Labels:** `12px` Bold, muted secondary color (placed above values).
+*   **Card Values:** `24px` Black/Heavy for primary metrics.
 
-Visual consistency rules:
-- Reuse existing WPF styles, brushes, spacing, buttons, cards, and typography where possible.
-- **Blurred Overlay Standard:** Every operational action (Create, Edit, Add, Payout, etc.) must open as a new panel in an overlay layer above the main content. The main content (DataGrid/List) must remain visible but be blurred (`BlurEffect`) while the overlay is active. Do not swap the center area or collapse the main list to show operational forms.
-- Do not introduce a new visual style per feature.
-- Do not change colors, spacing system, button style, card style, or typography unless I ask for a theme update.
-- If a page needs a new component, match the existing dashboard/module style.
-- Prefer clean desktop admin layout over mobile/web-style experiments.
+### 4. Structural Constraints
+*   **Sidebar Width:** Fixed at `320px`.
+*   **Margins/Padding:** Consistent `30px` padding for main content areas.
+*   **Corner Radius:** `12px` to `16px` for cards/panels; `6px` to `8px` for buttons.
+*   **Card Styling:** Prefer subtle borders (`1px #E2E8F0`) or very soft shadows over heavy elevations.
+
+### 5. Blurred Overlay Standard (MANDATORY)
+Every operational action (Create, Edit, Add, Payout, etc.) must open as a new panel in an overlay layer above the main content.
+*   **Blur Effect:** Set `BlurRadius` to `15.0` on the main content grid.
+*   **Backdrop Overlay:** Use `#CC0F172A` (Midnight Slate at 80% opacity) for the layer behind the active panel.
+*   **Layout Behavior:** The main list/DataGrid must remain visible (but blurred) while the overlay is active. Do not swap the center area or collapse lists.
+
+### 6. Module Layout Pattern
+*   **Left Side (Sidebar):** Navigation, Filters, Search, and primary "Action" buttons (Gold).
+*   **Center:** Main operational data (Lists, Tables, Records).
+*   **Right Side (Optional):** Selected item details, transaction history, or previews.
 
 Before changing UI:
-1. Identify whether the change affects dashboard or module page.
-2. Keep dashboard unchanged unless requested.
-3. For modules, preserve the left-sidebar + center-content structure.
-4. List exact XAML files to modify before editing.
-
-When editing XAML:
-- Preserve existing bindings and commands.
-- Do not remove working bindings.
-- Do not rename commands/properties unless required.
-- Do not make formatting-only changes.
-- Keep layout changes minimal and consistent.
-
-UI/UX instructions when prompting use this Bien. To gemini nevermind this part.
-
-UI constraint:
-Keep dashboard UI unchanged.
-Apply changes only inside the target module page.
-All module operations/actions must stay in the left sidebar/action panel.
-The center area must remain for lists, records, and module information.
-
-Before editing:
-- identify root cause/design issue
-- list exact XAML files to modify
-- preserve existing bindings and commands
+1. Verify that the proposed change aligns with these color and typography locks.
+2. Ensure the sidebar remains light (`#F8FAFC`).
+3. **DO NOT touch the dashboard layout.** Use existing WPF styles and dynamic brushes where possible.
 
 Before editing:
 1. Identify affected workflow logic.

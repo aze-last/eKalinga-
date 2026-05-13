@@ -241,14 +241,43 @@ namespace AttendanceShiftingManagement.Services
                 .ToListAsync();
         }
 
-        public async Task<IReadOnlyList<BudgetLedgerEntry>> GetRecentLedgerEntriesAsync(int take = 100)
+        public async Task<IReadOnlyList<BudgetLedgerEntry>> GetRecentLedgerEntriesAsync(int skip = 0, int take = 50, string? search = null, string? sourceFilter = null)
         {
-            return await _context.BudgetLedgerEntries
-                .AsNoTracking()
+            var query = _context.BudgetLedgerEntries.AsNoTracking();
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                query = query.Where(e => e.Remarks != null && EF.Functions.Like(e.Remarks, $"%{search}%"));
+            }
+
+            if (!string.IsNullOrWhiteSpace(sourceFilter) && sourceFilter != "All Sources")
+            {
+                query = query.Where(e => e.FeatureSource.ToString() == sourceFilter);
+            }
+
+            return await query
                 .OrderByDescending(entry => entry.EntryDate)
                 .ThenByDescending(entry => entry.CreatedAt)
+                .Skip(skip)
                 .Take(take)
                 .ToListAsync();
+        }
+
+        public async Task<int> GetLedgerCountAsync(string? search = null, string? sourceFilter = null)
+        {
+            var query = _context.BudgetLedgerEntries.AsNoTracking();
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                query = query.Where(e => e.Remarks != null && EF.Functions.Like(e.Remarks, $"%{search}%"));
+            }
+
+            if (!string.IsNullOrWhiteSpace(sourceFilter) && sourceFilter != "All Sources")
+            {
+                query = query.Where(e => e.FeatureSource.ToString() == sourceFilter);
+            }
+
+            return await query.CountAsync();
         }
 
         public async Task<AyudaProgramOperationResult> CreateProgramAsync(AyudaProgramRequest request, int createdByUserId)

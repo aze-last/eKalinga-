@@ -66,6 +66,9 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly RelayCommand _createCashForWorkBudgetCommand;
         private readonly RelayCommand _openDonationPanelCommand;
         private readonly RelayCommand _closeDonationPanelCommand;
+        private readonly RelayCommand _openGgmsSettingsPanelCommand;
+        private readonly RelayCommand _closeGgmsSettingsPanelCommand;
+        private readonly RelayCommand _saveGgmsSettingsCommand;
         private readonly RelayCommand _openProgramPanelCommand;
         private readonly RelayCommand _openAssistanceCaseBudgetsPanelCommand;
         private readonly RelayCommand _openCashForWorkBudgetsPanelCommand;
@@ -82,7 +85,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly RelayCommand _closeOtpPanelCommand;
         private readonly RelayCommand _navigatePreviousCommand;
         private readonly RelayCommand _navigateNextCommand;
-        private BudgetWorkspacePanel _activePanel = BudgetWorkspacePanel.Ledger;
+        private BudgetWorkspacePanel _activePanel = BudgetWorkspacePanel.Dashboard;
         private BudgetSetupSection _selectedSetupSection = BudgetSetupSection.AyudaProjects;
         private string _currentPanelTitle = "Budget Management";
         private string _currentPanelSubtitle = "Select a budget project or global cap to view and manage financial details.";
@@ -132,6 +135,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private DateTime? _seminarDate = DateTime.Today;
         private bool _isDonationPanelOpen;
         private bool _isProgramPanelOpen;
+        private bool _isGgmsSettingsPanelOpen;
         private bool _isSeminarPanelOpen;
         private bool _isBusy;
         private ICollectionView _ledgerEntriesView;
@@ -144,6 +148,8 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _searchText = string.Empty;
         private string _selectedTypeFilter = AllTypeFilter;
         private int _currentIndex = -1;
+        private decimal _selectedBudgetRemaining;
+        private bool _isGlobalCapSelected;
 
         private OtpChallengeSession? _otpSession;
         private OtpPendingAction _pendingAction = OtpPendingAction.None;
@@ -155,9 +161,41 @@ namespace AttendanceShiftingManagement.ViewModels
         private static readonly TimeSpan OtpExpiry = TimeSpan.FromMinutes(3);
         private static readonly TimeSpan OtpResendCooldown = TimeSpan.FromSeconds(45);
 
+        private BudgetRuntimeOptions _ggmsOptions = BudgetRuntimeOptions.Load();
+
+        private int _currentLedgerPage = 1;
+        private int _totalLedgerPages = 1;
+        private int _totalLedgerEntries = 0;
+        private const int LedgerPageSize = 25;
+
+        public int CurrentLedgerPage
+        {
+            get => _currentLedgerPage;
+            private set => SetProperty(ref _currentLedgerPage, value);
+        }
+
+        public int TotalLedgerPages
+        {
+            get => _totalLedgerPages;
+            private set => SetProperty(ref _totalLedgerPages, value);
+        }
+
+        public int TotalLedgerEntries
+        {
+            get => _totalLedgerEntries;
+            private set => SetProperty(ref _totalLedgerEntries, value);
+        }
+
+        private readonly RelayCommand _nextLedgerPageCommand;
+        private readonly RelayCommand _previousLedgerPageCommand;
+
+        public ICommand NextLedgerPageCommand => _nextLedgerPageCommand;
+        public ICommand PreviousLedgerPageCommand => _previousLedgerPageCommand;
+
         public BudgetViewModel(User currentUser)
         {
             _currentUser = currentUser;
+            SetupSections = new ObservableCollection<BudgetSetupSection>(Enum.GetValues<BudgetSetupSection>());
             DonorTypes = new ObservableCollection<PrivateDonationDonorType>(Enum.GetValues<PrivateDonationDonorType>());
             ProofTypes = new ObservableCollection<DonationProofType>(Enum.GetValues<DonationProofType>());
             ProgramTypes = new ObservableCollection<AyudaProgramType>(
@@ -171,14 +209,15 @@ namespace AttendanceShiftingManagement.ViewModels
             LedgerEntries = new ObservableCollection<BudgetLedgerEntryListItem>();
             LedgerSourceFilters = new ObservableCollection<string> { AllLedgerSourceFilter };
             _ledgerEntriesView = CollectionViewSource.GetDefaultView(LedgerEntries);
-            _ledgerEntriesView.Filter = FilterLedgerEntry;
+            // No local filtering for paginated ledger
+            // _ledgerEntriesView.Filter = FilterLedgerEntry;
 
             AllBudgets = new ObservableCollection<BudgetRecordListItem>();
             TypeFilters = new ObservableCollection<string> { AllTypeFilter, "Ayuda Project", "Global Aid Cap", "Global CFW Cap" };
             _budgetsView = CollectionViewSource.GetDefaultView(AllBudgets);
             _budgetsView.Filter = FilterBudgetRecord;
 
-            _openDashboardPanelCommand = new RelayCommand(_ => OpenLedgerPanel(), _ => !IsBusy && _activePanel != BudgetWorkspacePanel.Ledger);
+            _openDashboardPanelCommand = new RelayCommand(_ => ClosePanel(), _ => !IsBusy && _activePanel != BudgetWorkspacePanel.Dashboard);
             _openGovernmentSyncPanelCommand = new RelayCommand(_ => OpenLedgerPanel(), _ => !IsBusy && _activePanel != BudgetWorkspacePanel.Ledger);
             _openLedgerPanelCommand = new RelayCommand(_ => OpenLedgerPanel(), _ => !IsBusy && _activePanel != BudgetWorkspacePanel.Ledger);
             _refreshCommand = new RelayCommand(async _ => await LoadAsync(), _ => !IsBusy);
@@ -189,6 +228,9 @@ namespace AttendanceShiftingManagement.ViewModels
             _createCashForWorkBudgetCommand = new RelayCommand(async _ => await RequestUpdateGlobalCfwBudgetAsync(), _ => !IsBusy);
             _openDonationPanelCommand = new RelayCommand(_ => OpenDonationPanel(), _ => !IsBusy && !IsDonationPanelOpen);
             _closeDonationPanelCommand = new RelayCommand(_ => CloseDonationPanel(), _ => IsDonationPanelOpen);
+            _openGgmsSettingsPanelCommand = new RelayCommand(_ => OpenGgmsSettingsPanel(), _ => !IsBusy && !IsGgmsSettingsPanelOpen);
+            _closeGgmsSettingsPanelCommand = new RelayCommand(_ => CloseGgmsSettingsPanel(), _ => IsGgmsSettingsPanelOpen);
+            _saveGgmsSettingsCommand = new RelayCommand(_ => SaveGgmsSettings(), _ => IsGgmsSettingsPanelOpen);
             _openProgramPanelCommand = new RelayCommand(_ => OpenAyudaProjectsPanel(), _ => !IsBusy);
             _openAssistanceCaseBudgetsPanelCommand = new RelayCommand(_ => OpenAssistanceCaseBudgetsPanel(), _ => !IsBusy);
             _openCashForWorkBudgetsPanelCommand = new RelayCommand(_ => OpenCashForWorkBudgetsPanel(), _ => !IsBusy);
@@ -199,7 +241,7 @@ namespace AttendanceShiftingManagement.ViewModels
             _closePanelCommand = new RelayCommand(_ => ClosePanel(), _ => !IsBusy && _activePanel != BudgetWorkspacePanel.Ledger);
             _closeLedgerHistoryCardCommand = new RelayCommand(_ => CloseLedgerHistoryCard(), _ => SelectedLedgerEntry != null);
             _browseProofCommand = new RelayCommand(_ => BrowseProof());
-            _exportLedgerCommand = new RelayCommand(async _ => await ExportLedgerAsync(), _ => !IsBusy && LedgerEntriesView.Cast<object>().Any());
+            _exportLedgerCommand = new RelayCommand(async _ => await ExportLedgerAsync(), _ => !IsBusy && LedgerEntries.Any());
             _verifyOtpCommand = new RelayCommand(_ => VerifyOtp(), _ => !IsBusy && _otpSession != null && !string.IsNullOrWhiteSpace(OtpCode));
             _resendOtpCommand = new RelayCommand(async _ => await SendOtpAsync(isResend: true), _ => !IsBusy && OtpChallengeService.CanResend(_otpSession, DateTimeOffset.UtcNow));
             _closeOtpPanelCommand = new RelayCommand(_ => CloseOtpPanel());
@@ -207,9 +249,13 @@ namespace AttendanceShiftingManagement.ViewModels
             _navigatePreviousCommand = new RelayCommand(_ => NavigatePrevious(), _ => CanNavigatePrevious());
             _navigateNextCommand = new RelayCommand(_ => NavigateNext(), _ => CanNavigateNext());
 
+            _nextLedgerPageCommand = new RelayCommand(async _ => await NextLedgerPageAsync(), _ => !IsBusy && CurrentLedgerPage < TotalLedgerPages);
+            _previousLedgerPageCommand = new RelayCommand(async _ => await PreviousLedgerPageAsync(), _ => !IsBusy && CurrentLedgerPage > 1);
+
             _ = LoadAsync();
         }
 
+        public ObservableCollection<BudgetSetupSection> SetupSections { get; }
         public ObservableCollection<PrivateDonationDonorType> DonorTypes { get; }
         public ObservableCollection<DonationProofType> ProofTypes { get; }
         public ObservableCollection<AyudaProgramType> ProgramTypes { get; }
@@ -236,6 +282,9 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand CreateCashForWorkBudgetCommand => _createCashForWorkBudgetCommand;
         public ICommand OpenDonationPanelCommand => _openDonationPanelCommand;
         public ICommand CloseDonationPanelCommand => _closeDonationPanelCommand;
+        public ICommand OpenGgmsSettingsPanelCommand => _openGgmsSettingsPanelCommand;
+        public ICommand CloseGgmsSettingsPanelCommand => _closeGgmsSettingsPanelCommand;
+        public ICommand SaveGgmsSettingsCommand => _saveGgmsSettingsCommand;
         public ICommand OpenProgramPanelCommand => _openProgramPanelCommand;
         public ICommand OpenAssistanceCaseBudgetsPanelCommand => _openAssistanceCaseBudgetsPanelCommand;
         public ICommand OpenCashForWorkBudgetsPanelCommand => _openCashForWorkBudgetsPanelCommand;
@@ -273,6 +322,9 @@ namespace AttendanceShiftingManagement.ViewModels
                     _createCashForWorkBudgetCommand.RaiseCanExecuteChanged();
                     _openDonationPanelCommand.RaiseCanExecuteChanged();
                     _closeDonationPanelCommand.RaiseCanExecuteChanged();
+                    _openGgmsSettingsPanelCommand.RaiseCanExecuteChanged();
+                    _closeGgmsSettingsPanelCommand.RaiseCanExecuteChanged();
+                    _saveGgmsSettingsCommand.RaiseCanExecuteChanged();
                     _openProgramPanelCommand.RaiseCanExecuteChanged();
                     _openAssistanceCaseBudgetsPanelCommand.RaiseCanExecuteChanged();
                     _openCashForWorkBudgetsPanelCommand.RaiseCanExecuteChanged();
@@ -527,21 +579,54 @@ namespace AttendanceShiftingManagement.ViewModels
             }
         }
 
-        private void SyncWithSelectedBudget()
+        public decimal SelectedBudgetRemaining
+        {
+            get => _selectedBudgetRemaining;
+            private set => SetProperty(ref _selectedBudgetRemaining, value);
+        }
+
+        public bool IsGlobalCapSelected
+        {
+            get => _isGlobalCapSelected;
+            private set => SetProperty(ref _isGlobalCapSelected, value);
+        }
+
+        public bool IsGgmsSettingsPanelOpen
+        {
+            get => _isGgmsSettingsPanelOpen;
+            private set
+            {
+                if (SetProperty(ref _isGgmsSettingsPanelOpen, value))
+                {
+                    OnPropertyChanged(nameof(IsAnyOverlayOpen));
+                }
+            }
+        }
+
+        public bool IsAnyOverlayOpen => IsDonationPanelOpen || IsProgramPanelOpen || IsSeminarPanelOpen || _activePanel == BudgetWorkspacePanel.Ledger || ShowOtpPanel || IsGgmsSettingsPanelOpen;
+
+        public BudgetRuntimeOptions GgmsOptions
+        {
+            get => _ggmsOptions;
+            private set => SetProperty(ref _ggmsOptions, value);
+        }
+
+        private async void SyncWithSelectedBudget()
         {
             if (SelectedBudget == null)
             {
                 _currentIndex = -1;
+                IsGlobalCapSelected = false;
                 return;
             }
 
             var viewList = _budgetsView.Cast<BudgetRecordListItem>().ToList();
             _currentIndex = viewList.IndexOf(SelectedBudget);
+            IsGlobalCapSelected = SelectedBudget.Category is "Global Aid Cap" or "Global CFW Cap";
 
             if (SelectedBudget.OriginalItem is AyudaProgram program)
             {
                 OpenAyudaProjectsPanel();
-                // Map program properties to form fields for display/edit
                 ProgramCode = program.ProgramCode;
                 ProgramName = program.ProgramName;
                 SelectedProgramType = program.ProgramType;
@@ -564,6 +649,25 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 OpenCashForWorkBudgetsPanel();
                 CashForWorkBudgetCapText = cwb.BudgetCap?.ToString("N2") ?? string.Empty;
+            }
+
+            // Calculate Remaining
+            try
+            {
+                await using var context = new AppDbContext();
+                var spend = await context.BudgetLedgerEntries
+                    .AsNoTracking()
+                    .Where(entry => entry.EntryType == BudgetLedgerEntryType.Release &&
+                                   (entry.ProgramId == SelectedBudget.Id && SelectedBudget.Category == "Ayuda Project" ||
+                                    entry.AssistanceCaseBudgetId == SelectedBudget.Id && SelectedBudget.Category == "Global Aid Cap" ||
+                                    entry.CashForWorkBudgetId == SelectedBudget.Id && SelectedBudget.Category == "Global CFW Cap"))
+                    .SumAsync(entry => (decimal?)entry.TotalAmount) ?? 0m;
+                
+                SelectedBudgetRemaining = (SelectedBudget.BudgetCap ?? 0m) - spend;
+            }
+            catch
+            {
+                SelectedBudgetRemaining = 0m;
             }
 
             OnPropertyChanged(nameof(CurrentPosition));
@@ -889,6 +993,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 if (SetProperty(ref _isDonationPanelOpen, value))
                 {
                     OnPropertyChanged(nameof(IsAnySetupPanelOpen));
+                    OnPropertyChanged(nameof(IsAnyOverlayOpen));
                     _openDonationPanelCommand.RaiseCanExecuteChanged();
                     _closeDonationPanelCommand.RaiseCanExecuteChanged();
                 }
@@ -903,6 +1008,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 if (SetProperty(ref _isProgramPanelOpen, value))
                 {
                     OnPropertyChanged(nameof(IsAnySetupPanelOpen));
+                    OnPropertyChanged(nameof(IsAnyOverlayOpen));
                     _openProgramPanelCommand.RaiseCanExecuteChanged();
                     _closeProgramPanelCommand.RaiseCanExecuteChanged();
                 }
@@ -917,6 +1023,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 if (SetProperty(ref _isSeminarPanelOpen, value))
                 {
                     OnPropertyChanged(nameof(IsAnySetupPanelOpen));
+                    OnPropertyChanged(nameof(IsAnyOverlayOpen));
                     _openSeminarPanelCommand.RaiseCanExecuteChanged();
                     _closeSeminarPanelCommand.RaiseCanExecuteChanged();
                 }
@@ -952,6 +1059,7 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 if (SetProperty(ref _showOtpPanel, value))
                 {
+                    OnPropertyChanged(nameof(IsAnyOverlayOpen));
                     _verifyOtpCommand.RaiseCanExecuteChanged();
                     _resendOtpCommand.RaiseCanExecuteChanged();
                 }
@@ -1083,10 +1191,22 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             await using var context = new AppDbContext();
             var budgetService = new BudgetManagementService(context);
+            
+            var total = await budgetService.GetLedgerCountAsync(LedgerSearchText, SelectedLedgerSourceFilter);
+            TotalLedgerEntries = total;
+            TotalLedgerPages = (int)Math.Ceiling(total / (double)LedgerPageSize);
+            if (TotalLedgerPages == 0) TotalLedgerPages = 1;
+
+            if (CurrentLedgerPage > TotalLedgerPages) CurrentLedgerPage = TotalLedgerPages;
+            if (CurrentLedgerPage < 1) CurrentLedgerPage = 1;
+
+            var skip = (CurrentLedgerPage - 1) * LedgerPageSize;
+            var entries = await budgetService.GetRecentLedgerEntriesAsync(skip, LedgerPageSize, LedgerSearchText, SelectedLedgerSourceFilter);
+
             LedgerEntries.Clear();
             var programsById = Programs.ToDictionary(program => program.Id, program => program.ProgramName);
 
-            foreach (var entry in await budgetService.GetRecentLedgerEntriesAsync())
+            foreach (var entry in entries)
             {
                 LedgerEntries.Add(new BudgetLedgerEntryListItem
                 {
@@ -1111,7 +1231,26 @@ namespace AttendanceShiftingManagement.ViewModels
 
             SelectedLedgerEntry = null;
             RefreshLedgerSourceFilters();
-            RefreshLedgerFilters();
+            _nextLedgerPageCommand.RaiseCanExecuteChanged();
+            _previousLedgerPageCommand.RaiseCanExecuteChanged();
+        }
+
+        private async Task NextLedgerPageAsync()
+        {
+            if (CurrentLedgerPage < TotalLedgerPages)
+            {
+                CurrentLedgerPage++;
+                await LoadLedgerAsync();
+            }
+        }
+
+        private async Task PreviousLedgerPageAsync()
+        {
+            if (CurrentLedgerPage > 1)
+            {
+                CurrentLedgerPage--;
+                await LoadLedgerAsync();
+            }
         }
 
         private async Task SyncGovernmentBudgetAsync()
@@ -1386,7 +1525,7 @@ namespace AttendanceShiftingManagement.ViewModels
             }
             catch (Exception ex)
             {
-                SetOtpError($"Failed to send OTP: {ex.Message}");
+                SetErrorStatus($"Failed to send OTP: {ex.Message}");
             }
             finally
             {
@@ -1539,9 +1678,21 @@ namespace AttendanceShiftingManagement.ViewModels
             }
         }
 
-        private async Task CreateCashForWorkBudgetAsync()
+        private void OpenGgmsSettingsPanel()
         {
-            await Task.CompletedTask;
+            IsGgmsSettingsPanelOpen = true;
+        }
+
+        private void CloseGgmsSettingsPanel()
+        {
+            IsGgmsSettingsPanelOpen = false;
+        }
+
+        private void SaveGgmsSettings()
+        {
+            BudgetRuntimeOptions.Save(GgmsOptions);
+            CloseGgmsSettingsPanel();
+            SetSuccessStatus("GGMS settings saved.");
         }
 
         private async Task CreateSeminarAsync()
@@ -1698,16 +1849,6 @@ namespace AttendanceShiftingManagement.ViewModels
             ClosePanel();
         }
 
-        private void OpenGovernmentSyncPanel()
-        {
-            if (IsBusy)
-            {
-                return;
-            }
-
-            SetActivePanel(BudgetWorkspacePanel.Ledger);
-        }
-
         private void OpenLedgerPanel()
         {
             if (IsBusy)
@@ -1720,7 +1861,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private void ClosePanel()
         {
-            SetActivePanel(BudgetWorkspacePanel.Ledger);
+            SetActivePanel(BudgetWorkspacePanel.Dashboard);
         }
 
         private void CloseAllSetupPanels()
@@ -1747,6 +1888,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
             _activePanel = panel;
             CloseAllSetupPanels();
+            OnPropertyChanged(nameof(IsAnyOverlayOpen));
 
             if (panel == BudgetWorkspacePanel.Donation)
             {

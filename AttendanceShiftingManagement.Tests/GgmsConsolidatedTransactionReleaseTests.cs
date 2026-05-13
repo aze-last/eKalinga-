@@ -282,6 +282,11 @@ public sealed class GgmsConsolidatedTransactionReleaseTests
                 totalAmount));
             return Task.FromResult<string?>(null);
         }
+
+        public Task<List<GgmsConsolidatedTransaction>> LoadTransactionsAsync(string? projectNameFilter = null)
+        {
+            return Task.FromResult(new List<GgmsConsolidatedTransaction>());
+        }
     }
 
     private sealed record CashForWorkReleaseCall(

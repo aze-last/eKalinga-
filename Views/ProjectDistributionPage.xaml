@@ -134,6 +134,12 @@
                                 Height="40" Width="100"
                                 Style="{StaticResource SecondaryActionButton}" 
                                 Command="{Binding RefreshCommand}" />
+
+                        <Button Margin="12,0,0,0"
+                                Content="DASHBOARD" 
+                                Height="40" Width="120"
+                                Style="{StaticResource MaterialDesignFlatButton}"
+                                Command="{Binding DataContext.ShowDashboardCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}" />
                     </StackPanel>
                 </Grid>
 
@@ -158,7 +164,12 @@
                                 <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
 
-                            <TextBlock Text="PENDING BENEFICIARIES" Style="{StaticResource SectionTitleTextStyle}" />
+                            <StackPanel Orientation="Horizontal">
+                                <Border Background="{DynamicResource BrandMidnightBrush}" CornerRadius="12" Padding="8,2" VerticalAlignment="Center" Margin="0,0,12,0">
+                                    <TextBlock Text="STEP 1" Foreground="White" FontSize="10" FontWeight="Bold"/>
+                                </Border>
+                                <TextBlock Text="PENDING BENEFICIARIES" Style="{StaticResource SectionTitleTextStyle}" />
+                            </StackPanel>
                             
                             <!-- Search -->
                             <TextBox Grid.Row="2"
@@ -202,6 +213,7 @@
 
                     <!-- Column 2: ACTION COLUMN (Narrow) -->
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock Text="STEP 2" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" HorizontalAlignment="Center" Margin="0,0,0,4"/>
                         <Button Width="42" Height="42"
                                 Style="{StaticResource GoldActionButton}"
                                 Command="{Binding ConfirmReleaseCommand}"
@@ -229,7 +241,12 @@
                                 <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
 
-                            <TextBlock Text="RELEASED CLAIMS" Style="{StaticResource SectionTitleTextStyle}" />
+                            <StackPanel Orientation="Horizontal">
+                                <Border Background="{DynamicResource BrandSuccessBrush}" CornerRadius="12" Padding="8,2" VerticalAlignment="Center" Margin="0,0,12,0">
+                                    <TextBlock Text="STEP 3" Foreground="White" FontSize="10" FontWeight="Bold"/>
+                                </Border>
+                                <TextBlock Text="RELEASED CLAIMS" Style="{StaticResource SectionTitleTextStyle}" />
+                            </StackPanel>
 
                             <!-- DataGrid -->
                             <DataGrid Grid.Row="2"
