@@ -27,7 +27,8 @@ namespace AttendanceShiftingManagement.ViewModels
     public sealed class MasterListViewModel : ObservableObject
     {
         private readonly User? _currentUser;
-        private readonly ObservableCollection<MasterListBeneficiary> _beneficiaries = new();
+        private readonly ObservableCollection<MasterListBeneficiary> _pendingBeneficiaries = new();
+        private readonly ObservableCollection<MasterListBeneficiary> _approvedBeneficiaries = new();
         private readonly ObservableCollection<MasterListFilterOption> _filterOptions = new();
         private readonly ObservableCollection<BeneficiaryAssistanceLedgerEntry> _selectedBeneficiaryHistory = new();
         private readonly RelayCommand _refreshCommand;
@@ -48,6 +49,8 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly bool _autoRefresh;
         private CancellationTokenSource? _loadCts;
         private MasterListBeneficiary? _selectedBeneficiary;
+        private MasterListBeneficiary? _selectedPendingBeneficiary;
+        private MasterListBeneficiary? _selectedApprovedBeneficiary;
         private string _searchText = string.Empty;
         private string _scannerInput = string.Empty;
         private int _selectedPageSize = 100;
@@ -398,7 +401,40 @@ namespace AttendanceShiftingManagement.ViewModels
 
         public ObservableCollection<int> PageSizeOptions { get; }
 
-        public ObservableCollection<MasterListBeneficiary> Beneficiaries => _beneficiaries;
+        public ObservableCollection<MasterListBeneficiary> PendingBeneficiaries => _pendingBeneficiaries;
+        public ObservableCollection<MasterListBeneficiary> ApprovedBeneficiaries => _approvedBeneficiaries;
+
+        public MasterListBeneficiary? SelectedPendingBeneficiary
+        {
+            get => _selectedPendingBeneficiary;
+            set
+            {
+                if (SetProperty(ref _selectedPendingBeneficiary, value))
+                {
+                    if (value != null)
+                    {
+                        SelectedApprovedBeneficiary = null;
+                        SelectedBeneficiary = value;
+                    }
+                }
+            }
+        }
+
+        public MasterListBeneficiary? SelectedApprovedBeneficiary
+        {
+            get => _selectedApprovedBeneficiary;
+            set
+            {
+                if (SetProperty(ref _selectedApprovedBeneficiary, value))
+                {
+                    if (value != null)
+                    {
+                        SelectedPendingBeneficiary = null;
+                        SelectedBeneficiary = value;
+                    }
+                }
+            }
+        }
 
         public MasterListBeneficiary? SelectedBeneficiary
         {
@@ -801,11 +837,23 @@ namespace AttendanceShiftingManagement.ViewModels
             SelectedBeneficiary.VerificationStatus = stagingStatus;
             
             // Force property change notification for list UI
-            var index = _beneficiaries.IndexOf(SelectedBeneficiary);
-            if (index >= 0)
+            UpdateBeneficiaryInLists(SelectedBeneficiary);
+        }
+
+        private void UpdateBeneficiaryInLists(MasterListBeneficiary beneficiary)
+        {
+            var pIndex = _pendingBeneficiaries.IndexOf(beneficiary);
+            if (pIndex >= 0)
             {
-                _beneficiaries[index] = SelectedBeneficiary;
-                SelectedBeneficiary = _beneficiaries[index];
+                _pendingBeneficiaries[pIndex] = beneficiary;
+                if (SelectedPendingBeneficiary == beneficiary) SelectedPendingBeneficiary = _pendingBeneficiaries[pIndex];
+            }
+
+            var aIndex = _approvedBeneficiaries.IndexOf(beneficiary);
+            if (aIndex >= 0)
+            {
+                _approvedBeneficiaries[aIndex] = beneficiary;
+                if (SelectedApprovedBeneficiary == beneficiary) SelectedApprovedBeneficiary = _approvedBeneficiaries[aIndex];
             }
         }
 
@@ -1026,9 +1074,10 @@ namespace AttendanceShiftingManagement.ViewModels
                         SetSuccessStatus($"Mobile Scan Received: {scanPayload}");
 
                         // If exactly one beneficiary is found, select it
-                        if (Beneficiaries.Count == 1)
+                        var totalFound = PendingBeneficiaries.Count + ApprovedBeneficiaries.Count;
+                        if (totalFound == 1)
                         {
-                            SelectedBeneficiary = Beneficiaries[0];
+                            SelectedBeneficiary = PendingBeneficiaries.FirstOrDefault() ?? ApprovedBeneficiaries.FirstOrDefault();
                         }
                     }
                 }
@@ -1135,7 +1184,7 @@ namespace AttendanceShiftingManagement.ViewModels
             }
         }
 
-        public Visibility NoResultsVisibility => (Beneficiaries.Count == 0 && !IsBusy) ? Visibility.Visible : Visibility.Collapsed;
+        public Visibility NoResultsVisibility => (PendingBeneficiaries.Count == 0 && ApprovedBeneficiaries.Count == 0 && !IsBusy) ? Visibility.Visible : Visibility.Collapsed;
 
         public int SelectedPageSize
         {
@@ -1241,14 +1290,15 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             get
             {
-                if (FilteredBeneficiaryCount == 0 || Beneficiaries.Count == 0)
+                if (FilteredBeneficiaryCount == 0)
                 {
                     return "Showing 0 validated beneficiaries";
                 }
 
                 var start = ((CurrentPage - 1) * SelectedPageSize) + 1;
-                var end = start + Beneficiaries.Count - 1;
-                return $"Showing {start:N0}-{end:N0} of {FilteredBeneficiaryCount:N0} validated beneficiaries";
+                var totalLoaded = PendingBeneficiaries.Count + ApprovedBeneficiaries.Count;
+                var end = start + totalLoaded - 1;
+                return $"Showing {start:N0}-{end:N0} of {FilteredBeneficiaryCount:N0} total records";
             }
         }
 
@@ -1319,43 +1369,68 @@ namespace AttendanceShiftingManagement.ViewModels
 
                 var searchText = (SearchText ?? string.Empty).Trim();
 
-                var result = await _queryService.LoadPageAsync(
+                // Load Pending
+                var pendingFilters = new List<string>(selectedFilters);
+                if (!pendingFilters.Contains(MasterListQuickFilters.Pending))
+                    pendingFilters.Add(MasterListQuickFilters.Pending);
+
+                var pendingResult = await _queryService.LoadPageAsync(
                     new MasterListPageRequest
                     {
                         SearchText = searchText,
-                        QuickFilters = selectedFilters,
+                        QuickFilters = pendingFilters,
                         PageNumber = Math.Max(1, targetPage),
                         PageSize = SelectedPageSize
                     },
                     loadCts.Token);
 
-                if (loadCts.IsCancellationRequested || result == null || result.Beneficiaries == null)
+                // Load Approved
+                var approvedFilters = new List<string>(selectedFilters);
+                if (!approvedFilters.Contains(MasterListQuickFilters.Approved))
+                    approvedFilters.Add(MasterListQuickFilters.Approved);
+
+                var approvedResult = await _queryService.LoadPageAsync(
+                    new MasterListPageRequest
+                    {
+                        SearchText = searchText,
+                        QuickFilters = approvedFilters,
+                        PageNumber = Math.Max(1, targetPage),
+                        PageSize = SelectedPageSize
+                    },
+                    loadCts.Token);
+
+                if (loadCts.IsCancellationRequested) return;
+
+                _pendingBeneficiaries.Clear();
+                if (pendingResult?.Beneficiaries != null)
                 {
-                    return;
+                    foreach (var b in pendingResult.Beneficiaries) _pendingBeneficiaries.Add(b);
                 }
 
-                _beneficiaries.Clear();
-                foreach (var beneficiary in result.Beneficiaries)
+                _approvedBeneficiaries.Clear();
+                if (approvedResult?.Beneficiaries != null)
                 {
-                    if (beneficiary != null)
-                        _beneficiaries.Add(beneficiary);
+                    foreach (var b in approvedResult.Beneficiaries) _approvedBeneficiaries.Add(b);
                 }
                 
                 OnPropertyChanged(nameof(NoResultsVisibility));
 
-                TotalBeneficiaries = result.TotalBeneficiaries;
-                LinkedCivilRegistryCount = result.LinkedCivilRegistryCount;
-                SeniorCount = result.SeniorCount;
-                PwdCount = result.PwdCount;
-                FilteredBeneficiaryCount = result.FilteredBeneficiaryCount;
-                CurrentPage = Math.Max(1, targetPage);
+                if (pendingResult != null && approvedResult != null)
+                {
+                    TotalBeneficiaries = pendingResult.TotalBeneficiaries;
+                    LinkedCivilRegistryCount = pendingResult.LinkedCivilRegistryCount;
+                    SeniorCount = pendingResult.SeniorCount;
+                    PwdCount = pendingResult.PwdCount;
+                    FilteredBeneficiaryCount = pendingResult.FilteredBeneficiaryCount + approvedResult.FilteredBeneficiaryCount;
+                    CurrentPage = Math.Max(1, targetPage);
 
-                SnapshotSourceSummary = $"Validated beneficiaries snapshot from {result.SourceDatabase} on {result.SourceServer}";
-                LastUpdatedSummary = result.LastUpdatedAt.HasValue
-                    ? $"Last synced data: {result.LastUpdatedAt.Value:MMMM dd, yyyy hh:mm tt}"
-                    : "Last synced data: unavailable";
+                    SnapshotSourceSummary = $"Validated beneficiaries snapshot from {pendingResult.SourceDatabase} on {pendingResult.SourceServer}";
+                    LastUpdatedSummary = pendingResult.LastUpdatedAt.HasValue
+                        ? $"Last synced data: {pendingResult.LastUpdatedAt.Value:MMMM dd, yyyy hh:mm tt}"
+                        : "Last synced data: unavailable";
 
-                SelectedBeneficiary = _beneficiaries.FirstOrDefault();
+                    SelectedBeneficiary = PendingBeneficiaries.FirstOrDefault() ?? ApprovedBeneficiaries.FirstOrDefault();
+                }
 
                 SetSuccessStatus(
                     FilteredBeneficiaryCount == 0
@@ -1367,11 +1442,7 @@ namespace AttendanceShiftingManagement.ViewModels
             }
             catch (Exception ex)
             {
-                if (loadCts.IsCancellationRequested)
-                {
-                    return;
-                }
-
+                if (loadCts.IsCancellationRequested) return;
                 ClearResults();
                 SetErrorStatus(ex.Message);
             }
@@ -1382,25 +1453,23 @@ namespace AttendanceShiftingManagement.ViewModels
                     _loadCts = null;
                     IsBusy = false;
                 }
-
                 loadCts.Dispose();
             }
         }
 
         private void QueueReloadFromFirstPage()
         {
-            if (!_autoRefresh)
-            {
-                return;
-            }
-
+            if (!_autoRefresh) return;
             _ = LoadPageAsync(1, CancellationToken.None);
         }
 
         private void ClearResults()
         {
-            _beneficiaries.Clear();
+            _pendingBeneficiaries.Clear();
+            _approvedBeneficiaries.Clear();
             SelectedBeneficiary = null;
+            SelectedPendingBeneficiary = null;
+            SelectedApprovedBeneficiary = null;
             TotalBeneficiaries = 0;
             LinkedCivilRegistryCount = 0;
             SeniorCount = 0;

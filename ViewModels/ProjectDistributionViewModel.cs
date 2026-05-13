@@ -21,6 +21,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private DistributionBeneficiaryOption? _selectedAvailableBeneficiary;
         private ProjectDistributionBeneficiaryListItem? _selectedProgramBeneficiary;
         private ProjectDistributionBeneficiaryListItem? _selectedPendingBeneficiary;
+        private ProjectDistributionReleaseListItem? _selectedReleasedClaim;
         private string _statusMessage = "Select a project to review released budget and beneficiary history.";
         private Brush _statusBrush = Brushes.DimGray;
         private string _selectedProgramWorkflowSummary = "Select a project to load its distribution summary.";
@@ -389,11 +390,30 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 if (SetProperty(ref _selectedPendingBeneficiary, value))
                 {
+                    if (value != null)
+                    {
+                        SelectedReleasedClaim = null;
+                    }
                     SelectedProgramBeneficiary = value;
                     RefreshSelectedPendingDigitalId(value);
                     if (ConfirmReleaseCommand is RelayCommand confirmRelease)
                     {
                         confirmRelease.RaiseCanExecuteChanged();
+                    }
+                }
+            }
+        }
+
+        public ProjectDistributionReleaseListItem? SelectedReleasedClaim
+        {
+            get => _selectedReleasedClaim;
+            set
+            {
+                if (SetProperty(ref _selectedReleasedClaim, value))
+                {
+                    if (value != null)
+                    {
+                        SelectedPendingBeneficiary = null;
                     }
                 }
             }

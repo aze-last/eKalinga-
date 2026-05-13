@@ -1,5 +1,7 @@
 using AttendanceShiftingManagement.Models;
 using AttendanceShiftingManagement.ViewModels;
+using AttendanceShiftingManagement.Views.Dialog;
+using System.Windows;
 using System.Windows.Controls;
 
 namespace AttendanceShiftingManagement.Views
@@ -10,15 +12,56 @@ namespace AttendanceShiftingManagement.Views
         {
             InitializeComponent();
             DataContext = new ProjectDistributionViewModel(currentUser);
+            Loaded += ProjectDistributionPage_Loaded;
         }
 
-        private void ManageButton_Click(object sender, System.Windows.RoutedEventArgs e)
+        private void ProjectDistributionPage_Loaded(object sender, RoutedEventArgs e)
         {
-            if (sender is System.Windows.Controls.Button button && button.ContextMenu != null)
+            var viewModel = DataContext as ProjectDistributionViewModel;
+            if (viewModel?.SelectedProgram == null)
             {
-                button.ContextMenu.PlacementTarget = button;
-                button.ContextMenu.IsOpen = true;
+                ShowProjectSelection();
             }
+        }
+
+        private void ChangeProject_Click(object sender, RoutedEventArgs e)
+        {
+            ShowProjectSelection();
+        }
+
+        private void ShowProjectSelection()
+        {
+            var dialog = new ProjectSelectionDialog
+            {
+                DataContext = this.DataContext,
+                Owner = Window.GetWindow(this)
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                // Project selection is handled via binding to SelectedProgramSummary
+            }
+        }
+
+        private void PendingGrid_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            ShowDetailDialog();
+        }
+
+        private void ReleasedGrid_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            ShowDetailDialog();
+        }
+
+        private void ShowDetailDialog()
+        {
+            var dialog = new ProjectDistributionDetailDialog
+            {
+                DataContext = this.DataContext,
+                Owner = Window.GetWindow(this)
+            };
+
+            dialog.ShowDialog();
         }
     }
 }

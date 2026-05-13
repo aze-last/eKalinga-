@@ -6,11 +6,13 @@ using AttendanceShiftingManagement.Views;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Win32;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Data;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Windows;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -51,6 +53,8 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly RelayCommand _nextAttendancePageCommand;
         private readonly RelayCommand _previousParticipantPageCommand;
         private readonly RelayCommand _nextParticipantPageCommand;
+        private readonly RelayCommand _navigatePreviousCommand;
+        private readonly RelayCommand _navigateNextCommand;
 
         private CashForWorkEvent? _selectedEvent;
         private CashForWorkSavedAttendanceRow? _selectedAttendanceRow;
@@ -105,6 +109,10 @@ namespace AttendanceShiftingManagement.ViewModels
         private DataView? _historyPreviewRows;
         private ReportsSnapshot? _historySnapshot;
 
+        private string _eventSearchText = string.Empty;
+        private ICollectionView? _eventsView;
+        private int _currentIndex = -1;
+
         public CashForWorkOcrViewModel(User currentUser)
         {
             _currentUser = currentUser;
@@ -143,6 +151,11 @@ namespace AttendanceShiftingManagement.ViewModels
             _nextAttendancePageCommand = new RelayCommand(_ => { AttendanceCurrentPage++; ApplyAttendancePagination(); }, _ => AttendanceCurrentPage < AttendanceTotalPages);
             _previousParticipantPageCommand = new RelayCommand(_ => { ParticipantCurrentPage--; ApplyParticipantPagination(); }, _ => ParticipantCurrentPage > 1);
             _nextParticipantPageCommand = new RelayCommand(_ => { ParticipantCurrentPage++; ApplyParticipantPagination(); }, _ => ParticipantCurrentPage < ParticipantTotalPages);
+            _navigatePreviousCommand = new RelayCommand(_ => NavigatePrevious(), _ => _currentIndex > 0);
+            _navigateNextCommand = new RelayCommand(_ => NavigateNext(), _ => _currentIndex >= 0 && _currentIndex < Events.Count - 1);
+
+            _eventsView = CollectionViewSource.GetDefaultView(Events);
+            _eventsView.Filter = FilterEvents;
 
             _ = LoadWorkspaceAsync();
             ClearHistorySnapshot();
@@ -179,6 +192,31 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand NextAttendancePageCommand => _nextAttendancePageCommand;
         public ICommand PreviousParticipantPageCommand => _previousParticipantPageCommand;
         public ICommand NextParticipantPageCommand => _nextParticipantPageCommand;
+        public ICommand NavigatePreviousCommand => _navigatePreviousCommand;
+        public ICommand NavigateNextCommand => _navigateNextCommand;
+
+        public string EventSearchText
+        {
+            get => _eventSearchText;
+            set
+            {
+                if (SetProperty(ref _eventSearchText, value))
+                {
+                    _eventsView?.Refresh();
+                }
+            }
+        }
+
+        public ICollectionView? EventsView => _eventsView;
+
+        public string CurrentPosition
+        {
+            get
+            {
+                if (SelectedEvent == null || Events.Count == 0) return "0 / 0";
+                return $"{_currentIndex + 1} / {Events.Count}";
+            }
+        }
 
         public int AttendancePageSize
         {
@@ -296,6 +334,11 @@ namespace AttendanceShiftingManagement.ViewModels
                     return;
                 }
 
+                _currentIndex = value == null ? -1 : Events.IndexOf(value);
+                OnPropertyChanged(nameof(CurrentPosition));
+                _navigatePreviousCommand.RaiseCanExecuteChanged();
+                _navigateNextCommand.RaiseCanExecuteChanged();
+
                 SelectedAttendanceRow = null;
 
                 // Only trigger details load if we are not already in a bulk loading operation
@@ -320,6 +363,32 @@ namespace AttendanceShiftingManagement.ViewModels
                     SetSuccessStatus($"Loaded {value.WorkspaceLabel}.");
                 }
             }
+        }
+
+        private void NavigatePrevious()
+        {
+            if (_currentIndex > 0)
+            {
+                SelectedEvent = Events[_currentIndex - 1];
+            }
+        }
+
+        private void NavigateNext()
+        {
+            if (_currentIndex < Events.Count - 1)
+            {
+                SelectedEvent = Events[_currentIndex + 1];
+            }
+        }
+
+        private bool FilterEvents(object obj)
+        {
+            if (obj is not CashForWorkEvent ev) return false;
+            if (string.IsNullOrWhiteSpace(EventSearchText)) return true;
+
+            return ev.Title.Contains(EventSearchText, StringComparison.OrdinalIgnoreCase) ||
+                   ev.Location.Contains(EventSearchText, StringComparison.OrdinalIgnoreCase) ||
+                   ev.EventDate.ToString("MMM dd, yyyy").Contains(EventSearchText, StringComparison.OrdinalIgnoreCase);
         }
 
         private async Task LoadEventDetailsAsync(int? eventId)
@@ -710,6 +779,11 @@ namespace AttendanceShiftingManagement.ViewModels
             SelectedEvent = selectedEventId.HasValue
                 ? Events.FirstOrDefault(item => item.Id == selectedEventId.Value)
                 : null;
+
+            _currentIndex = SelectedEvent == null ? -1 : Events.IndexOf(SelectedEvent);
+            OnPropertyChanged(nameof(CurrentPosition));
+            _navigatePreviousCommand.RaiseCanExecuteChanged();
+            _navigateNextCommand.RaiseCanExecuteChanged();
         }
 
         private async Task LoadEligibleBeneficiariesAsync()

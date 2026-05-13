@@ -1,0 +1,89 @@
+<Window x:Class="AttendanceShiftingManagement.Views.Dialog.ReportListDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="Select Report Template" 
+        Width="700" Height="500"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResizeWithGrip"
+        ShowInTaskbar="False"
+        Background="{DynamicResource BrandSurfaceBrush}">
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="0,0,0,20">
+            <TextBlock Text="Report Templates" FontSize="22" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}"/>
+            <TextBlock Text="Select a report type to configure and generate official documentation." 
+                       FontSize="13" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,4,0,0"/>
+        </StackPanel>
+
+        <ListBox Grid.Row="1" 
+                 ItemsSource="{Binding ReportTypeOptions}" 
+                 SelectedItem="{Binding SelectedReportType}"
+                 Background="Transparent" BorderThickness="0"
+                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                 MouseDoubleClick="ListBox_MouseDoubleClick">
+            <ListBox.ItemContainerStyle>
+                <Style TargetType="ListBoxItem" BasedOn="{StaticResource MaterialDesignListBoxItem}">
+                    <Setter Property="Padding" Value="0"/>
+                    <Setter Property="Margin" Value="0,0,0,12"/>
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="ListBoxItem">
+                                <Border x:Name="Border" Padding="16" CornerRadius="16" 
+                                        Background="{DynamicResource ThemeCardBrush}" 
+                                        BorderBrush="{DynamicResource BrandBorderBrush}" 
+                                        BorderThickness="1">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        
+                                        <materialDesign:PackIcon Kind="FileDocumentOutline" Width="32" Height="32" 
+                                                                 Foreground="{DynamicResource BrandMidnightBrush}" 
+                                                                 VerticalAlignment="Center" Margin="0,0,16,0"/>
+                                        
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Label}" FontSize="16" FontWeight="SemiBold" 
+                                                       Foreground="{DynamicResource BrandMidnightBrush}"/>
+                                            <TextBlock Text="{Binding Description}" FontSize="12" 
+                                                       Foreground="{DynamicResource BrandTextSecondaryBrush}" 
+                                                       TextWrapping="Wrap" Margin="0,4,0,0"/>
+                                        </StackPanel>
+
+                                        <materialDesign:PackIcon Grid.Column="2" Kind="ChevronRight" Width="24" Height="24" 
+                                                                 Foreground="{DynamicResource BrandBorderBrush}" 
+                                                                 VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsSelected" Value="True">
+                                        <Setter TargetName="Border" Property="Background" Value="{DynamicResource ThemeAccentSoftBrush}"/>
+                                        <Setter TargetName="Border" Property="BorderBrush" Value="{DynamicResource ThemeAccentBorderBrush}"/>
+                                    </Trigger>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="Border" Property="BorderBrush" Value="{DynamicResource ThemeAccentBorderBrush}"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </ListBox.ItemContainerStyle>
+        </ListBox>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+            <Button Content="CLOSE" Style="{StaticResource MaterialDesignFlatButton}" 
+                    IsCancel="True" Click="Close_Click" Margin="0,0,12,0"/>
+            <Button Content="SELECT TEMPLATE" Style="{StaticResource GoldActionButton}" 
+                    Padding="24,0" Height="44" Click="Select_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

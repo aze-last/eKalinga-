@@ -3,7 +3,7 @@ param(
     [string]$Configuration = "Release",
     [string]$RuntimeIdentifier = "win-x64",
     [bool]$SelfContained = $true,
-    [bool]$PublishSingleFile = $true,
+    [bool]$PublishSingleFile = $false,
     [switch]$BootstrapInnoSetup,
     [switch]$Clean
 )
@@ -207,6 +207,12 @@ if ($LASTEXITCODE -ne 0) {
 $publishedExecutable = Join-Path $publishDir $appExeName
 if (-not (Test-Path -LiteralPath $publishedExecutable)) {
     throw "Published executable not found: $publishedExecutable"
+}
+
+$publishedSettingsPath = Join-Path $publishDir "appsettings.json"
+if (Test-Path -LiteralPath $appSettingsTemplatePath) {
+    Write-Host "Applying installer default appsettings from template..."
+    Copy-Item -LiteralPath $appSettingsTemplatePath -Destination $publishedSettingsPath -Force
 }
 
 $appVersion = Get-AppVersion -ExecutablePath $publishedExecutable

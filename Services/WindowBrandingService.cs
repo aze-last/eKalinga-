@@ -46,13 +46,22 @@ namespace AttendanceShiftingManagement.Services
 
         private static ImageSource LoadPackIcon(string uri)
         {
-            var icon = new BitmapImage();
-            icon.BeginInit();
-            icon.CacheOption = BitmapCacheOption.OnLoad;
-            icon.UriSource = new Uri(uri, UriKind.Absolute);
-            icon.EndInit();
-            icon.Freeze();
-            return icon;
+            try
+            {
+                var icon = new BitmapImage();
+                icon.BeginInit();
+                icon.CacheOption = BitmapCacheOption.OnLoad;
+                icon.UriSource = new Uri(uri, UriKind.Absolute);
+                icon.EndInit();
+                icon.Freeze();
+                return icon;
+            }
+            catch
+            {
+                // Return an empty/null source if the resource is missing
+                // This prevents the application from crashing during constructor invocation
+                return null!;
+            }
         }
 
         private static bool IsPackUri(string path)

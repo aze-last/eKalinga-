@@ -15,14 +15,21 @@ namespace AttendanceShiftingManagement.Helpers
 
             if (File.Exists(path))
             {
-                using var stream = File.OpenRead(path);
-                var fileImage = new BitmapImage();
-                fileImage.BeginInit();
-                fileImage.CacheOption = BitmapCacheOption.OnLoad;
-                fileImage.StreamSource = stream;
-                fileImage.EndInit();
-                fileImage.Freeze();
-                return fileImage;
+                try
+                {
+                    using var stream = File.OpenRead(path);
+                    var fileImage = new BitmapImage();
+                    fileImage.BeginInit();
+                    fileImage.CacheOption = BitmapCacheOption.OnLoad;
+                    fileImage.StreamSource = stream;
+                    fileImage.EndInit();
+                    fileImage.Freeze();
+                    return fileImage;
+                }
+                catch
+                {
+                    return null;
+                }
             }
 
             if (!Uri.TryCreate(path, UriKind.Absolute, out var uri))

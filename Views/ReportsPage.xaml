@@ -2,204 +2,226 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
-             Background="{DynamicResource BrandSurfaceBrush}">
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             d:DesignHeight="900" d:DesignWidth="1440"
+             Background="{DynamicResource BrandSurfaceBrush}"
+             Loaded="ReportsPage_Loaded">
     <UserControl.Resources>
         <Style x:Key="ReportsCardStyle" TargetType="Border">
-            <Setter Property="Padding" Value="20" />
-            <Setter Property="CornerRadius" Value="22" />
+            <Setter Property="Padding" Value="24" />
+            <Setter Property="CornerRadius" Value="20" />
             <Setter Property="Background" Value="{DynamicResource ThemeCardBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource BrandBorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
-        </Style>
-        <Style x:Key="ReportsRaisedCardStyle" TargetType="Border" BasedOn="{StaticResource ReportsCardStyle}">
-            <Setter Property="Background" Value="{DynamicResource ThemeCardRaisedBrush}" />
-        </Style>
-        <Style x:Key="ReportsTintCardStyle" TargetType="Border" BasedOn="{StaticResource ReportsCardStyle}">
-            <Setter Property="Background" Value="{DynamicResource ThemeAccentSoftBrush}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource ThemeAccentBorderBrush}" />
-            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Margin" Value="0,0,0,18" />
         </Style>
     </UserControl.Resources>
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <Grid Margin="24">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="*" />
-            </Grid.RowDefinitions>
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
 
-            <!-- 1. Header & Summary Card -->
-            <Border Grid.Row="0" Style="{StaticResource ReportsRaisedCardStyle}" Margin="0,0,0,18">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <StackPanel>
-                        <DockPanel LastChildFill="False">
-                            <TextBlock Text="Executive Reports" FontSize="28" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}" DockPanel.Dock="Left" />
-                            <Button Content="Back to Dashboard" 
-                                    Margin="24,0,0,0"
-                                    Style="{StaticResource SecondaryActionButton}"
-                                    Command="{Binding DataContext.ShowDashboardCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
-                                    VerticalAlignment="Center"
-                                    DockPanel.Dock="Left" />
-                        </DockPanel>
-                        <TextBlock Margin="0,8,0,0" Text="Analyze automated summaries, export datasets, and generate official printable documentation." Foreground="{DynamicResource BrandTextSecondaryBrush}" TextWrapping="Wrap" />
-                        <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
-                            <materialDesign:PackIcon Kind="ClockOutline" Foreground="{DynamicResource BrandTextSecondaryBrush}" VerticalAlignment="Center" />
-                            <TextBlock Margin="8,0,0,0" Text="Last updated just now" FontSize="12" Foreground="{DynamicResource BrandTextSecondaryBrush}" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </StackPanel>
-                    <Border Grid.Column="1" Padding="16" CornerRadius="18" Background="{DynamicResource ThemeAccentSoftBrush}" BorderBrush="{DynamicResource ThemeAccentBorderBrush}" BorderThickness="1">
-                        <StackPanel Width="240">
-                            <TextBlock Text="READY FOR EXPORT" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource BrandSuccessBrush}" />
-                            <TextBlock Margin="0,8,0,0" Text="{Binding LayoutSummary}" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}" />
-                            <TextBlock Margin="0,8,0,0" Text="{Binding ExportHint}" FontSize="12" Foreground="{DynamicResource BrandTextSecondaryBrush}" TextWrapping="Wrap" />
-                        </StackPanel>
-                    </Border>
-                </Grid>
-            </Border>
-
-            <!-- 2. Command Hub (Filters & Actions) -->
-            <Border Grid.Row="1" Style="{StaticResource ReportsRaisedCardStyle}" Margin="0,0,0,18">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="2*" />
-                        <ColumnDefinition Width="1.2*" />
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-
-                    <ComboBox Grid.Column="0" Margin="0,0,12,0" ItemsSource="{Binding ReportTypeOptions}" SelectedItem="{Binding SelectedReportType}" DisplayMemberPath="Label" Style="{StaticResource MaterialDesignOutlinedComboBox}" materialDesign:HintAssist.Hint="Active Module" />
-                    <ComboBox Grid.Column="1" Margin="0,0,12,0" ItemsSource="{Binding ProgramFilters}" SelectedItem="{Binding SelectedProgramFilter}" DisplayMemberPath="Name" IsEnabled="{Binding IsProgramFilterRelevant}" Style="{StaticResource MaterialDesignOutlinedComboBox}" materialDesign:HintAssist.Hint="Scope Override" />
-                    
-                    <Border Grid.Column="2" Margin="0,0,12,0" Padding="12,0" VerticalAlignment="Center" Height="48" CornerRadius="12" Background="{DynamicResource ThemeCardSubtleBrush}" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="1">
-                        <StackPanel Orientation="Horizontal">
-                            <DatePicker SelectedDate="{Binding DateFrom}" materialDesign:HintAssist.Hint="From" Width="100" BorderThickness="0" Background="Transparent" />
-                            <TextBlock Text="to" VerticalAlignment="Center" Margin="8,0" Foreground="{DynamicResource BrandTextSecondaryBrush}" />
-                            <DatePicker SelectedDate="{Binding DateTo}" materialDesign:HintAssist.Hint="To" Width="100" BorderThickness="0" Background="Transparent" />
-                        </StackPanel>
-                    </Border>
-
-                    <StackPanel Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Center">
-                        <Button Content="REFRESH" Margin="0,0,10,0" Style="{StaticResource SecondaryActionButton}" Command="{Binding RefreshReportCommand}" />
-                        <Button Content="EXPORT CSV" Margin="0,0,10,0" Style="{StaticResource SecondaryActionButton}" Command="{Binding ExportCsvCommand}" />
-                        <Button Content="SAVE PDF" Margin="0,0,10,0" Style="{StaticResource GoldActionButton}" Command="{Binding SavePdfCommand}" />
-                        <Button Padding="24,0" Content="PRINT PREVIEW" Style="{StaticResource SecondaryActionButton}" Command="{Binding PrintReportCommand}" />
-                    </StackPanel>
-                </Grid>
-            </Border>
-
-            <!-- 3. Intelligence Row (Metrics & Analytics) -->
-            <Grid Grid.Row="2" Margin="0,0,0,18">
+        <!-- Pattern A Header -->
+        <materialDesign:Card Grid.Row="0" Padding="12,8" Background="{DynamicResource ThemeCardBrush}" UniformCornerRadius="16">
+            <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="1.5*" />
-                    <ColumnDefinition Width="1*" />
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- KPI Belt -->
-                <ItemsControl Grid.Column="0" ItemsSource="{Binding Metrics}">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <UniformGrid Columns="2" />
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Border Style="{StaticResource ReportsCardStyle}" Margin="0,0,12,12">
+                <!-- Left: Title -->
+                <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="8,0">
+                    <TextBlock Text="{Binding ReportTitle}" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource BrandMidnightBrush}"/>
+                    <TextBlock Text="{Binding ReportSubtitle}" FontSize="12" Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
+                </StackPanel>
+
+                <!-- Center: Navigation -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Style="{StaticResource MaterialDesignFlatButton}" 
+                            Padding="8"
+                            Command="{Binding NavigatePreviousCommand}"
+                            ToolTip="Previous Report Template">
+                        <materialDesign:PackIcon Kind="ChevronLeft" Width="24" Height="24"/>
+                    </Button>
+                    
+                    <Border Margin="12,0" Background="{DynamicResource ThemeCardSubtleBrush}" CornerRadius="8" Padding="16,6">
+                        <TextBlock VerticalAlignment="Center" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}">
+                            <Run Text="{Binding CurrentPosition, Mode=OneWay}"/>
+                        </TextBlock>
+                    </Border>
+
+                    <Button Style="{StaticResource MaterialDesignFlatButton}" 
+                            Padding="8"
+                            Command="{Binding NavigateNextCommand}"
+                            ToolTip="Next Report Template">
+                        <materialDesign:PackIcon Kind="ChevronRight" Width="24" Height="24"/>
+                    </Button>
+                </StackPanel>
+
+                <!-- Right: Actions -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <Button Content="BROWSE TEMPLATES" 
+                            Style="{StaticResource SecondaryActionButton}" 
+                            Height="40" 
+                            Padding="16,0"
+                            Click="Browse_Click"/>
+                </StackPanel>
+            </Grid>
+        </materialDesign:Card>
+
+        <ScrollViewer Grid.Row="1" Margin="0,18,0,0" VerticalScrollBarVisibility="Auto">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="340"/>
+                    <ColumnDefinition Width="20"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Configuration Sidebar -->
+                <StackPanel Grid.Column="0">
+                    <Border Style="{StaticResource ReportsCardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="REPORT CONFIGURATION" FontSize="11" FontWeight="Bold" 
+                                       Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,20"/>
+
+                            <TextBlock Text="Date Range" FontSize="12" FontWeight="SemiBold" 
+                                       Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="4,0,0,8"/>
+                            <Border Padding="12,0" Height="48" CornerRadius="12" 
+                                    Background="{DynamicResource ThemeInputSurfaceBrush}" 
+                                    BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="1">
                                 <Grid>
-                                    <StackPanel VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding Label}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" />
-                                        <TextBlock Margin="0,8,0,0" Text="{Binding Value}" FontSize="32" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}" />
-                                    </StackPanel>
-                                    <materialDesign:PackIcon Kind="TrendingUp" HorizontalAlignment="Right" VerticalAlignment="Top" Opacity="0.3" Foreground="{DynamicResource BrandSuccessBrush}" Width="24" Height="24" />
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <DatePicker Grid.Column="0" SelectedDate="{Binding DateFrom}" 
+                                                materialDesign:HintAssist.Hint="From" BorderThickness="0" 
+                                                Background="Transparent" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Text="-" VerticalAlignment="Center" Margin="4,0"/>
+                                    <DatePicker Grid.Column="2" SelectedDate="{Binding DateTo}" 
+                                                materialDesign:HintAssist.Hint="To" BorderThickness="0" 
+                                                Background="Transparent" VerticalAlignment="Center"/>
                                 </Grid>
                             </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
 
-                <!-- Visual Distribution Analytics -->
-                <Border Grid.Column="1" Style="{StaticResource ReportsCardStyle}" Margin="12,0,0,12">
-                    <StackPanel>
-                        <TextBlock Text="Data Distribution" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}" />
-                        <TextBlock Text="Composition analysis for the current report scope." FontSize="11" Foreground="{DynamicResource BrandTextSecondaryBrush}" />
-                        
-                        <StackPanel Margin="0,18,0,0">
-                            <!-- Simulated Charts via Styled Borders -->
-                            <TextBlock Text="Completion Rate" FontSize="12" Foreground="{DynamicResource BrandMidnightBrush}" />
-                            <Grid Margin="0,6,0,14">
-                                <ProgressBar Value="85" Height="10" Foreground="{DynamicResource BrandSuccessBrush}" Background="{DynamicResource ThemeCardSubtleBrush}" />
-                                <TextBlock Text="85%" HorizontalAlignment="Right" Margin="0,-22,0,0" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource BrandSuccessBrush}" />
-                            </Grid>
+                            <StackPanel Visibility="{Binding IsProgramFilterRelevant, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <TextBlock Text="Scope / Program Override" FontSize="12" FontWeight="SemiBold" 
+                                           Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="4,16,0,8"/>
+                                <ComboBox ItemsSource="{Binding ProgramFilters}" 
+                                          SelectedItem="{Binding SelectedProgramFilter}" 
+                                          DisplayMemberPath="Name" 
+                                          Style="{StaticResource MaterialDesignOutlinedComboBox}"/>
+                            </StackPanel>
 
-                            <TextBlock Text="Validation Status" FontSize="12" Foreground="{DynamicResource BrandMidnightBrush}" />
-                            <Grid Margin="0,6,0,14">
-                                <ProgressBar Value="92" Height="10" Foreground="#2563EB" Background="{DynamicResource ThemeCardSubtleBrush}" />
-                                <TextBlock Text="92%" HorizontalAlignment="Right" Margin="0,-22,0,0" FontSize="11" FontWeight="Bold" Foreground="#2563EB" />
-                            </Grid>
+                            <Button Content="REFRESH DATA" Command="{Binding RefreshReportCommand}" 
+                                    Margin="0,24,0,0" Height="48" Style="{StaticResource GoldActionButton}"/>
                         </StackPanel>
-                    </StackPanel>
-                </Border>
-            </Grid>
+                    </Border>
 
-            <!-- 4. Data Preview Workspace -->
-            <Border Grid.Row="3" Style="{StaticResource ReportsCardStyle}">
-                <StackPanel>
-                    <Grid Margin="0,0,0,18">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="320" />
-                        </Grid.ColumnDefinitions>
+                    <!-- Export Actions Card -->
+                    <Border Style="{StaticResource ReportsCardStyle}">
                         <StackPanel>
-                            <TextBlock Text="Report Workspace" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}" />
-                            <TextBlock Margin="0,4,0,0" Foreground="{DynamicResource BrandTextSecondaryBrush}" Text="{Binding ReportSubtitle}" />
+                            <TextBlock Text="EXPORT &amp; DISTRIBUTION" FontSize="11" FontWeight="Bold" 
+                                       Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,20"/>
+                            
+                            <Button Content="PRINT PREVIEW" Command="{Binding PrintReportCommand}" 
+                                    Margin="0,0,0,10" Height="44" Style="{StaticResource SecondaryActionButton}"/>
+                            <Button Content="SAVE AS PDF" Command="{Binding SavePdfCommand}" 
+                                    Margin="0,0,0,10" Height="44" Style="{StaticResource SecondaryActionButton}"/>
+                            <Button Content="EXPORT CSV" Command="{Binding ExportCsvCommand}" 
+                                    Height="44" Style="{StaticResource SecondaryActionButton}"/>
                         </StackPanel>
-                        
-                        <!-- Workspace Search -->
-                        <Border Grid.Column="1" Background="{DynamicResource ThemeCardSubtleBrush}" CornerRadius="12" Padding="12,4" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="1">
-                            <Grid>
-                                <materialDesign:PackIcon Kind="Search" VerticalAlignment="Center" Foreground="{DynamicResource BrandTextSecondaryBrush}" />
-                                <TextBox Margin="28,0,0,0" BorderThickness="0" Background="Transparent" materialDesign:HintAssist.Hint="Search in report..." VerticalAlignment="Center" />
-                            </Grid>
-                        </Border>
-                    </Grid>
+                    </Border>
 
-                    <DataGrid ItemsSource="{Binding PreviewRows}"
-                              AutoGenerateColumns="True"
-                              CanUserAddRows="False"
-                              CanUserDeleteRows="False"
-                              IsReadOnly="True"
-                              HeadersVisibility="Column"
-                              MinHeight="400"
-                              Background="Transparent"
-                              BorderThickness="0"
-                              SelectionUnit="FullRow">
-                        <DataGrid.Resources>
-                            <Style TargetType="DataGridColumnHeader">
-                                <Setter Property="Background" Value="{DynamicResource ThemeCardRaisedBrush}" />
-                                <Setter Property="Foreground" Value="{DynamicResource BrandMidnightBrush}" />
-                                <Setter Property="FontWeight" Value="SemiBold" />
-                                <Setter Property="Padding" Value="12,14" />
-                                <Setter Property="BorderThickness" Value="0,0,0,1" />
-                                <Setter Property="BorderBrush" Value="{DynamicResource BrandBorderBrush}" />
-                            </Style>
-                            <Style TargetType="DataGridRow">
-                                <Setter Property="Background" Value="Transparent" />
-                                <Style.Triggers>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter Property="Background" Value="{DynamicResource ThemeAccentSoftBrush}" />
-                                    </Trigger>
-                                </Style.Triggers>
-                            </Style>
-                        </DataGrid.Resources>
-                    </DataGrid>
+                    <!-- Summary Info Card -->
+                    <Border Style="{StaticResource ReportsCardStyle}" Background="{DynamicResource ThemeAccentSoftBrush}">
+                        <StackPanel>
+                            <TextBlock Text="TEMPLATE GUIDANCE" FontSize="11" FontWeight="Bold" 
+                                       Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,12"/>
+                            <TextBlock Text="{Binding TemplateDescription}" FontSize="12" 
+                                       Foreground="{DynamicResource BrandMidnightBrush}" TextWrapping="Wrap"/>
+                            <Separator Margin="0,12" Background="{DynamicResource ThemeAccentBorderBrush}"/>
+                            <TextBlock Text="{Binding LayoutSummary}" FontSize="11" FontWeight="Bold" 
+                                       Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
-            </Border>
-        </Grid>
-    </ScrollViewer>
+
+                <!-- Preview Area -->
+                <StackPanel Grid.Column="2">
+                    <!-- Metrics Row -->
+                    <ItemsControl ItemsSource="{Binding Metrics}" Margin="0,0,0,18">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Columns="3" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Style="{StaticResource ReportsCardStyle}" Margin="0,0,12,0" Padding="20,16">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Label}" FontSize="11" FontWeight="Bold" 
+                                                   Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
+                                        <TextBlock Text="{Binding Value}" FontSize="28" FontWeight="Bold" 
+                                                   Foreground="{DynamicResource BrandMidnightBrush}" Margin="0,4,0,0"/>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <!-- Data Workspace -->
+                    <Border Style="{StaticResource ReportsCardStyle}" Padding="0">
+                        <StackPanel>
+                            <Border Padding="24,16" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource BrandBorderBrush}">
+                                <Grid>
+                                    <TextBlock Text="Preview Workspace" FontSize="16" FontWeight="Bold" 
+                                               Foreground="{DynamicResource BrandMidnightBrush}" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding RangeSummary}" FontSize="12" 
+                                               Foreground="{DynamicResource BrandTextSecondaryBrush}" 
+                                               HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+
+                            <DataGrid ItemsSource="{Binding PreviewRows}"
+                                      AutoGenerateColumns="True"
+                                      CanUserAddRows="False"
+                                      CanUserDeleteRows="False"
+                                      IsReadOnly="True"
+                                      HeadersVisibility="Column"
+                                      MinHeight="500"
+                                      Background="Transparent"
+                                      BorderThickness="0"
+                                      SelectionUnit="FullRow">
+                                <DataGrid.Resources>
+                                    <Style TargetType="DataGridColumnHeader">
+                                        <Setter Property="Background" Value="{DynamicResource ThemeCardSubtleBrush}" />
+                                        <Setter Property="Foreground" Value="{DynamicResource BrandMidnightBrush}" />
+                                        <Setter Property="FontWeight" Value="SemiBold" />
+                                        <Setter Property="Padding" Value="16,12" />
+                                        <Setter Property="BorderThickness" Value="0,0,0,1" />
+                                        <Setter Property="BorderBrush" Value="{DynamicResource BrandBorderBrush}" />
+                                    </Style>
+                                    <Style TargetType="DataGridRow">
+                                        <Setter Property="Background" Value="Transparent" />
+                                        <Style.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Background" Value="{DynamicResource ThemeAccentSoftBrush}" />
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </DataGrid.Resources>
+                            </DataGrid>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Grid>
+        </ScrollViewer>
+    </Grid>
 </UserControl>

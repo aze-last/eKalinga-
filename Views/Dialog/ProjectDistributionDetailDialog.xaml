@@ -1,0 +1,154 @@
+<Window x:Class="AttendanceShiftingManagement.Views.Dialog.ProjectDistributionDetailDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+        Title="Distribution Record Details"
+        Height="720" Width="520"
+        Background="Transparent"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize">
+
+    <shell:WindowChrome.WindowChrome>
+        <shell:WindowChrome CaptionHeight="40" ResizeBorderThickness="0"
+                            GlassFrameThickness="0" CornerRadius="0"/>
+    </shell:WindowChrome.WindowChrome>
+
+    <Border Background="{DynamicResource ThemeCardBrush}" CornerRadius="20"
+            BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="1">
+        <Grid Margin="24">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Close button -->
+            <Button Grid.Row="0"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Top"
+                    Margin="0,-8,-8,0"
+                    Width="36" Height="36"
+                    Style="{StaticResource MaterialDesignFlatButton}"
+                    shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                    Click="Close_Click">
+                <materialDesign:PackIcon Kind="Close" Width="18" Height="18" Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
+            </Button>
+
+            <!-- Header -->
+            <StackPanel Grid.Row="0" Margin="0,0,40,0">
+                <TextBlock Text="Distribution Record Details"
+                           FontSize="24" FontWeight="SemiBold"
+                           Foreground="{DynamicResource BrandMidnightBrush}"/>
+                <TextBlock Text="Review beneficiary information and distribution status."
+                           FontSize="14" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,4,0,0"/>
+            </StackPanel>
+
+            <ScrollViewer Grid.Row="1" Margin="0,20,0,0" VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                    <!-- Digital ID Card Section -->
+                    <Border Background="{DynamicResource ThemeCardSubtleBrush}"
+                            BorderBrush="{DynamicResource BrandBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="18"
+                            Padding="24">
+                        <StackPanel>
+                            <TextBlock Text="{Binding SelectedPendingBeneficiary.FullName, TargetNullValue='No pending beneficiary selected'}"
+                                       FontSize="24"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource BrandMidnightBrush}"
+                                       TextAlignment="Center"
+                                       TextWrapping="Wrap" />
+                            
+                            <TextBlock Margin="0,8,0,0"
+                                       Text="{Binding SelectedPendingDigitalIdCardNumber}"
+                                       FontSize="14"
+                                       Foreground="{DynamicResource BrandTextSecondaryBrush}"
+                                       TextAlignment="Center" />
+
+                            <Border Margin="0,24,0,24"
+                                    Width="240"
+                                    Height="240"
+                                    HorizontalAlignment="Center"
+                                    Background="{DynamicResource ThemeCardBrush}"
+                                    BorderBrush="{DynamicResource BrandBorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="16">
+                                <Image Source="{Binding SelectedPendingDigitalIdQrImage}"
+                                       Stretch="Uniform"
+                                       RenderOptions.BitmapScalingMode="NearestNeighbor"
+                                       SnapsToDevicePixels="True" />
+                            </Border>
+
+                            <TextBlock Text="{Binding SelectedPendingDigitalIdStatusText}"
+                                       FontSize="13"
+                                       FontWeight="Medium"
+                                       Foreground="{DynamicResource BrandTextSecondaryBrush}"
+                                       TextAlignment="Center"
+                                       TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Separator Margin="0,24" Background="{DynamicResource BrandBorderBrush}"/>
+
+                    <!-- Project Details -->
+                    <TextBlock Text="PROJECT &amp; ASSISTANCE"
+                               FontSize="14" FontWeight="SemiBold"
+                               Foreground="{DynamicResource BrandMidnightBrush}"
+                               Margin="0,0,0,12"/>
+
+                    <Border Background="{DynamicResource ThemeCardSubtleBrush}"
+                            BorderBrush="{DynamicResource BrandBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="12"
+                            Padding="16">
+                        <StackPanel>
+                            <TextBlock Text="{Binding SelectedProgram.ProgramName}"
+                                       FontSize="16" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource BrandMidnightBrush}"
+                                       TextWrapping="Wrap"/>
+                            
+                            <TextBlock Margin="0,8,0,0"
+                                       Text="{Binding SelectedProgramAssistanceSummary}"
+                                       FontSize="13"
+                                       Foreground="{DynamicResource BrandTextSecondaryBrush}"
+                                       LineHeight="20"
+                                       TextWrapping="Wrap"/>
+
+                            <TextBlock Margin="0,8,0,0"
+                                       Text="{Binding SelectedProgramWorkflowSummary}"
+                                       FontSize="13"
+                                       Foreground="{DynamicResource BrandTextSecondaryBrush}"
+                                       LineHeight="20"
+                                       TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Actions -->
+            <Grid Grid.Row="2" Margin="0,24,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <Button Content="CLOSE"
+                        Width="120" Height="44"
+                        Style="{StaticResource SecondaryActionButton}"
+                        shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                        Click="Close_Click"/>
+
+                <Button Grid.Column="1"
+                        Content="CONFIRM RELEASE"
+                        Width="220" Height="44"
+                        Style="{StaticResource PrimaryActionButton}"
+                        shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                        Command="{Binding ConfirmReleaseCommand}"
+                        Visibility="{Binding SelectedPendingBeneficiary, Converter={StaticResource NullToHiddenConverter}, ConverterParameter=NotNull}"/>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>

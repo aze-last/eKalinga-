@@ -6,7 +6,7 @@ namespace AttendanceShiftingManagement.Services
 {
     public sealed class SystemProfileSettingsModel
     {
-        public const string DefaultLogoUri = "pack://application:,,,/Images/96f88319-f1f4-46df-b780-691795d4e49e.png";
+        public const string DefaultLogoUri = "pack://application:,,,/Images/municipal-house.ico";
         public const string DefaultLoginBackgroundUri = "pack://application:,,,/Images/Gemini_Generated_Image_n4mhn0n4mhn0n4mh.png";
 
         public string SystemName { get; set; } = "eKalinga+";
@@ -221,7 +221,7 @@ namespace AttendanceShiftingManagement.Services
 
         private static SystemProfileSettingsModel EnsureInstallSerial(SystemProfileSettingsModel settings)
         {
-            settings.LogoPath = NormalizeAssetPath(settings.LogoPath, "96f88319-f1f4-46df-b780-691795d4e49e.png", SystemProfileSettingsModel.DefaultLogoUri);
+            settings.LogoPath = NormalizeAssetPath(settings.LogoPath, "municipal-house.ico", SystemProfileSettingsModel.DefaultLogoUri);
             settings.LoginBackgroundPath = NormalizeAssetPath(settings.LoginBackgroundPath, "Gemini_Generated_Image_n4mhn0n4mhn0n4mh.png", SystemProfileSettingsModel.DefaultLoginBackgroundUri);
             settings.AppearanceMode = NormalizeAppearanceMode(settings.AppearanceMode);
 

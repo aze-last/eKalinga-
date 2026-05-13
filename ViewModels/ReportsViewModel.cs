@@ -29,8 +29,11 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly RelayCommand _exportCsvCommand;
         private readonly RelayCommand _savePdfCommand;
         private readonly RelayCommand _printReportCommand;
+        private readonly RelayCommand _navigatePreviousCommand;
+        private readonly RelayCommand _navigateNextCommand;
         private ReportsReportTypeOption? _selectedReportType;
         private AyudaProgramFilterOption? _selectedProgramFilter;
+        private int _currentIndex = 0;
         private DateTime _dateFrom = new(DateTime.Today.Year, DateTime.Today.Month, 1);
         private DateTime _dateTo = DateTime.Today;
         private string _statusMessage = "Loading the reports workspace...";
@@ -70,6 +73,9 @@ namespace AttendanceShiftingManagement.ViewModels
             _exportCsvCommand = new RelayCommand(_ => ExportCsv(), _ => !IsBusy && CurrentSnapshotHasRows);
             _savePdfCommand = new RelayCommand(_ => SavePdf(), _ => !IsBusy && _currentSnapshot != null);
             _printReportCommand = new RelayCommand(_ => PrintReport(), _ => !IsBusy && _currentSnapshot != null);
+            
+            _navigatePreviousCommand = new RelayCommand(_ => NavigatePrevious(), _ => ReportTypeOptions.Count > 1);
+            _navigateNextCommand = new RelayCommand(_ => NavigateNext(), _ => ReportTypeOptions.Count > 1);
 
             _ = InitializeAsync();
         }
@@ -85,8 +91,10 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 if (SetProperty(ref _selectedReportType, value) && value != null)
                 {
+                    _currentIndex = ReportTypeOptions.IndexOf(value);
                     TemplateDescription = value.Description;
                     OnPropertyChanged(nameof(IsProgramFilterRelevant));
+                    OnPropertyChanged(nameof(CurrentPosition));
                     if (!IsProgramFilterRelevant)
                     {
                         SelectedProgramFilter = ProgramFilters.FirstOrDefault();
@@ -95,6 +103,25 @@ namespace AttendanceShiftingManagement.ViewModels
                     _ = LoadReportAsync();
                 }
             }
+        }
+
+        public string CurrentPosition => $"{_currentIndex + 1} / {ReportTypeOptions.Count}";
+
+        public ICommand NavigatePreviousCommand => _navigatePreviousCommand;
+        public ICommand NavigateNextCommand => _navigateNextCommand;
+
+        private void NavigatePrevious()
+        {
+            if (ReportTypeOptions.Count == 0) return;
+            var newIndex = _currentIndex <= 0 ? ReportTypeOptions.Count - 1 : _currentIndex - 1;
+            SelectedReportType = ReportTypeOptions[newIndex];
+        }
+
+        private void NavigateNext()
+        {
+            if (ReportTypeOptions.Count == 0) return;
+            var newIndex = _currentIndex >= ReportTypeOptions.Count - 1 ? 0 : _currentIndex + 1;
+            SelectedReportType = ReportTypeOptions[newIndex];
         }
 
         public AyudaProgramFilterOption? SelectedProgramFilter

@@ -12,13 +12,22 @@ namespace AttendanceShiftingManagement.Views
 
         public LoginWindow()
         {
-            InitializeComponent();
+            try
+            {
+                InitializeComponent();
 
-            if (System.ComponentModel.DesignerProperties.GetIsInDesignMode(this))
-                return;
+                if (System.ComponentModel.DesignerProperties.GetIsInDesignMode(this))
+                    return;
 
-            DataContext = new LoginViewModel();
-            WindowBrandingService.ApplyWindowIcon(this);
+                DataContext = new LoginViewModel();
+                WindowBrandingService.ApplyWindowIcon(this);
+            }
+            catch (Exception ex)
+            {
+                // This will be caught by the global handler in App.xaml.cs, 
+                // but logging it here provides more context.
+                throw new InvalidOperationException("Failed to initialize LoginWindow components.", ex);
+            }
         }
 
         private void PasswordBox_PasswordChanged(object sender, RoutedEventArgs e)

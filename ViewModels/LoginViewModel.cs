@@ -271,43 +271,60 @@ namespace AttendanceShiftingManagement.ViewModels
         public void RefreshStartupStateAsync()
         {
             RefreshConnectionSummary();
+            SetNeutralStatus("Preparing login. Open Connection Settings if you need to use Remote or LAN.");
+            _loginCommand.RaiseCanExecuteChanged();
+            _createInitialAdminCommand.RaiseCanExecuteChanged();
 
-            try
+            Task.Run(() =>
             {
-                EnsureDatabaseReady();
-                using var context = new AppDbContext();
-                var companySerialCheck = ValidateCompanySerial(context);
-                if (!companySerialCheck.IsSuccess)
+                try
                 {
-                    IsBootstrapMode = false;
-                    SetErrorStatus(companySerialCheck.Message);
-                    return;
-                }
+                    EnsureDatabaseReady();
+                    using var context = new AppDbContext();
+                    var companySerialCheck = BuildCompanySerialValidationResult(context);
 
-                var state = InitialAdminSetupService.GetState(context);
-                IsBootstrapMode = state.RequiresSetup;
+                    InvokeOnUiThread(() =>
+                    {
+                        _isCompanySerialAccessValid = companySerialCheck.IsSuccess;
+                        _loginCommand.RaiseCanExecuteChanged();
+                        _createInitialAdminCommand.RaiseCanExecuteChanged();
 
-                if (state.RequiresSetup)
-                {
-                    SetNeutralStatus(companySerialCheck.WasBoundToDatabase
-                        ? $"{companySerialCheck.Message} {state.Message}"
-                        : state.Message);
+                        if (!companySerialCheck.IsSuccess)
+                        {
+                            IsBootstrapMode = false;
+                            SetErrorStatus(companySerialCheck.Message);
+                            return;
+                        }
+
+                        var state = InitialAdminSetupService.GetState(context);
+                        IsBootstrapMode = state.RequiresSetup;
+
+                        if (state.RequiresSetup)
+                        {
+                            SetNeutralStatus(companySerialCheck.WasBoundToDatabase
+                                ? $"{companySerialCheck.Message} {state.Message}"
+                                : state.Message);
+                        }
+                        else if (string.IsNullOrWhiteSpace(StatusMessage))
+                        {
+                            SetNeutralStatus(companySerialCheck.WasBoundToDatabase
+                                ? companySerialCheck.Message
+                                : "Sign in with an existing admin account.");
+                        }
+                    });
                 }
-                else if (string.IsNullOrWhiteSpace(StatusMessage))
+                catch (Exception ex)
                 {
-                    SetNeutralStatus(companySerialCheck.WasBoundToDatabase
-                        ? companySerialCheck.Message
-                        : "Sign in with an existing admin account.");
+                    InvokeOnUiThread(() =>
+                    {
+                        _isCompanySerialAccessValid = false;
+                        _loginCommand.RaiseCanExecuteChanged();
+                        _createInitialAdminCommand.RaiseCanExecuteChanged();
+                        IsBootstrapMode = false;
+                        SetErrorStatus($"Database connection failed. No local database detected. Open Connection Settings and choose Remote or LAN. {ex.Message}");
+                    });
                 }
-            }
-            catch (Exception ex)
-            {
-                _isCompanySerialAccessValid = false;
-                _loginCommand.RaiseCanExecuteChanged();
-                _createInitialAdminCommand.RaiseCanExecuteChanged();
-                IsBootstrapMode = false;
-                SetErrorStatus($"Database connection failed. Check App Database settings. {ex.Message}");
-            }
+            });
         }
 
         private bool CanExecuteLogin(object? parameter)
@@ -466,21 +483,37 @@ namespace AttendanceShiftingManagement.ViewModels
             DatabaseInitializer.Initialize(resetDb, migrateOnStartup);
         }
 
-        private CompanySerialValidationResult ValidateCompanySerial(AppDbContext context)
+        private CompanySerialValidationResult BuildCompanySerialValidationResult(AppDbContext context)
         {
             _ = context;
             var localCompanySerial = (SystemProfileSettingsService.Load().InstallSerial ?? string.Empty)
                 .Trim()
                 .ToUpperInvariant();
-            var result = new CompanySerialValidationResult(
+            return new CompanySerialValidationResult(
                 true,
                 false,
                 "Company serial is shown for reference only.",
                 localCompanySerial);
+        }
+
+        private CompanySerialValidationResult ValidateCompanySerial(AppDbContext context)
+        {
+            var result = BuildCompanySerialValidationResult(context);
             _isCompanySerialAccessValid = result.IsSuccess;
             _loginCommand.RaiseCanExecuteChanged();
             _createInitialAdminCommand.RaiseCanExecuteChanged();
             return result;
+        }
+
+        private static void InvokeOnUiThread(Action action)
+        {
+            if (Application.Current?.Dispatcher?.CheckAccess() ?? false)
+            {
+                action();
+                return;
+            }
+
+            Application.Current?.Dispatcher?.Invoke(action);
         }
 
         private static IConfiguration BuildAppConfiguration()
