@@ -66,9 +66,32 @@ namespace AttendanceShiftingManagement.ViewModels
         private int _selectedScannerSessionDurationMinutes = 15;
         private const int DistributionPageSize = 10;
 
+        private bool _isCreateProjectPanelOpen;
+        private bool _isCreateProjectSuccessPanelOpen;
+        private string _newProjectCode = string.Empty;
+        private string _newProjectName = string.Empty;
+        private string _newProjectDescription = string.Empty;
+        private string _newProjectAssistanceType = string.Empty;
+        private AyudaProgramType _newProjectSelectedType = AyudaProgramType.GeneralPurpose;
+        private AssistanceReleaseKind _newProjectSelectedReleaseKind = AssistanceReleaseKind.Cash;
+        private string _newProjectUnitAmountText = string.Empty;
+        private string _newProjectItemDescription = string.Empty;
+        private DateTime? _newProjectStartDate = DateTime.Today;
+        private DateTime? _newProjectEndDate = DateTime.Today.AddDays(7);
+        private string _newProjectBudgetCapText = string.Empty;
+        private AyudaProgramDistributionStatus _newProjectSelectedDistributionStatus = AyudaProgramDistributionStatus.Open;
+        private string _newProjectSearchText = string.Empty;
+        private int _newProjectSelectedCount;
+
         public ProjectDistributionViewModel(User currentUser)
         {
             _currentUser = currentUser;
+
+            ProgramTypes = new ObservableCollection<AyudaProgramType>(
+                Enum.GetValues<AyudaProgramType>().Where(type => type != AyudaProgramType.AssistanceCase && type != AyudaProgramType.Seminar));
+            ReleaseKinds = new ObservableCollection<AssistanceReleaseKind>(Enum.GetValues<AssistanceReleaseKind>());
+            DistributionStatuses = new ObservableCollection<AyudaProgramDistributionStatus>(Enum.GetValues<AyudaProgramDistributionStatus>());
+            AvailableUnpickedBeneficiaries = new ObservableCollection<DistributionBeneficiaryOption>();
 
             RefreshCommand = new RelayCommand(async _ => await LoadAsync(), _ => !IsBusy);
             AddBeneficiaryCommand = new RelayCommand(async _ => await IncludeBeneficiaryAsync(), _ => CanAddBeneficiary());
@@ -94,8 +117,522 @@ namespace AttendanceShiftingManagement.ViewModels
             PrevReleasedPageCommand = new RelayCommand(async _ => await ChangeReleasedPageAsync(-1), _ => CanMoveReleasedPage(-1));
             NextReleasedPageCommand = new RelayCommand(async _ => await ChangeReleasedPageAsync(1), _ => CanMoveReleasedPage(1));
             ConfirmReleaseCommand = new RelayCommand(async _ => await ConfirmReleaseAsync(), _ => CanConfirmRelease());
+
+            OpenCreateProjectPanelCommand = new RelayCommand(_ => OpenCreateProjectPanel(), _ => !IsBusy);
+            CloseCreateProjectPanelCommand = new RelayCommand(_ => CloseCreateProjectPanel());
+            CloseCreateProjectSuccessPanelCommand = new RelayCommand(_ => CloseCreateProjectSuccessPanel());
+            ConfirmCreateProjectCommand = new RelayCommand(async _ => await ConfirmCreateProjectAsync(), _ => CanConfirmCreateProject());
+            ToggleBeneficiarySelectionCommand = new RelayCommand(parameter => ToggleBeneficiarySelection(parameter as DistributionBeneficiaryOption));
+
+            MoveToSelectedCommand = new RelayCommand(parameter => MoveToSelected(parameter as DistributionBeneficiaryOption));
+            MoveToAvailableCommand = new RelayCommand(parameter => MoveToAvailable(parameter as DistributionBeneficiaryOption));
+            MoveAllToSelectedCommand = new RelayCommand(_ => MoveAllToSelected());
+            MoveAllToAvailableCommand = new RelayCommand(_ => MoveAllToAvailable());
+
+            ResetCreateProjectForm();
             _ = LoadAsync();
         }
+
+        public ObservableCollection<AyudaProgramType> ProgramTypes { get; }
+        public ObservableCollection<AssistanceReleaseKind> ReleaseKinds { get; }
+        public ObservableCollection<AyudaProgramDistributionStatus> DistributionStatuses { get; }
+        public ObservableCollection<DistributionBeneficiaryOption> AvailableUnpickedBeneficiaries { get; }
+        public ObservableCollection<DistributionBeneficiaryOption> SelectedProjectBeneficiaries { get; } = new();
+
+        public ICommand OpenCreateProjectPanelCommand { get; }
+        public ICommand CloseCreateProjectPanelCommand { get; }
+        public ICommand CloseCreateProjectSuccessPanelCommand { get; }
+        public ICommand ConfirmCreateProjectCommand { get; }
+        public ICommand ToggleBeneficiarySelectionCommand { get; }
+        public ICommand MoveToSelectedCommand { get; }
+        public ICommand MoveToAvailableCommand { get; }
+        public ICommand MoveAllToSelectedCommand { get; }
+        public ICommand MoveAllToAvailableCommand { get; }
+
+        public bool IsAddBeneficiaryPanelOpen
+        {
+            get => _isAddBeneficiaryPanelOpen;
+            private set
+            {
+                if (SetProperty(ref _isAddBeneficiaryPanelOpen, value))
+                {
+                    OnPropertyChanged(nameof(IsAnyOverlayOpen));
+                }
+            }
+        }
+
+        public bool IsScannerPanelOpen
+        {
+            get => _isScannerPanelOpen;
+            private set
+            {
+                if (SetProperty(ref _isScannerPanelOpen, value))
+                {
+                    OnPropertyChanged(nameof(IsAnyOverlayOpen));
+                }
+            }
+        }
+
+        public bool IsAnyOverlayOpen => IsAddBeneficiaryPanelOpen || IsScannerPanelOpen || IsCreateProjectPanelOpen || IsCreateProjectSuccessPanelOpen;
+
+        public bool IsCreateProjectPanelOpen
+        {
+            get => _isCreateProjectPanelOpen;
+            private set
+            {
+                if (SetProperty(ref _isCreateProjectPanelOpen, value))
+                {
+                    OnPropertyChanged(nameof(IsAnyOverlayOpen));
+                    if (ConfirmCreateProjectCommand is RelayCommand confirm)
+                    {
+                        confirm.RaiseCanExecuteChanged();
+                    }
+                }
+            }
+        }
+
+        public bool IsCreateProjectSuccessPanelOpen
+        {
+            get => _isCreateProjectSuccessPanelOpen;
+            private set
+            {
+                if (SetProperty(ref _isCreateProjectSuccessPanelOpen, value))
+                {
+                    OnPropertyChanged(nameof(IsAnyOverlayOpen));
+                }
+            }
+        }
+
+        public string NewProjectCode
+        {
+            get => _newProjectCode;
+            private set => SetProperty(ref _newProjectCode, value);
+        }
+
+        public string NewProjectName
+        {
+            get => _newProjectName;
+            set
+            {
+                if (SetProperty(ref _newProjectName, value))
+                {
+                    if (ConfirmCreateProjectCommand is RelayCommand confirm)
+                    {
+                        confirm.RaiseCanExecuteChanged();
+                    }
+                }
+            }
+        }
+
+        public string NewProjectDescription
+        {
+            get => _newProjectDescription;
+            set => SetProperty(ref _newProjectDescription, value);
+        }
+
+        public string NewProjectAssistanceType
+        {
+            get => _newProjectAssistanceType;
+            set => SetProperty(ref _newProjectAssistanceType, value);
+        }
+
+        public AyudaProgramType NewProjectSelectedType
+        {
+            get => _newProjectSelectedType;
+            set
+            {
+                if (SetProperty(ref _newProjectSelectedType, value))
+                {
+                    OnPropertyChanged(nameof(NewProjectCashAmountVisibility));
+                    OnPropertyChanged(nameof(NewProjectGoodsDescriptionVisibility));
+                }
+            }
+        }
+
+        public AssistanceReleaseKind NewProjectSelectedReleaseKind
+        {
+            get => _newProjectSelectedReleaseKind;
+            set
+            {
+                if (SetProperty(ref _newProjectSelectedReleaseKind, value))
+                {
+                    OnPropertyChanged(nameof(NewProjectCashAmountVisibility));
+                    OnPropertyChanged(nameof(NewProjectGoodsDescriptionVisibility));
+                }
+            }
+        }
+
+        public string NewProjectUnitAmountText
+        {
+            get => _newProjectUnitAmountText;
+            set
+            {
+                if (SetProperty(ref _newProjectUnitAmountText, value))
+                {
+                    OnPropertyChanged(nameof(NewProjectTotalCost));
+                    if (ConfirmCreateProjectCommand is RelayCommand confirm)
+                    {
+                        confirm.RaiseCanExecuteChanged();
+                    }
+                }
+            }
+        }
+
+        public string NewProjectItemDescription
+        {
+            get => _newProjectItemDescription;
+            set => SetProperty(ref _newProjectItemDescription, value);
+        }
+
+        public DateTime? NewProjectStartDate
+        {
+            get => _newProjectStartDate;
+            set => SetProperty(ref _newProjectStartDate, value);
+        }
+
+        public DateTime? NewProjectEndDate
+        {
+            get => _newProjectEndDate;
+            set => SetProperty(ref _newProjectEndDate, value);
+        }
+
+        public string NewProjectBudgetCapText
+        {
+            get => _newProjectBudgetCapText;
+            set => SetProperty(ref _newProjectBudgetCapText, value);
+        }
+
+        public AyudaProgramDistributionStatus NewProjectSelectedDistributionStatus
+        {
+            get => _newProjectSelectedDistributionStatus;
+            set => SetProperty(ref _newProjectSelectedDistributionStatus, value);
+        }
+
+        public string NewProjectSearchText
+        {
+            get => _newProjectSearchText;
+            set
+            {
+                if (SetProperty(ref _newProjectSearchText, value))
+                {
+                    _ = LoadAvailableUnpickedBeneficiariesAsync();
+                }
+            }
+        }
+
+        public int NewProjectSelectedCount
+        {
+            get => _newProjectSelectedCount;
+            private set
+            {
+                if (SetProperty(ref _newProjectSelectedCount, value))
+                {
+                    OnPropertyChanged(nameof(NewProjectTotalCost));
+                    if (ConfirmCreateProjectCommand is RelayCommand confirm)
+                    {
+                        confirm.RaiseCanExecuteChanged();
+                    }
+                }
+            }
+        }
+
+        public decimal NewProjectTotalCost
+        {
+            get
+            {
+                if (TryParseOptionalAmount(NewProjectUnitAmountText, out var amount))
+                {
+                    return (amount ?? 0m) * NewProjectSelectedCount;
+                }
+                return 0m;
+            }
+        }
+
+        public Visibility NewProjectCashAmountVisibility => NewProjectSelectedReleaseKind == AssistanceReleaseKind.Cash
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
+        public Visibility NewProjectGoodsDescriptionVisibility => NewProjectSelectedReleaseKind == AssistanceReleaseKind.Goods
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
+        private void OpenCreateProjectPanel()
+        {
+            ResetCreateProjectForm();
+            IsCreateProjectPanelOpen = true;
+            _ = LoadAvailableUnpickedBeneficiariesAsync();
+        }
+
+        private void CloseCreateProjectPanel()
+        {
+            IsCreateProjectPanelOpen = false;
+        }
+
+        private void CloseCreateProjectSuccessPanel()
+        {
+            IsCreateProjectSuccessPanelOpen = false;
+            IsCreateProjectPanelOpen = false;
+        }
+
+        private void ResetCreateProjectForm()
+        {
+            NewProjectCode = $"PROJ-{DateTime.Now:yyyyMMddHHmm}";
+            NewProjectName = string.Empty;
+            NewProjectDescription = string.Empty;
+            NewProjectAssistanceType = string.Empty;
+            NewProjectSelectedType = AyudaProgramType.GeneralPurpose;
+            NewProjectSelectedReleaseKind = AssistanceReleaseKind.Cash;
+            NewProjectUnitAmountText = string.Empty;
+            NewProjectItemDescription = string.Empty;
+            NewProjectStartDate = DateTime.Today;
+            NewProjectEndDate = DateTime.Today.AddDays(7);
+            NewProjectBudgetCapText = string.Empty;
+            NewProjectSelectedDistributionStatus = AyudaProgramDistributionStatus.Open;
+            NewProjectSearchText = string.Empty;
+            AvailableUnpickedBeneficiaries.Clear();
+            SelectedProjectBeneficiaries.Clear();
+            NewProjectSelectedCount = 0;
+            IsCreateProjectSuccessPanelOpen = false;
+        }
+
+        private async Task LoadAvailableUnpickedBeneficiariesAsync()
+        {
+            await using var context = new AppDbContext();
+            
+            // Filter: Approved AND not in ANY active project
+            var search = NewProjectSearchText?.Trim();
+            
+            var enrolledIds = await context.AyudaProjectBeneficiaries
+                .AsNoTracking()
+                .Select(b => new { b.BeneficiaryStagingId, b.CivilRegistryId, b.BeneficiaryId })
+                .ToListAsync();
+
+            var alreadyEnrolledStagingIds = enrolledIds.Select(b => b.BeneficiaryStagingId).ToList();
+            var alreadyEnrolledCivilIds = enrolledIds.Where(b => b.CivilRegistryId != null).Select(b => b.CivilRegistryId!).ToList();
+            var alreadyEnrolledBenIds = enrolledIds.Where(b => b.BeneficiaryId != null).Select(b => b.BeneficiaryId!).ToList();
+
+            // Also exclude what's already in SelectedProjectBeneficiaries in the UI
+            var currentSelectedIds = SelectedProjectBeneficiaries.Select(b => b.StagingId).ToList();
+            var currentSelectedCivilIds = SelectedProjectBeneficiaries.Where(b => !string.IsNullOrEmpty(b.CivilRegistryId)).Select(b => b.CivilRegistryId).ToList();
+            var currentSelectedBenIds = SelectedProjectBeneficiaries.Where(b => !string.IsNullOrEmpty(b.BeneficiaryId)).Select(b => b.BeneficiaryId).ToList();
+
+            var beneficiaries = await context.BeneficiaryStaging
+                .AsNoTracking()
+                .Where(item => item.VerificationStatus == VerificationStatus.Approved)
+                .Select(item => new
+                {
+                    item.StagingID,
+                    item.BeneficiaryId,
+                    item.CivilRegistryId,
+                    item.LastName,
+                    item.FirstName,
+                    item.MiddleName,
+                    item.FullName,
+                    item.LinkedHouseholdId,
+                    item.LinkedHouseholdMemberId
+                })
+                .ToListAsync();
+
+            // Perform filtering in memory to handle complex duplicate checks correctly
+            var filteredBeneficiaries = beneficiaries
+                .Where(item => !alreadyEnrolledStagingIds.Contains(item.StagingID) &&
+                               !currentSelectedIds.Contains(item.StagingID))
+                .Where(item => string.IsNullOrEmpty(item.CivilRegistryId) || 
+                               (!alreadyEnrolledCivilIds.Contains(item.CivilRegistryId) && 
+                                !currentSelectedCivilIds.Contains(item.CivilRegistryId)))
+                .Where(item => string.IsNullOrEmpty(item.BeneficiaryId) || 
+                               (!alreadyEnrolledBenIds.Contains(item.BeneficiaryId) && 
+                                !currentSelectedBenIds.Contains(item.BeneficiaryId)))
+                .Where(item => string.IsNullOrWhiteSpace(search) || 
+                               (item.FullName != null && item.FullName.Contains(search, StringComparison.OrdinalIgnoreCase)) ||
+                               (item.BeneficiaryId != null && item.BeneficiaryId.Contains(search, StringComparison.OrdinalIgnoreCase)))
+                .OrderBy(item => item.FullName ?? item.LastName)
+                .ToList();
+
+            AvailableUnpickedBeneficiaries.Clear();
+            foreach (var b in filteredBeneficiaries)
+            {
+                AvailableUnpickedBeneficiaries.Add(new DistributionBeneficiaryOption
+                {
+                    StagingId = b.StagingID,
+                    BeneficiaryId = b.BeneficiaryId,
+                    CivilRegistryId = b.CivilRegistryId,
+                    LastName = b.LastName,
+                    FirstName = b.FirstName,
+                    MiddleName = b.MiddleName,
+                    FullName = b.FullName,
+                    LinkedHouseholdId = b.LinkedHouseholdId,
+                    LinkedHouseholdMemberId = b.LinkedHouseholdMemberId
+                });
+            }
+            
+            UpdateNewProjectSelectedCount();
+        }
+
+        private void MoveToSelected(DistributionBeneficiaryOption? option)
+        {
+            if (option == null) return;
+            AvailableUnpickedBeneficiaries.Remove(option);
+            SelectedProjectBeneficiaries.Add(option);
+            UpdateNewProjectSelectedCount();
+        }
+
+        private void MoveToAvailable(DistributionBeneficiaryOption? option)
+        {
+            if (option == null) return;
+            SelectedProjectBeneficiaries.Remove(option);
+            _ = LoadAvailableUnpickedBeneficiariesAsync();
+        }
+
+        private void MoveAllToSelected()
+        {
+            var items = AvailableUnpickedBeneficiaries.ToList();
+            foreach (var item in items)
+            {
+                AvailableUnpickedBeneficiaries.Remove(item);
+                SelectedProjectBeneficiaries.Add(item);
+            }
+            UpdateNewProjectSelectedCount();
+        }
+
+        private void MoveAllToAvailable()
+        {
+            SelectedProjectBeneficiaries.Clear();
+            _ = LoadAvailableUnpickedBeneficiariesAsync();
+        }
+
+        private void ToggleBeneficiarySelection(DistributionBeneficiaryOption? option)
+        {
+            if (option == null) return;
+            option.IsSelected = !option.IsSelected;
+            UpdateNewProjectSelectedCount();
+        }
+
+        private void UpdateNewProjectSelectedCount()
+        {
+            NewProjectSelectedCount = SelectedProjectBeneficiaries.Count;
+            if (ConfirmCreateProjectCommand is RelayCommand confirm)
+            {
+                confirm.RaiseCanExecuteChanged();
+            }
+        }
+
+        private bool CanConfirmCreateProject()
+        {
+            return !IsBusy && 
+                   !string.IsNullOrWhiteSpace(NewProjectCode) && 
+                   !string.IsNullOrWhiteSpace(NewProjectName) &&
+                   NewProjectSelectedCount > 0;
+        }
+
+        private async Task ConfirmCreateProjectAsync()
+        {
+            if (!CanConfirmCreateProject()) return;
+
+            if (!TryParseOptionalAmount(NewProjectUnitAmountText, out var unitAmount))
+            {
+                SetErrorStatus("Enter a valid unit amount.");
+                return;
+            }
+
+            if (!TryParseOptionalAmount(NewProjectBudgetCapText, out var budgetCap))
+            {
+                SetErrorStatus("Enter a valid project budget cap.");
+                return;
+            }
+
+            IsBusy = true;
+            SetNeutralStatus("Creating project and enrolling beneficiaries...");
+
+            try
+            {
+                await using var context = new AppDbContext();
+                var budgetService = new BudgetManagementService(context);
+                var distributionService = new ProjectDistributionService(context);
+
+                // 1. Create Program
+                var programResult = await budgetService.CreateProgramAsync(
+                    new AyudaProgramRequest(
+                        NewProjectCode,
+                        NewProjectName,
+                        NewProjectSelectedType,
+                        NormalizeNullable(NewProjectDescription),
+                        NormalizeNullable(NewProjectAssistanceType),
+                        NewProjectSelectedReleaseKind,
+                        unitAmount,
+                        NormalizeNullable(NewProjectItemDescription),
+                        NewProjectStartDate,
+                        NewProjectEndDate,
+                        budgetCap,
+                        NewProjectSelectedDistributionStatus),
+                    _currentUser.Id);
+
+                if (!programResult.IsSuccess)
+                {
+                    SetErrorStatus(programResult.Message);
+                    return;
+                }
+
+                int programId = programResult.ProgramId ?? throw new Exception("Program created but no ID returned.");
+
+                // 2. Bulk Enroll Selected Beneficiaries
+                var selectedIds = SelectedProjectBeneficiaries
+                    .Select(b => b.StagingId)
+                    .ToList();
+
+                SetNeutralStatus($"Enrolling {selectedIds.Count} beneficiaries...");
+                var enrollResult = await distributionService.BulkAddBeneficiariesAsync(
+                    programId, 
+                    selectedIds, 
+                    _currentUser.Id);
+
+                if (!enrollResult.IsSuccess)
+                {
+                    SetErrorStatus($"Project created, but enrollment failed: {enrollResult.Message}");
+                    return;
+                }
+
+                // 3. Bulk Record Claims (Story requirement: update the Digital ID ledger for each released beneficiary)
+                SetNeutralStatus($"Recording {selectedIds.Count} initial claims...");
+                var releaseResult = await distributionService.BulkRecordClaimsAsync(
+                    programId,
+                    selectedIds,
+                    _currentUser.Id,
+                    $"Initial bulk release for project '{NewProjectName}'.");
+
+                if (!releaseResult.IsSuccess)
+                {
+                    SetErrorStatus($"Project created and enrolled, but bulk release failed: {releaseResult.Message}");
+                    return;
+                }
+
+                // CloseCreateProjectPanel(); // Don't close immediately, show success panel
+                await LoadProgramsAsync(programId);
+                IsCreateProjectSuccessPanelOpen = true;
+                SetSuccessStatus($"Project '{NewProjectName}' created and released to {selectedIds.Count} beneficiaries.");
+            }
+            catch (Exception ex)
+            {
+                SetErrorStatus($"Error creating project: {ex.Message}");
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
+        private bool TryParseOptionalAmount(string text, out decimal? amount)
+        {
+            amount = null;
+            if (string.IsNullOrWhiteSpace(text)) return true;
+            if (decimal.TryParse(text, NumberStyles.Number, CultureInfo.CurrentCulture, out var parsed))
+            {
+                amount = parsed;
+                return true;
+            }
+            return false;
+        }
+
 
         public ObservableCollection<ProjectDistributionProgramListItem> ProgramSummaries { get; } = new();
         public ObservableCollection<DistributionBeneficiaryOption> AvailableBeneficiaries { get; } = new();
@@ -499,18 +1036,6 @@ namespace AttendanceShiftingManagement.ViewModels
             }
         }
 
-        public bool IsAddBeneficiaryPanelOpen
-        {
-            get => _isAddBeneficiaryPanelOpen;
-            private set => SetProperty(ref _isAddBeneficiaryPanelOpen, value);
-        }
-
-        public bool IsScannerPanelOpen
-        {
-            get => _isScannerPanelOpen;
-            private set => SetProperty(ref _isScannerPanelOpen, value);
-        }
-
         public string AddBeneficiaryStatusMessage
         {
             get => _addBeneficiaryStatusMessage;
@@ -662,14 +1187,35 @@ namespace AttendanceShiftingManagement.ViewModels
             var beneficiaries = await context.BeneficiaryStaging
                 .AsNoTracking()
                 .Where(item => item.VerificationStatus == VerificationStatus.Approved)
+                .Select(item => new
+                {
+                    item.StagingID,
+                    item.FullName,
+                    item.FirstName,
+                    item.LastName,
+                    item.BeneficiaryId,
+                    item.CivilRegistryId,
+                    item.IsSenior,
+                    item.IsPwd
+                })
                 .OrderBy(item => item.FullName ?? item.LastName)
                 .ThenBy(item => item.FirstName)
                 .ToListAsync();
 
             AvailableBeneficiaries.Clear();
-            foreach (var beneficiary in beneficiaries)
+            foreach (var b in beneficiaries)
             {
-                AvailableBeneficiaries.Add(DistributionBeneficiaryOption.FromEntity(beneficiary));
+                AvailableBeneficiaries.Add(new DistributionBeneficiaryOption
+                {
+                    StagingId = b.StagingID,
+                    FullName = b.FullName ?? string.Empty,
+                    FirstName = b.FirstName ?? string.Empty,
+                    LastName = b.LastName ?? string.Empty,
+                    BeneficiaryId = b.BeneficiaryId ?? string.Empty,
+                    CivilRegistryId = b.CivilRegistryId ?? string.Empty,
+                    IsSenior = b.IsSenior,
+                    IsPwd = b.IsPwd
+                });
             }
 
             ApplyAvailableBeneficiaryFilter();
@@ -731,7 +1277,22 @@ namespace AttendanceShiftingManagement.ViewModels
             var digitalIdsByStagingId = await context.BeneficiaryDigitalIds
                 .AsNoTracking()
                 .Where(item => memberships.Select(member => member.BeneficiaryStagingId).Contains(item.BeneficiaryStagingId) && item.IsActive)
-                .ToDictionaryAsync(item => item.BeneficiaryStagingId);
+                .Select(item => new
+                {
+                    item.Id,
+                    item.BeneficiaryStagingId,
+                    item.CardNumber,
+                    item.QrPayload,
+                    item.IsActive
+                })
+                .ToDictionaryAsync(item => item.BeneficiaryStagingId, item => new BeneficiaryDigitalId
+                {
+                    Id = item.Id,
+                    BeneficiaryStagingId = item.BeneficiaryStagingId,
+                    CardNumber = item.CardNumber,
+                    QrPayload = item.QrPayload,
+                    IsActive = item.IsActive
+                });
 
             _livePreviewMemberships = memberships;
             _livePreviewDigitalIdsByStagingId = digitalIdsByStagingId;
@@ -1918,9 +2479,12 @@ namespace AttendanceShiftingManagement.ViewModels
         public int StagingId { get; init; }
         public string FullName { get; init; } = string.Empty;
         public string FirstName { get; init; } = string.Empty;
+        public string MiddleName { get; init; } = string.Empty;
         public string LastName { get; init; } = string.Empty;
         public string BeneficiaryId { get; init; } = string.Empty;
         public string CivilRegistryId { get; init; } = string.Empty;
+        public int? LinkedHouseholdId { get; init; }
+        public int? LinkedHouseholdMemberId { get; init; }
         public bool IsSenior { get; init; }
         public bool IsPwd { get; init; }
         

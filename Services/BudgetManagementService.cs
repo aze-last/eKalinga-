@@ -243,7 +243,11 @@ namespace AttendanceShiftingManagement.Services
 
         public async Task<IReadOnlyList<BudgetLedgerEntry>> GetRecentLedgerEntriesAsync(int skip = 0, int take = 50, string? search = null, string? sourceFilter = null)
         {
-            var query = _context.BudgetLedgerEntries.AsNoTracking();
+            IQueryable<BudgetLedgerEntry> query = _context.BudgetLedgerEntries
+                .AsNoTracking()
+                .Include(e => e.Program)
+                .Include(e => e.AssistanceCaseBudget)
+                .Include(e => e.CashForWorkBudget);
 
             if (!string.IsNullOrWhiteSpace(search))
             {

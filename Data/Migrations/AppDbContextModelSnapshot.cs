@@ -754,6 +754,9 @@ namespace AttendanceShiftingManagement.Data.Migrations
                     b.Property<string>("MiddleName")
                         .HasColumnType("longtext");
 
+                    b.Property<string>("PhotoPath")
+                        .HasColumnType("longtext");
+
                     b.Property<string>("PwdIdNo")
                         .HasColumnType("longtext");
 
@@ -862,6 +865,12 @@ namespace AttendanceShiftingManagement.Data.Migrations
                         .HasColumnName("total_amount");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AssistanceCaseBudgetId");
+
+                    b.HasIndex("CashForWorkBudgetId");
+
+                    b.HasIndex("ProgramId");
 
                     b.HasIndex("FeatureSource", "SourceRecordId", "EntryType");
 
@@ -1719,6 +1728,27 @@ namespace AttendanceShiftingManagement.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("AyudaProgram");
+                });
+
+            modelBuilder.Entity("AttendanceShiftingManagement.Models.BudgetLedgerEntry", b =>
+                {
+                    b.HasOne("AttendanceShiftingManagement.Models.AssistanceCaseBudget", "AssistanceCaseBudget")
+                        .WithMany()
+                        .HasForeignKey("AssistanceCaseBudgetId");
+
+                    b.HasOne("AttendanceShiftingManagement.Models.CashForWorkBudget", "CashForWorkBudget")
+                        .WithMany()
+                        .HasForeignKey("CashForWorkBudgetId");
+
+                    b.HasOne("AttendanceShiftingManagement.Models.AyudaProgram", "Program")
+                        .WithMany()
+                        .HasForeignKey("ProgramId");
+
+                    b.Navigation("AssistanceCaseBudget");
+
+                    b.Navigation("CashForWorkBudget");
+
+                    b.Navigation("Program");
                 });
 
             modelBuilder.Entity("AttendanceShiftingManagement.Models.CashForWorkAttendance", b =>

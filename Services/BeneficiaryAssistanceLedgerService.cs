@@ -47,7 +47,14 @@ namespace AttendanceShiftingManagement.Services
 
             var staging = await _context.BeneficiaryStaging
                 .AsNoTracking()
-                .FirstOrDefaultAsync(item => item.StagingID == request.StagingId);
+                .Where(item => item.StagingID == request.StagingId)
+                .Select(item => new
+                {
+                    item.StagingID,
+                    item.CivilRegistryId,
+                    item.BeneficiaryId
+                })
+                .FirstOrDefaultAsync();
 
             if (staging == null)
             {
@@ -124,7 +131,13 @@ namespace AttendanceShiftingManagement.Services
         {
             var staging = await _context.BeneficiaryStaging
                 .AsNoTracking()
-                .FirstOrDefaultAsync(item => item.StagingID == stagingId);
+                .Where(item => item.StagingID == stagingId)
+                .Select(item => new
+                {
+                    item.CivilRegistryId,
+                    item.BeneficiaryId
+                })
+                .FirstOrDefaultAsync();
 
             if (staging == null)
             {
@@ -190,7 +203,13 @@ namespace AttendanceShiftingManagement.Services
         {
             var staging = await _context.BeneficiaryStaging
                 .AsNoTracking()
-                .FirstOrDefaultAsync(item => item.StagingID == stagingId);
+                .Where(item => item.StagingID == stagingId)
+                .Select(item => new
+                {
+                    item.CivilRegistryId,
+                    item.BeneficiaryId
+                })
+                .FirstOrDefaultAsync();
 
             if (staging == null)
             {

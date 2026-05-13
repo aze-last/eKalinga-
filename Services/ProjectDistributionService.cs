@@ -61,7 +61,21 @@ namespace AttendanceShiftingManagement.Services
 
             var beneficiary = await _context.BeneficiaryStaging
                 .AsNoTracking()
-                .FirstOrDefaultAsync(item => item.StagingID == beneficiaryStagingId);
+                .Where(item => item.StagingID == beneficiaryStagingId)
+                .Select(item => new
+                {
+                    item.StagingID,
+                    item.LinkedHouseholdId,
+                    item.LinkedHouseholdMemberId,
+                    item.BeneficiaryId,
+                    item.CivilRegistryId,
+                    item.FirstName,
+                    item.MiddleName,
+                    item.LastName,
+                    item.FullName,
+                    item.VerificationStatus
+                })
+                .FirstOrDefaultAsync();
 
             if (beneficiary == null)
             {
@@ -83,6 +97,10 @@ namespace AttendanceShiftingManagement.Services
                 return new ProjectDistributionOperationResult(false, "This beneficiary is already included in the selected project.", existingMembership.Id);
             }
 
+            var fullName = string.IsNullOrWhiteSpace(beneficiary.FullName)
+                ? BuildDisplayName(beneficiary.FirstName, beneficiary.MiddleName, beneficiary.LastName)
+                : beneficiary.FullName;
+
             var membership = new AyudaProjectBeneficiary
             {
                 AyudaProgramId = ayudaProgramId,
@@ -91,7 +109,7 @@ namespace AttendanceShiftingManagement.Services
                 HouseholdMemberId = beneficiary.LinkedHouseholdMemberId,
                 BeneficiaryId = NormalizeNullable(beneficiary.BeneficiaryId),
                 CivilRegistryId = NormalizeNullable(beneficiary.CivilRegistryId),
-                FullName = BuildDisplayName(beneficiary),
+                FullName = fullName,
                 Status = DistributionBeneficiaryStatus.Pending,
                 StatusUpdatedByUserId = actedByUserId,
                 StatusUpdatedAt = DateTime.Now,
@@ -148,6 +166,18 @@ namespace AttendanceShiftingManagement.Services
             var beneficiaries = await _context.BeneficiaryStaging
                 .AsNoTracking()
                 .Where(item => newStagingIds.Contains(item.StagingID) && item.VerificationStatus == VerificationStatus.Approved)
+                .Select(item => new
+                {
+                    item.StagingID,
+                    item.LinkedHouseholdId,
+                    item.LinkedHouseholdMemberId,
+                    item.BeneficiaryId,
+                    item.CivilRegistryId,
+                    item.FirstName,
+                    item.MiddleName,
+                    item.LastName,
+                    item.FullName
+                })
                 .ToListAsync();
 
             if (beneficiaries.Count == 0)
@@ -158,17 +188,19 @@ namespace AttendanceShiftingManagement.Services
             var newMemberships = new List<AyudaProjectBeneficiary>();
             var now = DateTime.Now;
 
-            foreach (var beneficiary in beneficiaries)
+            foreach (var b in beneficiaries)
             {
                 newMemberships.Add(new AyudaProjectBeneficiary
                 {
                     AyudaProgramId = ayudaProgramId,
-                    BeneficiaryStagingId = beneficiary.StagingID,
-                    HouseholdId = beneficiary.LinkedHouseholdId,
-                    HouseholdMemberId = beneficiary.LinkedHouseholdMemberId,
-                    BeneficiaryId = NormalizeNullable(beneficiary.BeneficiaryId),
-                    CivilRegistryId = NormalizeNullable(beneficiary.CivilRegistryId),
-                    FullName = BuildDisplayName(beneficiary),
+                    BeneficiaryStagingId = b.StagingID,
+                    HouseholdId = b.LinkedHouseholdId,
+                    HouseholdMemberId = b.LinkedHouseholdMemberId,
+                    BeneficiaryId = NormalizeNullable(b.BeneficiaryId),
+                    CivilRegistryId = NormalizeNullable(b.CivilRegistryId),
+                    FullName = string.IsNullOrWhiteSpace(b.FullName) 
+                        ? BuildDisplayName(b.FirstName, b.MiddleName, b.LastName) 
+                        : b.FullName,
                     Status = DistributionBeneficiaryStatus.Pending,
                     StatusUpdatedByUserId = actedByUserId,
                     StatusUpdatedAt = now,
@@ -188,6 +220,148 @@ namespace AttendanceShiftingManagement.Services
                 $"Bulk added {newMemberships.Count} beneficiaries to project/program #{ayudaProgramId}.");
 
             return new ProjectDistributionOperationResult(true, $"Successfully enrolled {newMemberships.Count} beneficiaries to the project.");
+        }
+
+        public async Task<ProjectDistributionOperationResult> BulkRecordClaimsAsync(
+            int ayudaProgramId,
+            IEnumerable<int> beneficiaryStagingIds,
+            int actedByUserId,
+            string? remarks)
+        {
+            var program = await _context.AyudaPrograms.FirstOrDefaultAsync(p => p.Id == ayudaProgramId);
+            if (program == null)
+            {
+                return new ProjectDistributionOperationResult(false, "Select an active project/program first.");
+            }
+
+            var lifecycleValidation = ValidateProjectLifecycle(program);
+            if (lifecycleValidation != null)
+            {
+                return lifecycleValidation;
+            }
+
+            var stagingIds = beneficiaryStagingIds.Distinct().ToList();
+            if (stagingIds.Count == 0)
+            {
+                return new ProjectDistributionOperationResult(false, "No beneficiaries selected for bulk claim.");
+            }
+
+            var memberships = await _context.AyudaProjectBeneficiaries
+                .Where(item => item.AyudaProgramId == ayudaProgramId && stagingIds.Contains(item.BeneficiaryStagingId))
+                .ToListAsync();
+
+            if (memberships.Count == 0)
+            {
+                return new ProjectDistributionOperationResult(false, "None of the selected beneficiaries are enrolled in this project.");
+            }
+
+            var successfulClaims = 0;
+            var now = DateTime.Now;
+            var historyService = new BeneficiaryAssistanceLedgerService(_context, _auditService);
+
+            foreach (var membership in memberships)
+            {
+                if (membership.Status == DistributionBeneficiaryStatus.Released) continue;
+                if (membership.Status == DistributionBeneficiaryStatus.Rejected) continue;
+
+                var existingClaim = await _context.AyudaProjectClaims
+                    .AnyAsync(c => c.AyudaProgramId == ayudaProgramId && c.BeneficiaryStagingId == membership.BeneficiaryStagingId);
+                
+                if (existingClaim)
+                {
+                    membership.Status = DistributionBeneficiaryStatus.Released;
+                    continue;
+                }
+
+                // Check budget cap for this individual claim if applicable
+                if (program.BudgetCap is > 0 && program.UnitAmount is > 0)
+                {
+                    var currentProjectSpend = await _context.AyudaProjectClaims
+                        .AsNoTracking()
+                        .Where(item => item.AyudaProgramId == ayudaProgramId)
+                        .SumAsync(item => (decimal?)item.UnitAmountSnapshot) ?? 0m;
+
+                    if (currentProjectSpend + program.UnitAmount.Value > program.BudgetCap.Value)
+                    {
+                        break; // Stop if budget cap reached
+                    }
+                }
+
+                var claim = new AyudaProjectClaim
+                {
+                    AyudaProgramId = ayudaProgramId,
+                    BeneficiaryStagingId = membership.BeneficiaryStagingId,
+                    ProjectBeneficiaryId = membership.Id,
+                    HouseholdId = membership.HouseholdId,
+                    HouseholdMemberId = membership.HouseholdMemberId,
+                    BeneficiaryId = membership.BeneficiaryId,
+                    CivilRegistryId = membership.CivilRegistryId,
+                    FullName = membership.FullName,
+                    AssistanceTypeSnapshot = NormalizeNullable(program.AssistanceType),
+                    ItemDescriptionSnapshot = NormalizeNullable(program.ItemDescription),
+                    UnitAmountSnapshot = program.UnitAmount,
+                    QrPayload = "BULK-RELEASE-INIT",
+                    Remarks = remarks ?? $"Bulk release for {membership.FullName}.",
+                    ClaimedByUserId = actedByUserId,
+                    ClaimedAt = now
+                };
+
+                _context.AyudaProjectClaims.Add(claim);
+                
+                membership.Status = DistributionBeneficiaryStatus.Released;
+                membership.StatusUpdatedByUserId = actedByUserId;
+                membership.StatusUpdatedAt = now;
+
+                if (program.UnitAmount is > 0)
+                {
+                    var releaseResult = await _budgetService.RecordReleaseAsync(
+                        new BudgetReleaseRequest(
+                            ayudaProgramId,
+                            BudgetLedgerFeatureSource.ProjectDistribution,
+                            BuildClaimSourceRecordId(ayudaProgramId, membership.BeneficiaryStagingId),
+                            1,
+                            program.ReleaseKind,
+                            program.UnitAmount.Value,
+                            now,
+                            remarks ?? $"Bulk release for {membership.FullName}."),
+                        actedByUserId);
+
+                    if (!releaseResult.IsSuccess)
+                    {
+                        _context.AyudaProjectClaims.Remove(claim);
+                        membership.Status = DistributionBeneficiaryStatus.Pending;
+                        continue;
+                    }
+                }
+
+                await historyService.RecordEntryAsync(
+                    membership.CivilRegistryId,
+                    membership.BeneficiaryId,
+                    BeneficiaryAssistanceSourceModule.ProjectDistribution,
+                    BuildClaimSourceRecordId(ayudaProgramId, membership.BeneficiaryStagingId),
+                    now,
+                    program.UnitAmount ?? 0m,
+                    remarks ?? $"Bulk release for {membership.FullName}.",
+                    actedByUserId);
+
+                successfulClaims++;
+            }
+
+            await _context.SaveChangesAsync();
+
+            if (successfulClaims > 0)
+            {
+                await _auditService.LogActivityAsync(
+                    actedByUserId,
+                    "ProjectBeneficiariesBulkClaimed",
+                    nameof(AyudaProjectClaim),
+                    ayudaProgramId,
+                    $"Bulk recorded {successfulClaims} claims for project/program #{ayudaProgramId}.");
+            }
+
+            return successfulClaims > 0 
+                ? new ProjectDistributionOperationResult(true, $"Successfully recorded {successfulClaims} project claims.")
+                : new ProjectDistributionOperationResult(false, "No claims were recorded (check budget caps or enrollment status).");
         }
 
         public async Task<ProjectDistributionQualificationResult> EvaluateQualificationAsync(int ayudaProgramId, int beneficiaryStagingId)
@@ -467,6 +641,13 @@ namespace AttendanceShiftingManagement.Services
                 .ToListAsync();
         }
 
+        private static string BuildDisplayName(string? first, string? middle, string? last)
+        {
+            return string.Join(" ", new[] { first, middle, last }
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Select(value => value!.Trim()));
+        }
+
         private static string BuildDisplayName(BeneficiaryStaging beneficiary)
         {
             if (!string.IsNullOrWhiteSpace(beneficiary.FullName))
@@ -474,9 +655,7 @@ namespace AttendanceShiftingManagement.Services
                 return beneficiary.FullName.Trim();
             }
 
-            return string.Join(" ", new[] { beneficiary.FirstName, beneficiary.MiddleName, beneficiary.LastName }
-                .Where(value => !string.IsNullOrWhiteSpace(value))
-                .Select(value => value!.Trim()));
+            return BuildDisplayName(beneficiary.FirstName, beneficiary.MiddleName, beneficiary.LastName);
         }
 
         private static string? NormalizeNullable(string? value)

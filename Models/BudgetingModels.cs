@@ -406,6 +406,15 @@ namespace AttendanceShiftingManagement.Models
 
         [Column("created_at")]
         public DateTime CreatedAt { get; set; } = DateTime.Now;
+
+        [ForeignKey(nameof(ProgramId))]
+        public AyudaProgram? Program { get; set; }
+
+        [ForeignKey(nameof(AssistanceCaseBudgetId))]
+        public AssistanceCaseBudget? AssistanceCaseBudget { get; set; }
+
+        [ForeignKey(nameof(CashForWorkBudgetId))]
+        public CashForWorkBudget? CashForWorkBudget { get; set; }
     }
 
     public enum AyudaProgramType
