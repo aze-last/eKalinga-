@@ -21,6 +21,8 @@
                       CornerRadius="0" />
     </WindowChrome.WindowChrome>
     <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
+
         <Style x:Key="WindowControlButtonStyle"
                TargetType="Button"
                BasedOn="{StaticResource MaterialDesignFlatButton}">
@@ -43,7 +45,139 @@
                 </Trigger>
             </Style.Triggers>
         </Style>
+
+        <!-- Collapses nav label text when IsSidebarCollapsed = true -->
+        <Style x:Key="SideNavLabelStyle" TargetType="TextBlock">
+            <Setter Property="Margin" Value="10,0,0,0"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Visibility" Value="Visible"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsSidebarCollapsed}" Value="True">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Collapses section labels (MODULES / OTHER) when collapsed -->
+        <Style x:Key="SideNavSectionLabelStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#FFD54F"/>
+            <Setter Property="Opacity" Value="0.6"/>
+            <Setter Property="Visibility" Value="Visible"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsSidebarCollapsed}" Value="True">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Nav item button: Tag="{Binding Is___Selected}" drives selected state -->
+        <Style x:Key="SideNavButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#BBDEFB"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Height" Value="46"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="NavBorder"
+                                Background="Transparent"
+                                BorderBrush="Transparent"
+                                BorderThickness="3,0,0,0">
+                            <ContentPresenter Margin="14,0,12,0"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="NavBorder" Property="Background" Value="#142C72"/>
+                            </Trigger>
+                            <DataTrigger Binding="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=Tag}" Value="True">
+                                <Setter TargetName="NavBorder" Property="Background" Value="#1A3A7A"/>
+                                <Setter TargetName="NavBorder" Property="BorderBrush" Value="#FFD54F"/>
+                            </DataTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="True">
+                    <Setter Property="Foreground" Value="White"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Home / back-to-dashboard button -->
+        <Style x:Key="SideNavHomeButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="HomeBorder"
+                                Background="Transparent">
+                            <!-- right margin leaves room for the overlaid toggle button -->
+                            <ContentPresenter Margin="16,0,40,0"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="HomeBorder" Property="Background" Value="#0D47A1"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Sidebar collapse/expand toggle button -->
+        <Style x:Key="SideNavToggleButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#4A6A9E"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Width" Value="36"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="ToggleBorder"
+                                Background="Transparent"
+                                CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ToggleBorder" Property="Background" Value="#142C72"/>
+                                <Setter Property="Foreground" Value="#BBDEFB"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Sidebar logout button -->
+        <Style x:Key="SideNavLogoutButtonStyle" TargetType="Button"
+               BasedOn="{StaticResource SideNavButtonStyle}">
+            <Setter Property="Foreground" Value="#FFCDD2"/>
+            <Setter Property="Height" Value="46"/>
+        </Style>
     </Window.Resources>
+
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="45" />
@@ -65,8 +199,6 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-
-                <!-- Left: Brand area (darker blue) -->
                 <Border Grid.Column="0"
                         Background="#0D47A1"
                         BorderBrush="#0A3880"
@@ -78,24 +210,22 @@
                                                  Width="22" Height="22"
                                                  Foreground="White"
                                                  VerticalAlignment="Center"/>
-                        <TextBlock Text="eKalinga+"
-                                   Foreground="White"
+                        <TextBlock Foreground="White"
                                    FontWeight="SemiBold"
                                    FontSize="14"
                                    Margin="8,0,0,0"
-                                   VerticalAlignment="Center"/>
+                                   VerticalAlignment="Center">
+                            <Run Text="eKalinga" Foreground="White"/>
+                            <Run Text="+" Foreground="#FFD54F"/>
+                        </TextBlock>
                     </StackPanel>
                 </Border>
-
-                <!-- Center: Subtitle -->
                 <TextBlock Grid.Column="1"
                            Text="{Binding SoftwareSubtitle}"
                            Foreground="#BBDEFB"
                            FontSize="12"
                            VerticalAlignment="Center"
                            Margin="18,0,0,0"/>
-
-                <!-- Right: Window controls -->
                 <StackPanel Grid.Column="2"
                             Orientation="Horizontal"
                             VerticalAlignment="Center"
@@ -119,8 +249,277 @@
             </Grid>
         </Border>
 
-        <!-- Main Content -->
-        <ContentControl Grid.Row="1"
-                        Content="{Binding CurrentView}" />
+        <!-- ── Main Area: Sidebar + Content ── -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- ── Sidebar (hidden on Dashboard) ── -->
+            <Border Grid.Column="0"
+                    Visibility="{Binding IsSecondarySectionVisible, Converter={StaticResource BoolToVisibility}}">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Width" Value="220"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsSidebarCollapsed}" Value="True">
+                                <Setter Property="Width" Value="52"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                        <GradientStop Color="#0D47A1" Offset="0"/>
+                        <GradientStop Color="#0A3880" Offset="1"/>
+                    </LinearGradientBrush>
+                </Border.Background>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Home + collapse toggle (overlaid) -->
+                    <Border Grid.Row="0"
+                            Height="56"
+                            BorderBrush="#0A3880"
+                            BorderThickness="0,0,0,1">
+                        <Grid>
+                            <!-- Home / back-to-dashboard -->
+                            <Button Command="{Binding ShowDashboardCommand}"
+                                    Style="{StaticResource SideNavHomeButtonStyle}"
+                                    ToolTip="Back to Dashboard">
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon Kind="HomeOutline"
+                                                             Width="20" Height="20"
+                                                             Foreground="White"
+                                                             VerticalAlignment="Center"/>
+                                    <TextBlock Style="{StaticResource SideNavLabelStyle}"
+                                               FontSize="14"
+                                               FontWeight="SemiBold">
+                                        <Run Text="Home" Foreground="White"/>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Button>
+                            <!-- Collapse / expand toggle (overlaid at right) -->
+                            <Button HorizontalAlignment="Right"
+                                    Command="{Binding ToggleSidebarCommand}"
+                                    Style="{StaticResource SideNavToggleButtonStyle}"
+                                    Height="36"
+                                    Margin="0,0,2,0">
+                                <Button.ToolTip>
+                                    <ToolTip>
+                                        <TextBlock>
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Text" Value="Collapse sidebar"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsSidebarCollapsed}" Value="True">
+                                                            <Setter Property="Text" Value="Expand sidebar"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </ToolTip>
+                                </Button.ToolTip>
+                                <Grid>
+                                    <materialDesign:PackIcon Kind="ChevronLeft"
+                                                             Width="14" Height="14">
+                                        <materialDesign:PackIcon.Style>
+                                            <Style TargetType="materialDesign:PackIcon">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsSidebarCollapsed}" Value="True">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </materialDesign:PackIcon.Style>
+                                    </materialDesign:PackIcon>
+                                    <materialDesign:PackIcon Kind="ChevronRight"
+                                                             Width="14" Height="14">
+                                        <materialDesign:PackIcon.Style>
+                                            <Style TargetType="materialDesign:PackIcon">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsSidebarCollapsed}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </materialDesign:PackIcon.Style>
+                                    </materialDesign:PackIcon>
+                                </Grid>
+                            </Button>
+                        </Grid>
+                    </Border>
+
+                    <!-- Nav Items -->
+                    <ScrollViewer Grid.Row="1"
+                                  VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel Margin="0,10,0,10">
+
+                            <TextBlock Text="MODULES"
+                                       Margin="17,4,0,6"
+                                       Style="{StaticResource SideNavSectionLabelStyle}"/>
+
+                            <Button Command="{Binding ShowAssistanceCasesCommand}"
+                                    Tag="{Binding IsAssistanceCasesSelected}"
+                                    Style="{StaticResource SideNavButtonStyle}"
+                                    ToolTip="Aid Request">
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon Kind="HandHeartOutline"
+                                                             Width="18" Height="18"
+                                                             VerticalAlignment="Center"/>
+                                    <TextBlock Text="Aid Request"
+                                               Style="{StaticResource SideNavLabelStyle}"/>
+                                </StackPanel>
+                            </Button>
+
+                            <Button Command="{Binding ShowMasterListCommand}"
+                                    Tag="{Binding IsMasterListSelected}"
+                                    Style="{StaticResource SideNavButtonStyle}"
+                                    ToolTip="Masterlist">
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon Kind="AccountGroupOutline"
+                                                             Width="18" Height="18"
+                                                             VerticalAlignment="Center"/>
+                                    <TextBlock Text="Masterlist"
+                                               Style="{StaticResource SideNavLabelStyle}"/>
+                                </StackPanel>
+                            </Button>
+
+                            <Button Command="{Binding ShowBudgetCommand}"
+                                    Tag="{Binding IsBudgetSelected}"
+                                    Style="{StaticResource SideNavButtonStyle}"
+                                    ToolTip="Budget">
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon Kind="CashMultiple"
+                                                             Width="18" Height="18"
+                                                             VerticalAlignment="Center"/>
+                                    <TextBlock Text="Budget"
+                                               Style="{StaticResource SideNavLabelStyle}"/>
+                                </StackPanel>
+                            </Button>
+
+                            <Button Command="{Binding ShowDistributionCommand}"
+                                    Tag="{Binding IsDistributionSelected}"
+                                    Style="{StaticResource SideNavButtonStyle}"
+                                    ToolTip="Distribution">
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon Kind="PackageVariantClosed"
+                                                             Width="18" Height="18"
+                                                             VerticalAlignment="Center"/>
+                                    <TextBlock Text="Distribution"
+                                               Style="{StaticResource SideNavLabelStyle}"/>
+                                </StackPanel>
+                            </Button>
+
+                            <Button Command="{Binding ShowCashForWorkCommand}"
+                                    Tag="{Binding IsCashForWorkSelected}"
+                                    Style="{StaticResource SideNavButtonStyle}"
+                                    ToolTip="Cash-for-Work">
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon Kind="ClipboardTextClockOutline"
+                                                             Width="18" Height="18"
+                                                             VerticalAlignment="Center"/>
+                                    <TextBlock Text="Cash-for-Work"
+                                               Style="{StaticResource SideNavLabelStyle}"/>
+                                </StackPanel>
+                            </Button>
+
+                            <Button Command="{Binding ShowReportsCommand}"
+                                    Tag="{Binding IsReportsSelected}"
+                                    Style="{StaticResource SideNavButtonStyle}"
+                                    ToolTip="Reports">
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon Kind="ChartBoxOutline"
+                                                             Width="18" Height="18"
+                                                             VerticalAlignment="Center"/>
+                                    <TextBlock Text="Reports"
+                                               Style="{StaticResource SideNavLabelStyle}"/>
+                                </StackPanel>
+                            </Button>
+
+                            <Border Height="1"
+                                    Background="#0A3880"
+                                    Margin="14,8"/>
+
+                            <TextBlock Text="OTHER"
+                                       Margin="17,0,0,6"
+                                       Style="{StaticResource SideNavSectionLabelStyle}"/>
+
+                            <Button Command="{Binding ShowGgmsTransactionsCommand}"
+                                    Tag="{Binding IsGgmsTransactionsSelected}"
+                                    Style="{StaticResource SideNavButtonStyle}"
+                                    ToolTip="GGMS Transactions">
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon Kind="DatabaseSync"
+                                                             Width="18" Height="18"
+                                                             VerticalAlignment="Center"/>
+                                    <TextBlock Text="GGMS Transactions"
+                                               Style="{StaticResource SideNavLabelStyle}"/>
+                                </StackPanel>
+                            </Button>
+
+                            <Button Command="{Binding ShowBorrowingCommand}"
+                                    Tag="{Binding IsBorrowingSelected}"
+                                    Style="{StaticResource SideNavButtonStyle}"
+                                    ToolTip="Equipment Borrowing">
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon Kind="ToolboxOutline"
+                                                             Width="18" Height="18"
+                                                             VerticalAlignment="Center"/>
+                                    <TextBlock Text="Equipment Borrowing"
+                                               Style="{StaticResource SideNavLabelStyle}"/>
+                                </StackPanel>
+                            </Button>
+
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- User info + Logout -->
+                    <Border Grid.Row="2"
+                            BorderBrush="#0A3880"
+                            BorderThickness="0,1,0,0">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal"
+                                        Margin="16,10,12,6">
+                                <materialDesign:PackIcon Kind="AccountCircleOutline"
+                                                         Width="18" Height="18"
+                                                         Foreground="#5C7DAF"
+                                                         VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding UserDisplayName}"
+                                           Style="{StaticResource SideNavLabelStyle}"
+                                           FontSize="12"
+                                           Foreground="#A9B7C9"
+                                           TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+                            <Button Click="Logout_Click"
+                                    Style="{StaticResource SideNavLogoutButtonStyle}"
+                                    ToolTip="Logout">
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon Kind="LogoutVariant"
+                                                             Width="18" Height="18"
+                                                             VerticalAlignment="Center"/>
+                                    <TextBlock Text="Logout"
+                                               Style="{StaticResource SideNavLabelStyle}"/>
+                                </StackPanel>
+                            </Button>
+                            <Border Height="8"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <!-- ── Page Content ── -->
+            <ContentControl Grid.Column="1"
+                            Content="{Binding CurrentView}" />
+        </Grid>
     </Grid>
 </Window>

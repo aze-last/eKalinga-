@@ -22,6 +22,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _officeName = "Local Government Unit";
         private string _softwareTitle = "eKalinga+ Ayuda Management System";
         private string _softwareSubtitle = "Centralized barangay assistance operations";
+        private bool _isSidebarCollapsed = false;
 
         public BarangayMainViewModel(User currentUser)
         {
@@ -37,6 +38,7 @@ namespace AttendanceShiftingManagement.ViewModels
             ShowBorrowingCommand = new RelayCommand(_ => SwitchSection("Borrowing"));
             ShowGgmsTransactionsCommand = new RelayCommand(_ => SwitchSection("GgmsTransactions"));
             ShowReportsCommand = new RelayCommand(_ => SwitchSection("Reports"));
+            ToggleSidebarCommand = new RelayCommand(_ => IsSidebarCollapsed = !IsSidebarCollapsed);
             RefreshBranding();
             RefreshConnectionSummary();
             LoadUserSummary();
@@ -93,6 +95,11 @@ namespace AttendanceShiftingManagement.ViewModels
             get => _softwareSubtitle;
             private set => SetProperty(ref _softwareSubtitle, value);
         }
+        public bool IsSidebarCollapsed
+        {
+            get => _isSidebarCollapsed;
+            private set => SetProperty(ref _isSidebarCollapsed, value);
+        }
 
         public ImageSource? OfficeLogoImage
         {
@@ -131,11 +138,13 @@ namespace AttendanceShiftingManagement.ViewModels
         public bool IsGgmsTransactionsSelected => _currentSection == "GgmsTransactions";
         public bool IsReportsSelected => _currentSection == "Reports";
         public bool IsSecondarySectionVisible => _currentSection != "Dashboard";
+        public bool IsBorrowingSelected => _currentSection == "Borrowing";
         public RelayCommand ShowDashboardCommand { get; }
         public RelayCommand ShowCashForWorkCommand { get; }
         public RelayCommand ShowBudgetCommand { get; }
         public RelayCommand ShowDistributionCommand { get; }
         public RelayCommand ShowMasterListCommand { get; }
+        public RelayCommand ToggleSidebarCommand { get; }
         public ICommand ShowAssistanceCasesCommand { get; }
         public ICommand ShowBorrowingCommand { get; }
         public ICommand ShowGgmsTransactionsCommand { get; }
@@ -185,6 +194,7 @@ namespace AttendanceShiftingManagement.ViewModels
             OnPropertyChanged(nameof(IsGgmsTransactionsSelected));
             OnPropertyChanged(nameof(IsReportsSelected));
             OnPropertyChanged(nameof(IsSecondarySectionVisible));
+            OnPropertyChanged(nameof(IsBorrowingSelected));
             CurrentView = BuildView(section);
         }
 
