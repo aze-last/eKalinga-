@@ -7,14 +7,14 @@
 
     <UserControl.Resources>
         <helpers:NumericToVisibilityConverter x:Key="NumericToVisibilityConverter" />
-        <SolidColorBrush x:Key="TileAidRequestBrush" Color="#6366F1"/>
-        <SolidColorBrush x:Key="TileMasterListBrush" Color="#0EA5E9"/>
-        <SolidColorBrush x:Key="TileBudgetBrush" Color="#10B981"/>
-        <SolidColorBrush x:Key="TileDistributionBrush" Color="#F59E0B"/>
-        <SolidColorBrush x:Key="TileCashForWorkBrush" Color="#8B5CF6"/>
-        <SolidColorBrush x:Key="TileReportsBrush" Color="#3B82F6"/>
-        <SolidColorBrush x:Key="TileSettingsBrush" Color="#475569"/>
-        <SolidColorBrush x:Key="TileLogoutBrush" Color="#EF4444"/>
+        <SolidColorBrush x:Key="TileAidRequestBrush"    Color="#C62828"/>
+        <SolidColorBrush x:Key="TileMasterListBrush"    Color="#1565C0"/>
+        <SolidColorBrush x:Key="TileBudgetBrush"        Color="#2E7D32"/>
+        <SolidColorBrush x:Key="TileDistributionBrush"  Color="#E65100"/>
+        <SolidColorBrush x:Key="TileCashForWorkBrush"   Color="#6A1B9A"/>
+        <SolidColorBrush x:Key="TileReportsBrush"       Color="#AD1457"/>
+        <SolidColorBrush x:Key="TileSettingsBrush"      Color="#37474F"/>
+        <SolidColorBrush x:Key="TileLogoutBrush"        Color="#B71C1C"/>
 
         <Style x:Key="ConfiguredLogoStyle" TargetType="Image">
             <Setter Property="Visibility" Value="Collapsed"/>
@@ -42,26 +42,28 @@
         <Style x:Key="HeaderActionButtonStyle" TargetType="Button">
             <Setter Property="Width" Value="42"/>
             <Setter Property="Height" Value="42"/>
-            <Setter Property="Background" Value="#1E293B"/>
+            <Setter Property="Background" Value="#1A4A8A"/>
             <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderBrush" Value="#334155"/>
+            <Setter Property="BorderBrush" Value="#1565C0"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="HeaderButtonBorder"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="10">
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="10">
                             <ContentPresenter HorizontalAlignment="Center"
-                                              VerticalAlignment="Center"/>
+                                      VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="HeaderButtonBorder" Property="Background" Value="{DynamicResource ThemeAccentBrush}"/>
-                                <Setter TargetName="HeaderButtonBorder" Property="BorderBrush" Value="{DynamicResource ThemeAccentBorderBrush}"/>
+                                <Setter TargetName="HeaderButtonBorder" Property="Background"
+                                Value="{DynamicResource ThemeAccentBrush}"/>
+                                <Setter TargetName="HeaderButtonBorder" Property="BorderBrush"
+                                Value="{DynamicResource ThemeAccentBorderBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -88,16 +90,34 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="TileBorder"
-                                Background="{TemplateBinding Background}"
-                                CornerRadius="12">
-                            <ContentPresenter Margin="{TemplateBinding Padding}"/>
+                        Background="{TemplateBinding Background}"
+                        CornerRadius="12">
+                            <Border.Effect>
+                                <DropShadowEffect Color="Black" Opacity="0.28"
+                                          BlurRadius="10" ShadowDepth="3"/>
+                            </Border.Effect>
+                            <Grid>
+                                <!-- Subtle white gradient overlay for depth -->
+                                <Border CornerRadius="12"
+                                IsHitTestVisible="False"
+                                Opacity="0.08">
+                                    <Border.Background>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                            <GradientStop Color="White" Offset="0"/>
+                                            <GradientStop Color="Transparent" Offset="0.65"/>
+                                        </LinearGradientBrush>
+                                    </Border.Background>
+                                </Border>
+                                <ContentPresenter Margin="{TemplateBinding Padding}"/>
+                            </Grid>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="TileBorder" Property="Opacity" Value="0.92"/>
-                                <Setter Property="RenderTransform">
+                                <Setter TargetName="TileBorder" Property="Opacity" Value="0.88"/>
+                                <Setter TargetName="TileBorder" Property="Effect">
                                     <Setter.Value>
-                                        <ScaleTransform ScaleX="1.02" ScaleY="1.02"/>
+                                        <DropShadowEffect Color="Black" Opacity="0.40"
+                                                  BlurRadius="18" ShadowDepth="6"/>
                                     </Setter.Value>
                                 </Setter>
                             </Trigger>
@@ -114,10 +134,11 @@
             </Setter>
         </Style>
 
-        <Style x:Key="UtilityTileButtonStyle" TargetType="Button" BasedOn="{StaticResource LaunchpadTileButtonStyle}">
-            <Setter Property="Padding" Value="20"/>
-            <Setter Property="MinHeight" Value="50"/>
-            <Setter Property="Height" Value="50"/>
+        <Style x:Key="UtilityTileButtonStyle" TargetType="Button"
+       BasedOn="{StaticResource LaunchpadTileButtonStyle}">
+            <Setter Property="Padding" Value="16,10"/>
+            <Setter Property="MinHeight" Value="62"/>
+            <Setter Property="Height" Value="62"/>
         </Style>
     </UserControl.Resources>
 
@@ -132,10 +153,16 @@
                 Click="CheckForUpdateButton_Click"/>
 
         <Border Grid.Row="0"
-                Background="#1a1d21"
-                Padding="18,12"
-                BorderBrush="#273447"
-                BorderThickness="0,0,0,1">
+        Padding="18,12"
+        BorderBrush="#0A3880"
+        BorderThickness="0,0,0,1">
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                    <GradientStop Color="#0D47A1" Offset="0"/>
+                    <GradientStop Color="#1565C0" Offset="0.5"/>
+                    <GradientStop Color="#1E88E5" Offset="1"/>
+                </LinearGradientBrush>
+            </Border.Background>
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -172,8 +199,8 @@
                     </StackPanel>
 
                     <Button Style="{StaticResource HeaderActionButtonStyle}"
-                            Background="#1B2735"
-                            BorderBrush="#314154"
+                            Background="#1A4A8A"
+                            BorderBrush="#0D47A1"
                             Click="SettingsButton_Click"
                             ToolTip="Settings">
                         <materialDesign:PackIcon Kind="CogOutline"
@@ -320,14 +347,14 @@
                         </Grid.RowDefinitions>
 
                         <Border Grid.Row="0"
-                                Width="300"
-                                Height="300"
+                                Width="275"
+                                Height="275"
                                 HorizontalAlignment="Center"
                                 Background="{DynamicResource ThemeCardSubtleBrush}"
                                 BorderBrush="{DynamicResource BrandBorderBrush}"
-                                BorderThickness="1"
+                                BorderThickness="0"
                                 CornerRadius="18"
-                                Padding="1"
+                                Padding="0"
                                 ClipToBounds="True">
                             <Grid>
                                 <Image Style="{StaticResource ConfiguredLogoStyle}"
@@ -341,7 +368,7 @@
                         </Border>
 
                         <TextBlock Grid.Row="1"
-                                   Margin="0,18,0,0"
+                                   Margin="0,14,0,0"
                                    HorizontalAlignment="Center"
                                    Text="eKalinga+"
                                    FontSize="28"
@@ -359,7 +386,7 @@
 
                         <StackPanel Grid.Row="3"
                                     VerticalAlignment="Center" 
-                                    Margin="0,18,0,18">
+                                    Margin="0,10,0,18">
                             <TextBlock HorizontalAlignment="Center"
                                        Text="{Binding DataContext.OfficeName, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
                                        FontSize="16"
@@ -398,21 +425,20 @@
                                     Margin="4,4,4,8"
                                     Height="50"
                                     Padding="14,8">
-                                <DockPanel LastChildFill="True">
-                                    <materialDesign:PackIcon Kind="Cog"
-                                                             Width="20"
-                                                             Height="20"
-                                                             Foreground="White"
-                                                             VerticalAlignment="Center"
-                                                             Margin="0,0,12,0"/>
-                                    <TextBlock
-                                               Text="SETTINGS"
-                                               VerticalAlignment="Center"
-                                               FontSize="14"
-                                               FontWeight="Bold"
-                                               Foreground="White"
-                                               TextTrimming="CharacterEllipsis"/>
-                                </DockPanel>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <materialDesign:PackIcon Grid.Column="0" Kind="Cog"
+                             Width="22" Height="22" Foreground="White"
+                             VerticalAlignment="Center" Margin="0,0,14,0"/>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="SETTINGS" FontSize="13" FontWeight="Bold" Foreground="White"/>
+                                        <TextBlock Text="Configure system" FontSize="10"
+                   Foreground="White" Opacity="0.72" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </Grid>
                             </Button>
 
                             <Button Style="{StaticResource UtilityTileButtonStyle}"
@@ -421,21 +447,20 @@
                                     Margin="4,0,4,8"
                                     Height="50"
                                     Padding="14,8">
-                                <DockPanel LastChildFill="True">
-                                    <materialDesign:PackIcon Kind="Sync"
-                                                             Width="20"
-                                                             Height="20"
-                                                             Foreground="White"
-                                                             VerticalAlignment="Center"
-                                                             Margin="0,0,12,0"/>
-                                    <TextBlock
-                                               Text="SYNC REMOTE AND LOCAL"
-                                               VerticalAlignment="Center"
-                                               FontSize="14"
-                                               FontWeight="Bold"
-                                               Foreground="White"
-                                               TextTrimming="CharacterEllipsis"/>
-                                </DockPanel>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <materialDesign:PackIcon Grid.Column="0" Kind="Sync"
+                             Width="22" Height="22" Foreground="White"
+                             VerticalAlignment="Center" Margin="0,0,14,0"/>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="SYNC" FontSize="13" FontWeight="Bold" Foreground="White"/>
+                                        <TextBlock Text="Remote &amp; local data" FontSize="10"
+                   Foreground="White" Opacity="0.72" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </Grid>
                             </Button>
 
                             <Button Style="{StaticResource UtilityTileButtonStyle}"
@@ -444,21 +469,20 @@
                                     Margin="4,0,4,4"
                                     Height="50"
                                     Padding="14,8">
-                                <DockPanel LastChildFill="True">
-                                    <materialDesign:PackIcon Kind="LogoutVariant"
-                                                             Width="20"
-                                                             Height="20"
-                                                             Foreground="White"
-                                                             VerticalAlignment="Center"
-                                                             Margin="0,0,12,0"/>
-                                    <TextBlock
-                                               Text="LOGOUT"
-                                               VerticalAlignment="Center"
-                                               FontSize="14"
-                                               FontWeight="Bold"
-                                               Foreground="White"
-                                               TextTrimming="CharacterEllipsis"/>
-                                </DockPanel>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <materialDesign:PackIcon Grid.Column="0" Kind="LogoutVariant"
+                             Width="22" Height="22" Foreground="White"
+                             VerticalAlignment="Center" Margin="0,0,14,0"/>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="LOGOUT" FontSize="13" FontWeight="Bold" Foreground="White"/>
+                                        <TextBlock Text="Sign out of session" FontSize="10"
+                   Foreground="White" Opacity="0.72" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </Grid>
                             </Button>
                         </StackPanel>
                     </Grid>
@@ -543,7 +567,7 @@
                 <Button Grid.Row="2"
                         Grid.Column="0"
                         Style="{StaticResource LaunchpadTileButtonStyle}"
-                        Background="#4F46E5"
+                        Background="#1A237E"
                         Command="{Binding DataContext.ShowGgmsTransactionsCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}">
                     <StackPanel>
                         <materialDesign:PackIcon Kind="DatabaseSync"
@@ -569,8 +593,13 @@
         </ScrollViewer>
 
         <Border Grid.Row="2"
-                Background="#1a1d21"
-                Padding="20,8">
+        Padding="20,8">
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                    <GradientStop Color="#0D47A1" Offset="0"/>
+                    <GradientStop Color="#1565C0" Offset="1"/>
+                </LinearGradientBrush>
+            </Border.Background>
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>

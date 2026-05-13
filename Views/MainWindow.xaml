@@ -6,37 +6,33 @@
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         mc:Ignorable="d"
         Title=""
-        Width="1400"
-        Height="900"
         MinWidth="1180"
         MinHeight="760"
+        WindowState="Maximized"
         WindowStartupLocation="CenterScreen"
-        Background="Transparent"
         WindowStyle="None"
-        AllowsTransparency="True"
+        ResizeMode="CanResize"
+        Background="{DynamicResource ThemeWindowShellBrush}"
         FontFamily="Segoe UI">
-
     <WindowChrome.WindowChrome>
-        <WindowChrome CaptionHeight="40"
+        <WindowChrome CaptionHeight="45"
                       ResizeBorderThickness="5"
                       GlassFrameThickness="0"
                       CornerRadius="0" />
     </WindowChrome.WindowChrome>
-
     <Window.Resources>
         <Style x:Key="WindowControlButtonStyle"
                TargetType="Button"
                BasedOn="{StaticResource MaterialDesignFlatButton}">
-            <Setter Property="Width" Value="44" />
-            <Setter Property="Height" Value="32" />
+            <Setter Property="Width" Value="46" />
+            <Setter Property="Height" Value="45" />
             <Setter Property="Padding" Value="0" />
-            <Setter Property="Foreground" Value="{DynamicResource BrandTextSecondaryBrush}" />
+            <Setter Property="Foreground" Value="White" />
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="materialDesign:ButtonAssist.CornerRadius" Value="12" />
+            <Setter Property="materialDesign:ButtonAssist.CornerRadius" Value="0" />
             <Setter Property="WindowChrome.IsHitTestVisibleInChrome" Value="True" />
         </Style>
-
         <Style x:Key="WindowCloseButtonStyle"
                TargetType="Button"
                BasedOn="{StaticResource WindowControlButtonStyle}">
@@ -48,25 +44,62 @@
             </Style.Triggers>
         </Style>
     </Window.Resources>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="45" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
 
-    <Border Margin="0"
-            CornerRadius="30"
-            Background="{DynamicResource ThemeWindowShellBrush}"
-            BorderBrush="{DynamicResource ThemeWindowShellBorderBrush}"
-            BorderThickness="1">
-        <Grid Margin="18"
-              ClipToBounds="True">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="36" />
-                <RowDefinition Height="*" />
-            </Grid.RowDefinitions>
+        <!-- ── Custom Title Bar ── -->
+        <Border Grid.Row="0">
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                    <GradientStop Color="#1565C0" Offset="0"/>
+                    <GradientStop Color="#1976D2" Offset="0.5"/>
+                    <GradientStop Color="#2196F3" Offset="1"/>
+                </LinearGradientBrush>
+            </Border.Background>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="220"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
 
-            <Grid Grid.Row="0"
-                  Background="Transparent">
-                <StackPanel Orientation="Horizontal"
-                            HorizontalAlignment="Right"
+                <!-- Left: Brand area (darker blue) -->
+                <Border Grid.Column="0"
+                        Background="#0D47A1"
+                        BorderBrush="#0A3880"
+                        BorderThickness="0,0,1,0">
+                    <StackPanel Orientation="Horizontal"
+                                Margin="16,0,0,0"
+                                VerticalAlignment="Center">
+                        <materialDesign:PackIcon Kind="HandHeart"
+                                                 Width="22" Height="22"
+                                                 Foreground="White"
+                                                 VerticalAlignment="Center"/>
+                        <TextBlock Text="eKalinga+"
+                                   Foreground="White"
+                                   FontWeight="SemiBold"
+                                   FontSize="14"
+                                   Margin="8,0,0,0"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Center: Subtitle -->
+                <TextBlock Grid.Column="1"
+                           Text="{Binding SoftwareSubtitle}"
+                           Foreground="#BBDEFB"
+                           FontSize="12"
+                           VerticalAlignment="Center"
+                           Margin="18,0,0,0"/>
+
+                <!-- Right: Window controls -->
+                <StackPanel Grid.Column="2"
+                            Orientation="Horizontal"
                             VerticalAlignment="Center"
-                            Margin="0,0,6,0">
+                            WindowChrome.IsHitTestVisibleInChrome="True">
                     <Button Style="{StaticResource WindowControlButtonStyle}"
                             Click="Minimize_Click"
                             ToolTip="Minimize">
@@ -84,9 +117,10 @@
                     </Button>
                 </StackPanel>
             </Grid>
+        </Border>
 
-            <ContentControl Grid.Row="1"
-                            Content="{Binding CurrentView}" />
-        </Grid>
-    </Border>
+        <!-- Main Content -->
+        <ContentControl Grid.Row="1"
+                        Content="{Binding CurrentView}" />
+    </Grid>
 </Window>
