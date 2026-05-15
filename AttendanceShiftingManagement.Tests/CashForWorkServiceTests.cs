@@ -131,6 +131,7 @@ public sealed class CashForWorkServiceTests
             new TimeSpan(11, 0, 0),
             null,
             admin.Id,
+            0m,
             CashForWorkEventKind.Seminar);
 
         var digitalId = await digitalIdService.EnsureIssuedAsync(beneficiary.StagingID, admin.Id);
@@ -208,6 +209,7 @@ public sealed class CashForWorkServiceTests
             new TimeSpan(10, 0, 0),
             null,
             admin.Id,
+            0m,
             CashForWorkEventKind.Seminar);
 
         var ex = Assert.Throws<InvalidOperationException>(() => service.AddParticipant(seminarEvent.Id, beneficiary.StagingID, admin.Id));
@@ -258,6 +260,7 @@ public sealed class CashForWorkServiceTests
             new TimeSpan(10, 0, 0),
             null,
             admin.Id,
+            0m,
             CashForWorkEventKind.Seminar);
 
         context.CashForWorkParticipants.Add(new CashForWorkParticipant
@@ -317,6 +320,7 @@ public sealed class CashForWorkServiceTests
             new TimeSpan(10, 0, 0),
             null,
             admin.Id,
+            0m,
             CashForWorkEventKind.Seminar);
 
         var result = await service.ReleaseEventAsync(seminarEvent.Id, 1000m, admin.Id, null);
@@ -398,10 +402,10 @@ public sealed class CashForWorkServiceTests
 
         service.DeleteEvent(cashForWorkEvent.Id, admin.Id);
 
-        Assert.Empty(context.CashForWorkAttendances);
-        Assert.Empty(context.CashForWorkParticipants);
-        Assert.Empty(context.CashForWorkEvents);
-        Assert.Empty(context.ScannerSessions);
+        Assert.Empty(context.CashForWorkAttendances.Where(x => !x.IsDeleted));
+        Assert.Empty(context.CashForWorkParticipants.Where(x => !x.IsDeleted));
+        Assert.Empty(context.CashForWorkEvents.Where(x => !x.IsDeleted));
+        Assert.Empty(context.ScannerSessions.Where(x => x.IsActive));
         Assert.Contains(
             context.ActivityLogs.Select(log => log.Action).ToArray(),
             action => string.Equals(action, "CashForWorkEventDeleted", StringComparison.Ordinal));
@@ -468,7 +472,7 @@ public sealed class CashForWorkServiceTests
 
         service.DeleteAttendance(attendanceId, admin.Id);
 
-        Assert.Empty(context.CashForWorkAttendances);
+        Assert.Empty(context.CashForWorkAttendances.Where(x => !x.IsDeleted));
         Assert.Contains(
             context.ActivityLogs.Select(log => log.Action).ToArray(),
             action => string.Equals(action, "CashForWorkAttendanceDeleted", StringComparison.Ordinal));

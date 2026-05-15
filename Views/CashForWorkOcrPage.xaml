@@ -429,7 +429,6 @@
 
                     <!-- Panel Content Area -->
                     <Grid Grid.Row="1">
-                        <!-- Event Editor Panel -->
                         <ScrollViewer Visibility="{Binding EventEditorVisibility}" VerticalScrollBarVisibility="Auto" Padding="30">
                             <StackPanel>
                                 <TextBlock Text="EVENT DETAILS" Style="{StaticResource SidebarHeaderStyle}" Margin="0,0,0,20"/>
@@ -444,29 +443,43 @@
                                     <StackPanel Grid.Column="0">
                                         <TextBlock Text="Event Title" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="4,0,0,8"/>
                                         <TextBox Text="{Binding EventTitle, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource MaterialDesignOutlinedTextBox}" materialDesign:HintAssist.Hint="e.g. Clean-up Drive Batch 1"/>
+
+                                        <TextBlock Text="Location" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="4,8,0,8"/>
+                                        <TextBox Text="{Binding EventLocation, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource MaterialDesignOutlinedTextBox}" materialDesign:HintAssist.Hint="e.g. Barangay Hall Plaza"/>
+
+                                        <Grid Margin="0,8,0,0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="12"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0">
+                                                <TextBlock Text="Start Date" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="4,0,0,8"/>
+                                                <DatePicker SelectedDate="{Binding EventDate}" Style="{StaticResource MaterialDesignOutlinedDatePicker}"/>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="2">
+                                                <TextBlock Text="Finish Date" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="4,0,0,8"/>
+                                                <DatePicker SelectedDate="{Binding FinishDate}" Style="{StaticResource MaterialDesignOutlinedDatePicker}"/>
+                                            </StackPanel>
+                                        </Grid>
                                     </StackPanel>
 
                                     <StackPanel Grid.Column="2">
                                         <TextBlock Text="Event Type" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="4,0,0,8"/>
-                                        <ComboBox ItemsSource="{Binding EventKinds}" SelectedItem="{Binding EventEditorKind}" Style="{StaticResource MaterialDesignOutlinedComboBox}"/>
-                                    </StackPanel>
-                                </Grid>
+                                        <ComboBox ItemsSource="{Binding EventKinds}" SelectedItem="{Binding EventEditorKind}" Height="45" Margin="0,0,0,20"/>
 
-                                <Grid Margin="0,24,0,0">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="24"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
+                                        <TextBlock Text="Benefit Type" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="4,0,0,8"/>
+                                        <ComboBox ItemsSource="{Binding BenefitTypes}" SelectedItem="{Binding BenefitType}" Height="45" Margin="0,0,0,20"/>
 
-                                    <StackPanel Grid.Column="0">
-                                        <TextBlock Text="Location" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="4,0,0,8"/>
-                                        <TextBox Text="{Binding EventLocation, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource MaterialDesignOutlinedTextBox}" materialDesign:HintAssist.Hint="e.g. Barangay Hall Plaza"/>
-                                    </StackPanel>
+                                        <StackPanel Visibility="{Binding IsCashBenefit, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            <TextBlock Text="Per-Person Amount" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="4,0,0,8"/>
+                                            <TextBox Text="{Binding EventAmountText, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource MaterialDesignOutlinedTextBox}" materialDesign:HintAssist.Hint="0.00"/>
+                                        </StackPanel>
 
-                                    <StackPanel Grid.Column="2">
-                                        <TextBlock Text="Event Date" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="4,0,0,8"/>
-                                        <DatePicker SelectedDate="{Binding EventDate}" Style="{StaticResource MaterialDesignOutlinedDatePicker}"/>
+                                        <StackPanel Visibility="{Binding IsGoodsBenefit, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            <TextBlock Text="Goods Description" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="4,0,0,8"/>
+                                            <TextBox Text="{Binding BenefitDescription, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource MaterialDesignOutlinedTextBox}" materialDesign:HintAssist.Hint="e.g. 5kg Rice, Canned Goods"/>
+                                        </StackPanel>
                                     </StackPanel>
                                 </Grid>
 

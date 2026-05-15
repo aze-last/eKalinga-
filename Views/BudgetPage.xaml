@@ -121,11 +121,6 @@
                                 <Button Content="CASH-FOR-WORK CAPS" 
                                         Command="{Binding OpenCashForWorkBudgetsPanelCommand}"
                                         Style="{StaticResource MaterialDesignOutlinedButton}" 
-                                        Foreground="{StaticResource PrimaryBrandBrush}" BorderBrush="{StaticResource PrimaryBrandBrush}" HorizontalContentAlignment="Left" Height="45" Margin="0,0,0,8" FontSize="14"/>
-
-                                <Button Content="SEMINARS" 
-                                        Command="{Binding OpenSeminarPanelCommand}"
-                                        Style="{StaticResource MaterialDesignOutlinedButton}" 
                                         Foreground="{StaticResource PrimaryBrandBrush}" BorderBrush="{StaticResource PrimaryBrandBrush}" HorizontalContentAlignment="Left" Height="45" Margin="0,0,0,20" FontSize="14"/>
 
                                 <TextBlock Text="AUDIT (CLAIM)" Style="{StaticResource SidebarHeaderStyle}"/>
@@ -456,69 +451,6 @@
 
                     <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="20">
                         <Button Content="CLOSE" Style="{StaticResource MaterialDesignFlatButton}" Command="{Binding CloseProgramPanelCommand}" Foreground="#64748B"/>
-                    </StackPanel>
-                </Grid>
-            </materialDesign:Card>
-        </Border>
-
-        <!-- Seminar Panel Overlay -->
-        <Border Grid.RowSpan="3" Panel.ZIndex="101" Background="#CC0F172A" Visibility="{Binding IsSeminarPanelOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <materialDesign:Card Width="500" VerticalAlignment="Center" HorizontalAlignment="Center">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-
-                    <Border Grid.Row="0" Background="{StaticResource PrimaryBrandBrush}" Padding="20,15">
-                        <TextBlock Text="SEMINAR &amp; TRAINING SETUP" Foreground="White" FontSize="18" FontWeight="Bold"/>
-                    </Border>
-
-                    <ScrollViewer Grid.Row="1" MaxHeight="600" VerticalScrollBarVisibility="Auto">
-                        <Border Padding="25">
-                            <StackPanel>
-                                <TextBox materialDesign:HintAssist.Hint="Seminar Code *" 
-                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                         Text="{Binding SeminarCode}" Margin="0,0,0,15"/>
-
-                                <TextBox materialDesign:HintAssist.Hint="Seminar Title *" 
-                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                         Text="{Binding SeminarTitle}" Margin="0,0,0,15"/>
-
-                                <DatePicker materialDesign:HintAssist.Hint="Date of Event *" 
-                                            Style="{StaticResource MaterialDesignOutlinedDatePicker}"
-                                            SelectedDate="{Binding SeminarDate}" Margin="0,0,0,15"/>
-
-                                <ComboBox materialDesign:HintAssist.Hint="Support Kind *" 
-                                          Style="{StaticResource MaterialDesignOutlinedComboBox}"
-                                          ItemsSource="{Binding SeminarSupportKinds}"
-                                          SelectedItem="{Binding SelectedSeminarSupportKind}"
-                                          Margin="0,0,0,15"/>
-
-                                <TextBox materialDesign:HintAssist.Hint="Support Amount (PHP)" 
-                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                         Text="{Binding SeminarAmountText}"
-                                         Visibility="{Binding SeminarAmountVisibility}"
-                                         Margin="0,0,0,15"/>
-
-                                <TextBox materialDesign:HintAssist.Hint="Package / Goods Detail" 
-                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                         Text="{Binding SeminarGoodsDescription}"
-                                         Visibility="{Binding SeminarGoodsVisibility}"
-                                         Margin="0,0,0,15"/>
-
-                                <TextBox materialDesign:HintAssist.Hint="Agenda / Credentials" 
-                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                         Text="{Binding SeminarAgenda}"
-                                         AcceptsReturn="True" Height="100" Margin="0,0,0,15"/>
-                            </StackPanel>
-                        </Border>
-                    </ScrollViewer>
-
-                    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="20">
-                        <Button Content="CANCEL" Style="{StaticResource MaterialDesignFlatButton}" Command="{Binding CloseSeminarPanelCommand}" Margin="0,0,10,0" Foreground="#64748B"/>
-                        <Button Content="CREATE SEMINAR" Command="{Binding CreateSeminarCommand}" Style="{StaticResource MaterialDesignRaisedButton}" Background="{StaticResource ActionAccentBrush}" BorderBrush="{StaticResource ActionAccentBrush}" Foreground="White"/>
                     </StackPanel>
                 </Grid>
             </materialDesign:Card>

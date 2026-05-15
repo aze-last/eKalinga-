@@ -21,8 +21,7 @@ namespace AttendanceShiftingManagement.ViewModels
         GovernmentSync,
         Ledger,
         Donation,
-        Program,
-        Seminar
+        Program
     }
 
     public enum BudgetSetupSection
@@ -67,9 +66,6 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly RelayCommand _openAssistanceCaseBudgetsPanelCommand;
         private readonly RelayCommand _openCashForWorkBudgetsPanelCommand;
         private readonly RelayCommand _closeProgramPanelCommand;
-        private readonly RelayCommand _openSeminarPanelCommand;
-        private readonly RelayCommand _closeSeminarPanelCommand;
-        private readonly RelayCommand _createSeminarCommand;
         private readonly RelayCommand _closePanelCommand;
         private readonly RelayCommand _closeLedgerHistoryCardCommand;
         private readonly RelayCommand _browseProofCommand;
@@ -107,17 +103,8 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _proofFilePath = string.Empty;
         private string _assistanceCaseBudgetCapText = string.Empty;
         private string _cashForWorkBudgetCapText = string.Empty;
-        private string _seminarCode = string.Empty;
-        private string _seminarTitle = string.Empty;
-        private string _seminarCredentials = string.Empty;
-        private AssistanceReleaseKind _selectedSeminarSupportKind = AssistanceReleaseKind.Cash;
-        private string _seminarAmountText = string.Empty;
-        private string _seminarGoodsDescription = string.Empty;
-        private string _seminarAgenda = string.Empty;
-        private DateTime? _seminarDate = DateTime.Today;
         private bool _isDonationPanelOpen;
         private bool _isProgramPanelOpen;
-        private bool _isSeminarPanelOpen;
         private bool _isBusy;
         private ICollectionView _ledgerEntriesView;
         private BudgetLedgerEntryListItem? _selectedLedgerEntry;
@@ -177,7 +164,6 @@ namespace AttendanceShiftingManagement.ViewModels
             SetupSections = new ObservableCollection<BudgetSetupSection>(Enum.GetValues<BudgetSetupSection>());
             DonorTypes = new ObservableCollection<PrivateDonationDonorType>(Enum.GetValues<PrivateDonationDonorType>());
             ProofTypes = new ObservableCollection<DonationProofType>(Enum.GetValues<DonationProofType>());
-            SeminarSupportKinds = new ObservableCollection<AssistanceReleaseKind>(Enum.GetValues<AssistanceReleaseKind>());
             CashForWorkBudgets = new ObservableCollection<CashForWorkBudget>();
             Donations = new ObservableCollection<PrivateDonation>();
             LedgerEntries = new ObservableCollection<BudgetLedgerEntryListItem>();
@@ -202,9 +188,6 @@ namespace AttendanceShiftingManagement.ViewModels
             _openAssistanceCaseBudgetsPanelCommand = new RelayCommand(_ => OpenAssistanceCaseBudgetsPanel(), _ => !IsBusy);
             _openCashForWorkBudgetsPanelCommand = new RelayCommand(_ => OpenCashForWorkBudgetsPanel(), _ => !IsBusy);
             _closeProgramPanelCommand = new RelayCommand(_ => CloseProgramPanel(), _ => IsProgramPanelOpen);
-            _openSeminarPanelCommand = new RelayCommand(_ => OpenSeminarPanel(), _ => !IsBusy && !IsSeminarPanelOpen);
-            _closeSeminarPanelCommand = new RelayCommand(_ => CloseSeminarPanel(), _ => IsSeminarPanelOpen);
-            _createSeminarCommand = new RelayCommand(async _ => await CreateSeminarAsync(), _ => !IsBusy);
             _closePanelCommand = new RelayCommand(_ => ClosePanel(), _ => !IsBusy);
             _closeLedgerHistoryCardCommand = new RelayCommand(_ => CloseLedgerHistoryCard(), _ => SelectedLedgerEntry != null);
             _browseProofCommand = new RelayCommand(_ => BrowseProof());
@@ -225,7 +208,6 @@ namespace AttendanceShiftingManagement.ViewModels
         public ObservableCollection<BudgetSetupSection> SetupSections { get; }
         public ObservableCollection<PrivateDonationDonorType> DonorTypes { get; }
         public ObservableCollection<DonationProofType> ProofTypes { get; }
-        public ObservableCollection<AssistanceReleaseKind> SeminarSupportKinds { get; }
         public ObservableCollection<CashForWorkBudget> CashForWorkBudgets { get; }
         public ObservableCollection<PrivateDonation> Donations { get; }
         public ObservableCollection<BudgetLedgerEntryListItem> LedgerEntries { get; }
@@ -247,9 +229,6 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand OpenAssistanceCaseBudgetsPanelCommand => _openAssistanceCaseBudgetsPanelCommand;
         public ICommand OpenCashForWorkBudgetsPanelCommand => _openCashForWorkBudgetsPanelCommand;
         public ICommand CloseProgramPanelCommand => _closeProgramPanelCommand;
-        public ICommand OpenSeminarPanelCommand => _openSeminarPanelCommand;
-        public ICommand CloseSeminarPanelCommand => _closeSeminarPanelCommand;
-        public ICommand CreateSeminarCommand => _createSeminarCommand;
         public ICommand ClosePanelCommand => _closePanelCommand;
         public ICommand CloseLedgerHistoryCardCommand => _closeLedgerHistoryCardCommand;
         public ICommand CloseHistoryDetailCommand => _closeLedgerHistoryCardCommand;
@@ -282,9 +261,6 @@ namespace AttendanceShiftingManagement.ViewModels
                     _openAssistanceCaseBudgetsPanelCommand.RaiseCanExecuteChanged();
                     _openCashForWorkBudgetsPanelCommand.RaiseCanExecuteChanged();
                     _closeProgramPanelCommand.RaiseCanExecuteChanged();
-                    _openSeminarPanelCommand.RaiseCanExecuteChanged();
-                    _closeSeminarPanelCommand.RaiseCanExecuteChanged();
-                    _createSeminarCommand.RaiseCanExecuteChanged();
                     _closePanelCommand.RaiseCanExecuteChanged();
                     _exportLedgerCommand.RaiseCanExecuteChanged();
                     _verifyOtpCommand.RaiseCanExecuteChanged();
@@ -407,8 +383,6 @@ namespace AttendanceShiftingManagement.ViewModels
         public Visibility DonationPanelVisibility => GetPanelVisibility(BudgetWorkspacePanel.Donation);
 
         public Visibility ProgramPanelVisibility => GetPanelVisibility(BudgetWorkspacePanel.Program);
-
-        public Visibility SeminarPanelVisibility => GetPanelVisibility(BudgetWorkspacePanel.Seminar);
 
         public Visibility AssistanceCaseBudgetsSectionVisibility => _selectedSetupSection == BudgetSetupSection.AssistanceCaseBudgets
             ? Visibility.Visible
@@ -539,7 +513,7 @@ namespace AttendanceShiftingManagement.ViewModels
             private set => SetProperty(ref _isGlobalCapSelected, value);
         }
 
-        public bool IsAnyOverlayOpen => IsDonationPanelOpen || IsProgramPanelOpen || IsSeminarPanelOpen || _activePanel == BudgetWorkspacePanel.Ledger || ShowOtpPanel;
+        public bool IsAnyOverlayOpen => IsDonationPanelOpen || IsProgramPanelOpen || _activePanel == BudgetWorkspacePanel.Ledger || ShowOtpPanel;
 
         private async void SyncWithSelectedBudget()
         {
@@ -748,61 +722,6 @@ namespace AttendanceShiftingManagement.ViewModels
             set => SetProperty(ref _cashForWorkBudgetCapText, value);
         }
 
-        public string SeminarCode
-        {
-            get => _seminarCode;
-            set => SetProperty(ref _seminarCode, value);
-        }
-
-        public string SeminarTitle
-        {
-            get => _seminarTitle;
-            set => SetProperty(ref _seminarTitle, value);
-        }
-
-        public string SeminarCredentials
-        {
-            get => _seminarCredentials;
-            set => SetProperty(ref _seminarCredentials, value);
-        }
-
-        public AssistanceReleaseKind SelectedSeminarSupportKind
-        {
-            get => _selectedSeminarSupportKind;
-            set
-            {
-                if (SetProperty(ref _selectedSeminarSupportKind, value))
-                {
-                    OnPropertyChanged(nameof(SeminarAmountVisibility));
-                    OnPropertyChanged(nameof(SeminarGoodsVisibility));
-                }
-            }
-        }
-
-        public string SeminarAmountText
-        {
-            get => _seminarAmountText;
-            set => SetProperty(ref _seminarAmountText, value);
-        }
-
-        public string SeminarGoodsDescription
-        {
-            get => _seminarGoodsDescription;
-            set => SetProperty(ref _seminarGoodsDescription, value);
-        }
-
-        public string SeminarAgenda
-        {
-            get => _seminarAgenda;
-            set => SetProperty(ref _seminarAgenda, value);
-        }
-
-        public DateTime? SeminarDate
-        {
-            get => _seminarDate;
-            set => SetProperty(ref _seminarDate, value);
-        }
-
         public bool IsDonationPanelOpen
         {
             get => _isDonationPanelOpen;
@@ -834,30 +753,7 @@ namespace AttendanceShiftingManagement.ViewModels
             }
         }
 
-        public bool IsSeminarPanelOpen
-        {
-            get => _isSeminarPanelOpen;
-            private set
-            {
-                if (SetProperty(ref _isSeminarPanelOpen, value))
-                {
-                    OnPropertyChanged(nameof(IsAnySetupPanelOpen));
-                    OnPropertyChanged(nameof(IsAnyOverlayOpen));
-                    _openSeminarPanelCommand.RaiseCanExecuteChanged();
-                    _closeSeminarPanelCommand.RaiseCanExecuteChanged();
-                }
-            }
-        }
-
-        public bool IsAnySetupPanelOpen => IsDonationPanelOpen || IsProgramPanelOpen || IsSeminarPanelOpen;
-
-        public Visibility SeminarAmountVisibility => SelectedSeminarSupportKind == AssistanceReleaseKind.Cash
-            ? Visibility.Visible
-            : Visibility.Collapsed;
-
-        public Visibility SeminarGoodsVisibility => SelectedSeminarSupportKind == AssistanceReleaseKind.Goods
-            ? Visibility.Visible
-            : Visibility.Collapsed;
+        public bool IsAnySetupPanelOpen => IsDonationPanelOpen || IsProgramPanelOpen;
 
         public bool ShowOtpPanel
         {
@@ -1392,106 +1288,6 @@ namespace AttendanceShiftingManagement.ViewModels
             }
         }
 
-        private async Task CreateSeminarAsync()
-        {
-            if (IsBusy)
-            {
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(SeminarCode))
-            {
-                SetErrorStatus("Enter a seminar code.");
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(SeminarTitle))
-            {
-                SetErrorStatus("Enter the seminar title.");
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(SeminarAgenda))
-            {
-                SetErrorStatus("Enter the seminar agenda.");
-                return;
-            }
-
-            decimal? unitAmount = null;
-            if (SelectedSeminarSupportKind == AssistanceReleaseKind.Cash)
-            {
-                if (!TryParseAmount(SeminarAmountText, out var parsedAmount))
-                {
-                    SetErrorStatus("Enter a valid seminar amount.");
-                    return;
-                }
-
-                unitAmount = parsedAmount;
-            }
-            else if (string.IsNullOrWhiteSpace(SeminarGoodsDescription))
-            {
-                SetErrorStatus("Describe the seminar goods or package.");
-                return;
-            }
-
-            IsBusy = true;
-            SetNeutralStatus("Creating seminar setup...");
-
-            try
-            {
-                await using var context = new AppDbContext();
-                var budgetService = new BudgetManagementService(context);
-                var result = await budgetService.CreateProgramAsync(
-                    new AyudaProgramRequest(
-                        SeminarCode,
-                        SeminarTitle,
-                        AyudaProgramType.Seminar,
-                        BuildSeminarDescription(),
-                        SelectedSeminarSupportKind == AssistanceReleaseKind.Cash ? "Seminar Amount" : "Seminar Goods",
-                        SelectedSeminarSupportKind,
-                        unitAmount,
-                        NormalizeNullable(SeminarGoodsDescription),
-                        SeminarDate?.Date,
-                        SeminarDate?.Date,
-                        unitAmount,
-                        AyudaProgramDistributionStatus.Draft),
-                    _currentUser.Id);
-
-                if (!result.IsSuccess)
-                {
-                    SetErrorStatus(result.Message);
-                    return;
-                }
-
-                ResetSeminarForm();
-                CloseSeminarPanel();
-                SetSuccessStatus(result.Message);
-            }
-            catch (Exception ex)
-            {
-                SetErrorStatus($"Unable to create seminar setup: {ex.Message}");
-            }
-            finally
-            {
-                IsBusy = false;
-            }
-        }
-
-        private void OpenSeminarPanel()
-        {
-            if (IsBusy)
-            {
-                return;
-            }
-
-            SetActivePanel(BudgetWorkspacePanel.Seminar);
-        }
-
-        private void CloseSeminarPanel()
-        {
-            ClosePanel();
-        }
-
         private void OpenDonationPanel()
         {
             if (IsBusy)
@@ -1553,7 +1349,6 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             IsDonationPanelOpen = false;
             IsProgramPanelOpen = false;
-            IsSeminarPanelOpen = false;
         }
 
         private void CloseLedgerHistoryCard()
@@ -1565,8 +1360,7 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             if (_activePanel == panel &&
                 IsDonationPanelOpen == (panel == BudgetWorkspacePanel.Donation) &&
-                IsProgramPanelOpen == (panel == BudgetWorkspacePanel.Program) &&
-                IsSeminarPanelOpen == (panel == BudgetWorkspacePanel.Seminar))
+                IsProgramPanelOpen == (panel == BudgetWorkspacePanel.Program))
             {
                 return;
             }
@@ -1582,10 +1376,6 @@ namespace AttendanceShiftingManagement.ViewModels
             else if (panel == BudgetWorkspacePanel.Program)
             {
                 IsProgramPanelOpen = true;
-            }
-            else if (panel == BudgetWorkspacePanel.Seminar)
-            {
-                IsSeminarPanelOpen = true;
             }
 
             (CurrentPanelTitle, CurrentPanelSubtitle) = panel switch
@@ -1605,9 +1395,6 @@ namespace AttendanceShiftingManagement.ViewModels
                 BudgetWorkspacePanel.Program => (
                     "Global Caps",
                     "Use the section dropdown to switch between Aid Request budgets and Cash-for-Work budgets."),
-                BudgetWorkspacePanel.Seminar => (
-                    "Seminars",
-                    "Keep seminar setup inside Budget so seminar records continue using the existing program codebase and release definitions."),
                 _ => (CurrentPanelTitle, CurrentPanelSubtitle)
             };
 
@@ -1616,7 +1403,6 @@ namespace AttendanceShiftingManagement.ViewModels
             OnPropertyChanged(nameof(LedgerVisibility));
             OnPropertyChanged(nameof(DonationPanelVisibility));
             OnPropertyChanged(nameof(ProgramPanelVisibility));
-            OnPropertyChanged(nameof(SeminarPanelVisibility));
             OnPropertyChanged(nameof(BackToDashboardVisibility));
             OnPropertyChanged(nameof(HistoryDetailVisibility));
 
@@ -1628,8 +1414,6 @@ namespace AttendanceShiftingManagement.ViewModels
             _openAssistanceCaseBudgetsPanelCommand.RaiseCanExecuteChanged();
             _openCashForWorkBudgetsPanelCommand.RaiseCanExecuteChanged();
             _closeProgramPanelCommand.RaiseCanExecuteChanged();
-            _openSeminarPanelCommand.RaiseCanExecuteChanged();
-            _closeSeminarPanelCommand.RaiseCanExecuteChanged();
             _closePanelCommand.RaiseCanExecuteChanged();
         }
 
@@ -1725,18 +1509,6 @@ namespace AttendanceShiftingManagement.ViewModels
             DonationRemarks = string.Empty;
             ProofReferenceNumber = string.Empty;
             ProofFilePath = string.Empty;
-        }
-
-        private void ResetSeminarForm()
-        {
-            SeminarCode = string.Empty;
-            SeminarTitle = string.Empty;
-            SeminarCredentials = string.Empty;
-            SelectedSeminarSupportKind = AssistanceReleaseKind.Cash;
-            SeminarAmountText = string.Empty;
-            SeminarGoodsDescription = string.Empty;
-            SeminarAgenda = string.Empty;
-            SeminarDate = DateTime.Today;
         }
 
         private void SetOtpNeutral(string message)
@@ -1871,20 +1643,6 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             return !string.IsNullOrWhiteSpace(source)
                 && source.Contains(searchText, StringComparison.OrdinalIgnoreCase);
-        }
-
-        private string BuildSeminarDescription()
-        {
-            var sections = new List<string>();
-
-            if (!string.IsNullOrWhiteSpace(SeminarCredentials))
-            {
-                sections.Add($"Credentials: {SeminarCredentials.Trim()}");
-            }
-
-            sections.Add($"Agenda: {SeminarAgenda.Trim()}");
-
-            return string.Join(Environment.NewLine, sections);
         }
 
         private static string? NormalizeNullable(string? value)

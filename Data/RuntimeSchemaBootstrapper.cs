@@ -352,6 +352,36 @@ namespace AttendanceShiftingManagement.Data
 
             EnsureColumnExists(
                 connection,
+                "cash_for_work_events",
+                "finish_date",
+                "ALTER TABLE `cash_for_work_events` ADD COLUMN `finish_date` datetime(6) NULL;");
+
+            EnsureColumnExists(
+                connection,
+                "cash_for_work_events",
+                "benefit_type",
+                "ALTER TABLE `cash_for_work_events` ADD COLUMN `benefit_type` varchar(32) NOT NULL DEFAULT 'None';");
+
+            EnsureColumnExists(
+                connection,
+                "cash_for_work_events",
+                "benefit_description",
+                "ALTER TABLE `cash_for_work_events` ADD COLUMN `benefit_description` varchar(250) NULL;");
+
+            EnsureColumnExists(
+                connection,
+                "cash_for_work_events",
+                "cash_for_work_budget_id",
+                "ALTER TABLE `cash_for_work_events` ADD COLUMN `cash_for_work_budget_id` int NULL;");
+
+            EnsureColumnExists(
+                connection,
+                "cash_for_work_events",
+                "unit_amount",
+                "ALTER TABLE `cash_for_work_events` ADD COLUMN `unit_amount` decimal(18,2) NOT NULL DEFAULT 0.00;");
+
+            EnsureColumnExists(
+                connection,
                 "cash_for_work_participants",
                 "is_deleted",
                 "ALTER TABLE `cash_for_work_participants` ADD COLUMN `is_deleted` tinyint(1) NOT NULL DEFAULT 0;");
@@ -708,14 +738,19 @@ namespace AttendanceShiftingManagement.Data
                     `title` varchar(150) NOT NULL,
                     `location` varchar(150) NOT NULL,
                     `event_date` datetime(6) NOT NULL,
+                    `finish_date` datetime(6) NULL,
                     `start_time` time(6) NOT NULL,
                     `end_time` time(6) NOT NULL,
                     `notes` varchar(500) NULL,
                     `created_by_user_id` int NOT NULL,
                     `status` longtext NOT NULL,
                     `event_kind` varchar(32) NOT NULL,
+                    `benefit_type` varchar(32) NOT NULL DEFAULT 'None',
+                    `benefit_description` varchar(250) NULL,
                     `ayuda_program_id` int NULL,
+                    `cash_for_work_budget_id` int NULL,
                     `budget_ledger_entry_id` int NULL,
+                    `unit_amount` decimal(18,2) NOT NULL DEFAULT 0.00,
                     `release_amount` decimal(18,2) NULL,
                     `released_at` datetime(6) NULL,
                     `created_at` datetime(6) NOT NULL,

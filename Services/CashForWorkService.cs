@@ -139,7 +139,7 @@ namespace AttendanceShiftingManagement.Services
                 Math.Max(0, approvedParticipants.Count - releaseReadyParticipantCount),
                 releaseReadyParticipantCount,
                 releaseReadyParticipants.Count(participant => participant.Source == AttendanceCaptureSource.Manual),
-                releaseReadyParticipantCount * (cashForWorkEvent.AyudaProgram?.UnitAmount ?? 0m),
+                releaseReadyParticipantCount * (cashForWorkEvent.UnitAmount > 0 ? cashForWorkEvent.UnitAmount : (cashForWorkEvent.AyudaProgram?.UnitAmount ?? 0m)),
                 releaseReadyParticipants);
         }
 
@@ -151,7 +151,11 @@ namespace AttendanceShiftingManagement.Services
             TimeSpan endTime,
             string? notes,
             int createdByUserId,
-            CashForWorkEventKind eventKind = CashForWorkEventKind.CashForWork)
+            decimal unitAmount = 0m,
+            CashForWorkEventKind eventKind = CashForWorkEventKind.CashForWork,
+            DateTime? finishDate = null,
+            CashForWorkBenefitType benefitType = CashForWorkBenefitType.None,
+            string? benefitDescription = null)
         {
             var resolvedBudgetId = await ResolveGlobalBudgetAsync();
 
@@ -160,12 +164,16 @@ namespace AttendanceShiftingManagement.Services
                 Title = title.Trim(),
                 Location = location.Trim(),
                 EventDate = eventDate.Date,
+                FinishDate = finishDate?.Date,
                 StartTime = startTime,
                 EndTime = endTime,
                 Notes = string.IsNullOrWhiteSpace(notes) ? null : notes.Trim(),
                 CreatedByUserId = createdByUserId,
                 Status = CashForWorkEventStatus.Open,
                 EventKind = eventKind,
+                BenefitType = benefitType,
+                BenefitDescription = benefitDescription,
+                UnitAmount = unitAmount,
                 CashForWorkBudgetId = resolvedBudgetId,
                 CreatedAt = DateTime.Now,
                 UpdatedAt = DateTime.Now
@@ -444,7 +452,11 @@ namespace AttendanceShiftingManagement.Services
             TimeSpan endTime,
             string? notes,
             int updatedByUserId,
-            CashForWorkEventKind eventKind = CashForWorkEventKind.CashForWork)
+            decimal unitAmount = 0m,
+            CashForWorkEventKind eventKind = CashForWorkEventKind.CashForWork,
+            DateTime? finishDate = null,
+            CashForWorkBenefitType benefitType = CashForWorkBenefitType.None,
+            string? benefitDescription = null)
         {
             var cashForWorkEvent = await _context.CashForWorkEvents
                 .FirstOrDefaultAsync(item => !item.IsDeleted && item.Id == eventId);
@@ -461,10 +473,14 @@ namespace AttendanceShiftingManagement.Services
             cashForWorkEvent.Title = title.Trim();
             cashForWorkEvent.Location = location.Trim();
             cashForWorkEvent.EventDate = eventDate.Date;
+            cashForWorkEvent.FinishDate = finishDate?.Date;
             cashForWorkEvent.StartTime = startTime;
             cashForWorkEvent.EndTime = endTime;
             cashForWorkEvent.Notes = string.IsNullOrWhiteSpace(notes) ? null : notes.Trim();
             cashForWorkEvent.EventKind = eventKind;
+            cashForWorkEvent.BenefitType = benefitType;
+            cashForWorkEvent.BenefitDescription = benefitDescription;
+            cashForWorkEvent.UnitAmount = unitAmount;
             cashForWorkEvent.CashForWorkBudgetId = resolvedBudgetId;
             cashForWorkEvent.UpdatedAt = DateTime.Now;
 

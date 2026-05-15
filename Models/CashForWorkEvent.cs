@@ -24,6 +24,16 @@ namespace AttendanceShiftingManagement.Models
         [Required]
         public DateTime EventDate { get; set; }
 
+        [Column("finish_date")]
+        public DateTime? FinishDate { get; set; }
+
+        [Column("benefit_type")]
+        public CashForWorkBenefitType BenefitType { get; set; } = CashForWorkBenefitType.None;
+
+        [Column("benefit_description")]
+        [MaxLength(250)]
+        public string? BenefitDescription { get; set; }
+
         [Column("start_time")]
         [Required]
         public TimeSpan StartTime { get; set; }
@@ -54,6 +64,9 @@ namespace AttendanceShiftingManagement.Models
 
         [Column("budget_ledger_entry_id")]
         public int? BudgetLedgerEntryId { get; set; }
+
+        [Column("unit_amount", TypeName = "decimal(18,2)")]
+        public decimal UnitAmount { get; set; }
 
         [Column("release_amount", TypeName = "decimal(18,2)")]
         public decimal? ReleaseAmount { get; set; }
@@ -97,6 +110,13 @@ namespace AttendanceShiftingManagement.Models
     {
         CashForWork,
         Seminar
+    }
+
+    public enum CashForWorkBenefitType
+    {
+        None,
+        Cash,
+        Goods
     }
 
     public enum CashForWorkEventStatus

@@ -72,6 +72,10 @@ namespace AttendanceShiftingManagement.ViewModels
         private DateTime _eventDate = DateTime.Today;
         private string _eventStartTime = "07:00";
         private string _eventEndTime = "12:00";
+        private DateTime? _finishDate = DateTime.Today;
+        private CashForWorkBenefitType _benefitType = CashForWorkBenefitType.None;
+        private string _benefitDescription = string.Empty;
+        private string _eventAmountText = string.Empty;
         private string _statusMessage = "Select an event from the dropdown or open the Create Event panel.";
         private Brush _statusBrush = NeutralBrush;
         private string _attendanceSummary = "Attendance records will appear after you select an event.";
@@ -528,6 +532,42 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             get => _eventEndTime;
             set => SetProperty(ref _eventEndTime, value);
+        }
+
+        public DateTime? FinishDate
+        {
+            get => _finishDate;
+            set => SetProperty(ref _finishDate, value);
+        }
+
+        public IEnumerable<CashForWorkBenefitType> BenefitTypes => Enum.GetValues<CashForWorkBenefitType>();
+
+        public CashForWorkBenefitType BenefitType
+        {
+            get => _benefitType;
+            set
+            {
+                if (SetProperty(ref _benefitType, value))
+                {
+                    OnPropertyChanged(nameof(IsCashBenefit));
+                    OnPropertyChanged(nameof(IsGoodsBenefit));
+                }
+            }
+        }
+
+        public string BenefitDescription
+        {
+            get => _benefitDescription;
+            set => SetProperty(ref _benefitDescription, value);
+        }
+
+        public bool IsCashBenefit => BenefitType == CashForWorkBenefitType.Cash;
+        public bool IsGoodsBenefit => BenefitType == CashForWorkBenefitType.Goods;
+
+        public string EventAmountText
+        {
+            get => _eventAmountText;
+            set => SetProperty(ref _eventAmountText, value);
         }
 
         public string StatusMessage
@@ -1097,8 +1137,12 @@ namespace AttendanceShiftingManagement.ViewModels
             EventTitle = string.Empty;
             EventLocation = string.Empty;
             EventDate = DateTime.Today;
+            FinishDate = DateTime.Today;
             EventStartTime = "07:00";
             EventEndTime = "12:00";
+            BenefitType = CashForWorkBenefitType.None;
+            BenefitDescription = string.Empty;
+            EventAmountText = string.Empty;
             EventNotes = string.Empty;
 
             OnPropertyChanged(nameof(EventEditorKindLabel));
@@ -1123,8 +1167,12 @@ namespace AttendanceShiftingManagement.ViewModels
             EventTitle = SelectedEvent.Title;
             EventLocation = SelectedEvent.Location;
             EventDate = SelectedEvent.EventDate.Date;
+            FinishDate = SelectedEvent.FinishDate?.Date ?? SelectedEvent.EventDate.Date;
             EventStartTime = SelectedEvent.StartTime.ToString(@"hh\:mm", CultureInfo.InvariantCulture);
             EventEndTime = SelectedEvent.EndTime.ToString(@"hh\:mm", CultureInfo.InvariantCulture);
+            BenefitType = SelectedEvent.BenefitType;
+            BenefitDescription = SelectedEvent.BenefitDescription ?? string.Empty;
+            EventAmountText = SelectedEvent.UnitAmount.ToString("N2", CultureInfo.CurrentCulture);
             EventNotes = SelectedEvent.Notes ?? string.Empty;
 
             OnPropertyChanged(nameof(EventEditorKindLabel));
@@ -1274,6 +1322,14 @@ namespace AttendanceShiftingManagement.ViewModels
                 return;
             }
 
+            if (_eventEditorKind == CashForWorkEventKind.Seminar && BenefitType == CashForWorkBenefitType.None)
+            {
+                MessageBox.Show("Select a benefit type for the seminar (Cash or Goods). Use 'None' only if no payout/distribution is intended.", "Benefit Type Required", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            TryParseAmount(EventAmountText, out var unitAmount);
+
             IsBusy = true;
             try
             {
@@ -1291,7 +1347,12 @@ namespace AttendanceShiftingManagement.ViewModels
                         startTime,
                         endTime,
                         EventNotes,
-                        _currentUser.Id);
+                        _currentUser.Id,
+                        unitAmount,
+                        _eventEditorKind,
+                        FinishDate?.Date,
+                        BenefitType,
+                        BenefitDescription);
                 }
                 else
                 {
@@ -1303,7 +1364,11 @@ namespace AttendanceShiftingManagement.ViewModels
                         endTime,
                         EventNotes,
                         _currentUser.Id,
-                        _eventEditorKind);
+                        unitAmount,
+                        _eventEditorKind,
+                        FinishDate?.Date,
+                        BenefitType,
+                        BenefitDescription);
                 }
 
                 await LoadAnnouncementsAsync();
