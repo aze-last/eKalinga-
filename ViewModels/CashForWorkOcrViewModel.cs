@@ -705,6 +705,7 @@ namespace AttendanceShiftingManagement.ViewModels
         public Visibility SelectedEventVisibility => HasSelectedEvent ? Visibility.Visible : Visibility.Collapsed;
         public Visibility NoSelectedEventVisibility => HasSelectedEvent ? Visibility.Collapsed : Visibility.Visible;
         public bool IsDrawerOpen => ActivePanel != CashForWorkWorkspacePanel.None;
+        public bool IsAnyOverlayOpen => IsDrawerOpen;
         public Visibility DrawerVisibility => IsDrawerOpen ? Visibility.Visible : Visibility.Collapsed;
         public Visibility EventEditorVisibility => ActivePanel == CashForWorkWorkspacePanel.EventEditor ? Visibility.Visible : Visibility.Collapsed;
         public Visibility BeneficiariesVisibility => ActivePanel == CashForWorkWorkspacePanel.Beneficiaries ? Visibility.Visible : Visibility.Collapsed;

@@ -15,6 +15,7 @@ namespace AttendanceShiftingManagement.Services
         public string AyudaOfficeCode { get; set; } = string.Empty;
         public string GgmsOfficeTable { get; set; } = "tbl_offices";
         public string GgmsAllocationTable { get; set; } = "officeallocations";
+        public string GgmsConsolidatedTransactionTable { get; set; } = "consolidated_transactions";
         public DatabaseConnectionPreset GgmsConnection { get; set; } = new()
         {
             DisplayName = "GGMS Budget Source",
@@ -72,6 +73,7 @@ namespace AttendanceShiftingManagement.Services
                 AyudaOfficeCode = normalized.AyudaOfficeCode,
                 GgmsOfficeTable = normalized.GgmsOfficeTable,
                 GgmsAllocationTable = normalized.GgmsAllocationTable,
+                GgmsConsolidatedTransactionTable = normalized.GgmsConsolidatedTransactionTable,
                 GgmsConnection = new DatabaseConnectionPreset
                 {
                     DisplayName = normalized.GgmsConnection.DisplayName,
@@ -109,6 +111,9 @@ namespace AttendanceShiftingManagement.Services
             settings.GgmsAllocationTable = string.IsNullOrWhiteSpace(settings.GgmsAllocationTable)
                 ? "officeallocations"
                 : settings.GgmsAllocationTable.Trim();
+            settings.GgmsConsolidatedTransactionTable = string.IsNullOrWhiteSpace(settings.GgmsConsolidatedTransactionTable)
+                ? "consolidated_transactions"
+                : settings.GgmsConsolidatedTransactionTable.Trim();
 
             settings.GgmsConnection ??= new DatabaseConnectionPreset();
             settings.GgmsConnection.DisplayName = string.IsNullOrWhiteSpace(settings.GgmsConnection.DisplayName)

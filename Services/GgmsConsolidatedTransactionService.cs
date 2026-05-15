@@ -13,6 +13,7 @@ namespace AttendanceShiftingManagement.Services
     {
         Task<string?> TryWriteAssistanceCaseReleaseAsync(AppDbContext context, AssistanceCase assistanceCase);
         Task<string?> TryWriteProjectDistributionClaimAsync(AppDbContext context, AyudaProgram? program, AyudaProjectClaim claim);
+        Task<string?> TryWriteBulkProjectDistributionClaimsAsync(AppDbContext context, AyudaProgram? program, IReadOnlyCollection<AyudaProjectClaim> claims);
         Task<string?> TryWriteCashForWorkReleaseAsync(
             AppDbContext context,
             CashForWorkEvent cashForWorkEvent,
@@ -31,13 +32,13 @@ namespace AttendanceShiftingManagement.Services
 
         public Task<string?> TryWriteAssistanceCaseReleaseAsync(AppDbContext context, AssistanceCase assistanceCase) => Task.FromResult<string?>(null);
         public Task<string?> TryWriteProjectDistributionClaimAsync(AppDbContext context, AyudaProgram? program, AyudaProjectClaim claim) => Task.FromResult<string?>(null);
+        public Task<string?> TryWriteBulkProjectDistributionClaimsAsync(AppDbContext context, AyudaProgram? program, IReadOnlyCollection<AyudaProjectClaim> claims) => Task.FromResult<string?>(null);
         public Task<string?> TryWriteCashForWorkReleaseAsync(AppDbContext context, CashForWorkEvent cashForWorkEvent, IReadOnlyCollection<CashForWorkParticipant> participants, IReadOnlyCollection<int> releasedParticipantIds, decimal totalAmount) => Task.FromResult<string?>(null);
         public Task<List<GgmsConsolidatedTransaction>> LoadTransactionsAsync(string? projectNameFilter = null) => Task.FromResult(new List<GgmsConsolidatedTransaction>());
     }
 
     public sealed class GgmsConsolidatedTransactionService : IGgmsConsolidatedTransactionService
     {
-        private const string ConsolidatedTransactionsTable = "consolidated_transactions";
         private const int SharedColumnMaxLength = 45;
         private const string DefaultOfficeId = "OFF-2026-0006";
         private const string OfficeName = "eKalinga+";
@@ -57,6 +58,7 @@ namespace AttendanceShiftingManagement.Services
 
         private readonly DatabaseConnectionPreset _ggmsConnection;
         private readonly string _officeId;
+        private readonly string _tableName;
 
         public GgmsConsolidatedTransactionService(BudgetRuntimeOptions? options = null)
         {
@@ -66,6 +68,9 @@ namespace AttendanceShiftingManagement.Services
                 : ClonePreset(DefaultConnection);
             _officeId = NormalizeAndLimit(runtimeOptions.AyudaOfficeCode, SharedColumnMaxLength)
                 ?? DefaultOfficeId;
+            _tableName = !string.IsNullOrWhiteSpace(runtimeOptions.GgmsConsolidatedTransactionTable)
+                ? runtimeOptions.GgmsConsolidatedTransactionTable.Trim()
+                : "consolidated_transactions";
         }
 
         public async Task<List<GgmsConsolidatedTransaction>> LoadTransactionsAsync(string? projectNameFilter = null)
@@ -77,7 +82,7 @@ namespace AttendanceShiftingManagement.Services
                 await connection.OpenAsync();
 
                 var query = $@"
-                    SELECT * FROM {ConsolidatedTransactionsTable}
+                    SELECT * FROM `{_tableName}`
                     WHERE office_id = @officeId
                 ";
 
@@ -100,6 +105,7 @@ namespace AttendanceShiftingManagement.Services
                 {
                     results.Add(new GgmsConsolidatedTransaction
                     {
+                        Id = reader.GetInt32("id"),
                         BeneficiaryId = reader.IsDBNull(reader.GetOrdinal("beneficiary_id")) ? null : reader.GetString("beneficiary_id"),
                         CivilRegistryId = reader.IsDBNull(reader.GetOrdinal("civil_registry_id")) ? null : reader.GetString("civil_registry_id"),
                         ProjectCode = reader.IsDBNull(reader.GetOrdinal("project_code")) ? null : reader.GetString("project_code"),
@@ -130,30 +136,37 @@ namespace AttendanceShiftingManagement.Services
             ArgumentNullException.ThrowIfNull(context);
             ArgumentNullException.ThrowIfNull(assistanceCase);
 
-            var beneficiary = await ResolveBeneficiaryAsync(
-                context,
-                assistanceCase.ValidatedBeneficiaryId,
-                assistanceCase.ValidatedCivilRegistryId,
-                assistanceCase.ValidatedBeneficiaryName,
-                $"AMS-{assistanceCase.CaseNumber}");
+            try
+            {
+                var beneficiary = await ResolveBeneficiaryAsync(
+                    context,
+                    assistanceCase.ValidatedBeneficiaryId,
+                    assistanceCase.ValidatedCivilRegistryId,
+                    assistanceCase.ValidatedBeneficiaryName,
+                    $"AMS-{assistanceCase.CaseNumber}");
 
-            var entry = new GgmsConsolidatedTransactionEntry(
-                beneficiary.BeneficiaryId,
-                beneficiary.CivilRegistryId,
-                NormalizeAndLimit($"AMS-{assistanceCase.CaseNumber}", SharedColumnMaxLength),
-                AidRequestProjectName,
-                _officeId,
-                beneficiary.FullName,
-                beneficiary.FirstName,
-                beneficiary.MiddleName,
-                beneficiary.LastName,
-                OfficeName,
-                NormalizeAndLimit(assistanceCase.AssistanceType, SharedColumnMaxLength) ?? "Aid Request",
-                assistanceCase.ApprovedAmount,
-                assistanceCase.UpdatedAt.Date,
-                "Released");
+                var entry = new GgmsConsolidatedTransactionEntry(
+                    beneficiary.BeneficiaryId,
+                    beneficiary.CivilRegistryId,
+                    NormalizeAndLimit($"AMS-{assistanceCase.CaseNumber}", SharedColumnMaxLength),
+                    AidRequestProjectName,
+                    _officeId,
+                    beneficiary.FullName,
+                    beneficiary.FirstName,
+                    beneficiary.MiddleName,
+                    beneficiary.LastName,
+                    OfficeName,
+                    NormalizeAndLimit(assistanceCase.AssistanceType, SharedColumnMaxLength) ?? "Aid Request",
+                    assistanceCase.ApprovedAmount,
+                    assistanceCase.UpdatedAt.Date,
+                    "Released");
 
-            return await TryInsertEntriesAsync([entry]);
+                return await TryInsertEntriesAsync([entry]);
+            }
+            catch (Exception ex)
+            {
+                return $"GGMS Resolution Error: {ex.Message}";
+            }
         }
 
         public async Task<string?> TryWriteProjectDistributionClaimAsync(AppDbContext context, AyudaProgram? program, AyudaProjectClaim claim)
@@ -161,37 +174,95 @@ namespace AttendanceShiftingManagement.Services
             ArgumentNullException.ThrowIfNull(context);
             ArgumentNullException.ThrowIfNull(claim);
 
-            var beneficiary = await ResolveBeneficiaryAsync(
-                context,
-                claim.BeneficiaryId,
-                claim.CivilRegistryId,
-                claim.FullName,
-                $"AMS-PD-{claim.Id:D6}");
+            try
+            {
+                var beneficiary = await ResolveBeneficiaryAsync(
+                    context,
+                    claim.BeneficiaryId,
+                    claim.CivilRegistryId,
+                    claim.FullName,
+                    $"AMS-PD-{claim.Id:D6}");
 
-            var transactionType = NormalizeAndLimit(
-                claim.AssistanceTypeSnapshot
-                    ?? program?.AssistanceType
-                    ?? program?.ProgramName
-                    ?? "Project Claim",
-                SharedColumnMaxLength);
+                var transactionType = NormalizeAndLimit(
+                    claim.AssistanceTypeSnapshot
+                        ?? program?.AssistanceType
+                        ?? program?.ProgramName
+                        ?? "Project Claim",
+                    SharedColumnMaxLength);
 
-            var entry = new GgmsConsolidatedTransactionEntry(
-                beneficiary.BeneficiaryId,
-                beneficiary.CivilRegistryId,
-                NormalizeAndLimit($"AMS-PD-{claim.Id:D6}", SharedColumnMaxLength),
-                ProjectDistributionProjectName,
-                _officeId,
-                beneficiary.FullName,
-                beneficiary.FirstName,
-                beneficiary.MiddleName,
-                beneficiary.LastName,
-                OfficeName,
-                transactionType ?? "Project Claim",
-                claim.UnitAmountSnapshot,
-                claim.ClaimedAt.Date,
-                "Released");
+                var entry = new GgmsConsolidatedTransactionEntry(
+                    beneficiary.BeneficiaryId,
+                    beneficiary.CivilRegistryId,
+                    NormalizeAndLimit($"AMS-PD-{claim.Id:D6}", SharedColumnMaxLength),
+                    ProjectDistributionProjectName,
+                    _officeId,
+                    beneficiary.FullName,
+                    beneficiary.FirstName,
+                    beneficiary.MiddleName,
+                    beneficiary.LastName,
+                    OfficeName,
+                    transactionType ?? "Project Claim",
+                    claim.UnitAmountSnapshot,
+                    claim.ClaimedAt.Date,
+                    "Released");
 
-            return await TryInsertEntriesAsync([entry]);
+                return await TryInsertEntriesAsync([entry]);
+            }
+            catch (Exception ex)
+            {
+                return $"GGMS Resolution Error: {ex.Message}";
+            }
+        }
+
+        public async Task<string?> TryWriteBulkProjectDistributionClaimsAsync(AppDbContext context, AyudaProgram? program, IReadOnlyCollection<AyudaProjectClaim> claims)
+        {
+            ArgumentNullException.ThrowIfNull(context);
+            ArgumentNullException.ThrowIfNull(claims);
+
+            if (claims.Count == 0) return null;
+
+            try
+            {
+                var entries = new List<GgmsConsolidatedTransactionEntry>();
+                foreach (var claim in claims)
+                {
+                    var beneficiary = await ResolveBeneficiaryAsync(
+                        context,
+                        claim.BeneficiaryId,
+                        claim.CivilRegistryId,
+                        claim.FullName,
+                        $"AMS-PD-{claim.Id:D6}");
+
+                    var transactionType = NormalizeAndLimit(
+                        claim.AssistanceTypeSnapshot
+                            ?? program?.AssistanceType
+                            ?? program?.ProgramName
+                            ?? "Project Claim",
+                        SharedColumnMaxLength);
+
+                    entries.Add(new GgmsConsolidatedTransactionEntry(
+                        beneficiary.BeneficiaryId,
+                        beneficiary.CivilRegistryId,
+                        NormalizeAndLimit($"AMS-PD-{claim.Id:D6}", SharedColumnMaxLength),
+                        ProjectDistributionProjectName,
+                        _officeId,
+                        beneficiary.FullName,
+                        beneficiary.FirstName,
+                        beneficiary.MiddleName,
+                        beneficiary.LastName,
+                        OfficeName,
+                        transactionType ?? "Project Claim",
+                        claim.UnitAmountSnapshot,
+                        claim.ClaimedAt.Date,
+                        "Released"));
+                }
+
+                return await TryInsertEntriesAsync(entries);
+            }
+            catch (Exception ex)
+            {
+                return $"GGMS Bulk Resolution Error: {ex.Message}";
+            }
         }
 
         public async Task<string?> TryWriteCashForWorkReleaseAsync(
@@ -208,57 +279,64 @@ namespace AttendanceShiftingManagement.Services
 
             if (releasedParticipantIds.Count <= 0) return null;
 
-            var releasedParticipantSet = releasedParticipantIds.ToHashSet();
-            var perParticipantAmount = totalAmount / releasedParticipantIds.Count;
-            var budgetLabel = cashForWorkEvent.CashForWorkBudget?.BudgetName;
-            if (string.IsNullOrWhiteSpace(budgetLabel) && cashForWorkEvent.CashForWorkBudgetId.HasValue)
+            try
             {
-                budgetLabel = await context.CashForWorkBudgets
-                    .AsNoTracking()
-                    .Where(item => item.Id == cashForWorkEvent.CashForWorkBudgetId.Value)
-                    .Select(item => item.BudgetName)
-                    .FirstOrDefaultAsync();
+                var releasedParticipantSet = releasedParticipantIds.ToHashSet();
+                var perParticipantAmount = totalAmount / releasedParticipantIds.Count;
+                var budgetLabel = cashForWorkEvent.CashForWorkBudget?.BudgetName;
+                if (string.IsNullOrWhiteSpace(budgetLabel) && cashForWorkEvent.CashForWorkBudgetId.HasValue)
+                {
+                    budgetLabel = await context.CashForWorkBudgets
+                        .AsNoTracking()
+                        .Where(item => item.Id == cashForWorkEvent.CashForWorkBudgetId.Value)
+                        .Select(item => item.BudgetName)
+                        .FirstOrDefaultAsync();
+                }
+
+                var transactionType = NormalizeAndLimit(
+                    cashForWorkEvent.EventKind == CashForWorkEventKind.Seminar
+                        ? "Seminar Release"
+                        : budgetLabel
+                            ?? cashForWorkEvent.AyudaProgram?.ProgramName
+                            ?? "Cash-for-Work Payout",
+                    SharedColumnMaxLength) ?? "Cash-for-Work Payout";
+                var releaseDate = (cashForWorkEvent.ReleasedAt ?? DateTime.Now).Date;
+
+                var entries = new List<GgmsConsolidatedTransactionEntry>();
+                foreach (var participant in participants)
+                {
+                    if (!releasedParticipantSet.Contains(participant.Id)) continue;
+
+                    var beneficiary = BuildBeneficiaryIdentity(
+                        participant.Beneficiary,
+                        participant.Beneficiary?.BeneficiaryId,
+                        participant.Beneficiary?.CivilRegistryId,
+                        BuildDisplayName(participant.Beneficiary),
+                        $"AMS-{participant.BeneficiaryStagingId ?? participant.Id}");
+
+                    entries.Add(new GgmsConsolidatedTransactionEntry(
+                        beneficiary.BeneficiaryId,
+                        beneficiary.CivilRegistryId,
+                        NormalizeAndLimit($"AMS-{cashForWorkEvent.Id:D6}-{participant.Id:D6}", SharedColumnMaxLength),
+                        CashForWorkProjectName,
+                        _officeId,
+                        beneficiary.FullName,
+                        beneficiary.FirstName,
+                        beneficiary.MiddleName,
+                        beneficiary.LastName,
+                        OfficeName,
+                        transactionType,
+                        perParticipantAmount,
+                        releaseDate,
+                        "Released"));
+                }
+
+                return await TryInsertEntriesAsync(entries);
             }
-
-            var transactionType = NormalizeAndLimit(
-                cashForWorkEvent.EventKind == CashForWorkEventKind.Seminar
-                    ? "Seminar Release"
-                    : budgetLabel
-                        ?? cashForWorkEvent.AyudaProgram?.ProgramName
-                        ?? "Cash-for-Work Payout",
-                SharedColumnMaxLength) ?? "Cash-for-Work Payout";
-            var releaseDate = (cashForWorkEvent.ReleasedAt ?? DateTime.Now).Date;
-
-            var entries = new List<GgmsConsolidatedTransactionEntry>();
-            foreach (var participant in participants)
+            catch (Exception ex)
             {
-                if (!releasedParticipantSet.Contains(participant.Id)) continue;
-
-                var beneficiary = BuildBeneficiaryIdentity(
-                    participant.Beneficiary,
-                    participant.Beneficiary?.BeneficiaryId,
-                    participant.Beneficiary?.CivilRegistryId,
-                    BuildDisplayName(participant.Beneficiary),
-                    $"AMS-{participant.BeneficiaryStagingId ?? participant.Id}");
-
-                entries.Add(new GgmsConsolidatedTransactionEntry(
-                    beneficiary.BeneficiaryId,
-                    beneficiary.CivilRegistryId,
-                    NormalizeAndLimit($"AMS-{cashForWorkEvent.Id:D6}-{participant.Id:D6}", SharedColumnMaxLength),
-                    CashForWorkProjectName,
-                    _officeId,
-                    beneficiary.FullName,
-                    beneficiary.FirstName,
-                    beneficiary.MiddleName,
-                    beneficiary.LastName,
-                    OfficeName,
-                    transactionType,
-                    perParticipantAmount,
-                    releaseDate,
-                    "Released"));
+                return $"GGMS CFW Resolution Error: {ex.Message}";
             }
-
-            return await TryInsertEntriesAsync(entries);
         }
 
         private async Task<string?> TryInsertEntriesAsync(IReadOnlyCollection<GgmsConsolidatedTransactionEntry> entries)
@@ -302,15 +380,15 @@ namespace AttendanceShiftingManagement.Services
             }
             catch (Exception ex)
             {
-                return ex.Message;
+                return $"GGMS Database Write Error: {ex.Message}";
             }
         }
 
-        private static string BuildInsertCommandText(bool includeProjectNameColumn)
+        private string BuildInsertCommandText(bool includeProjectNameColumn)
         {
             return includeProjectNameColumn
                 ? $"""
-                INSERT INTO {ConsolidatedTransactionsTable}
+                INSERT INTO `{_tableName}`
                 (beneficiary_id, civil_registry_id, project_code, project_name, office_id,
                  full_name, first_name, middle_name, last_name,
                  office_name, transaction_type, amount, transaction_date, status)
@@ -320,7 +398,7 @@ namespace AttendanceShiftingManagement.Services
                  @office_name, @transaction_type, @amount, @transaction_date, @status);
                 """
                 : $"""
-                INSERT INTO {ConsolidatedTransactionsTable}
+                INSERT INTO `{_tableName}`
                 (beneficiary_id, civil_registry_id, project_code, office_id,
                  full_name, first_name, middle_name, last_name,
                  office_name, transaction_type, amount, transaction_date, status)
@@ -331,21 +409,27 @@ namespace AttendanceShiftingManagement.Services
                 """;
         }
 
-        private static async Task<bool> HasProjectNameColumnAsync(MySqlConnection connection, MySqlTransaction transaction)
+        private async Task<bool> HasProjectNameColumnAsync(MySqlConnection connection, MySqlTransaction transaction)
         {
-            await using var command = new MySqlCommand(
-                """
-                SELECT COUNT(*)
-                FROM information_schema.COLUMNS
-                WHERE TABLE_SCHEMA = DATABASE()
-                  AND TABLE_NAME = @tableName
-                  AND COLUMN_NAME = 'project_name';
-                """,
-                connection,
-                transaction);
+            try
+            {
+                await using var command = new MySqlCommand(
+                    $"""
+                    SELECT COUNT(*)
+                    FROM information_schema.COLUMNS
+                    WHERE TABLE_SCHEMA = DATABASE()
+                      AND TABLE_NAME = '{_tableName}'
+                      AND COLUMN_NAME = 'project_name';
+                    """,
+                    connection,
+                    transaction);
 
-            command.Parameters.AddWithValue("@tableName", ConsolidatedTransactionsTable);
-            return Convert.ToInt32(await command.ExecuteScalarAsync()) > 0;
+                return Convert.ToInt32(await command.ExecuteScalarAsync()) > 0;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         private static async Task<GgmsBeneficiaryIdentity> ResolveBeneficiaryAsync(

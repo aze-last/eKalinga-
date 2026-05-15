@@ -351,12 +351,18 @@ namespace AttendanceShiftingManagement.Services
 
             if (successfulClaims > 0)
             {
+                var claimsToSync = await _context.AyudaProjectClaims
+                    .Where(c => c.AyudaProgramId == ayudaProgramId && c.ClaimedAt == now)
+                    .ToListAsync();
+
+                var ggmsWarningMessage = await _ggmsConsolidatedTransactionService.TryWriteBulkProjectDistributionClaimsAsync(_context, program, claimsToSync);
+
                 await _auditService.LogActivityAsync(
                     actedByUserId,
                     "ProjectBeneficiariesBulkClaimed",
                     nameof(AyudaProjectClaim),
                     ayudaProgramId,
-                    $"Bulk recorded {successfulClaims} claims for project/program #{ayudaProgramId}.");
+                    $"Bulk recorded {successfulClaims} claims for project/program #{ayudaProgramId}.{(string.IsNullOrWhiteSpace(ggmsWarningMessage) ? "" : $" GGMS warning: {ggmsWarningMessage}")}");
             }
 
             return successfulClaims > 0 
@@ -611,7 +617,7 @@ namespace AttendanceShiftingManagement.Services
                 "ProjectBeneficiaryClaimed",
                 nameof(AyudaProjectClaim),
                 claim.Id,
-                $"Recorded project claim for '{claim.FullName}' under project/program #{ayudaProgramId}.");
+                $"Recorded project claim for '{claim.FullName}' under project/program #{ayudaProgramId}.{(string.IsNullOrWhiteSpace(ggmsWarningMessage) ? "" : $" GGMS warning: {ggmsWarningMessage}")}");
 
             var successMessage = "Project claim recorded.";
             if (!string.IsNullOrWhiteSpace(ggmsWarningMessage))

@@ -55,13 +55,38 @@ namespace AttendanceShiftingManagement.Views
 
         private void ShowDetailDialog()
         {
+            var viewModel = DataContext as ProjectDistributionViewModel;
             var dialog = new ProjectDistributionDetailDialog
             {
                 DataContext = this.DataContext,
                 Owner = Window.GetWindow(this)
             };
 
-            dialog.ShowDialog();
+            if (viewModel != null)
+            {
+                // Define the handler
+                void OnRequestClose()
+                {
+                    dialog.Close();
+                }
+
+                // Subscribe
+                viewModel.RequestCloseDialog += OnRequestClose;
+
+                try
+                {
+                    dialog.ShowDialog();
+                }
+                finally
+                {
+                    // Unsubscribe to prevent memory leaks
+                    viewModel.RequestCloseDialog -= OnRequestClose;
+                }
+            }
+            else
+            {
+                dialog.ShowDialog();
+            }
         }
     }
 }

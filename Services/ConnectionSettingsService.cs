@@ -216,7 +216,9 @@ namespace AttendanceShiftingManagement.Services
                 AllowLoadLocalInfile = true,
                 Keepalive = 30,
                 AllowZeroDateTime = true,
-                ConvertZeroDateTime = true
+                ConvertZeroDateTime = true,
+                AllowPublicKeyRetrieval = true,
+                SslMode = MySqlSslMode.Preferred
             };
 
             return builder.ConnectionString;

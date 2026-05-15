@@ -20,7 +20,7 @@ namespace AttendanceShiftingManagement.Data
         public DbSet<BeneficiaryDigitalId> BeneficiaryDigitalIds => Set<BeneficiaryDigitalId>();
         public DbSet<AyudaProgram> AyudaPrograms => Set<AyudaProgram>();
         public DbSet<AyudaProjectBeneficiary> AyudaProjectBeneficiaries => Set<AyudaProjectBeneficiary>();
-        public DbSet<AyudaProjectClaim> AyudaProjectClaims => Set<AyudaProjectClaim>();
+        public DbSet<AyudaProjectClaim> AyudaProjectClaims => Set< AyudaProjectClaim>();
         public DbSet<GovernmentBudgetSnapshot> GovernmentBudgetSnapshots => Set<GovernmentBudgetSnapshot>();
         public DbSet<PrivateDonation> PrivateDonations => Set<PrivateDonation>();
         public DbSet<BudgetLedgerEntry> BudgetLedgerEntries => Set<BudgetLedgerEntry>();

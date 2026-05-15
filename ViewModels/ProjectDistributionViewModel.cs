@@ -399,18 +399,9 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             await using var context = new AppDbContext();
             
-            // Filter: Approved AND not in ANY active project
+            // Filter: Approved (cross-event listing is allowed; only exclude if already in the current picker session)
             var search = NewProjectSearchText?.Trim();
             
-            var enrolledIds = await context.AyudaProjectBeneficiaries
-                .AsNoTracking()
-                .Select(b => new { b.BeneficiaryStagingId, b.CivilRegistryId, b.BeneficiaryId })
-                .ToListAsync();
-
-            var alreadyEnrolledStagingIds = enrolledIds.Select(b => b.BeneficiaryStagingId).ToList();
-            var alreadyEnrolledCivilIds = enrolledIds.Where(b => b.CivilRegistryId != null).Select(b => b.CivilRegistryId!).ToList();
-            var alreadyEnrolledBenIds = enrolledIds.Where(b => b.BeneficiaryId != null).Select(b => b.BeneficiaryId!).ToList();
-
             // Also exclude what's already in SelectedProjectBeneficiaries in the UI
             var currentSelectedIds = SelectedProjectBeneficiaries.Select(b => b.StagingId).ToList();
             var currentSelectedCivilIds = SelectedProjectBeneficiaries.Where(b => !string.IsNullOrEmpty(b.CivilRegistryId)).Select(b => b.CivilRegistryId).ToList();
@@ -435,14 +426,9 @@ namespace AttendanceShiftingManagement.ViewModels
 
             // Perform filtering in memory to handle complex duplicate checks correctly
             var filteredBeneficiaries = beneficiaries
-                .Where(item => !alreadyEnrolledStagingIds.Contains(item.StagingID) &&
-                               !currentSelectedIds.Contains(item.StagingID))
-                .Where(item => string.IsNullOrEmpty(item.CivilRegistryId) || 
-                               (!alreadyEnrolledCivilIds.Contains(item.CivilRegistryId) && 
-                                !currentSelectedCivilIds.Contains(item.CivilRegistryId)))
-                .Where(item => string.IsNullOrEmpty(item.BeneficiaryId) || 
-                               (!alreadyEnrolledBenIds.Contains(item.BeneficiaryId) && 
-                                !currentSelectedBenIds.Contains(item.BeneficiaryId)))
+                .Where(item => !currentSelectedIds.Contains(item.StagingID))
+                .Where(item => string.IsNullOrEmpty(item.CivilRegistryId) || !currentSelectedCivilIds.Contains(item.CivilRegistryId))
+                .Where(item => string.IsNullOrEmpty(item.BeneficiaryId) || !currentSelectedBenIds.Contains(item.BeneficiaryId))
                 .Where(item => string.IsNullOrWhiteSpace(search) || 
                                (item.FullName != null && item.FullName.Contains(search, StringComparison.OrdinalIgnoreCase)) ||
                                (item.BeneficiaryId != null && item.BeneficiaryId.Contains(search, StringComparison.OrdinalIgnoreCase)))
@@ -455,12 +441,12 @@ namespace AttendanceShiftingManagement.ViewModels
                 AvailableUnpickedBeneficiaries.Add(new DistributionBeneficiaryOption
                 {
                     StagingId = b.StagingID,
-                    BeneficiaryId = b.BeneficiaryId,
-                    CivilRegistryId = b.CivilRegistryId,
-                    LastName = b.LastName,
-                    FirstName = b.FirstName,
-                    MiddleName = b.MiddleName,
-                    FullName = b.FullName,
+                    BeneficiaryId = b.BeneficiaryId ?? string.Empty,
+                    CivilRegistryId = b.CivilRegistryId ?? string.Empty,
+                    LastName = b.LastName ?? string.Empty,
+                    FirstName = b.FirstName ?? string.Empty,
+                    MiddleName = b.MiddleName ?? string.Empty,
+                    FullName = b.FullName ?? string.Empty,
                     LinkedHouseholdId = b.LinkedHouseholdId,
                     LinkedHouseholdMemberId = b.LinkedHouseholdMemberId
                 });
@@ -592,24 +578,12 @@ namespace AttendanceShiftingManagement.ViewModels
                     return;
                 }
 
-                // 3. Bulk Record Claims (Story requirement: update the Digital ID ledger for each released beneficiary)
-                SetNeutralStatus($"Recording {selectedIds.Count} initial claims...");
-                var releaseResult = await distributionService.BulkRecordClaimsAsync(
-                    programId,
-                    selectedIds,
-                    _currentUser.Id,
-                    $"Initial bulk release for project '{NewProjectName}'.");
+                // NOTE: We no longer auto-release claims here. 
+                // Beneficiaries will remain in 'Pending' status for manual scanning or bulk release later.
 
-                if (!releaseResult.IsSuccess)
-                {
-                    SetErrorStatus($"Project created and enrolled, but bulk release failed: {releaseResult.Message}");
-                    return;
-                }
-
-                // CloseCreateProjectPanel(); // Don't close immediately, show success panel
                 await LoadProgramsAsync(programId);
                 IsCreateProjectSuccessPanelOpen = true;
-                SetSuccessStatus($"Project '{NewProjectName}' created and released to {selectedIds.Count} beneficiaries.");
+                SetSuccessStatus($"Project '{NewProjectName}' created. {selectedIds.Count} beneficiaries are now pending for distribution.");
             }
             catch (Exception ex)
             {
@@ -1184,6 +1158,21 @@ namespace AttendanceShiftingManagement.ViewModels
         private async Task LoadAvailableBeneficiariesAsync()
         {
             await using var context = new AppDbContext();
+
+            // Filter: Approved AND not already in the SELECTED project (if any)
+            var selectedProgramId = SelectedProgram?.Id;
+            var enrolledInSelectedProject = selectedProgramId.HasValue
+                ? await context.AyudaProjectBeneficiaries
+                    .AsNoTracking()
+                    .Where(b => b.AyudaProgramId == selectedProgramId.Value)
+                    .Select(b => new { b.BeneficiaryStagingId, b.CivilRegistryId, b.BeneficiaryId })
+                    .ToListAsync()
+                : new();
+
+            var alreadyEnrolledStagingIds = enrolledInSelectedProject.Select(b => b.BeneficiaryStagingId).ToList();
+            var alreadyEnrolledCivilIds = enrolledInSelectedProject.Where(b => b.CivilRegistryId != null).Select(b => b.CivilRegistryId!).ToList();
+            var alreadyEnrolledBenIds = enrolledInSelectedProject.Where(b => b.BeneficiaryId != null).Select(b => b.BeneficiaryId!).ToList();
+
             var beneficiaries = await context.BeneficiaryStaging
                 .AsNoTracking()
                 .Where(item => item.VerificationStatus == VerificationStatus.Approved)
@@ -1205,6 +1194,11 @@ namespace AttendanceShiftingManagement.ViewModels
             AvailableBeneficiaries.Clear();
             foreach (var b in beneficiaries)
             {
+                // Skip if already in the selected project
+                if (alreadyEnrolledStagingIds.Contains(b.StagingID)) continue;
+                if (!string.IsNullOrEmpty(b.CivilRegistryId) && alreadyEnrolledCivilIds.Contains(b.CivilRegistryId)) continue;
+                if (!string.IsNullOrEmpty(b.BeneficiaryId) && alreadyEnrolledBenIds.Contains(b.BeneficiaryId)) continue;
+
                 AvailableBeneficiaries.Add(new DistributionBeneficiaryOption
                 {
                     StagingId = b.StagingID,
@@ -1249,106 +1243,135 @@ namespace AttendanceShiftingManagement.ViewModels
 
             var programId = selectedProgram.Id;
 
-            await using var context = new AppDbContext();
-            _ = context.AssistanceCases;
-            var memberships = await context.AyudaProjectBeneficiaries
-                .AsNoTracking()
-                .Where(item => item.AyudaProgramId == programId)
-                .OrderBy(item => item.Status)
-                .ThenBy(item => item.FullName)
-                .ToListAsync();
-
-            var legacyProjectClaims = await context.AyudaProjectClaims
-                .AsNoTracking()
-                .Where(item => item.AyudaProgramId == programId)
-                .OrderByDescending(item => item.ClaimedAt)
-                .ToListAsync();
-
-            var distributedAmount = await context.BudgetLedgerEntries
-                .AsNoTracking()
-                .Where(item => item.ProgramId == programId && item.EntryType == BudgetLedgerEntryType.Release)
-                .SumAsync(item => (decimal?)item.TotalAmount) ?? 0m;
-
-            var releaseHistory = legacyProjectClaims
-                .Select(ProjectDistributionReleaseListItem.FromLegacyProjectClaim)
-                .OrderByDescending(item => item.ReleasedAt)
-                .ThenBy(item => item.FullName)
-                .ToList();
-            var digitalIdsByStagingId = await context.BeneficiaryDigitalIds
-                .AsNoTracking()
-                .Where(item => memberships.Select(member => member.BeneficiaryStagingId).Contains(item.BeneficiaryStagingId) && item.IsActive)
-                .Select(item => new
+            try
+            {
+                // Parallelize database queries using SEPARATE contexts for thread safety
+                var membershipsTask = Task.Run(async () =>
                 {
-                    item.Id,
-                    item.BeneficiaryStagingId,
-                    item.CardNumber,
-                    item.QrPayload,
-                    item.IsActive
-                })
-                .ToDictionaryAsync(item => item.BeneficiaryStagingId, item => new BeneficiaryDigitalId
-                {
-                    Id = item.Id,
-                    BeneficiaryStagingId = item.BeneficiaryStagingId,
-                    CardNumber = item.CardNumber,
-                    QrPayload = item.QrPayload,
-                    IsActive = item.IsActive
+                    await using var ctx = new AppDbContext();
+                    return await ctx.AyudaProjectBeneficiaries
+                        .AsNoTracking()
+                        .Where(item => item.AyudaProgramId == programId)
+                        .OrderBy(item => item.Status)
+                        .ThenBy(item => item.FullName)
+                        .ToListAsync();
                 });
 
-            _livePreviewMemberships = memberships;
-            _livePreviewDigitalIdsByStagingId = digitalIdsByStagingId;
-            _digitalIdsByStagingId = digitalIdsByStagingId;
+                var legacyProjectClaimsTask = Task.Run(async () =>
+                {
+                    await using var ctx = new AppDbContext();
+                    return await ctx.AyudaProjectClaims
+                        .AsNoTracking()
+                        .Where(item => item.AyudaProgramId == programId)
+                        .OrderByDescending(item => item.ClaimedAt)
+                        .ToListAsync();
+                });
 
-            if (SelectedProgram?.Id != programId)
-            {
-                return;
-            }
+                var distributedAmountTask = Task.Run(async () =>
+                {
+                    await using var ctx = new AppDbContext();
+                    return await ctx.BudgetLedgerEntries
+                        .AsNoTracking()
+                        .Where(item => item.ProgramId == programId && item.EntryType == BudgetLedgerEntryType.Release)
+                        .SumAsync(item => (decimal?)item.TotalAmount);
+                });
 
-            foreach (var membership in memberships)
-            {
-                ProgramBeneficiaries.Add(ProjectDistributionBeneficiaryListItem.FromEntity(membership));
-            }
+                await Task.WhenAll(membershipsTask, legacyProjectClaimsTask, distributedAmountTask);
 
-            OnPropertyChanged(nameof(HasProgramBeneficiaries));
+                var memberships = await membershipsTask;
+                var legacyProjectClaims = await legacyProjectClaimsTask;
+                var distributedAmount = (await distributedAmountTask) ?? 0m;
 
-            foreach (var release in releaseHistory)
-            {
-                ProgramReleaseHistory.Add(release);
-            }
+                var stagingIds = memberships.Select(m => m.BeneficiaryStagingId).ToList();
+                
+                // Final context for sequential parts
+                await using var context = new AppDbContext();
+                var digitalIdsByStagingId = await context.BeneficiaryDigitalIds
+                    .AsNoTracking()
+                    .Where(item => stagingIds.Contains(item.BeneficiaryStagingId) && item.IsActive)
+                    .Select(item => new
+                    {
+                        item.Id,
+                        item.BeneficiaryStagingId,
+                        item.CardNumber,
+                        item.QrPayload,
+                        item.IsActive
+                    })
+                    .ToDictionaryAsync(item => item.BeneficiaryStagingId, item => new BeneficiaryDigitalId
+                    {
+                        Id = item.Id,
+                        BeneficiaryStagingId = item.BeneficiaryStagingId,
+                        CardNumber = item.CardNumber,
+                        QrPayload = item.QrPayload,
+                        IsActive = item.IsActive
+                    });
 
-            OnPropertyChanged(nameof(HasProgramReleaseHistory));
-            OnPropertyChanged(nameof(PendingTotalCount));
-            OnPropertyChanged(nameof(ReleasedTotalCount));
+                var releaseHistory = legacyProjectClaims
+                    .Select(ProjectDistributionReleaseListItem.FromLegacyProjectClaim)
+                    .OrderByDescending(item => item.ReleasedAt)
+                    .ThenBy(item => item.FullName)
+                    .ToList();
 
-            var beneficiaryCount = releaseHistory
-                .Select(item => item.IdentityKey)
-                .Where(item => !string.IsNullOrWhiteSpace(item))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .Count();
+                _livePreviewMemberships = memberships;
+                _livePreviewDigitalIdsByStagingId = digitalIdsByStagingId;
+                _digitalIdsByStagingId = digitalIdsByStagingId;
 
-            if (beneficiaryCount == 0)
-            {
-                beneficiaryCount = releaseHistory
-                    .Select(item => item.FullName)
+                if (SelectedProgram?.Id != programId)
+                {
+                    return;
+                }
+
+                foreach (var membership in memberships)
+                {
+                    ProgramBeneficiaries.Add(ProjectDistributionBeneficiaryListItem.FromEntity(membership));
+                }
+
+                OnPropertyChanged(nameof(HasProgramBeneficiaries));
+
+                foreach (var release in releaseHistory)
+                {
+                    ProgramReleaseHistory.Add(release);
+                }
+
+                OnPropertyChanged(nameof(HasProgramReleaseHistory));
+                OnPropertyChanged(nameof(PendingTotalCount));
+                OnPropertyChanged(nameof(ReleasedTotalCount));
+
+                var beneficiaryCount = releaseHistory
+                    .Select(item => item.IdentityKey)
                     .Where(item => !string.IsNullOrWhiteSpace(item))
                     .Distinct(StringComparer.OrdinalIgnoreCase)
                     .Count();
-            }
 
-            SelectedProgramBudgetCapText = FormatBudgetCap(selectedProgram.BudgetCap);
-            SelectedProgramDistributedText = FormatCurrency(distributedAmount);
-            SelectedProgramRemainingBudgetText = FormatRemainingBudget(selectedProgram.BudgetCap, distributedAmount);
-            SelectedProgramBeneficiaryCountText = beneficiaryCount.ToString("N0", CultureInfo.InvariantCulture);
-            SelectedProgramReleaseSummary = releaseHistory.Count == 0
-                ? "No released beneficiaries are tied to this project yet."
-                : $"{releaseHistory.Count:N0} released entr{(releaseHistory.Count == 1 ? "y" : "ies")} are tied to this project.";
-            ProgramReleaseEmptyStateMessage = releaseHistory.Count == 0
-                ? "No released beneficiaries are tied to this project yet."
-                : string.Empty;
-            PendingCurrentPage = 1;
-            ReleasedCurrentPage = 1;
-            await GetPendingBeneficiariesPaginatedAsync();
-            await GetReleasedClaimsPaginatedAsync();
-            RefreshLivePreview(selectedProgram, memberships, digitalIdsByStagingId);
+                if (beneficiaryCount == 0)
+                {
+                    beneficiaryCount = releaseHistory
+                        .Select(item => item.FullName)
+                        .Where(item => !string.IsNullOrWhiteSpace(item))
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .Count();
+                }
+
+                SelectedProgramBudgetCapText = FormatBudgetCap(selectedProgram.BudgetCap);
+                SelectedProgramDistributedText = FormatCurrency(distributedAmount);
+                SelectedProgramRemainingBudgetText = FormatRemainingBudget(selectedProgram.BudgetCap, distributedAmount);
+                SelectedProgramBeneficiaryCountText = beneficiaryCount.ToString("N0", CultureInfo.InvariantCulture);
+                SelectedProgramReleaseSummary = releaseHistory.Count == 0
+                    ? "No released beneficiaries are tied to this project yet."
+                    : $"{releaseHistory.Count:N0} released entr{(releaseHistory.Count == 1 ? "y" : "ies")} are tied to this project.";
+                ProgramReleaseEmptyStateMessage = releaseHistory.Count == 0
+                    ? "No released beneficiaries are tied to this project yet."
+                    : string.Empty;
+                PendingCurrentPage = 1;
+                ReleasedCurrentPage = 1;
+                await GetPendingBeneficiariesPaginatedAsync();
+                await GetReleasedClaimsPaginatedAsync();
+                RefreshLivePreview(selectedProgram, memberships, digitalIdsByStagingId);
+            }
+            catch (Exception ex)
+            {
+                SetErrorStatus($"Error loading project details: {ex.Message}");
+            }
         }
 
         private bool CanAddBeneficiary()
@@ -2291,6 +2314,8 @@ namespace AttendanceShiftingManagement.ViewModels
                 && !string.IsNullOrWhiteSpace(SelectedPendingDigitalIdQrPayload);
         }
 
+        public event Action? RequestCloseDialog;
+
         private async Task ConfirmReleaseAsync()
         {
             if (!CanConfirmRelease() || SelectedProgram == null || SelectedPendingBeneficiary == null)
@@ -2329,7 +2354,22 @@ namespace AttendanceShiftingManagement.ViewModels
                 }
 
                 await LoadProjectDetailsAsync();
+                await LoadAvailableBeneficiariesAsync(); // Refresh available list to prevent double-adding
                 SetSuccessStatus(result.Message);
+
+                if (result.Message.Contains("GGMS sync warning"))
+                {
+                    MessageBox.Show(
+                        "The claim was recorded locally, but GGMS synchronization failed.\n\n" +
+                        "Reason: " + result.Message.Split("GGMS sync warning:")[1].Trim() + "\n\n" +
+                        "Please check your internet connection or GGMS database permissions.",
+                        "GGMS Sync Warning",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                }
+
+                // Auto-close the dialog after success
+                RequestCloseDialog?.Invoke();
             }
             catch (Exception ex)
             {
