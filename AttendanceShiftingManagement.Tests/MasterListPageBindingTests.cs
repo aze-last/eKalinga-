@@ -16,15 +16,16 @@ public sealed class MasterListPageBindingTests
 
         var xaml = File.ReadAllText(pagePath);
 
-        Assert.Contains("Text=\"Validated Beneficiaries\"", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("Text=\"Master List\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("ItemsSource=\"{Binding Beneficiaries}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"Masterlist Management\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Text=\"Validated Beneficiaries\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("ItemsSource=\"{Binding PendingBeneficiaries}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("ItemsSource=\"{Binding ApprovedBeneficiaries}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding PreviousPageCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding NextPageCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"{Binding PageSummary}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("SelectedItem=\"{Binding SelectedPageSize}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"{Binding SearchText, UpdateSourceTrigger=PropertyChanged, Delay=250}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("HorizontalScrollBarVisibility=\"Auto\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Background=\"{DynamicResource ThemeCardSubtleBrush}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("BlurEffect Radius=\"0\" x:Name=\"BackgroundBlur\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Binding=\"{Binding FullName}\"", xaml, StringComparison.Ordinal);
     }
 
     [Fact]

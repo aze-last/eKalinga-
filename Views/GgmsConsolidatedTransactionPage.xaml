@@ -11,163 +11,237 @@
     
     <UserControl.Resources>
         <helpers:NumericToVisibilityConverter x:Key="NumericToVisibilityConverter" />
+        
+        <Style x:Key="SidebarHeaderStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Foreground" Value="{DynamicResource ThemePrimaryActionBrush}" />
+            <Setter Property="Margin" Value="0,0,0,12" />
+            <Setter Property="Typography.Capitals" Value="AllSmallCaps"/>
+        </Style>
+
+        <Style x:Key="PatternBGridStyle" TargetType="DataGrid" BasedOn="{StaticResource {x:Type DataGrid}}">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="HeadersVisibility" Value="Column"/>
+            <Setter Property="AutoGenerateColumns" Value="False"/>
+            <Setter Property="CanUserAddRows" Value="False"/>
+            <Setter Property="IsReadOnly" Value="True"/>
+            <Setter Property="RowHeight" Value="52"/>
+        </Style>
     </UserControl.Resources>
 
-    <Grid Background="{DynamicResource BrandSurfaceBrush}">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="300"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
+    <Grid>
+        <!-- Main Layout Container with Blur Effect -->
+        <Grid>
+            <Grid.Effect>
+                <BlurEffect Radius="0" x:Name="BackgroundBlur"/>
+            </Grid.Effect>
+            <Grid.Style>
+                <Style TargetType="Grid">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsAnyOverlayOpen}" Value="True">
+                            <DataTrigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetProperty="(Grid.Effect).(BlurEffect.Radius)" To="15" Duration="0:0:0.3"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </DataTrigger.EnterActions>
+                            <DataTrigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetProperty="(Grid.Effect).(BlurEffect.Radius)" To="0" Duration="0:0:0.3"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </DataTrigger.ExitActions>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Grid.Style>
 
-        <!-- Sidebar Actions -->
-        <Border Grid.Column="0" Background="{DynamicResource ThemeCardBrush}" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="0,0,1,0">
-            <DockPanel Margin="20">
-                <StackPanel DockPanel.Dock="Top">
-                    <TextBlock Text="GGMS Ledger" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}" Margin="0,0,0,20"/>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="320" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
 
-                    <TextBlock Text="Search Transactions" FontSize="12" FontWeight="Medium" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,8"/>
-                    <Grid Margin="0,0,0,24">
-                        <TextBox Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                 materialDesign:HintAssist.Hint="Name or Code..."
-                                 Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                                 materialDesign:TextFieldAssist.HasClearButton="True">
-                            <TextBox.InputBindings>
-                                <KeyBinding Key="Enter" Command="{Binding SearchCommand}"/>
-                            </TextBox.InputBindings>
-                        </TextBox>
+                <!-- Sidebar Navigation -->
+                <Border Grid.Column="0" Background="{DynamicResource ThemeCardSubtleBrush}" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="0,0,1,0">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <!-- Dashboard Navigation -->
+                        <StackPanel Grid.Row="0" Margin="20,20,20,10">
+                            <Button Content="DASHBOARD" 
+                                    Command="{Binding DataContext.ShowDashboardCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                    Style="{StaticResource MaterialDesignOutlinedButton}"
+                                    Height="45" Margin="0,0,0,20"/>
+                        </StackPanel>
+
+                        <!-- Sidebar Actions -->
+                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                            <Border Padding="20,0,20,20">
+                                <StackPanel>
+                                    <TextBlock Text="SEARCH &amp; FILTER" Style="{StaticResource SidebarHeaderStyle}"/>
+
+                                    <Grid Margin="0,0,0,20">
+                                        <TextBox Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                                 materialDesign:HintAssist.Hint="Beneficiary name or ID..."
+                                                 Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                                 materialDesign:TextFieldAssist.HasClearButton="True">
+                                            <TextBox.InputBindings>
+                                                <KeyBinding Key="Enter" Command="{Binding SearchCommand}"/>
+                                            </TextBox.InputBindings>
+                                        </TextBox>
+                                    </Grid>
+
+                                    <TextBlock Text="PROJECT FILTER" Style="{StaticResource SidebarHeaderStyle}"/>
+                                    <StackPanel Margin="0,0,0,24">
+                                        <RadioButton Style="{StaticResource MaterialDesignTabRadioButton}"
+                                                     Content="All Transactions"
+                                                     IsChecked="{Binding SelectedProjectFilter, Converter={StaticResource EqualityToBooleanConverter}, ConverterParameter='All Transactions'}"
+                                                     Command="{Binding FilterCommand}" CommandParameter="All Transactions"
+                                                     Height="38" HorizontalContentAlignment="Left" Margin="0,0,0,4"/>
+                                        <RadioButton Style="{StaticResource MaterialDesignTabRadioButton}"
+                                                     Content="Aid Request"
+                                                     IsChecked="{Binding SelectedProjectFilter, Converter={StaticResource EqualityToBooleanConverter}, ConverterParameter='Aid Request'}"
+                                                     Command="{Binding FilterCommand}" CommandParameter="Aid Request"
+                                                     Height="38" HorizontalContentAlignment="Left" Margin="0,0,0,4"/>
+                                        <RadioButton Style="{StaticResource MaterialDesignTabRadioButton}"
+                                                     Content="Cash For Work"
+                                                     IsChecked="{Binding SelectedProjectFilter, Converter={StaticResource EqualityToBooleanConverter}, ConverterParameter='Cash For Work'}"
+                                                     Command="{Binding FilterCommand}" CommandParameter="Cash For Work"
+                                                     Height="38" HorizontalContentAlignment="Left" Margin="0,0,0,4"/>
+                                        <RadioButton Style="{StaticResource MaterialDesignTabRadioButton}"
+                                                     Content="Project Distribution"
+                                                     IsChecked="{Binding SelectedProjectFilter, Converter={StaticResource EqualityToBooleanConverter}, ConverterParameter='Project Distribution'}"
+                                                     Command="{Binding FilterCommand}" CommandParameter="Project Distribution"
+                                                     Height="38" HorizontalContentAlignment="Left" Margin="0,0,0,4"/>
+                                    </StackPanel>
+
+                                    <TextBlock Text="OPERATIONS" Style="{StaticResource SidebarHeaderStyle}"/>
+                                    <Button Content="SYNC WITH GGMS" 
+                                            Command="{Binding LoadCommand}"
+                                            Style="{StaticResource GoldActionButton}" 
+                                            Height="45" Margin="0,0,0,8" FontSize="14"/>
+                                </StackPanel>
+                            </Border>
+                        </ScrollViewer>
+
+                        <!-- Status Summary -->
+                        <Border Grid.Row="2" Padding="20" Background="{DynamicResource ThemeCardBrush}" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="0,1,0,0">
+                            <StackPanel>
+                                <TextBlock Text="SYNC STATUS" Style="{StaticResource SidebarHeaderStyle}"/>
+                                <TextBlock Text="{Binding StatusMessage}" FontSize="12" Foreground="{DynamicResource BrandTextSecondaryBrush}" TextWrapping="Wrap"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                                    <materialDesign:PackIcon Kind="CloudCheck" Foreground="{DynamicResource BrandSuccessBrush}" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Connected to GGMS" FontSize="11" Margin="8,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource BrandSuccessBrush}"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </Border>
+
+                <!-- Main Content Area -->
+                <Grid Grid.Column="1" Margin="30">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Page Header -->
+                    <Grid Grid.Row="0" Margin="0,0,0,24">
+                        <StackPanel>
+                            <TextBlock Text="Consolidated Transactions" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource ThemePrimaryActionBrush}"/>
+                            <TextBlock Text="View and filter all eKalinga+ transactions synced to GGMS." FontSize="13" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,4,0,0"/>
+                        </StackPanel>
                     </Grid>
 
-                    <TextBlock Text="Project Filter" FontSize="12" FontWeight="Medium" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,8"/>
-                    <StackPanel Margin="0,0,0,20">
-                        <RadioButton Style="{StaticResource MaterialDesignTabRadioButton}"
-                                     Content="All Transactions"
-                                     IsChecked="True"
-                                     Command="{Binding FilterCommand}" CommandParameter="All Transactions"
-                                     Margin="0,0,0,8"/>
-                        <RadioButton Style="{StaticResource MaterialDesignTabRadioButton}"
-                                     Content="Aid Request"
-                                     Command="{Binding FilterCommand}" CommandParameter="Aid Request"
-                                     Margin="0,0,0,8"/>
-                        <RadioButton Style="{StaticResource MaterialDesignTabRadioButton}"
-                                     Content="Cash For Work"
-                                     Command="{Binding FilterCommand}" CommandParameter="Cash For Work"
-                                     Margin="0,0,0,8"/>
-                        <RadioButton Style="{StaticResource MaterialDesignTabRadioButton}"
-                                     Content="Project Distribution"
-                                     Command="{Binding FilterCommand}" CommandParameter="Project Distribution"
-                                     Margin="0,0,0,8"/>
-                    </StackPanel>
+                    <!-- Data Grid Container -->
+                    <Border Grid.Row="1" Background="{DynamicResource ThemeCardBrush}" CornerRadius="12" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="1">
+                        <Grid>
+                            <DataGrid ItemsSource="{Binding PagedTransactions}" 
+                                      Style="{StaticResource PatternBGridStyle}">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Date" Binding="{Binding TransactionDate, StringFormat='MMM dd, yyyy'}" Width="120"/>
+                                    <DataGridTextColumn Header="Beneficiary Name" Binding="{Binding FullName}" Width="2*"/>
+                                    <DataGridTextColumn Header="Project" Binding="{Binding ProjectName}" Width="160"/>
+                                    <DataGridTextColumn Header="Type" Binding="{Binding TransactionType}" Width="160"/>
+                                    <DataGridTextColumn Header="Amount" Binding="{Binding Amount, StringFormat='N2'}" Width="130">
+                                        <DataGridTextColumn.ElementStyle>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="HorizontalAlignment" Value="Right"/>
+                                                <Setter Property="VerticalAlignment" Value="Center"/>
+                                                <Setter Property="Margin" Value="0,0,20,0"/>
+                                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                            </Style>
+                                        </DataGridTextColumn.ElementStyle>
+                                    </DataGridTextColumn>
+                                    <DataGridTemplateColumn Header="Status" Width="120">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <Border Background="#D1FAE5" CornerRadius="12" Padding="10,4" HorizontalAlignment="Center">
+                                                    <TextBlock Text="{Binding Status}" Foreground="#065F46" FontSize="11" FontWeight="Bold"/>
+                                                </Border>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                </DataGrid.Columns>
+                            </DataGrid>
 
-                    <Button Style="{StaticResource MaterialDesignFlatButton}"
-                            Command="{Binding LoadCommand}"
-                            HorizontalAlignment="Left">
-                        <StackPanel Orientation="Horizontal">
-                            <materialDesign:PackIcon Kind="Refresh" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="Sync with GGMS" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
-                </StackPanel>
+                            <!-- Empty State -->
+                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" 
+                                        Visibility="{Binding PagedTransactions.Count, Converter={StaticResource NumericToVisibilityConverter}, ConverterParameter=0}">
+                                <materialDesign:PackIcon Kind="DatabaseSearch" Width="48" Height="48" Foreground="{DynamicResource BrandBorderBrush}" HorizontalAlignment="Center"/>
+                                <TextBlock Text="No transactions found." FontSize="14" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,12,0,0"/>
+                            </StackPanel>
 
-                <!-- Dashboard Nav -->
-                <Button DockPanel.Dock="Bottom" 
-                        Style="{StaticResource MaterialDesignFlatButton}"
-                        Command="{Binding RelativeSource={RelativeSource AncestorType=Window}, Path=DataContext.ShowDashboardCommand}"
-                        HorizontalAlignment="Left" Margin="0,20,0,0">
-                    <StackPanel Orientation="Horizontal">
-                        <materialDesign:PackIcon Kind="ViewDashboard" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                        <TextBlock Text="Return to Dashboard" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
-            </DockPanel>
-        </Border>
+                            <!-- Loading Overlay -->
+                            <Border Background="#CCFFFFFF" Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}" CornerRadius="12">
+                                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                    <ProgressBar Style="{StaticResource MaterialDesignCircularProgressBar}" Value="0" IsIndeterminate="True" Width="48" Height="48" Foreground="{DynamicResource BrandBrush}"/>
+                                    <TextBlock Text="{Binding StatusMessage}" Margin="0,16,0,0" FontWeight="Bold" Foreground="{DynamicResource ThemePrimaryActionBrush}"/>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </Border>
 
-        <!-- Main Content -->
-        <Grid Grid.Column="1" Margin="24">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
+                    <!-- Pagination -->
+                    <Border Grid.Row="2" Margin="0,20,0,0" Padding="16" Background="{DynamicResource ThemeCardBrush}" CornerRadius="12" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="1">
+                        <DockPanel>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="Showing page " FontSize="13" Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
+                                <TextBlock Text="{Binding CurrentPage}" FontWeight="Bold" FontSize="13" Foreground="{DynamicResource ThemePrimaryActionBrush}"/>
+                                <TextBlock Text=" of " FontSize="13" Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
+                                <TextBlock Text="{Binding TotalPages}" FontWeight="Bold" FontSize="13" Foreground="{DynamicResource ThemePrimaryActionBrush}"/>
+                                <TextBlock Text=" total pages" FontSize="13" Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
+                            </StackPanel>
 
-            <!-- Header -->
-            <StackPanel Grid.Row="0" Margin="0,0,0,24">
-                <TextBlock Text="Consolidated Transactions" FontSize="28" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}"/>
-                <TextBlock Text="Global Government Management System (GGMS) - Office OFF-2026-0006" 
-                           FontSize="14" Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
-            </StackPanel>
-
-            <!-- DataGrid -->
-            <materialDesign:Card Grid.Row="1" Padding="0" VerticalAlignment="Stretch">
-                <Grid>
-                    <DataGrid ItemsSource="{Binding PagedTransactions}" 
-                              AutoGenerateColumns="False" 
-                              IsReadOnly="True" 
-                              Background="Transparent"
-                              SelectionMode="Single"
-                              HeadersVisibility="Column">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="Date" Binding="{Binding TransactionDate, StringFormat='MMM dd, yyyy'}" Width="110"/>
-                            <DataGridTextColumn Header="Beneficiary Name" Binding="{Binding FullName}" Width="2*"/>
-                            <DataGridTextColumn Header="Project" Binding="{Binding ProjectName}" Width="150"/>
-                            <DataGridTextColumn Header="Type" Binding="{Binding TransactionType}" Width="150"/>
-                            <DataGridTextColumn Header="Amount" Binding="{Binding Amount, StringFormat='N2'}" Width="120">
-                                <DataGridTextColumn.ElementStyle>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="HorizontalAlignment" Value="Right"/>
-                                        <Setter Property="Margin" Value="0,0,10,0"/>
-                                    </Style>
-                                </DataGridTextColumn.ElementStyle>
-                            </DataGridTextColumn>
-                            <DataGridTemplateColumn Header="Status" Width="100">
-                                <DataGridTemplateColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <Border Background="#D1FAE5" CornerRadius="4" Padding="8,2">
-                                            <TextBlock Text="{Binding Status}" Foreground="#065F46" FontSize="11" FontWeight="Medium" HorizontalAlignment="Center"/>
-                                        </Border>
-                                    </DataTemplate>
-                                </DataGridTemplateColumn.CellTemplate>
-                            </DataGridTemplateColumn>
-                        </DataGrid.Columns>
-                    </DataGrid>
-
-                    <!-- Empty State -->
-                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" 
-                                Visibility="{Binding PagedTransactions.Count, Converter={StaticResource NumericToVisibilityConverter}, ConverterParameter=0}">
-                        <materialDesign:PackIcon Kind="DatabaseSearch" Width="48" Height="48" Foreground="{DynamicResource BrandBorderBrush}" HorizontalAlignment="Center"/>
-                        <TextBlock Text="No transactions found." Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,12,0,0"/>
-                    </StackPanel>
-
-                    <!-- Loading Overlay -->
-                    <Border Background="#80FFFFFF" Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                            <ProgressBar Style="{StaticResource MaterialDesignCircularProgressBar}" Value="0" IsIndeterminate="True" Width="48" Height="48"/>
-                            <TextBlock Text="{Binding StatusMessage}" Margin="0,16,0,0" FontWeight="Medium"/>
-                        </StackPanel>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                <Button Style="{StaticResource MaterialDesignFlatButton}" 
+                                        Command="{Binding PreviousPageCommand}"
+                                        Width="40" Height="40" Padding="0">
+                                    <materialDesign:PackIcon Kind="ChevronLeft" Width="24" Height="24"/>
+                                </Button>
+                                <Button Style="{StaticResource MaterialDesignFlatButton}" 
+                                        Command="{Binding NextPageCommand}"
+                                        Width="40" Height="40" Padding="0" Margin="8,0,0,0">
+                                    <materialDesign:PackIcon Kind="ChevronRight" Width="24" Height="24"/>
+                                </Button>
+                            </StackPanel>
+                        </DockPanel>
                     </Border>
                 </Grid>
-            </materialDesign:Card>
-
-            <!-- Pagination -->
-            <Border Grid.Row="2" Margin="0,16,0,0" Padding="12" Background="{DynamicResource ThemeCardBrush}" CornerRadius="8">
-                <DockPanel>
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock Text="Showing page " Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
-                        <TextBlock Text="{Binding CurrentPage}" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}"/>
-                        <TextBlock Text=" of " Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
-                        <TextBlock Text="{Binding TotalPages}" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}"/>
-                    </StackPanel>
-
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                        <Button Style="{StaticResource MaterialDesignOutlinedButton}" 
-                                Content="Previous" 
-                                Command="{Binding PreviousPageCommand}"
-                                Margin="0,0,8,0"/>
-                        <Button Style="{StaticResource MaterialDesignOutlinedButton}" 
-                                Content="Next" 
-                                Command="{Binding NextPageCommand}"/>
-                    </StackPanel>
-                </DockPanel>
-            </Border>
+            </Grid>
         </Grid>
+
+        <!-- OVERLAYS (Standard Backdrop) -->
+        <Border Background="#CC0F172A" Visibility="{Binding IsAnyOverlayOpen, Converter={StaticResource BooleanToVisibilityConverter}}" Panel.ZIndex="100"/>
     </Grid>
 </UserControl>

@@ -1876,6 +1876,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private void RefreshDrawerVisibilityFlags()
         {
             OnPropertyChanged(nameof(IsDrawerOpen));
+            OnPropertyChanged(nameof(IsAnyOverlayOpen));
             OnPropertyChanged(nameof(DrawerVisibility));
             OnPropertyChanged(nameof(EventEditorVisibility));
             OnPropertyChanged(nameof(BeneficiariesVisibility));

@@ -30,11 +30,19 @@ namespace AttendanceShiftingManagement.Views
 
         private void OpenFilterDialog()
         {
-            var dialog = new Dialog.MasterListFilterDialog(_viewModel)
+            _viewModel.IsFilterPanelOpen = true;
+            try
             {
-                Owner = Window.GetWindow(this)
-            };
-            dialog.ShowDialog();
+                var dialog = new Dialog.MasterListFilterDialog(_viewModel)
+                {
+                    Owner = Window.GetWindow(this)
+                };
+                dialog.ShowDialog();
+            }
+            finally
+            {
+                _viewModel.IsFilterPanelOpen = false;
+            }
         }
 
         private void Grid_MouseDoubleClick(object sender, MouseButtonEventArgs e)
@@ -42,11 +50,19 @@ namespace AttendanceShiftingManagement.Views
             var grid = sender as DataGrid;
             if (grid?.SelectedItem == null) return;
 
-            var dialog = new Dialog.MasterListDetailDialog(_viewModel)
+            _viewModel.IsDetailPanelOpen = true;
+            try
             {
-                Owner = Window.GetWindow(this)
-            };
-            dialog.ShowDialog();
+                var dialog = new Dialog.MasterListDetailDialog(_viewModel)
+                {
+                    Owner = Window.GetWindow(this)
+                };
+                dialog.ShowDialog();
+            }
+            finally
+            {
+                _viewModel.IsDetailPanelOpen = false;
+            }
         }
     }
 }

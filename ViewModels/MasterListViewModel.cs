@@ -56,6 +56,8 @@ namespace AttendanceShiftingManagement.ViewModels
         private int _selectedPageSize = 100;
         private bool _isBusy;
         private bool _isHistoryLoading;
+        private bool _isFilterPanelOpen;
+        private bool _isDetailPanelOpen;
         private string _statusMessage = "Loading validated beneficiaries...";
         private Brush _statusBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#6B7280"));
         private int _totalBeneficiaries;
@@ -158,6 +160,32 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             get => _isHistoryLoading;
             private set => SetProperty(ref _isHistoryLoading, value);
+        }
+
+        public bool IsAnyOverlayOpen => _isFilterPanelOpen || _isDetailPanelOpen;
+
+        public bool IsFilterPanelOpen
+        {
+            get => _isFilterPanelOpen;
+            set
+            {
+                if (SetProperty(ref _isFilterPanelOpen, value))
+                {
+                    OnPropertyChanged(nameof(IsAnyOverlayOpen));
+                }
+            }
+        }
+
+        public bool IsDetailPanelOpen
+        {
+            get => _isDetailPanelOpen;
+            set
+            {
+                if (SetProperty(ref _isDetailPanelOpen, value))
+                {
+                    OnPropertyChanged(nameof(IsAnyOverlayOpen));
+                }
+            }
         }
 
         public Visibility HistoryEmptyStateVisibility => (SelectedBeneficiaryHistory.Count == 0 && !IsHistoryLoading) ? Visibility.Visible : Visibility.Collapsed;

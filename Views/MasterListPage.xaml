@@ -9,6 +9,14 @@
     <UserControl.Resources>
         <helpers:NullToHiddenConverter x:Key="NullToHiddenConverter" />
         
+        <Style x:Key="SidebarHeaderStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Foreground" Value="{DynamicResource ThemePrimaryActionBrush}" />
+            <Setter Property="Margin" Value="0,0,0,12" />
+            <Setter Property="Typography.Capitals" Value="AllSmallCaps"/>
+        </Style>
+
         <Style x:Key="PatternBGridStyle" TargetType="DataGrid" BasedOn="{StaticResource {x:Type DataGrid}}">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
@@ -26,152 +34,243 @@
         </Style>
     </UserControl.Resources>
 
-    <Grid Margin="24">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
+    <Grid>
+        <!-- Main Layout Container with Blur Effect -->
+        <Grid>
+            <Grid.Effect>
+                <BlurEffect Radius="0" x:Name="BackgroundBlur"/>
+            </Grid.Effect>
+            <Grid.Style>
+                <Style TargetType="Grid">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsAnyOverlayOpen}" Value="True">
+                            <DataTrigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetProperty="(Grid.Effect).(BlurEffect.Radius)" To="15" Duration="0:0:0.3"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </DataTrigger.EnterActions>
+                            <DataTrigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetProperty="(Grid.Effect).(BlurEffect.Radius)" To="0" Duration="0:0:0.3"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </DataTrigger.ExitActions>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Grid.Style>
 
-        <!-- Pattern B Header -->
-        <materialDesign:Card Grid.Row="0" Padding="12,8" Background="{DynamicResource ThemeCardBrush}" UniformCornerRadius="16">
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="320" />
+                    <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
-                <!-- Left: Title -->
-                <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="8,0">
-                    <TextBlock Text="Masterlist Management" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource BrandMidnightBrush}"/>
-                    <TextBlock Text="Validate staging records and manage the approved registry." FontSize="12" Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
-                </StackPanel>
+                <!-- Sidebar Navigation -->
+                <Border Grid.Column="0" Background="{DynamicResource ThemeCardSubtleBrush}" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="0,0,1,0">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
 
-                <!-- Center: Stats Card -->
-                <materialDesign:Card Grid.Column="1" Padding="16,8" Background="{DynamicResource ThemeCardSubtleBrush}" UniformCornerRadius="12">
-                    <StackPanel Orientation="Horizontal">
-                        <StackPanel Margin="0,0,24,0">
-                            <TextBlock Text="PENDING" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
-                            <TextBlock Text="{Binding PendingBeneficiaries.Count, StringFormat=N0}" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource ThemeWarningForegroundBrush}"/>
+                        <!-- Dashboard Navigation -->
+                        <StackPanel Grid.Row="0" Margin="20,20,20,10">
+                            <Button Content="DASHBOARD" 
+                                    Command="{Binding DataContext.ShowDashboardCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                    Style="{StaticResource MaterialDesignOutlinedButton}"
+                                    Height="45" Margin="0,0,0,20"/>
                         </StackPanel>
-                        <StackPanel>
-                            <TextBlock Text="APPROVED" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
-                            <TextBlock Text="{Binding TotalBeneficiaries, StringFormat=N0}" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource BrandSuccessBrush}"/>
-                        </StackPanel>
-                    </StackPanel>
-                </materialDesign:Card>
 
-                <!-- Right: Actions -->
-                <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                    <Button Content="FILTER / SEARCH" 
-                            Style="{StaticResource SecondaryActionButton}" 
-                            Height="40" 
-                            Padding="16,0"
-                            Click="Filter_Click"
-                            Margin="0,0,8,0"/>
-                    <Button Content="DASHBOARD" 
-                            Style="{StaticResource MaterialDesignFlatButton}"
-                            Height="40"
-                            Command="{Binding DataContext.ShowDashboardCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"/>
-                </StackPanel>
-            </Grid>
-        </materialDesign:Card>
+                        <!-- Sidebar Actions -->
+                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                            <Border Padding="20,0,20,20">
+                                <StackPanel>
+                                    <TextBlock Text="REGISTRY OPERATIONS" Style="{StaticResource SidebarHeaderStyle}"/>
 
-        <!-- Pattern B Three-Column Workspace -->
-        <Grid Grid.Row="1" Margin="0,18,0,0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="56"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
+                                    <Button Content="REFRESH LISTS" 
+                                            Command="{Binding RefreshCommand}"
+                                            Style="{StaticResource GoldActionButton}" 
+                                            HorizontalContentAlignment="Left" Height="45" Margin="0,0,0,8" FontSize="14"/>
 
-            <!-- Left: Pending/Staging DataGrid -->
-            <Border Grid.Column="0" Background="{DynamicResource ThemeCardBrush}" CornerRadius="16" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="1" Padding="0">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-                    
-                    <Border Grid.Row="0" Padding="16" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource BrandBorderBrush}" Background="{DynamicResource ThemeCardSubtleBrush}" CornerRadius="16,16,0,0">
-                        <TextBlock Text="STAGING / PENDING" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}"/>
-                    </Border>
+                                    <Button Content="FILTER / SEARCH" 
+                                            Click="Filter_Click"
+                                            Style="{StaticResource MaterialDesignOutlinedButton}" 
+                                            HorizontalContentAlignment="Left" Height="45" Margin="0,0,0,20" FontSize="14"/>
 
-                    <DataGrid Grid.Row="1" ItemsSource="{Binding PendingBeneficiaries}" SelectedItem="{Binding SelectedPendingBeneficiary}" Style="{StaticResource PatternBGridStyle}" MouseDoubleClick="Grid_MouseDoubleClick">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="Full Name" Binding="{Binding FullName}" Width="*"/>
-                            <DataGridTextColumn Header="Staging ID" Binding="{Binding ResidentsId}" Width="100"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
+                                    <TextBlock Text="VALIDATION ACTIONS" Style="{StaticResource SidebarHeaderStyle}"/>
+                                    
+                                    <Button Content="APPROVE SELECTED" 
+                                            Command="{Binding ApproveCommand}" 
+                                            Margin="0,0,0,8" Height="44" 
+                                            Style="{StaticResource GoldActionButton}"/>
 
-                    <Border Grid.Row="2" Padding="16" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource BrandBorderBrush}">
-                        <TextBlock Text="{Binding PendingBeneficiaries.Count, StringFormat='{}{0} Records'}" FontSize="11" Foreground="{DynamicResource BrandTextSecondaryBrush}" HorizontalAlignment="Right"/>
-                    </Border>
-                </Grid>
-            </Border>
+                                    <Button Content="REJECT SELECTED" 
+                                            Command="{Binding RejectCommand}" 
+                                            Margin="0,0,0,8" Height="40" 
+                                            Style="{StaticResource MaterialDesignOutlinedButton}"
+                                            Foreground="{DynamicResource BrandRedBrush}"/>
+                                    
+                                    <Button Content="RETURN TO PENDING" 
+                                            Command="{Binding ReturnToPendingCommand}" 
+                                            Margin="0,0,0,20" Height="40" 
+                                            Style="{StaticResource MaterialDesignOutlinedButton}"/>
 
-            <!-- Center: Action Column -->
-            <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Center">
-                <Button Command="{Binding ApproveCommand}"
-                        Style="{StaticResource MaterialDesignIconButton}"
-                        ToolTip="Approve Selected"
-                        Foreground="{DynamicResource BrandSuccessBrush}"
-                        Width="44" Height="44">
-                    <materialDesign:PackIcon Kind="CheckCircle" Width="24" Height="24"/>
-                </Button>
-                <Button Command="{Binding RejectCommand}"
-                        Style="{StaticResource MaterialDesignIconButton}"
-                        ToolTip="Reject Selected"
-                        Foreground="#B91C1C"
-                        Width="44" Height="44" Margin="0,12,0,0">
-                    <materialDesign:PackIcon Kind="CloseCircle" Width="24" Height="24"/>
-                </Button>
-                <Button Command="{Binding RefreshCommand}"
-                        Style="{StaticResource MaterialDesignIconButton}"
-                        ToolTip="Refresh Lists"
-                        Foreground="{DynamicResource BrandMidnightBrush}"
-                        Width="44" Height="44" Margin="0,12,0,0">
-                    <materialDesign:PackIcon Kind="Refresh" Width="24" Height="24"/>
-                </Button>
-            </StackPanel>
+                                    <TextBlock Text="DIGITAL ID &amp; TOOLS" Style="{StaticResource SidebarHeaderStyle}"/>
+                                    
+                                    <Button Content="PRINT DIGITAL ID" 
+                                            Command="{Binding PrintDigitalIdCommand}" 
+                                            Margin="0,0,0,8" Height="40" 
+                                            Style="{StaticResource MaterialDesignOutlinedButton}"/>
 
-            <!-- Right: Approved/Registry DataGrid -->
-            <Border Grid.Column="2" Background="{DynamicResource ThemeCardBrush}" CornerRadius="16" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="1" Padding="0">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-                    
-                    <Border Grid.Row="0" Padding="16" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource BrandBorderBrush}" Background="{DynamicResource ThemeCardSubtleBrush}" CornerRadius="16,16,0,0">
-                        <TextBlock Text="APPROVED REGISTRY" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}"/>
-                    </Border>
+                                    <Button Content="UPLOAD PHOTO" 
+                                            Command="{Binding UploadDigitalIdPhotoCommand}" 
+                                            Margin="0,0,0,8" Height="40" 
+                                            Style="{StaticResource MaterialDesignOutlinedButton}"/>
 
-                    <DataGrid Grid.Row="1" ItemsSource="{Binding ApprovedBeneficiaries}" SelectedItem="{Binding SelectedApprovedBeneficiary}" Style="{StaticResource PatternBGridStyle}" MouseDoubleClick="Grid_MouseDoubleClick">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="Full Name" Binding="{Binding FullName}" Width="*"/>
-                            <DataGridTextColumn Header="Beneficiary ID" Binding="{Binding BeneficiaryId}" Width="120"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
+                                    <Button Content="CREATE SCAN SESSION" 
+                                            Command="{Binding CreateLookupScannerSessionCommand}" 
+                                            Margin="0,0,0,20" Height="40" 
+                                            Style="{StaticResource MaterialDesignOutlinedButton}"/>
+                                </StackPanel>
+                            </Border>
+                        </ScrollViewer>
 
-                    <Border Grid.Row="2" Padding="16" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource BrandBorderBrush}">
-                        <Grid>
-                            <TextBlock Text="{Binding TotalBeneficiaries, StringFormat='{}{0} Total Validated'}" FontSize="11" Foreground="{DynamicResource BrandTextSecondaryBrush}" HorizontalAlignment="Left"/>
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                <Button Style="{StaticResource MaterialDesignFlatButton}" Command="{Binding PreviousPageCommand}" Padding="4" Width="28" Height="28">
-                                    <materialDesign:PackIcon Kind="ChevronLeft" Width="18" Height="18"/>
-                                </Button>
-                                <TextBlock Text="{Binding CurrentPage}" VerticalAlignment="Center" Margin="8,0" FontSize="11" FontWeight="Bold"/>
-                                <Button Style="{StaticResource MaterialDesignFlatButton}" Command="{Binding NextPageCommand}" Padding="4" Width="28" Height="28">
-                                    <materialDesign:PackIcon Kind="ChevronRight" Width="18" Height="18"/>
-                                </Button>
+                        <!-- Registry Stats -->
+                        <Border Grid.Row="2" Padding="20" Background="{DynamicResource ThemeCardBrush}" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="0,1,0,0">
+                            <StackPanel>
+                                <TextBlock Text="REGISTRY SUMMARY" Style="{StaticResource SidebarHeaderStyle}"/>
+                                <UniformGrid Columns="2">
+                                    <StackPanel Margin="0,0,10,10">
+                                        <TextBlock Text="PENDING" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
+                                        <TextBlock Text="{Binding PendingBeneficiaries.Count, StringFormat=N0}" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource ThemeWarningForegroundBrush}"/>
+                                    </StackPanel>
+                                    <StackPanel Margin="0,0,0,10">
+                                        <TextBlock Text="APPROVED" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
+                                        <TextBlock Text="{Binding TotalBeneficiaries, StringFormat=N0}" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource BrandSuccessBrush}"/>
+                                    </StackPanel>
+                                </UniformGrid>
                             </StackPanel>
-                        </Grid>
-                    </Border>
+                        </Border>
+                    </Grid>
+                </Border>
+
+                <!-- Main Content Area -->
+                <Grid Grid.Column="1" Margin="30">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Page Header -->
+                    <Grid Grid.Row="0" Margin="0,0,0,24">
+                        <StackPanel>
+                            <TextBlock Text="Masterlist Management" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource ThemePrimaryActionBrush}"/>
+                            <TextBlock Text="Validate staging records and manage the approved registry." FontSize="13" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Workspace -->
+                    <Grid Grid.Row="1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="56"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Left: Pending/Staging -->
+                        <Border Grid.Column="0" Background="{DynamicResource ThemeCardBrush}" CornerRadius="12" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="1">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                
+                                <Border Grid.Row="0" Padding="16" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource BrandBorderBrush}" Background="{DynamicResource ThemeCardSubtleBrush}" CornerRadius="12,12,0,0">
+                                    <TextBlock Text="STAGING / PENDING" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}"/>
+                                </Border>
+
+                                <DataGrid Grid.Row="1" ItemsSource="{Binding PendingBeneficiaries}" SelectedItem="{Binding SelectedPendingBeneficiary}" Style="{StaticResource PatternBGridStyle}" MouseDoubleClick="Grid_MouseDoubleClick">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Full Name" Binding="{Binding FullName}" Width="*"/>
+                                        <DataGridTextColumn Header="Staging ID" Binding="{Binding ResidentsId}" Width="100"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+
+                                <Border Grid.Row="2" Padding="12,8" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource BrandBorderBrush}">
+                                    <TextBlock Text="{Binding PendingBeneficiaries.Count, StringFormat='{}{0} Records'}" FontSize="11" Foreground="{DynamicResource BrandTextSecondaryBrush}" HorizontalAlignment="Right"/>
+                                </Border>
+                            </Grid>
+                        </Border>
+
+                        <!-- Center: Action Column -->
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <Button Command="{Binding ApproveCommand}"
+                                    Style="{StaticResource MaterialDesignIconButton}"
+                                    ToolTip="Approve Selected"
+                                    Foreground="{DynamicResource BrandSuccessBrush}"
+                                    Width="44" Height="44">
+                                <materialDesign:PackIcon Kind="CheckCircle" Width="24" Height="24"/>
+                            </Button>
+                            <Button Command="{Binding RejectCommand}"
+                                    Style="{StaticResource MaterialDesignIconButton}"
+                                    ToolTip="Reject Selected"
+                                    Foreground="#B91C1C"
+                                    Width="44" Height="44" Margin="0,12,0,0">
+                                <materialDesign:PackIcon Kind="CloseCircle" Width="24" Height="24"/>
+                            </Button>
+                        </StackPanel>
+
+                        <!-- Right: Approved/Registry -->
+                        <Border Grid.Column="2" Background="{DynamicResource ThemeCardBrush}" CornerRadius="12" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="1">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                
+                                <Border Grid.Row="0" Padding="16" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource BrandBorderBrush}" Background="{DynamicResource ThemeCardSubtleBrush}" CornerRadius="12,12,0,0">
+                                    <TextBlock Text="APPROVED REGISTRY" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}"/>
+                                </Border>
+
+                                <DataGrid Grid.Row="1" ItemsSource="{Binding ApprovedBeneficiaries}" SelectedItem="{Binding SelectedApprovedBeneficiary}" Style="{StaticResource PatternBGridStyle}" MouseDoubleClick="Grid_MouseDoubleClick">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Full Name" Binding="{Binding FullName}" Width="*"/>
+                                        <DataGridTextColumn Header="Beneficiary ID" Binding="{Binding BeneficiaryId}" Width="120"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+
+                                <Border Grid.Row="2" Padding="12,8" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource BrandBorderBrush}">
+                                    <Grid>
+                                        <TextBlock Text="{Binding PageSummary}" FontSize="11" Foreground="{DynamicResource BrandTextSecondaryBrush}" VerticalAlignment="Center" HorizontalAlignment="Left"/>
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                            <Button Style="{StaticResource MaterialDesignFlatButton}" Command="{Binding PreviousPageCommand}" Padding="4" Width="28" Height="28">
+                                                <materialDesign:PackIcon Kind="ChevronLeft" Width="18" Height="18"/>
+                                            </Button>
+                                            <TextBlock Text="{Binding CurrentPage}" VerticalAlignment="Center" Margin="8,0" FontSize="11" FontWeight="Bold"/>
+                                            <Button Style="{StaticResource MaterialDesignFlatButton}" Command="{Binding NextPageCommand}" Padding="4" Width="28" Height="28">
+                                                <materialDesign:PackIcon Kind="ChevronRight" Width="18" Height="18"/>
+                                            </Button>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </Grid>
+                        </Border>
+                    </Grid>
                 </Grid>
-            </Border>
+            </Grid>
         </Grid>
+
+        <!-- OVERLAYS (Placeholder for Detail/Filter Panels) -->
+        <Border Background="#CC0F172A" Visibility="{Binding IsAnyOverlayOpen, Converter={StaticResource BooleanToVisibilityConverter}}" Panel.ZIndex="100">
+            <!-- Content for Detail/Filter panels would go here or be injected via UserControls -->
+            <TextBlock Text="Panel Placeholder" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Border>
     </Grid>
 </UserControl>

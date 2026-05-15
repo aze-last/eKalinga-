@@ -23,6 +23,8 @@ namespace AttendanceShiftingManagement.ViewModels
         private int _pageSize = 25;
         private int _totalPages = 1;
         private bool _isBusy;
+        private bool _isFilterPanelOpen;
+        private bool _isDetailPanelOpen;
         private string _statusMessage = "Ready";
 
         public GgmsConsolidatedTransactionViewModel(User currentUser)
@@ -108,6 +110,32 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             get => _isBusy;
             set => SetProperty(ref _isBusy, value);
+        }
+
+        public bool IsAnyOverlayOpen => _isFilterPanelOpen || _isDetailPanelOpen;
+
+        public bool IsFilterPanelOpen
+        {
+            get => _isFilterPanelOpen;
+            set
+            {
+                if (SetProperty(ref _isFilterPanelOpen, value))
+                {
+                    OnPropertyChanged(nameof(IsAnyOverlayOpen));
+                }
+            }
+        }
+
+        public bool IsDetailPanelOpen
+        {
+            get => _isDetailPanelOpen;
+            set
+            {
+                if (SetProperty(ref _isDetailPanelOpen, value))
+                {
+                    OnPropertyChanged(nameof(IsAnyOverlayOpen));
+                }
+            }
         }
 
         public string StatusMessage

@@ -268,6 +268,15 @@ public sealed class GgmsConsolidatedTransactionReleaseTests
             return Task.FromResult<string?>(null);
         }
 
+        public Task<string?> TryWriteBulkProjectDistributionClaimsAsync(AppDbContext context, AyudaProgram? program, IReadOnlyCollection<AyudaProjectClaim> claims)
+        {
+            foreach (var claim in claims)
+            {
+                ProjectClaimWrites.Add((program, claim));
+            }
+            return Task.FromResult<string?>(null);
+        }
+
         public Task<string?> TryWriteCashForWorkReleaseAsync(
             AppDbContext context,
             CashForWorkEvent cashForWorkEvent,
