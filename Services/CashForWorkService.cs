@@ -257,21 +257,22 @@ namespace AttendanceShiftingManagement.Services
 
             EnsureEventCanBeModified(cashForWorkEvent);
 
+            var endDate = cashForWorkEvent.FinishDate?.Date ?? cashForWorkEvent.EventDate.Date;
+            if (DateTime.Today < cashForWorkEvent.EventDate.Date || DateTime.Today > endDate)
+            {
+                throw new InvalidOperationException($"Attendance can only be recorded between {cashForWorkEvent.EventDate:MMM dd} and {endDate:MMM dd}.");
+            }
+
             if (cashForWorkEvent.EventKind == CashForWorkEventKind.Seminar)
             {
                 throw new InvalidOperationException("Seminar attendance is scan-based only.");
-            }
-
-            if (cashForWorkEvent.EventDate.Date > DateTime.Today)
-            {
-                throw new InvalidOperationException("Attendance cannot be recorded for future events.");
             }
 
             var selectedParticipantIds = participantIds
                 .Distinct()
                 .ToList();
             var validParticipantIds = GetValidParticipantIds(eventId);
-            var recordedParticipantIds = GetRecordedParticipantIds(eventId, cashForWorkEvent.EventDate.Date);
+            var recordedParticipantIds = GetRecordedParticipantIds(eventId, DateTime.Today);
 
             foreach (var participantId in selectedParticipantIds)
             {
@@ -283,7 +284,7 @@ namespace AttendanceShiftingManagement.Services
                 _context.CashForWorkAttendances.Add(new CashForWorkAttendance
                 {
                     ParticipantId = participantId,
-                    AttendanceDate = cashForWorkEvent.EventDate.Date,
+                    AttendanceDate = DateTime.Today,
                     Status = CashForWorkAttendanceStatus.Present,
                     Source = AttendanceCaptureSource.Manual,
                     RecordedByUserId = recordedByUserId,

@@ -284,7 +284,6 @@
     {
       "id": "permissions-officer@attendance-shifting-management",
       "role": "User Access & Permissions Officer",
-      "template": "permissions-officer.md",
       "allowedPaths": [
         "Models/User.cs",
         "Models/UserPermission.cs",
@@ -295,6 +294,18 @@
         "ViewModels/BarangayMainViewModel.cs",
         "Views/MainWindow.xaml",
         "Views/BarangayDashboardPage.xaml"
+      ]
+    },
+    {
+      "id": "sia-doc-worker@attendance-shifting-management",
+      "role": "Senior SIA Doc Writer, Researcher & Reviewer",
+      "template": "sia-doc-worker.md",
+      "allowedPaths": [
+        "docs",
+        "Maam Bahaya",
+        "Maam Bahaya/drafts",
+        "Maam Bahaya/research",
+        ".agent-team"
       ]
     }
   ]

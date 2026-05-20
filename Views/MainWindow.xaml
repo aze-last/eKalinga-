@@ -5,35 +5,37 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         mc:Ignorable="d"
-        Title=""
+        Title="eKalinga+"
         Width="1400"
         Height="900"
         MinWidth="1180"
         MinHeight="760"
         WindowStartupLocation="CenterScreen"
-        Background="Transparent"
+        Background="{DynamicResource ThemeWindowShellBrush}"
         WindowStyle="None"
-        AllowsTransparency="True"
+        ResizeMode="CanResizeWithGrip"
+        AllowsTransparency="False"
         FontFamily="Segoe UI">
 
     <WindowChrome.WindowChrome>
-        <WindowChrome CaptionHeight="40"
-                      ResizeBorderThickness="5"
+        <WindowChrome CaptionHeight="32"
+                      ResizeBorderThickness="6"
                       GlassFrameThickness="0"
-                      CornerRadius="0" />
+                      CornerRadius="0"
+                      UseAeroCaptionButtons="False" />
     </WindowChrome.WindowChrome>
 
     <Window.Resources>
         <Style x:Key="WindowControlButtonStyle"
                TargetType="Button"
                BasedOn="{StaticResource MaterialDesignFlatButton}">
-            <Setter Property="Width" Value="44" />
+            <Setter Property="Width" Value="46" />
             <Setter Property="Height" Value="32" />
             <Setter Property="Padding" Value="0" />
-            <Setter Property="Foreground" Value="{DynamicResource BrandTextSecondaryBrush}" />
+            <Setter Property="Foreground" Value="White" />
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="materialDesign:ButtonAssist.CornerRadius" Value="12" />
+            <Setter Property="materialDesign:ButtonAssist.CornerRadius" Value="0" />
             <Setter Property="WindowChrome.IsHitTestVisibleInChrome" Value="True" />
         </Style>
 
@@ -42,49 +44,84 @@
                BasedOn="{StaticResource WindowControlButtonStyle}">
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#EF4444" />
+                    <Setter Property="Background" Value="#E81123" />
                     <Setter Property="Foreground" Value="White" />
                 </Trigger>
             </Style.Triggers>
         </Style>
     </Window.Resources>
 
-    <Border Margin="0"
-            CornerRadius="30"
-            Background="{DynamicResource ThemeWindowShellBrush}"
-            BorderBrush="{DynamicResource ThemeWindowShellBorderBrush}"
-            BorderThickness="1">
-        <Grid Margin="18"
-              ClipToBounds="True">
+    <Border BorderBrush="#1E293B">
+        <Border.Style>
+            <Style TargetType="Border">
+                <Setter Property="BorderThickness" Value="1" />
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding WindowState, RelativeSource={RelativeSource AncestorType=Window}}" Value="Maximized">
+                        <Setter Property="BorderThickness" Value="0" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+        </Border.Style>
+        <Grid Background="{DynamicResource ThemeWindowShellBrush}">
             <Grid.RowDefinitions>
-                <RowDefinition Height="36" />
+                <RowDefinition Height="32" />
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
-            <Grid Grid.Row="0"
-                  Background="Transparent">
-                <StackPanel Orientation="Horizontal"
-                            HorizontalAlignment="Right"
-                            VerticalAlignment="Center"
-                            Margin="0,0,6,0">
-                    <Button Style="{StaticResource WindowControlButtonStyle}"
-                            Click="Minimize_Click"
-                            ToolTip="Minimize">
-                        <materialDesign:PackIcon Kind="WindowMinimize" Width="18" Height="18" />
-                    </Button>
-                    <Button Style="{StaticResource WindowControlButtonStyle}"
-                            Click="MaximizeRestore_Click"
-                            ToolTip="Maximize/Restore">
-                        <materialDesign:PackIcon Kind="WindowMaximize" Width="18" Height="18" />
-                    </Button>
-                    <Button Style="{StaticResource WindowCloseButtonStyle}"
-                            Click="Close_Click"
-                            ToolTip="Close">
-                        <materialDesign:PackIcon Kind="Close" Width="18" Height="18" />
-                    </Button>
-                </StackPanel>
-            </Grid>
+            <!-- Branded Slim Title Bar (32px) -->
+            <Border Grid.Row="0" 
+                    Background="#0F172A"
+                    Panel.ZIndex="1">
+                <Grid>
+                    <StackPanel Orientation="Horizontal"
+                                VerticalAlignment="Center"
+                                Margin="12,0,0,0">
+                        <materialDesign:PackIcon Kind="HandHeart" 
+                                               Foreground="White" 
+                                               Width="16" Height="16" 
+                                               VerticalAlignment="Center" />
+                        <TextBlock Text="eKalinga+" 
+                                 Foreground="White" 
+                                 FontWeight="SemiBold" 
+                                 FontSize="12"
+                                 Margin="8,0,0,0" 
+                                 VerticalAlignment="Center" />
+                    </StackPanel>
 
+                    <StackPanel Orientation="Horizontal"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Top">
+                        <Button Style="{StaticResource WindowControlButtonStyle}"
+                                Click="Minimize_Click"
+                                ToolTip="Minimize">
+                            <materialDesign:PackIcon Kind="WindowMinimize" Width="14" Height="14" />
+                        </Button>
+                        <Button x:Name="MaximizeButton"
+                                Style="{StaticResource WindowControlButtonStyle}"
+                                Click="MaximizeRestore_Click">
+                            <materialDesign:PackIcon Width="14" Height="14">
+                                <materialDesign:PackIcon.Style>
+                                    <Style TargetType="materialDesign:PackIcon">
+                                        <Setter Property="Kind" Value="WindowMaximize" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding WindowState, RelativeSource={RelativeSource AncestorType=Window}}" Value="Maximized">
+                                                <Setter Property="Kind" Value="WindowRestore" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </materialDesign:PackIcon.Style>
+                            </materialDesign:PackIcon>
+                        </Button>
+                        <Button Style="{StaticResource WindowCloseButtonStyle}"
+                                Click="Close_Click"
+                                ToolTip="Close">
+                            <materialDesign:PackIcon Kind="Close" Width="14" Height="14" />
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Main Content Area -->
             <ContentControl Grid.Row="1"
                             Content="{Binding CurrentView}" />
         </Grid>

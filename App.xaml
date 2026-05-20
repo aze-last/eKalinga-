@@ -58,6 +58,7 @@
             <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
             <helpers:NullToHiddenConverter x:Key="NullToHiddenConverter" />
             <helpers:EqualityToBooleanConverter x:Key="EqualityToBooleanConverter" />
+            <helpers:EqualityToBooleanConverter x:Key="EqualityToBooleanInverseConverter" Inverse="True" />
 
             <!-- Local fallback style keys so the app and designer do not depend on
                  toolkit-specific keyed resources being present in every environment. -->

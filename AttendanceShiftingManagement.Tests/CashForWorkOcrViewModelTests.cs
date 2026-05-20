@@ -43,8 +43,8 @@ public sealed class CashForWorkOcrViewModelTests
                 Assert.Equal(string.Empty, viewModel.EventTitle);
                 Assert.Equal(string.Empty, viewModel.EventLocation);
                 Assert.Equal(DateTime.Today, viewModel.EventDate.Date);
-                Assert.Equal("07:00", viewModel.EventStartTime);
-                Assert.Equal("12:00", viewModel.EventEndTime);
+                Assert.Equal(DateTime.Today.AddHours(7), viewModel.EventStartTime);
+                Assert.Equal(DateTime.Today.AddHours(12), viewModel.EventEndTime);
                 Assert.Equal(string.Empty, viewModel.EventNotes);
                 Assert.Equal("CREATE EVENT", viewModel.EventEditorSubmitLabel);
                 Assert.Equal("Create Event", viewModel.DrawerTitle);
@@ -99,8 +99,8 @@ public sealed class CashForWorkOcrViewModelTests
                 Assert.Equal(existingEvent.Title, viewModel.EventTitle);
                 Assert.Equal(existingEvent.Location, viewModel.EventLocation);
                 Assert.Equal(existingEvent.EventDate.Date, viewModel.EventDate.Date);
-                Assert.Equal("08:00", viewModel.EventStartTime);
-                Assert.Equal("12:00", viewModel.EventEndTime);
+                Assert.Equal(DateTime.Today.Date.Add(existingEvent.StartTime), viewModel.EventStartTime);
+                Assert.Equal(DateTime.Today.Date.Add(existingEvent.EndTime), viewModel.EventEndTime);
                 Assert.Equal(existingEvent.Notes, viewModel.EventNotes);
                 Assert.Equal("UPDATE EVENT", viewModel.EventEditorSubmitLabel);
                 Assert.Equal("Edit Event", viewModel.DrawerTitle);

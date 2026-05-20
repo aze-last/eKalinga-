@@ -70,8 +70,8 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _eventLocation = string.Empty;
         private string _eventNotes = string.Empty;
         private DateTime _eventDate = DateTime.Today;
-        private string _eventStartTime = "07:00";
-        private string _eventEndTime = "12:00";
+        private DateTime? _eventStartTime = DateTime.Today.AddHours(7);
+        private DateTime? _eventEndTime = DateTime.Today.AddHours(12);
         private DateTime? _finishDate = DateTime.Today;
         private CashForWorkBenefitType _benefitType = CashForWorkBenefitType.None;
         private string _benefitDescription = string.Empty;
@@ -519,16 +519,27 @@ namespace AttendanceShiftingManagement.ViewModels
         public DateTime EventDate
         {
             get => _eventDate;
-            set => SetProperty(ref _eventDate, value);
+            set
+            {
+                var oldDate = _eventDate;
+                if (SetProperty(ref _eventDate, value))
+                {
+                    // If FinishDate was the same as the old EventDate or null, update it to the new one
+                    if (!FinishDate.HasValue || FinishDate.Value.Date == oldDate.Date)
+                    {
+                        FinishDate = value;
+                    }
+                }
+            }
         }
 
-        public string EventStartTime
+        public DateTime? EventStartTime
         {
             get => _eventStartTime;
             set => SetProperty(ref _eventStartTime, value);
         }
 
-        public string EventEndTime
+        public DateTime? EventEndTime
         {
             get => _eventEndTime;
             set => SetProperty(ref _eventEndTime, value);
@@ -1138,8 +1149,8 @@ namespace AttendanceShiftingManagement.ViewModels
             EventLocation = string.Empty;
             EventDate = DateTime.Today;
             FinishDate = DateTime.Today;
-            EventStartTime = "07:00";
-            EventEndTime = "12:00";
+            EventStartTime = DateTime.Today.AddHours(7);
+            EventEndTime = DateTime.Today.AddHours(12);
             BenefitType = CashForWorkBenefitType.None;
             BenefitDescription = string.Empty;
             EventAmountText = string.Empty;
@@ -1168,8 +1179,8 @@ namespace AttendanceShiftingManagement.ViewModels
             EventLocation = SelectedEvent.Location;
             EventDate = SelectedEvent.EventDate.Date;
             FinishDate = SelectedEvent.FinishDate?.Date ?? SelectedEvent.EventDate.Date;
-            EventStartTime = SelectedEvent.StartTime.ToString(@"hh\:mm", CultureInfo.InvariantCulture);
-            EventEndTime = SelectedEvent.EndTime.ToString(@"hh\:mm", CultureInfo.InvariantCulture);
+            EventStartTime = DateTime.Today.Date.Add(SelectedEvent.StartTime);
+            EventEndTime = DateTime.Today.Date.Add(SelectedEvent.EndTime);
             BenefitType = SelectedEvent.BenefitType;
             BenefitDescription = SelectedEvent.BenefitDescription ?? string.Empty;
             EventAmountText = SelectedEvent.UnitAmount.ToString("N2", CultureInfo.CurrentCulture);
@@ -1315,10 +1326,9 @@ namespace AttendanceShiftingManagement.ViewModels
                 return;
             }
 
-            if (!TimeSpan.TryParse(EventStartTime, out var startTime) ||
-                !TimeSpan.TryParse(EventEndTime, out var endTime))
+            if (!EventStartTime.HasValue || !EventEndTime.HasValue)
             {
-                MessageBox.Show("Use HH:mm format for start and end time.", "Invalid Time", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Provide both start and end times.", "Invalid Time", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -1336,6 +1346,10 @@ namespace AttendanceShiftingManagement.ViewModels
                 await using var context = new AppDbContext();
                 var cfwService = new CashForWorkService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
                 var isEditing = _editingEventId.HasValue;
+                
+                var startTime = EventStartTime.Value.TimeOfDay;
+                var endTime = EventEndTime.Value.TimeOfDay;
+
                 CashForWorkEvent savedEvent;
                 if (_editingEventId is int eventIdToUpdate)
                 {

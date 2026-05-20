@@ -492,12 +492,16 @@
 
                                     <StackPanel Grid.Column="0">
                                         <TextBlock Text="Start Time" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="4,0,0,8"/>
-                                        <TextBox Text="{Binding EventStartTime, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource MaterialDesignOutlinedTextBox}" materialDesign:HintAssist.Hint="HH:mm (24-hour)"/>
+                                        <materialDesign:TimePicker SelectedTime="{Binding EventStartTime, UpdateSourceTrigger=PropertyChanged}" 
+                                                                  Style="{StaticResource MaterialDesignOutlinedTimePicker}" 
+                                                                  Height="45"/>
                                     </StackPanel>
 
                                     <StackPanel Grid.Column="2">
                                         <TextBlock Text="End Time" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="4,0,0,8"/>
-                                        <TextBox Text="{Binding EventEndTime, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource MaterialDesignOutlinedTextBox}" materialDesign:HintAssist.Hint="HH:mm (24-hour)"/>
+                                        <materialDesign:TimePicker SelectedTime="{Binding EventEndTime, UpdateSourceTrigger=PropertyChanged}" 
+                                                                  Style="{StaticResource MaterialDesignOutlinedTimePicker}" 
+                                                                  Height="45"/>
                                     </StackPanel>
                                 </Grid>
 
