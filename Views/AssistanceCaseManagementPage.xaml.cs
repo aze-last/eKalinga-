@@ -40,5 +40,20 @@ namespace AttendanceShiftingManagement.Views
                 viewModel.IsBrowsePanelOpen = false;
             }
         }
+        private void Scanner_Closed()
+        {
+            if (DataContext is AssistanceCaseManagementViewModel vm)
+            {
+                vm.IsPcScannerOpen = false;
+            }
+        }
+
+        private void Scanner_QrCodeScanned(string payload)
+        {
+            if (DataContext is AssistanceCaseManagementViewModel vm)
+            {
+                vm.ProcessPcScanCommand.Execute(payload);
+            }
+        }
     }
 }

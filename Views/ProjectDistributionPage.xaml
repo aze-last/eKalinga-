@@ -324,6 +324,9 @@
 
         <!-- Operational Overlays -->
         <Grid Panel.ZIndex="110" Visibility="{Binding IsAnyOverlayOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <!-- Create Project Panel -->
+            <local:ProjectDistributionCreateProjectPanel Visibility="{Binding IsCreateProjectPanelOpen, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
             <!-- Add Beneficiary Panel -->
             <local:ProjectDistributionAddBeneficiaryPanel Visibility="{Binding IsAddBeneficiaryPanelOpen, Converter={StaticResource BooleanToVisibilityConverter}}" 
                                                          Margin="100,60"/>

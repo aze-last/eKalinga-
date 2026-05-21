@@ -12,6 +12,7 @@ using System.Windows;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 
 namespace AttendanceShiftingManagement.ViewModels
 {
@@ -111,9 +112,23 @@ namespace AttendanceShiftingManagement.ViewModels
         private ImageSource? _lookupScannerQrImage;
         private readonly RelayCommand _createLookupScannerSessionCommand;
 
+        private bool _isPcScannerOpen;
+        private AssistanceValidatedBeneficiaryOption? _scannedBeneficiary;
+        private string? _scannedBeneficiaryStatus;
+        private BitmapSource? _scannedBeneficiaryPhoto;
+        private bool _isScannedResultVisible;
+        private string? _lastScannedPayload;
+        private string _scannerActionLabel = "LOAD BENEFICIARY";
+
+        private readonly RelayCommand _openPcScannerCommand;
+        private readonly RelayCommand _processPcScanCommand;
+        private readonly RelayCommand _confirmScannedClaimCommand;
+        private readonly RelayCommand _cancelScannedClaimCommand;
+
         public AssistanceCaseManagementViewModel(User currentUser)
         {
             _currentUser = currentUser;
+            ScannerActionLabel = "LOAD BENEFICIARY";
             StatusFilters = new ObservableCollection<string>
             {
                 "All",
@@ -124,6 +139,18 @@ namespace AttendanceShiftingManagement.ViewModels
                 "Closed",
                 "Rejected",
                 "Cancelled"
+            };
+
+            AssistanceKeywords = new ObservableCollection<string>
+            {
+                "Medical Assistance",
+                "Burial Assistance",
+                "Educational Assistance",
+                "Food Assistance",
+                "Financial Assistance",
+                "Emergency Shelter Assistance",
+                "Transportation Assistance",
+                "Livelihood Assistance"
             };
 
             PriorityOptions = new ObservableCollection<AssistanceCasePriority>(Enum.GetValues<AssistanceCasePriority>());
@@ -159,6 +186,11 @@ namespace AttendanceShiftingManagement.ViewModels
             _createLookupScannerSessionCommand = new RelayCommand(async _ => await CreateLookupScannerSessionAsync(), _ => !IsBusy);
             _navigatePreviousCommand = new RelayCommand(_ => NavigatePrevious(), _ => CanNavigatePrevious());
             _navigateNextCommand = new RelayCommand(_ => NavigateNext(), _ => CanNavigateNext());
+
+            _openPcScannerCommand = new RelayCommand(_ => IsPcScannerOpen = true, _ => !IsBusy && CanEditSelectedCase);
+            _processPcScanCommand = new RelayCommand(payload => _ = ExecuteProcessPcScan(payload as string));
+            _confirmScannedClaimCommand = new RelayCommand(_ => ExecuteConfirmScannedLookup(), _ => !IsBusy && ScannedBeneficiary != null);
+            _cancelScannedClaimCommand = new RelayCommand(_ => ResetScannedResult());
 
             ApplyFilter();
             _ = LoadAsync();
@@ -606,6 +638,63 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand ToggleAnalyticsCommand => _toggleAnalyticsCommand;
         public ICommand NavigatePreviousCommand => _navigatePreviousCommand;
         public ICommand NavigateNextCommand => _navigateNextCommand;
+        public ICommand OpenPcScannerCommand => _openPcScannerCommand;
+        public ICommand ProcessPcScanCommand => _processPcScanCommand;
+        public ICommand ConfirmScannedClaimCommand => _confirmScannedClaimCommand;
+        public ICommand CancelScannedClaimCommand => _cancelScannedClaimCommand;
+
+        public bool IsPcScannerOpen
+        {
+            get => _isPcScannerOpen;
+            set
+            {
+                if (SetProperty(ref _isPcScannerOpen, value))
+                {
+                    OnPropertyChanged(nameof(IsAnyOverlayOpen));
+                }
+            }
+        }
+
+        public AssistanceValidatedBeneficiaryOption? ScannedBeneficiary
+        {
+            get => _scannedBeneficiary;
+            private set
+            {
+                if (SetProperty(ref _scannedBeneficiary, value))
+                {
+                    _confirmScannedClaimCommand.RaiseCanExecuteChanged();
+                }
+            }
+        }
+
+        public string? ScannedBeneficiaryStatus
+        {
+            get => _scannedBeneficiaryStatus;
+            private set => SetProperty(ref _scannedBeneficiaryStatus, value);
+        }
+
+        public BitmapSource? ScannedBeneficiaryPhoto
+        {
+            get => _scannedBeneficiaryPhoto;
+            private set => SetProperty(ref _scannedBeneficiaryPhoto, value);
+        }
+
+        public bool IsScannedResultVisible
+        {
+            get => _isScannedResultVisible;
+            private set => SetProperty(ref _isScannedResultVisible, value);
+        }
+
+        public string ScannerActionLabel
+        {
+            get => _scannerActionLabel;
+            set => SetProperty(ref _scannerActionLabel, value);
+        }
+
+        public string ScannerHeader => "Beneficiary Search";
+        public string ScannerDescription => "Scan ID to find and load beneficiary details.";
+
+        public ObservableCollection<string> AssistanceKeywords { get; }
 
         public string CurrentPosition
         {
@@ -670,8 +759,7 @@ namespace AttendanceShiftingManagement.ViewModels
             CasesView = CollectionViewSource.GetDefaultView(_cases);
             ApplyFilter();
 
-            SelectedCase = _cases.FirstOrDefault(item => item.Id == preferredCaseId)
-                ?? _cases.FirstOrDefault();
+            SelectedCase = _cases.FirstOrDefault(item => item.Id == preferredCaseId);
 
             if (!string.IsNullOrWhiteSpace(SelectedCase?.ValidatedBeneficiaryName))
             {
@@ -756,6 +844,81 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 await LoadAnalyticsAsync();
             }
+        }
+
+        private async Task ExecuteProcessPcScan(string? payload)
+        {
+            if (string.IsNullOrWhiteSpace(payload)) return;
+            
+            IsBusy = true;
+            SetNeutralStatus("Analyzing ID card...");
+
+            try
+            {
+                await using var context = new AppDbContext();
+                var digitalIdService = new BeneficiaryDigitalIdService(context);
+                var lookup = await digitalIdService.LookupByQrPayloadAsync(payload);
+
+                if (lookup == null)
+                {
+                    SetErrorStatus("Invalid QR code or beneficiary not found.");
+                    return;
+                }
+
+                ScannedBeneficiary = new AssistanceValidatedBeneficiaryOption(
+                    lookup.FullName,
+                    lookup.BeneficiaryId,
+                    lookup.CivilRegistryId);
+
+                ScannedBeneficiaryStatus = "Found in Validated Masterlist. Click to load into current request.";
+                ScannedBeneficiaryPhoto = string.IsNullOrWhiteSpace(lookup.PhotoPath) ? null : LocalImageLoader.Load(lookup.PhotoPath) as BitmapSource;
+                
+                _lastScannedPayload = payload;
+                IsScannedResultVisible = true;
+                SetNeutralStatus($"ID analyzed: {lookup.FullName}. Please review and confirm.");
+            }
+            catch (Exception ex)
+            {
+                SetErrorStatus($"Scan analysis error: {ex.Message}");
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
+        private void ExecuteConfirmScannedLookup()
+        {
+            if (ScannedBeneficiary == null) return;
+
+            // 1. Reset/Prepare a new case first to ensure a clean form
+            BeginNewCase();
+
+            // 2. Ensure the beneficiary is in the lookup list
+            if (!_validatedBeneficiaries.Any(item => item.Matches(ScannedBeneficiary)))
+            {
+                _validatedBeneficiaries.Insert(0, ScannedBeneficiary);
+            }
+
+            // 3. Select the scanned beneficiary in the form
+            SelectedValidatedBeneficiary = _validatedBeneficiaries.FirstOrDefault(item => item.Matches(ScannedBeneficiary))
+                ?? ScannedBeneficiary;
+
+            // 4. Open the panel so the user can immediately see the pre-filled form
+            OpenCasePanel(force: true);
+
+            ResetScannedResult();
+            IsPcScannerOpen = false;
+            SetSuccessStatus($"Beneficiary assigned: {SelectedValidatedBeneficiary.FullName}. Form ready.");
+        }
+
+        private void ResetScannedResult()
+        {
+            ScannedBeneficiary = null;
+            ScannedBeneficiaryStatus = null;
+            ScannedBeneficiaryPhoto = null;
+            _lastScannedPayload = null;
+            IsScannedResultVisible = false;
         }
 
         private async Task LoadAnalyticsAsync()

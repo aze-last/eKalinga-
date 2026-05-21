@@ -57,6 +57,8 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly RelayCommand _navigateNextCommand;
         private readonly RelayCommand _openPcScannerCommand;
         private readonly RelayCommand _processPcScanCommand;
+        private readonly RelayCommand _confirmScannedClaimCommand;
+        private readonly RelayCommand _cancelScannedClaimCommand;
 
         private CashForWorkEvent? _selectedEvent;
         private CashForWorkSavedAttendanceRow? _selectedAttendanceRow;
@@ -116,6 +118,13 @@ namespace AttendanceShiftingManagement.ViewModels
         private ReportsSnapshot? _historySnapshot;
 
         private bool _isPcScannerOpen;
+        private CashForWorkParticipantListItem? _scannedBeneficiary;
+        private string? _scannedBeneficiaryStatus;
+        private BitmapSource? _scannedBeneficiaryPhoto;
+        private bool _isScannedResultVisible;
+        private string? _lastScannedPayload;
+        private string _scannerActionLabel = "RECORD ATTENDANCE";
+
         private string _eventSearchText = string.Empty;
         private ICollectionView? _eventsView;
         private int _currentIndex = -1;
@@ -161,7 +170,9 @@ namespace AttendanceShiftingManagement.ViewModels
             _navigatePreviousCommand = new RelayCommand(_ => NavigatePrevious(), _ => _currentIndex > 0);
             _navigateNextCommand = new RelayCommand(_ => NavigateNext(), _ => _currentIndex >= 0 && _currentIndex < Events.Count - 1);
             _openPcScannerCommand = new RelayCommand(_ => IsPcScannerOpen = true, _ => !IsBusy && HasSelectedEvent);
-            _processPcScanCommand = new RelayCommand(payload => ExecuteProcessPcScan(payload as string));
+            _processPcScanCommand = new RelayCommand(payload => _ = ExecuteProcessPcScan(payload as string));
+            _confirmScannedClaimCommand = new RelayCommand(async _ => await ExecuteConfirmScannedAttendanceAsync(), _ => !IsBusy && ScannedBeneficiary != null);
+            _cancelScannedClaimCommand = new RelayCommand(_ => ResetScannedResult());
 
             _eventsView = CollectionViewSource.GetDefaultView(Events);
             _eventsView.Filter = FilterEvents;
@@ -788,6 +799,49 @@ namespace AttendanceShiftingManagement.ViewModels
         public Visibility ManualAttendanceVisibility => IsSelectedSeminarEvent ? Visibility.Collapsed : Visibility.Visible;
         public Visibility SeminarScannerHintVisibility => IsSelectedSeminarEvent ? Visibility.Visible : Visibility.Collapsed;
         public string SelectedEventLabel => SelectedEvent?.WorkspaceLabel ?? "No event selected";
+
+        public ICommand ConfirmScannedClaimCommand => _confirmScannedClaimCommand;
+        public ICommand CancelScannedClaimCommand => _cancelScannedClaimCommand;
+
+        public CashForWorkParticipantListItem? ScannedBeneficiary
+        {
+            get => _scannedBeneficiary;
+            private set
+            {
+                if (SetProperty(ref _scannedBeneficiary, value))
+                {
+                    _confirmScannedClaimCommand.RaiseCanExecuteChanged();
+                }
+            }
+        }
+
+        public string? ScannedBeneficiaryStatus
+        {
+            get => _scannedBeneficiaryStatus;
+            private set => SetProperty(ref _scannedBeneficiaryStatus, value);
+        }
+
+        public BitmapSource? ScannedBeneficiaryPhoto
+        {
+            get => _scannedBeneficiaryPhoto;
+            private set => SetProperty(ref _scannedBeneficiaryPhoto, value);
+        }
+
+        public bool IsScannedResultVisible
+        {
+            get => _isScannedResultVisible;
+            private set => SetProperty(ref _isScannedResultVisible, value);
+        }
+
+        public string ScannerActionLabel
+        {
+            get => _scannerActionLabel;
+            set => SetProperty(ref _scannerActionLabel, value);
+        }
+
+        public string ScannerHeader => "Attendance Capture";
+        public string ScannerDescription => "Scan ID to record present status for this event.";
+
         public string EventEditorKindLabel => _eventEditorKind == CashForWorkEventKind.Seminar ? "Seminar" : "Cash-for-Work";
         public string EventEditorSubmitLabel => _editingEventId.HasValue
             ? _eventEditorKind == CashForWorkEventKind.Seminar
@@ -1744,18 +1798,60 @@ namespace AttendanceShiftingManagement.ViewModels
             }
         }
 
-        private void ExecuteProcessPcScan(string? payload)
+        private async Task ExecuteProcessPcScan(string? payload)
         {
-            if (string.IsNullOrWhiteSpace(payload)) return;
-            IsPcScannerOpen = false;
-            _ = RecordAttendanceViaScanAsync(payload);
-        }
-
-        private async Task RecordAttendanceViaScanAsync(string payload)
-        {
-            if (SelectedEvent == null) return;
+            if (string.IsNullOrWhiteSpace(payload) || SelectedEvent == null) return;
             
             IsBusy = true;
+            SetNeutralStatus("Analyzing ID card...");
+
+            try
+            {
+                await using var context = new AppDbContext();
+                var digitalIdService = new BeneficiaryDigitalIdService(context);
+                var lookup = await digitalIdService.LookupByQrPayloadAsync(payload);
+
+                if (lookup == null)
+                {
+                    SetErrorStatus("Invalid QR code or beneficiary not found.");
+                    return;
+                }
+
+                ScannedBeneficiary = new CashForWorkParticipantListItem
+                {
+                    FullName = lookup.FullName,
+                    BeneficiaryId = lookup.BeneficiaryId ?? string.Empty,
+                    CivilRegistryId = lookup.CivilRegistryId ?? string.Empty,
+                    BeneficiaryStagingId = lookup.BeneficiaryStagingId
+                };
+
+                ScannedBeneficiaryStatus = "Confirm attendance for this participant.";
+                ScannedBeneficiaryPhoto = string.IsNullOrWhiteSpace(lookup.PhotoPath) ? null : LocalImageLoader.Load(lookup.PhotoPath) as BitmapSource;
+                
+                _lastScannedPayload = payload;
+                IsScannedResultVisible = true;
+                SetNeutralStatus($"ID analyzed: {lookup.FullName}. Please review and confirm attendance.");
+            }
+            catch (Exception ex)
+            {
+                SetErrorStatus($"Scan analysis error: {ex.Message}");
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
+        private async Task ExecuteConfirmScannedAttendanceAsync()
+        {
+            if (SelectedEvent == null || ScannedBeneficiary == null || string.IsNullOrWhiteSpace(_lastScannedPayload))
+            {
+                return;
+            }
+
+            IsBusy = true;
+            SetNeutralStatus($"Recording attendance for {ScannedBeneficiary.FullName}...");
+
             try
             {
                 await using var context = new AppDbContext();
@@ -1765,14 +1861,16 @@ namespace AttendanceShiftingManagement.ViewModels
                     SelectedEvent.Id, 
                     _currentUser.Id, 
                     null, 
-                    payload,
+                    _lastScannedPayload,
                     AttendanceCaptureSource.DesktopCamera);
 
                 if (success)
                 {
-                    SetSuccessStatus($"Attendance recorded successfully via camera.");
+                    SetSuccessStatus($"Attendance recorded successfully for {ScannedBeneficiary.FullName}.");
                     await LoadSavedAttendanceAsync();
                     await LoadReleaseSummaryAsync();
+                    ResetScannedResult();
+                    IsPcScannerOpen = false;
                 }
                 else
                 {
@@ -1787,6 +1885,15 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 IsBusy = false;
             }
+        }
+
+        private void ResetScannedResult()
+        {
+            ScannedBeneficiary = null;
+            ScannedBeneficiaryStatus = null;
+            ScannedBeneficiaryPhoto = null;
+            _lastScannedPayload = null;
+            IsScannedResultVisible = false;
         }
 
         private async Task ExecuteReleaseBudgetAsync()

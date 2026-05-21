@@ -98,6 +98,20 @@
                                             Style="{StaticResource GoldActionButton}" 
                                             HorizontalContentAlignment="Left" Height="45" Margin="0,0,0,8" FontSize="14"/>
 
+                                    <Button Content="SCAN VIA PC CAMERA" 
+                                            Command="{Binding OpenPcScannerCommand}"
+                                            Style="{StaticResource MaterialDesignOutlinedButton}" 
+                                            HorizontalContentAlignment="Left" Height="45" Margin="0,0,0,8" FontSize="14">
+                                        <Button.ContentTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <materialDesign:PackIcon Kind="Camera" Width="20" Height="20" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{Binding}" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </Button.ContentTemplate>
+                                    </Button>
+
                                     <Button Content="BROWSE ALL REQUESTS" 
                                             Click="Browse_Click"
                                             Style="{StaticResource MaterialDesignOutlinedButton}" 
@@ -466,9 +480,10 @@
 
                                     <StackPanel Grid.Column="2">
                                         <TextBlock Text="Assistance Keyword" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="4,0,0,8"/>
-                                        <TextBox Text="{Binding EditableAssistanceType, UpdateSourceTrigger=PropertyChanged}" 
-                                                 Style="{StaticResource MaterialDesignOutlinedTextBox}" 
-                                                 materialDesign:HintAssist.Hint="e.g. medical, burial, educational"/>
+                                        <ComboBox ItemsSource="{Binding AssistanceKeywords}"
+                                                  SelectedItem="{Binding EditableAssistanceType, UpdateSourceTrigger=PropertyChanged}"
+                                                  Style="{StaticResource MaterialDesignOutlinedComboBox}" 
+                                                  materialDesign:HintAssist.Hint="Select assistance category..."/>
                                     </StackPanel>
                                 </Grid>
 
@@ -565,5 +580,11 @@
                 </Border>
             </Grid>
         </Border>
+
+        <!-- PC Scanner Overlay -->
+        <Grid Visibility="{Binding IsPcScannerOpen, Converter={StaticResource BooleanToVisibilityConverter}}" Panel.ZIndex="120">
+            <local:DesktopScannerOverlay QrCodeScanned="Scanner_QrCodeScanned"
+                                       Closed="Scanner_Closed"/>
+        </Grid>
     </Grid>
 </UserControl>

@@ -72,6 +72,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private BitmapSource? _scannedBeneficiaryPhoto;
         private bool _isScannedResultVisible;
         private string? _lastScannedPayload;
+        private string _scannerActionLabel = "CONFIRM CLAIM";
 
 
         private bool _isCreateProjectPanelOpen;
@@ -200,6 +201,15 @@ namespace AttendanceShiftingManagement.ViewModels
             get => _isScannedResultVisible;
             private set => SetProperty(ref _isScannedResultVisible, value);
         }
+
+        public string ScannerActionLabel
+        {
+            get => _scannerActionLabel;
+            set => SetProperty(ref _scannerActionLabel, value);
+        }
+
+        public string ScannerHeader => "Payout Verification";
+        public string ScannerDescription => "Scan ID to verify eligibility and confirm release.";
 
         public bool IsAddBeneficiaryPanelOpen
         {

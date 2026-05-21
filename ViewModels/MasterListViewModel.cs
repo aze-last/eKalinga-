@@ -65,6 +65,13 @@ namespace AttendanceShiftingManagement.ViewModels
         private bool _isFilterPanelOpen;
         private bool _isDetailPanelOpen;
         private bool _isPcScannerOpen;
+        private MasterListBeneficiary? _scannedBeneficiary;
+        private string? _scannedBeneficiaryStatus;
+        private BitmapSource? _scannedBeneficiaryPhoto;
+        private bool _isScannedResultVisible;
+        private string? _lastScannedPayload;
+        private string _scannerActionLabel = "CONFIRM SEARCH";
+
         private string _statusMessage = "Loading validated beneficiaries...";
         private Brush _statusBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#6B7280"));
         
@@ -152,7 +159,9 @@ namespace AttendanceShiftingManagement.ViewModels
             _cropDigitalIdPhotoCommand = new RelayCommand(async _ => await CropDigitalIdPhotoAsync(), _ => CanCropDigitalIdPhoto());
             
             _openPcScannerCommand = new RelayCommand(_ => IsPcScannerOpen = true);
-            _processPcScanCommand = new RelayCommand(payload => ExecuteProcessPcScan(payload as string));
+            _processPcScanCommand = new RelayCommand(async payload => await ExecuteProcessPcScanAsync(payload as string));
+            _confirmScannedClaimCommand = new RelayCommand(_ => ExecuteConfirmScannedLookup(), _ => !IsBusy && ScannedBeneficiary != null);
+            _cancelScannedClaimCommand = new RelayCommand(_ => ResetScannedResult());
             _createLookupScannerSessionCommand = new RelayCommand(async _ => await CreateLookupScannerSessionAsync(), _ => CanCreateLookupScannerSession());
 
             if (autoLoad)
@@ -177,11 +186,68 @@ namespace AttendanceShiftingManagement.ViewModels
             ScannerInput = string.Empty;
         }
 
-        private void ExecuteProcessPcScan(string? payload)
+        private async Task ExecuteProcessPcScanAsync(string? payload)
         {
             if (string.IsNullOrWhiteSpace(payload)) return;
+
+            IsBusy = true;
+            SetNeutralStatus("Analyzing ID card...");
+
+            try
+            {
+                await using var context = new AppDbContext();
+                var digitalIdService = new BeneficiaryDigitalIdService(context);
+                var lookup = await digitalIdService.LookupByQrPayloadAsync(payload);
+
+                if (lookup == null)
+                {
+                    SetErrorStatus("Invalid QR code or beneficiary not found.");
+                    return;
+                }
+
+                ScannedBeneficiary = new MasterListBeneficiary
+                {
+                    FullName = lookup.FullName,
+                    BeneficiaryId = lookup.BeneficiaryId ?? string.Empty,
+                    CivilRegistryId = lookup.CivilRegistryId ?? string.Empty,
+                    ResidentsId = lookup.ResidentsId ?? 0
+                };
+
+                ScannedBeneficiaryStatus = "Found in registry. Click confirm to locate.";
+                ScannedBeneficiaryPhoto = string.IsNullOrWhiteSpace(lookup.PhotoPath) ? null : LocalImageLoader.Load(lookup.PhotoPath) as BitmapSource;
+
+                _lastScannedPayload = payload;
+                IsScannedResultVisible = true;
+                SetNeutralStatus($"ID analyzed: {lookup.FullName}.");
+            }
+            catch (Exception ex)
+            {
+                SetErrorStatus($"Scan analysis error: {ex.Message}");
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
+        private void ExecuteConfirmScannedLookup()
+        {
+            if (string.IsNullOrWhiteSpace(_lastScannedPayload)) return;
+
+            SearchText = _lastScannedPayload.Trim();
             IsPcScannerOpen = false;
-            SearchText = payload.Trim();
+            ResetScannedResult();
+
+            SetSuccessStatus($"Registry filtered for ID: {SearchText}");
+        }
+
+        private void ResetScannedResult()
+        {
+            ScannedBeneficiary = null;
+            ScannedBeneficiaryStatus = null;
+            ScannedBeneficiaryPhoto = null;
+            IsScannedResultVisible = false;
+            _lastScannedPayload = null;
         }
 
         public ICommand ProcessScanCommand => _processScanCommand;
@@ -404,7 +470,7 @@ namespace AttendanceShiftingManagement.ViewModels
             private set => SetProperty(ref _lookupScannerSessionPin, value);
         }
 
-        public string LookupScannerSessionExpiresAtText
+        public string? LookupScannerSessionExpiresAtText
         {
             get => _lookupScannerSessionExpiresAtText;
             private set => SetProperty(ref _lookupScannerSessionExpiresAtText, value);
@@ -415,6 +481,51 @@ namespace AttendanceShiftingManagement.ViewModels
             get => _lookupScannerQrImage;
             private set => SetProperty(ref _lookupScannerQrImage, value);
         }
+
+        public MasterListBeneficiary? ScannedBeneficiary
+        {
+            get => _scannedBeneficiary;
+            private set
+            {
+                if (SetProperty(ref _scannedBeneficiary, value))
+                {
+                    _confirmScannedClaimCommand.RaiseCanExecuteChanged();
+                }
+            }
+        }
+
+        public string? ScannedBeneficiaryStatus
+        {
+            get => _scannedBeneficiaryStatus;
+            private set => SetProperty(ref _scannedBeneficiaryStatus, value);
+        }
+
+        public BitmapSource? ScannedBeneficiaryPhoto
+        {
+            get => _scannedBeneficiaryPhoto;
+            private set => SetProperty(ref _scannedBeneficiaryPhoto, value);
+        }
+
+        public bool IsScannedResultVisible
+        {
+            get => _isScannedResultVisible;
+            private set => SetProperty(ref _isScannedResultVisible, value);
+        }
+
+        public string ScannerActionLabel
+        {
+            get => _scannerActionLabel;
+            set => SetProperty(ref _scannerActionLabel, value);
+        }
+
+        public string ScannerHeader => "Beneficiary Lookup";
+        public string ScannerDescription => "Scan ID to find and locate the record in the registry.";
+
+        private readonly RelayCommand _confirmScannedClaimCommand;
+        private readonly RelayCommand _cancelScannedClaimCommand;
+
+        public ICommand ConfirmScannedClaimCommand => _confirmScannedClaimCommand;
+        public ICommand CancelScannedClaimCommand => _cancelScannedClaimCommand;
 
         public ICommand SaveCorrectionsCommand => _saveCorrectionsCommand;
         public ICommand ReturnToPendingCommand => _returnToPendingCommand;

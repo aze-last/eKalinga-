@@ -7,6 +7,7 @@ namespace AttendanceShiftingManagement.Services
 {
     public sealed record BeneficiaryDigitalIdLookupResult(
         int BeneficiaryStagingId,
+        long? ResidentsId,
         int? HouseholdId,
         int? HouseholdMemberId,
         string FullName,
@@ -168,6 +169,7 @@ namespace AttendanceShiftingManagement.Services
             var releaseHistory = await _ledgerService.GetEntriesAsync(stagingRow.CivilRegistryId, stagingRow.BeneficiaryId);
             return new BeneficiaryDigitalIdLookupResult(
                 stagingRow.StagingID,
+                stagingRow.ResidentsId,
                 digitalId.HouseholdId,
                 digitalId.HouseholdMemberId,
                 BuildDisplayName(stagingRow),

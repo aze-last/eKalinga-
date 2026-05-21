@@ -42,12 +42,12 @@
                     </Grid.ColumnDefinitions>
 
                     <StackPanel>
-                        <TextBlock Text="PC Camera Scanner"
+                        <TextBlock Text="{Binding ScannerHeader}"
                                    FontSize="25"
                                    FontWeight="SemiBold"
                                    Foreground="{DynamicResource BrandMidnightBrush}" />
                         <TextBlock Margin="0,4,0,0"
-                                   Text="Capture the Beneficiary ID to verify and scan."
+                                   Text="{Binding ScannerDescription}"
                                    FontSize="12"
                                    Foreground="{DynamicResource BrandTextSecondaryBrush}" />
                     </StackPanel>
@@ -148,10 +148,10 @@
                                             Margin="0,0,8,0"
                                             Command="{Binding CancelScannedClaimCommand}"/>
 
-                                    <Button Grid.Column="1" 
-                                            Content="CONFIRM RELEASE" 
-                                            Style="{StaticResource GoldActionButton}"
-                                            Command="{Binding ConfirmScannedClaimCommand}"/>
+                                    <Button Grid.Column="1"
+                                            Content="{Binding ScannerActionLabel}"
+                                            Style="{StaticResource PrimaryActionButton}"
+                                            Command="{Binding ConfirmScannedClaimCommand}" />
                                 </Grid>
                             </Border>
                         </Grid>
