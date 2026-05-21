@@ -303,7 +303,7 @@ namespace AttendanceShiftingManagement.Services
             return savedCount;
         }
 
-        public async Task<bool> SaveScannerAttendanceAsync(int eventId, int recordedByUserId, int? participantId, string qrPayload)
+        public async Task<bool> SaveScannerAttendanceAsync(int eventId, int recordedByUserId, int? participantId, string qrPayload, AttendanceCaptureSource source = AttendanceCaptureSource.ScannerSession)
         {
             var cashForWorkEvent = await _context.CashForWorkEvents
                 .AsNoTracking()
@@ -341,9 +341,9 @@ namespace AttendanceShiftingManagement.Services
                 return false;
             }
 
-            var attendanceDate = cashForWorkEvent.EventDate.Date;
+            var attendanceDate = DateTime.Today; // Use today instead of event start date to support multi-day
             var alreadyRecorded = await _context.CashForWorkAttendances
-                .AnyAsync(item => item.ParticipantId == participant.Id && item.AttendanceDate == attendanceDate);
+                .AnyAsync(item => !item.IsDeleted && item.ParticipantId == participant.Id && item.AttendanceDate == attendanceDate);
 
             if (alreadyRecorded)
             {
@@ -355,7 +355,7 @@ namespace AttendanceShiftingManagement.Services
                 ParticipantId = participant.Id,
                 AttendanceDate = attendanceDate,
                 Status = CashForWorkAttendanceStatus.Present,
-                Source = AttendanceCaptureSource.ScannerSession,
+                Source = source,
                 OcrExtractedName = qrPayload.Trim(),
                 RecordedByUserId = recordedByUserId,
                 RecordedAt = DateTime.Now
@@ -368,7 +368,7 @@ namespace AttendanceShiftingManagement.Services
                 "CashForWorkScannerAttendanceSaved",
                 "CashForWorkEvent",
                 eventId,
-                $"Saved scanner attendance for participant '{lookupResult.FullName}' (staging #{participant.BeneficiaryStagingId}) in event '{cashForWorkEvent.Title}'.");
+                $"Saved {source} attendance for participant '{lookupResult.FullName}' (staging #{participant.BeneficiaryStagingId}) in event '{cashForWorkEvent.Title}'.");
 
             return true;
         }

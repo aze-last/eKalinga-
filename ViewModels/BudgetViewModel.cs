@@ -85,6 +85,8 @@ namespace AttendanceShiftingManagement.ViewModels
         private decimal _governmentAvailable;
         private decimal _privateAvailable;
         private decimal _releasedTotal;
+        private decimal _weeklySpent;
+        private decimal _monthlySpent;
         private decimal _governmentAllocated;
         private decimal _governmentSpentReference;
         private decimal _assistanceCaseBudgetCapTotal;
@@ -287,6 +289,18 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             get => _combinedAvailable;
             private set => SetProperty(ref _combinedAvailable, value);
+        }
+
+        public decimal WeeklySpent
+        {
+            get => _weeklySpent;
+            private set => SetProperty(ref _weeklySpent, value);
+        }
+
+        public decimal MonthlySpent
+        {
+            get => _monthlySpent;
+            private set => SetProperty(ref _monthlySpent, value);
         }
 
         public decimal GovernmentAvailable
@@ -858,6 +872,8 @@ namespace AttendanceShiftingManagement.ViewModels
             GovernmentAvailable = overview.GovernmentAvailable;
             PrivateAvailable = overview.PrivateAvailable;
             ReleasedTotal = overview.ReleasedTotal;
+            WeeklySpent = overview.WeeklySpent;
+            MonthlySpent = overview.MonthlySpent;
             GovernmentAllocated = overview.GovernmentAllocated;
             GovernmentSpentReference = overview.GovernmentSpentReference;
             GovernmentOfficeCode = string.IsNullOrWhiteSpace(overview.OfficeCode) ? "Not configured" : overview.OfficeCode;

@@ -137,50 +137,135 @@
 
             <!-- Center Content: Search & List -->
             <Grid Grid.Column="1" Background="Transparent" Visibility="{Binding EmptyStateVisibility}">
-                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="600">
-                    <materialDesign:PackIcon Kind="Finance" Width="64" Height="64" Foreground="{StaticResource PrimaryBrandBrush}" HorizontalAlignment="Center" Margin="0,0,0,20" Opacity="0.5"/>
-                    <TextBlock Text="BUDGET BROWSER" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,10" Foreground="{StaticResource PrimaryBrandBrush}"/>
-                    <TextBlock Text="Select a record from the list or use the quick actions to manage financial data." 
-                               TextWrapping="Wrap" TextAlignment="Center" Foreground="#64748B" Margin="0,0,0,30"/>
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="30">
+                        <!-- Primary Summary Cards -->
+                        <Grid Margin="0,0,0,16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="16"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="16"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="16"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
 
-                    <materialDesign:Card Style="{StaticResource SummaryCardStyle}" Padding="0">
-                        <Border Padding="15">
-                            <StackPanel>
-                                <Grid Margin="0,10,0,25">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBox materialDesign:HintAssist.Hint="Search budget code or name..." 
-                                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                             Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"/>
-                                    <ComboBox Grid.Column="1" Margin="10,0,0,0" Width="180"
-                                              materialDesign:HintAssist.Hint="Filter Type"
-                                              Style="{StaticResource MaterialDesignOutlinedComboBox}"
-                                              ItemsSource="{Binding TypeFilters}"
-                                              SelectedItem="{Binding SelectedTypeFilter}"/>
-                                </Grid>
+                            <materialDesign:Card Grid.Column="0" Style="{StaticResource SummaryCardStyle}">
+                                <Border Padding="20,15" Height="90">
+                                    <StackPanel>
+                                        <TextBlock Text="GGMS ALLOCATION" FontSize="10" FontWeight="Bold" Foreground="#64748B" Margin="0,0,0,8"/>
+                                        <TextBlock Text="{Binding GovernmentAllocated, StringFormat='PHP {0:N2}'}" FontSize="18" FontWeight="Bold" Foreground="{StaticResource PrimaryBrandBrush}"/>
+                                    </StackPanel>
+                                </Border>
+                            </materialDesign:Card>
 
-                                <DataGrid ItemsSource="{Binding BudgetsView}"
-                                          SelectedItem="{Binding SelectedBudget}"
-                                          AutoGenerateColumns="False"
-                                          IsReadOnly="True"
-                                          Height="300"
-                                          SelectionMode="Single"
-                                          Background="Transparent"
-                                          BorderThickness="0">
-                                    <DataGrid.Columns>
-                                        <DataGridTextColumn Header="CODE" Binding="{Binding Code}" Width="100"/>
-                                        <DataGridTextColumn Header="NAME" Binding="{Binding Name}" Width="*"/>
-                                        <DataGridTextColumn Header="CATEGORY" Binding="{Binding Category}" Width="120"/>
-                                        <DataGridTextColumn Header="CAP / BUDGET" Binding="{Binding BudgetCap, StringFormat='N2'}" Width="120"/>
-                                        <DataGridTextColumn Header="STATUS" Binding="{Binding Status}" Width="100"/>
-                                    </DataGrid.Columns>
-                                </DataGrid>
-                            </StackPanel>
-                        </Border>
-                    </materialDesign:Card>
-                </StackPanel>
+                            <materialDesign:Card Grid.Column="2" Style="{StaticResource SummaryCardStyle}">
+                                <Border Padding="20,15" Height="90">
+                                    <StackPanel>
+                                        <TextBlock Text="PRIVATE DONATIONS" FontSize="10" FontWeight="Bold" Foreground="#64748B" Margin="0,0,0,8"/>
+                                        <TextBlock Text="{Binding PrivateAvailable, StringFormat='PHP {0:N2}'}" FontSize="18" FontWeight="Bold" Foreground="{StaticResource PrimaryBrandBrush}"/>
+                                    </StackPanel>
+                                </Border>
+                            </materialDesign:Card>
+
+                            <materialDesign:Card Grid.Column="4" Style="{StaticResource SummaryCardStyle}">
+                                <Border Padding="20,15" Height="90">
+                                    <StackPanel>
+                                        <TextBlock Text="COMBINED POOL" FontSize="10" FontWeight="Bold" Foreground="#64748B" Margin="0,0,0,8"/>
+                                        <TextBlock Text="{Binding CombinedAvailable, StringFormat='PHP {0:N2}'}" FontSize="18" FontWeight="Bold" Foreground="{StaticResource PrimaryBrandBrush}"/>
+                                    </StackPanel>
+                                </Border>
+                            </materialDesign:Card>
+
+                            <materialDesign:Card Grid.Column="6" Style="{StaticResource SummaryCardStyle}">
+                                <Border Padding="20,15" Height="90">
+                                    <StackPanel>
+                                        <TextBlock Text="TOTAL RELEASED" FontSize="10" FontWeight="Bold" Foreground="#64748B" Margin="0,0,0,8"/>
+                                        <TextBlock Text="{Binding ReleasedTotal, StringFormat='PHP {0:N2}'}" FontSize="18" FontWeight="Bold" Foreground="#15803D"/>
+                                    </StackPanel>
+                                </Border>
+                            </materialDesign:Card>
+                        </Grid>
+
+                        <!-- Spending Velocity Cards -->
+                        <Grid Margin="0,0,0,24">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="16"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <materialDesign:Card Grid.Column="0" Style="{StaticResource SummaryCardStyle}">
+                                <Border Padding="20,15" Height="75">
+                                    <Grid>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="SPENT THIS WEEK" FontSize="9" FontWeight="Bold" Foreground="#64748B" Margin="0,0,0,4"/>
+                                            <TextBlock Text="{Binding WeeklySpent, StringFormat='PHP {0:N2}'}" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrandBrush}"/>
+                                        </StackPanel>
+                                        <materialDesign:PackIcon Kind="TrendingDown" Foreground="#64748B" Opacity="0.3" Width="24" Height="24" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Border>
+                            </materialDesign:Card>
+
+                            <materialDesign:Card Grid.Column="2" Style="{StaticResource SummaryCardStyle}">
+                                <Border Padding="20,15" Height="75">
+                                    <Grid>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="SPENT THIS MONTH" FontSize="9" FontWeight="Bold" Foreground="#64748B" Margin="0,0,0,4"/>
+                                            <TextBlock Text="{Binding MonthlySpent, StringFormat='PHP {0:N2}'}" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrandBrush}"/>
+                                        </StackPanel>
+                                        <materialDesign:PackIcon Kind="CalendarMonth" Foreground="#64748B" Opacity="0.3" Width="24" Height="24" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Border>
+                            </materialDesign:Card>
+                        </Grid>
+
+                        <!-- Browser Card -->
+                        <materialDesign:Card Style="{StaticResource SummaryCardStyle}" Padding="0">
+                            <Border Padding="28">
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,24">
+                                        <materialDesign:PackIcon Kind="DatabaseSearch" Foreground="{StaticResource PrimaryBrandBrush}" Width="22" Height="22" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                        <TextBlock Text="BUDGET BROWSER" FontSize="17" FontWeight="Bold" Foreground="{StaticResource PrimaryBrandBrush}" VerticalAlignment="Center"/>
+                                    </StackPanel>
+
+                                    <Grid Margin="0,0,0,24">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="200"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox materialDesign:HintAssist.Hint="Search budget code or name..." 
+                                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                                 Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                                 Height="44" Margin="0,0,16,0"/>
+                                        <ComboBox Grid.Column="1" Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                                  ItemsSource="{Binding TypeFilters}"
+                                                  SelectedItem="{Binding SelectedTypeFilter}"
+                                                  Height="44"/>
+                                    </Grid>
+
+                                    <DataGrid ItemsSource="{Binding BudgetsView}"
+                                              SelectedItem="{Binding SelectedBudget}"
+                                              AutoGenerateColumns="False"
+                                              IsReadOnly="True"
+                                              Height="400"
+                                              SelectionMode="Single"
+                                              Background="Transparent"
+                                              BorderThickness="0">
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Header="CODE" Binding="{Binding Code}" Width="120"/>
+                                            <DataGridTextColumn Header="NAME" Binding="{Binding Name}" Width="*"/>
+                                            <DataGridTextColumn Header="CATEGORY" Binding="{Binding Category}" Width="150"/>
+                                            <DataGridTextColumn Header="CAP / BUDGET" Binding="{Binding BudgetCap, StringFormat='N2'}" Width="130"/>
+                                            <DataGridTextColumn Header="STATUS" Binding="{Binding Status}" Width="100"/>
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                </StackPanel>
+                            </Border>
+                        </materialDesign:Card>
+                    </StackPanel>
+                </ScrollViewer>
             </Grid>
 
             <!-- Center Content: Detail View (Pattern A) -->

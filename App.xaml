@@ -56,7 +56,9 @@
             <SolidColorBrush x:Key="ThemeTabStripBorderBrush" Color="#D5DEEA" />
             <SolidColorBrush x:Key="ThemeSelectionGlowBrush" Color="#E2ECFA" />
             <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+            <helpers:InverseBooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter" />
             <helpers:NullToHiddenConverter x:Key="NullToHiddenConverter" />
+            <helpers:BooleanToBlurRadiusConverter x:Key="BooleanToBlurRadiusConverter" />
             <helpers:EqualityToBooleanConverter x:Key="EqualityToBooleanConverter" />
             <helpers:EqualityToBooleanConverter x:Key="EqualityToBooleanInverseConverter" Inverse="True" />
 
@@ -196,6 +198,67 @@
             <Style x:Key="GoldActionButton" TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}">
                 <Setter Property="Background" Value="{DynamicResource BrandYellowBrush}" />
                 <Setter Property="Foreground" Value="{DynamicResource BrandGoldTextBrush}" />
+            </Style>
+
+            <Style x:Key="SidebarHeaderStyle" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="13" />
+                <Setter Property="FontWeight" Value="Bold" />
+                <Setter Property="Foreground" Value="{DynamicResource ThemePrimaryActionBrush}" />
+                <Setter Property="Margin" Value="0,0,0,12" />
+                <Setter Property="TextOptions.TextRenderingMode" Value="ClearType" />
+            </Style>
+
+            <Style x:Key="PatternBGridStyle" TargetType="DataGrid" BasedOn="{StaticResource {x:Type DataGrid}}">
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="AutoGenerateColumns" Value="False" />
+                <Setter Property="CanUserAddRows" Value="False" />
+                <Setter Property="IsReadOnly" Value="True" />
+                <Setter Property="GridLinesVisibility" Value="None" />
+                <Setter Property="RowHeight" Value="42" />
+                <Setter Property="ColumnHeaderHeight" Value="40" />
+                <Setter Property="SelectionMode" Value="Extended" />
+                <Setter Property="HorizontalScrollBarVisibility" Value="Auto" />
+                <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
+                <Setter Property="HeadersVisibility" Value="Column" />
+                <Style.Resources>
+                    <Style TargetType="DataGridColumnHeader">
+                        <Setter Property="Background" Value="Transparent" />
+                        <Setter Property="Foreground" Value="{DynamicResource BrandTextSecondaryBrush}" />
+                        <Setter Property="FontWeight" Value="SemiBold" />
+                        <Setter Property="FontSize" Value="12" />
+                        <Setter Property="Padding" Value="16,0" />
+                        <Setter Property="BorderThickness" Value="0,0,0,1" />
+                        <Setter Property="BorderBrush" Value="{DynamicResource BrandBorderBrush}" />
+                        <Setter Property="VerticalContentAlignment" Value="Center" />
+                    </Style>
+                    <Style TargetType="DataGridRow">
+                        <Setter Property="Background" Value="Transparent" />
+                        <Setter Property="BorderThickness" Value="0,0,0,1" />
+                        <Setter Property="BorderBrush" Value="{DynamicResource BrandBorderBrush}" />
+                        <Style.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource ThemeSelectionGlowBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource ThemeCardSubtleBrush}" />
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                    <Style TargetType="DataGridCell">
+                        <Setter Property="Padding" Value="16,0" />
+                        <Setter Property="BorderThickness" Value="0" />
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="DataGridCell">
+                                    <Border Padding="{TemplateBinding Padding}" Background="{TemplateBinding Background}">
+                                        <ContentPresenter VerticalAlignment="Center" />
+                                    </Border>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </Style.Resources>
             </Style>
         </ResourceDictionary>
     </Application.Resources>

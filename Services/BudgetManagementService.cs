@@ -85,6 +85,8 @@ namespace AttendanceShiftingManagement.Services
         decimal ReleasedTotal,
         decimal GovernmentReleasedTotal,
         decimal PrivateReleasedTotal,
+        decimal WeeklySpent,
+        decimal MonthlySpent,
         DateTime? LastGovernmentSyncAt,
         string? OfficeCode,
         string? OfficeName);
@@ -614,6 +616,18 @@ namespace AttendanceShiftingManagement.Services
             var privateReleasedTotal = await releaseEntries
                 .SumAsync(entry => (decimal?)entry.PrivatePortion) ?? 0m;
 
+            var now = DateTime.Today;
+            var startOfWeek = now.AddDays(-(int)now.DayOfWeek);
+            var startOfMonth = new DateTime(now.Year, now.Month, 1);
+
+            var weeklySpent = await releaseEntries
+                .Where(entry => entry.EntryDate >= startOfWeek)
+                .SumAsync(entry => (decimal?)entry.TotalAmount) ?? 0m;
+
+            var monthlySpent = await releaseEntries
+                .Where(entry => entry.EntryDate >= startOfMonth)
+                .SumAsync(entry => (decimal?)entry.TotalAmount) ?? 0m;
+
             var governmentAllocated = latestSnapshot?.AllocatedAmount ?? 0m;
             var governmentSpentReference = latestSnapshot?.SpentAmount ?? 0m;
             var governmentBaseAvailable = Math.Max(0m, governmentAllocated - governmentSpentReference);
@@ -641,6 +655,8 @@ namespace AttendanceShiftingManagement.Services
                 governmentReleasedTotal + privateReleasedTotal,
                 governmentReleasedTotal,
                 privateReleasedTotal,
+                weeklySpent,
+                monthlySpent,
                 latestSnapshot?.SyncedAt,
                 latestSnapshot?.OfficeCode,
                 latestSnapshot?.OfficeName);

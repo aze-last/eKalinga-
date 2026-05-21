@@ -47,6 +47,8 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly RelayCommand _rejectCommand;
         private readonly RelayCommand _uploadDigitalIdPhotoCommand;
         private readonly RelayCommand _cropDigitalIdPhotoCommand;
+        private readonly RelayCommand _openPcScannerCommand;
+        private readonly RelayCommand _processPcScanCommand;
         private readonly RelayCommand _createLookupScannerSessionCommand;
 
         private readonly IMasterListQueryService _queryService;
@@ -62,6 +64,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private bool _isHistoryLoading;
         private bool _isFilterPanelOpen;
         private bool _isDetailPanelOpen;
+        private bool _isPcScannerOpen;
         private string _statusMessage = "Loading validated beneficiaries...";
         private Brush _statusBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#6B7280"));
         
@@ -147,6 +150,9 @@ namespace AttendanceShiftingManagement.ViewModels
             _rejectCommand = new RelayCommand(async _ => await RejectSelectedAsync(), _ => CanRejectSelected());
             _uploadDigitalIdPhotoCommand = new RelayCommand(async _ => await UploadDigitalIdPhotoAsync(), _ => CanUploadDigitalIdPhoto());
             _cropDigitalIdPhotoCommand = new RelayCommand(async _ => await CropDigitalIdPhotoAsync(), _ => CanCropDigitalIdPhoto());
+            
+            _openPcScannerCommand = new RelayCommand(_ => IsPcScannerOpen = true);
+            _processPcScanCommand = new RelayCommand(payload => ExecuteProcessPcScan(payload as string));
             _createLookupScannerSessionCommand = new RelayCommand(async _ => await CreateLookupScannerSessionAsync(), _ => CanCreateLookupScannerSession());
 
             if (autoLoad)
@@ -171,6 +177,13 @@ namespace AttendanceShiftingManagement.ViewModels
             ScannerInput = string.Empty;
         }
 
+        private void ExecuteProcessPcScan(string? payload)
+        {
+            if (string.IsNullOrWhiteSpace(payload)) return;
+            IsPcScannerOpen = false;
+            SearchText = payload.Trim();
+        }
+
         public ICommand ProcessScanCommand => _processScanCommand;
 
         public bool IsHistoryLoading
@@ -179,7 +192,7 @@ namespace AttendanceShiftingManagement.ViewModels
             private set => SetProperty(ref _isHistoryLoading, value);
         }
 
-        public bool IsAnyOverlayOpen => _isFilterPanelOpen || _isDetailPanelOpen;
+        public bool IsAnyOverlayOpen => _isFilterPanelOpen || _isDetailPanelOpen || _isPcScannerOpen;
 
         public bool IsFilterPanelOpen
         {
@@ -199,6 +212,18 @@ namespace AttendanceShiftingManagement.ViewModels
             set
             {
                 if (SetProperty(ref _isDetailPanelOpen, value))
+                {
+                    OnPropertyChanged(nameof(IsAnyOverlayOpen));
+                }
+            }
+        }
+
+        public bool IsPcScannerOpen
+        {
+            get => _isPcScannerOpen;
+            set
+            {
+                if (SetProperty(ref _isPcScannerOpen, value))
                 {
                     OnPropertyChanged(nameof(IsAnyOverlayOpen));
                 }
@@ -396,6 +421,8 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand ApproveCommand => _approveCommand;
         public ICommand RejectCommand => _rejectCommand;
         public ICommand UploadDigitalIdPhotoCommand => _uploadDigitalIdPhotoCommand;
+        public ICommand OpenPcScannerCommand => _openPcScannerCommand;
+        public ICommand ProcessPcScanCommand => _processPcScanCommand;
         public ICommand CreateLookupScannerSessionCommand => _createLookupScannerSessionCommand;
 
         public string LinkedCivilRegistryTooltip => BuildMetricTooltip("linked civil registry", LinkedCivilRegistryCount);
@@ -629,6 +656,8 @@ namespace AttendanceShiftingManagement.ViewModels
             _rejectCommand.RaiseCanExecuteChanged();
             _uploadDigitalIdPhotoCommand.RaiseCanExecuteChanged();
             _cropDigitalIdPhotoCommand.RaiseCanExecuteChanged();
+            _openPcScannerCommand.RaiseCanExecuteChanged();
+            _processPcScanCommand.RaiseCanExecuteChanged();
             _createLookupScannerSessionCommand.RaiseCanExecuteChanged();
         }
 

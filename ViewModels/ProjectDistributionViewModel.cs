@@ -49,6 +49,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private bool _isBusy;
         private bool _isAddBeneficiaryPanelOpen;
         private bool _isScannerPanelOpen;
+        private bool _isPcScannerOpen;
         private string _addBeneficiaryStatusMessage = string.Empty;
         private Brush _addBeneficiaryStatusBrush = Brushes.DimGray;
         private string _scannerStatusMessage = string.Empty;
@@ -61,10 +62,17 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _pendingSearchText = string.Empty;
         private string _selectedPendingDigitalIdCardNumber = "No digital ID issued yet.";
         private string _selectedPendingDigitalIdQrPayload = string.Empty;
-        private string _selectedPendingDigitalIdStatusText = "Select a pending beneficiary to review the digital ID.";
+        private string? _selectedPendingDigitalIdStatusText = "Select a pending beneficiary to review the digital ID.";
         private BitmapSource? _selectedPendingDigitalIdQrImage;
         private int _selectedScannerSessionDurationMinutes = 15;
         private const int DistributionPageSize = 10;
+
+        private ProjectDistributionBeneficiaryListItem? _scannedBeneficiary;
+        private string? _scannedBeneficiaryStatus;
+        private BitmapSource? _scannedBeneficiaryPhoto;
+        private bool _isScannedResultVisible;
+        private string? _lastScannedPayload;
+
 
         private bool _isCreateProjectPanelOpen;
         private bool _isCreateProjectSuccessPanelOpen;
@@ -82,6 +90,11 @@ namespace AttendanceShiftingManagement.ViewModels
         private AyudaProgramDistributionStatus _newProjectSelectedDistributionStatus = AyudaProgramDistributionStatus.Open;
         private string _newProjectSearchText = string.Empty;
         private int _newProjectSelectedCount;
+
+        private readonly RelayCommand _openPcScannerCommand;
+        private readonly RelayCommand _processPcScanCommand;
+        private readonly RelayCommand _confirmScannedClaimCommand;
+        private readonly RelayCommand _cancelScannedClaimCommand;
 
         public ProjectDistributionViewModel(User currentUser)
         {
@@ -129,6 +142,11 @@ namespace AttendanceShiftingManagement.ViewModels
             MoveAllToSelectedCommand = new RelayCommand(_ => MoveAllToSelected());
             MoveAllToAvailableCommand = new RelayCommand(_ => MoveAllToAvailable());
 
+            _openPcScannerCommand = new RelayCommand(_ => IsPcScannerOpen = true, _ => !IsBusy && SelectedProgram != null);
+            _processPcScanCommand = new RelayCommand(payload => _ = ExecuteProcessPcScan(payload as string));
+            _confirmScannedClaimCommand = new RelayCommand(async _ => await ExecuteConfirmScannedClaimAsync(), _ => !IsBusy && ScannedBeneficiary != null);
+            _cancelScannedClaimCommand = new RelayCommand(_ => ResetScannedResult());
+
             ResetCreateProjectForm();
             _ = LoadAsync();
         }
@@ -148,6 +166,40 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand MoveToAvailableCommand { get; }
         public ICommand MoveAllToSelectedCommand { get; }
         public ICommand MoveAllToAvailableCommand { get; }
+        public ICommand OpenPcScannerCommand => _openPcScannerCommand;
+        public ICommand ProcessPcScanCommand => _processPcScanCommand;
+        public ICommand ConfirmScannedClaimCommand => _confirmScannedClaimCommand;
+        public ICommand CancelScannedClaimCommand => _cancelScannedClaimCommand;
+
+        public ProjectDistributionBeneficiaryListItem? ScannedBeneficiary
+        {
+            get => _scannedBeneficiary;
+            private set
+            {
+                if (SetProperty(ref _scannedBeneficiary, value))
+                {
+                    _confirmScannedClaimCommand.RaiseCanExecuteChanged();
+                }
+            }
+        }
+
+        public string? ScannedBeneficiaryStatus
+        {
+            get => _scannedBeneficiaryStatus;
+            private set => SetProperty(ref _scannedBeneficiaryStatus, value);
+        }
+
+        public BitmapSource? ScannedBeneficiaryPhoto
+        {
+            get => _scannedBeneficiaryPhoto;
+            private set => SetProperty(ref _scannedBeneficiaryPhoto, value);
+        }
+
+        public bool IsScannedResultVisible
+        {
+            get => _isScannedResultVisible;
+            private set => SetProperty(ref _isScannedResultVisible, value);
+        }
 
         public bool IsAddBeneficiaryPanelOpen
         {
@@ -173,7 +225,19 @@ namespace AttendanceShiftingManagement.ViewModels
             }
         }
 
-        public bool IsAnyOverlayOpen => IsAddBeneficiaryPanelOpen || IsScannerPanelOpen || IsCreateProjectPanelOpen || IsCreateProjectSuccessPanelOpen;
+        public bool IsPcScannerOpen
+        {
+            get => _isPcScannerOpen;
+            set
+            {
+                if (SetProperty(ref _isPcScannerOpen, value))
+                {
+                    OnPropertyChanged(nameof(IsAnyOverlayOpen));
+                }
+            }
+        }
+
+        public bool IsAnyOverlayOpen => IsAddBeneficiaryPanelOpen || IsScannerPanelOpen || IsCreateProjectPanelOpen || IsCreateProjectSuccessPanelOpen || IsPcScannerOpen;
 
         public bool IsCreateProjectPanelOpen
         {
@@ -704,6 +768,11 @@ namespace AttendanceShiftingManagement.ViewModels
                         confirmRelease.RaiseCanExecuteChanged();
                     }
 
+                    if (OpenPcScannerCommand is RelayCommand openPcScanner)
+                    {
+                        openPcScanner.RaiseCanExecuteChanged();
+                    }
+
                     if (!IsBusy)
                     {
                         _ = LoadProjectDetailsAsync();
@@ -1005,6 +1074,11 @@ namespace AttendanceShiftingManagement.ViewModels
                     if (ConfirmReleaseCommand is RelayCommand confirmRelease)
                     {
                         confirmRelease.RaiseCanExecuteChanged();
+                    }
+
+                    if (OpenPcScannerCommand is RelayCommand openPcScanner)
+                    {
+                        openPcScanner.RaiseCanExecuteChanged();
                     }
                 }
             }
@@ -1546,6 +1620,106 @@ namespace AttendanceShiftingManagement.ViewModels
 
                 await Task.Delay(2000);
             }
+        }
+
+        private async Task ExecuteProcessPcScan(string? payload)
+        {
+            if (string.IsNullOrWhiteSpace(payload) || SelectedProgram == null) return;
+            
+            IsBusy = true;
+            SetNeutralStatus("Analyzing ID card...");
+
+            try
+            {
+                await using var context = new AppDbContext();
+                var digitalIdService = new BeneficiaryDigitalIdService(context);
+                var lookup = await digitalIdService.LookupByQrPayloadAsync(payload);
+
+                if (lookup == null)
+                {
+                    SetErrorStatus("Invalid QR code or beneficiary not found.");
+                    return;
+                }
+
+                var distributionService = new ProjectDistributionService(context);
+                var qualification = await distributionService.EvaluateQualificationAsync(SelectedProgram.Id, lookup.BeneficiaryStagingId);
+
+                ScannedBeneficiary = new ProjectDistributionBeneficiaryListItem
+                {
+                    FullName = lookup.FullName,
+                    BeneficiaryId = lookup.BeneficiaryId ?? string.Empty,
+                    CivilRegistryId = lookup.CivilRegistryId ?? string.Empty,
+                    BeneficiaryStagingId = lookup.BeneficiaryStagingId,
+                    Status = qualification.BeneficiaryStatus ?? DistributionBeneficiaryStatus.Pending
+                };
+
+                ScannedBeneficiaryStatus = qualification.Message;
+                ScannedBeneficiaryPhoto = string.IsNullOrWhiteSpace(lookup.PhotoPath) ? null : LocalImageLoader.Load(lookup.PhotoPath) as BitmapSource;
+                
+                _lastScannedPayload = payload;
+                IsScannedResultVisible = true;
+                SetNeutralStatus($"ID analyzed: {lookup.FullName}. Please review and confirm release.");
+            }
+            catch (Exception ex)
+            {
+                SetErrorStatus($"Scan analysis error: {ex.Message}");
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
+        private async Task ExecuteConfirmScannedClaimAsync()
+        {
+            if (SelectedProgram == null || ScannedBeneficiary == null || string.IsNullOrWhiteSpace(_lastScannedPayload))
+            {
+                return;
+            }
+
+            IsBusy = true;
+            SetNeutralStatus($"Recording claim for {ScannedBeneficiary.FullName}...");
+
+            try
+            {
+                await using var context = new AppDbContext();
+                var distributionService = new ProjectDistributionService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
+                var result = await distributionService.RecordClaimAsync(
+                    SelectedProgram.Id,
+                    ScannedBeneficiary.BeneficiaryStagingId,
+                    _currentUser.Id,
+                    _lastScannedPayload,
+                    "Marked via Desktop Camera (Confirmed)");
+
+                if (result.IsSuccess)
+                {
+                    SetSuccessStatus(result.Message);
+                    await LoadProjectDetailsAsync();
+                    ResetScannedResult();
+                    IsPcScannerOpen = false;
+                }
+                else
+                {
+                    SetErrorStatus(result.Message);
+                }
+            }
+            catch (Exception ex)
+            {
+                SetErrorStatus($"Failed to record claim: {ex.Message}");
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
+        private void ResetScannedResult()
+        {
+            ScannedBeneficiary = null;
+            ScannedBeneficiaryStatus = null;
+            ScannedBeneficiaryPhoto = null;
+            _lastScannedPayload = null;
+            IsScannedResultVisible = false;
         }
 
         private void ResetDistributionScannerSession()

@@ -64,5 +64,15 @@ namespace AttendanceShiftingManagement.Views
                 _viewModel.IsDetailPanelOpen = false;
             }
         }
+
+        private void Scanner_QrCodeScanned(string payload)
+        {
+            _viewModel.ProcessPcScanCommand.Execute(payload);
+        }
+
+        private void Scanner_Closed()
+        {
+            _viewModel.IsPcScannerOpen = false;
+        }
     }
 }

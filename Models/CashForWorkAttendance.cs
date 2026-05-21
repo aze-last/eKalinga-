@@ -55,6 +55,7 @@ namespace AttendanceShiftingManagement.Models
     {
         Manual,
         OcrUpload,
-        ScannerSession
+        ScannerSession,
+        DesktopCamera
     }
 }

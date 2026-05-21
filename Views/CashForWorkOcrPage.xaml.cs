@@ -25,5 +25,21 @@ namespace AttendanceShiftingManagement.Views
                 dialog.ShowDialog();
             }
         }
+
+        private void Scanner_QrCodeScanned(string payload)
+        {
+            if (DataContext is CashForWorkOcrViewModel vm)
+            {
+                vm.ProcessPcScanCommand.Execute(payload);
+            }
+        }
+
+        private void Scanner_Closed()
+        {
+            if (DataContext is CashForWorkOcrViewModel vm)
+            {
+                vm.IsPcScannerOpen = false;
+            }
+        }
     }
 }

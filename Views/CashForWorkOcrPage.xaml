@@ -5,6 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:helpers="clr-namespace:AttendanceShiftingManagement.Helpers"
+             xmlns:local="clr-namespace:AttendanceShiftingManagement.Views"
              mc:Ignorable="d"
              d:DesignHeight="900"
              d:DesignWidth="1440"
@@ -133,6 +134,11 @@
                                     <Button Content="SCAN ATTENDANCE" 
                                             Command="{Binding OpenScanAttendancePanelCommand}"
                                             Style="{StaticResource MaterialDesignOutlinedButton}" 
+                                            HorizontalContentAlignment="Left" Height="45" Margin="0,0,0,8" FontSize="14"/>
+
+                                    <Button Content="SCAN VIA PC CAMERA" 
+                                            Command="{Binding OpenPcScannerCommand}"
+                                            Style="{StaticResource GoldActionButton}" 
                                             HorizontalContentAlignment="Left" Height="45" Margin="0,0,0,8" FontSize="14"/>
 
                                     <Button Content="RELEASE PAYOUT" 
@@ -387,7 +393,7 @@
         <Border Background="#CC0F172A" Visibility="{Binding IsAnyOverlayOpen, Converter={StaticResource BooleanToVisibilityConverter}}" Panel.ZIndex="100"/>
 
         <!-- Operational Overlays -->
-        <Grid Panel.ZIndex="110" Visibility="{Binding IsAnyOverlayOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+        <Grid Panel.ZIndex="110" Visibility="{Binding IsDrawerOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
             <Grid.Style>
                 <Style TargetType="Grid">
                     <Setter Property="Margin" Value="100,60" />
@@ -726,6 +732,12 @@
                     </Border>
                 </Grid>
             </Border>
+        </Grid>
+
+        <!-- PC Scanner Overlay -->
+        <Grid Panel.ZIndex="120" Visibility="{Binding IsPcScannerOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <local:DesktopScannerOverlay QrCodeScanned="Scanner_QrCodeScanned"
+                                       Closed="Scanner_Closed"/>
         </Grid>
     </Grid>
 </UserControl>

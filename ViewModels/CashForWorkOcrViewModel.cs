@@ -55,6 +55,8 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly RelayCommand _nextParticipantPageCommand;
         private readonly RelayCommand _navigatePreviousCommand;
         private readonly RelayCommand _navigateNextCommand;
+        private readonly RelayCommand _openPcScannerCommand;
+        private readonly RelayCommand _processPcScanCommand;
 
         private CashForWorkEvent? _selectedEvent;
         private CashForWorkSavedAttendanceRow? _selectedAttendanceRow;
@@ -113,6 +115,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private DataView? _historyPreviewRows;
         private ReportsSnapshot? _historySnapshot;
 
+        private bool _isPcScannerOpen;
         private string _eventSearchText = string.Empty;
         private ICollectionView? _eventsView;
         private int _currentIndex = -1;
@@ -157,6 +160,8 @@ namespace AttendanceShiftingManagement.ViewModels
             _nextParticipantPageCommand = new RelayCommand(_ => { ParticipantCurrentPage++; ApplyParticipantPagination(); }, _ => ParticipantCurrentPage < ParticipantTotalPages);
             _navigatePreviousCommand = new RelayCommand(_ => NavigatePrevious(), _ => _currentIndex > 0);
             _navigateNextCommand = new RelayCommand(_ => NavigateNext(), _ => _currentIndex >= 0 && _currentIndex < Events.Count - 1);
+            _openPcScannerCommand = new RelayCommand(_ => IsPcScannerOpen = true, _ => !IsBusy && HasSelectedEvent);
+            _processPcScanCommand = new RelayCommand(payload => ExecuteProcessPcScan(payload as string));
 
             _eventsView = CollectionViewSource.GetDefaultView(Events);
             _eventsView.Filter = FilterEvents;
@@ -198,6 +203,8 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand NextParticipantPageCommand => _nextParticipantPageCommand;
         public ICommand NavigatePreviousCommand => _navigatePreviousCommand;
         public ICommand NavigateNextCommand => _navigateNextCommand;
+        public ICommand OpenPcScannerCommand => _openPcScannerCommand;
+        public ICommand ProcessPcScanCommand => _processPcScanCommand;
 
         public string EventSearchText
         {
@@ -342,6 +349,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 OnPropertyChanged(nameof(CurrentPosition));
                 _navigatePreviousCommand.RaiseCanExecuteChanged();
                 _navigateNextCommand.RaiseCanExecuteChanged();
+                _openPcScannerCommand.RaiseCanExecuteChanged();
 
                 SelectedAttendanceRow = null;
 
@@ -747,6 +755,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 _refreshWorkspaceCommand.RaiseCanExecuteChanged();
                 _saveAttendanceSheetPdfCommand.RaiseCanExecuteChanged();
                 _printAttendanceSheetCommand.RaiseCanExecuteChanged();
+                _openPcScannerCommand.RaiseCanExecuteChanged();
             }
         }
 
@@ -756,7 +765,18 @@ namespace AttendanceShiftingManagement.ViewModels
         public Visibility SelectedEventVisibility => HasSelectedEvent ? Visibility.Visible : Visibility.Collapsed;
         public Visibility NoSelectedEventVisibility => HasSelectedEvent ? Visibility.Collapsed : Visibility.Visible;
         public bool IsDrawerOpen => ActivePanel != CashForWorkWorkspacePanel.None;
-        public bool IsAnyOverlayOpen => IsDrawerOpen;
+        public bool IsPcScannerOpen
+        {
+            get => _isPcScannerOpen;
+            set
+            {
+                if (SetProperty(ref _isPcScannerOpen, value))
+                {
+                    OnPropertyChanged(nameof(IsAnyOverlayOpen));
+                }
+            }
+        }
+        public bool IsAnyOverlayOpen => IsDrawerOpen || IsPcScannerOpen;
         public Visibility DrawerVisibility => IsDrawerOpen ? Visibility.Visible : Visibility.Collapsed;
         public Visibility EventEditorVisibility => ActivePanel == CashForWorkWorkspacePanel.EventEditor ? Visibility.Visible : Visibility.Collapsed;
         public Visibility BeneficiariesVisibility => ActivePanel == CashForWorkWorkspacePanel.Beneficiaries ? Visibility.Visible : Visibility.Collapsed;
@@ -923,7 +943,7 @@ namespace AttendanceShiftingManagement.ViewModels
             var attendanceRecords = cfwService.GetAttendanceRecords(SelectedEvent.Id);
             var presentParticipantIds = attendanceRecords
                 .Where(record =>
-                    record.AttendanceDate.Date == SelectedEvent.EventDate.Date &&
+                    record.AttendanceDate.Date == DateTime.Today &&
                     record.Status == CashForWorkAttendanceStatus.Present)
                 .Select(record => record.ParticipantId)
                 .ToHashSet();
@@ -1717,6 +1737,51 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 MessageBox.Show(ex.Message, "Scanner Session Failed", MessageBoxButton.OK, MessageBoxImage.Error);
                 SetErrorStatus($"Unable to start the attendance scanner session: {ex.Message}");
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
+        private void ExecuteProcessPcScan(string? payload)
+        {
+            if (string.IsNullOrWhiteSpace(payload)) return;
+            IsPcScannerOpen = false;
+            _ = RecordAttendanceViaScanAsync(payload);
+        }
+
+        private async Task RecordAttendanceViaScanAsync(string payload)
+        {
+            if (SelectedEvent == null) return;
+            
+            IsBusy = true;
+            try
+            {
+                await using var context = new AppDbContext();
+                var cfwService = new CashForWorkService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
+                
+                var success = await cfwService.SaveScannerAttendanceAsync(
+                    SelectedEvent.Id, 
+                    _currentUser.Id, 
+                    null, 
+                    payload,
+                    AttendanceCaptureSource.DesktopCamera);
+
+                if (success)
+                {
+                    SetSuccessStatus($"Attendance recorded successfully via camera.");
+                    await LoadSavedAttendanceAsync();
+                    await LoadReleaseSummaryAsync();
+                }
+                else
+                {
+                    SetErrorStatus("Unable to record attendance. Check if the beneficiary is assigned or already scanned.");
+                }
+            }
+            catch (Exception ex)
+            {
+                SetErrorStatus($"Failed to record attendance: {ex.Message}");
             }
             finally
             {

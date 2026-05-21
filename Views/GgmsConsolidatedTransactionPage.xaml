@@ -10,25 +10,8 @@
              d:DesignHeight="700" d:DesignWidth="1100">
     
     <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         <helpers:NumericToVisibilityConverter x:Key="NumericToVisibilityConverter" />
-        
-        <Style x:Key="SidebarHeaderStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="13" />
-            <Setter Property="FontWeight" Value="Bold" />
-            <Setter Property="Foreground" Value="{DynamicResource ThemePrimaryActionBrush}" />
-            <Setter Property="Margin" Value="0,0,0,12" />
-            <Setter Property="Typography.Capitals" Value="AllSmallCaps"/>
-        </Style>
-
-        <Style x:Key="PatternBGridStyle" TargetType="DataGrid" BasedOn="{StaticResource {x:Type DataGrid}}">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="HeadersVisibility" Value="Column"/>
-            <Setter Property="AutoGenerateColumns" Value="False"/>
-            <Setter Property="CanUserAddRows" Value="False"/>
-            <Setter Property="IsReadOnly" Value="True"/>
-            <Setter Property="RowHeight" Value="52"/>
-        </Style>
     </UserControl.Resources>
 
     <Grid>

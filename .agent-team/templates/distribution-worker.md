@@ -14,7 +14,7 @@ Allowed files: `Views/ProjectDistribution*.xaml`, `ViewModels/ProjectDistributio
 4. **Audit Trail:** Every claim must be recorded with a timestamp, the user who performed the release, and the specific `AyudaProgramId`.
 
 ## UI/UX Constraints
-- **Module Layout:** Strictly adhere to the standard module layout (Left sidebar for filters/actions, Center for the main list/stats, Right for details).
+- **Module Layout:** Strictly adhere to the standard module layout (Left sidebar for filters/actions, Center for the main list/stats (Pending leftside and release Rightside).
 - **Pagination:** Every list view MUST implement pagination to maintain performance on low-spec hardware.
 
 ## Theme & Dark Mode Consistency (Midnight Slate)

@@ -1,0 +1,200 @@
+<UserControl x:Class="AttendanceShiftingManagement.Views.DesktopScannerOverlay"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             Background="Transparent">
+
+    <UserControl.Resources>
+        <DropShadowEffect x:Key="BrandElevationShadowEffect"
+                          BlurRadius="18"
+                          ShadowDepth="6"
+                          Color="#22000000"
+                          Opacity="0.55" />
+    </UserControl.Resources>
+
+    <Grid Background="#00000000">
+        <!-- Backdrop -->
+        <Border Background="#CC0F172A" />
+
+        <Border Width="640"
+                Padding="28"
+                Background="{DynamicResource ThemeCardBrush}"
+                BorderBrush="{DynamicResource BrandBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="22"
+                VerticalAlignment="Center"
+                HorizontalAlignment="Center"
+                Effect="{StaticResource BrandElevationShadowEffect}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="18" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="18" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <!-- Header -->
+                <Grid Grid.Row="0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel>
+                        <TextBlock Text="PC Camera Scanner"
+                                   FontSize="25"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource BrandMidnightBrush}" />
+                        <TextBlock Margin="0,4,0,0"
+                                   Text="Capture the Beneficiary ID to verify and scan."
+                                   FontSize="12"
+                                   Foreground="{DynamicResource BrandTextSecondaryBrush}" />
+                    </StackPanel>
+
+                    <Button Grid.Column="1"
+                            Width="36"
+                            Height="36"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Foreground="{DynamicResource BrandTextSecondaryBrush}"
+                            Click="Close_Click">
+                        <materialDesign:PackIcon Kind="Close" Width="24" Height="24"/>
+                    </Button>
+                </Grid>
+
+                <!-- Camera Feed / Result Overlay -->
+                <Border Grid.Row="2" 
+                        Background="Black" 
+                        CornerRadius="12" 
+                        ClipToBounds="True" 
+                        BorderBrush="{DynamicResource BrandBorderBrush}" 
+                        BorderThickness="1">
+                    <Grid>
+                        <!-- Camera Feed -->
+                        <Grid Visibility="{Binding IsScannedResultVisible, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                            <Image x:Name="CameraFeed" Stretch="Uniform" />
+                            
+                            <!-- Scanner Reticle -->
+                            <Border BorderBrush="{DynamicResource BrandPrimaryActionBrush}" 
+                                    BorderThickness="2" 
+                                    Width="200" Height="200" 
+                                    HorizontalAlignment="Center" 
+                                    VerticalAlignment="Center"
+                                    CornerRadius="8"
+                                    Opacity="0.6">
+                                <materialDesign:PackIcon Kind="ScanHelper" 
+                                                       Width="40" Height="40" 
+                                                       HorizontalAlignment="Center" 
+                                                       VerticalAlignment="Center" 
+                                                       Foreground="{DynamicResource BrandPrimaryActionBrush}" />
+                            </Border>
+                        </Grid>
+
+                        <!-- Scan Result Panel -->
+                        <Grid Background="{DynamicResource ThemeCardBrush}"
+                              Visibility="{Binding IsScannedResultVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="20">
+                                <Border Width="120" Height="120" 
+                                        CornerRadius="60" 
+                                        BorderBrush="{DynamicResource BrandBorderBrush}" 
+                                        BorderThickness="2" 
+                                        ClipToBounds="True"
+                                        Background="#F1F5F9"
+                                        Margin="0,0,0,16">
+                                    <Grid>
+                                        <materialDesign:PackIcon Kind="Account" Width="60" Height="60" 
+                                                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                               Foreground="{DynamicResource BrandTextSecondaryBrush}" />
+                                        <Image Source="{Binding ScannedBeneficiaryPhoto}" Stretch="UniformToFill" />
+                                    </Grid>
+                                </Border>
+
+                                <TextBlock Text="{Binding ScannedBeneficiary.FullName}" 
+                                           FontSize="22" FontWeight="Bold" 
+                                           TextAlignment="Center"
+                                           Foreground="{DynamicResource BrandMidnightBrush}" />
+                                
+                                <TextBlock Text="{Binding ScannedBeneficiary.BeneficiaryId, StringFormat='ID: \{0\}'}" 
+                                           FontSize="14" 
+                                           TextAlignment="Center"
+                                           Foreground="{DynamicResource BrandTextSecondaryBrush}" 
+                                           Margin="0,4,0,0"/>
+
+                                <Border Background="#FEF3C7" CornerRadius="8" Padding="12,8" Margin="0,16,0,0">
+                                    <TextBlock Text="{Binding ScannedBeneficiaryStatus}" 
+                                               FontSize="13" FontWeight="Medium"
+                                               Foreground="#92400E" 
+                                               TextAlignment="Center" 
+                                               TextWrapping="Wrap"/>
+                                </Border>
+                            </StackPanel>
+
+                            <Border Grid.Row="1" Background="#F8FAFC" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="0,1,0,0" Padding="16">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <Button Grid.Column="0" 
+                                            Content="CANCEL" 
+                                            Style="{StaticResource SecondaryActionButton}"
+                                            Margin="0,0,8,0"
+                                            Command="{Binding CancelScannedClaimCommand}"/>
+
+                                    <Button Grid.Column="1" 
+                                            Content="CONFIRM RELEASE" 
+                                            Style="{StaticResource GoldActionButton}"
+                                            Command="{Binding ConfirmScannedClaimCommand}"/>
+                                </Grid>
+                            </Border>
+                        </Grid>
+                    </Grid>
+                </Border>
+
+                <!-- Footer / Status -->
+                <Grid Grid.Row="4" Visibility="{Binding IsScannedResultVisible, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock x:Name="StatusText" 
+                               Text="Starting camera..." 
+                               FontSize="12" 
+                               FontWeight="SemiBold" 
+                               Foreground="{DynamicResource BrandTextSecondaryBrush}" 
+                               VerticalAlignment="Center"/>
+
+                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                        <ComboBox x:Name="CameraSelector" 
+                                  Width="200" 
+                                  Margin="0,0,12,0"
+                                  Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                  materialDesign:HintAssist.Hint="Select Camera"
+                                  SelectionChanged="CameraSelector_SelectionChanged"/>
+
+                        <Button Content="CAPTURE &amp; SCAN ID"
+                                Width="180"
+                                Height="40"
+                                Margin="0,0,12,0"
+                                Style="{StaticResource GoldActionButton}"
+                                Click="Capture_Click" />
+                        
+                        <Button Content="CLOSE"
+                                Width="100"
+                                Height="40"
+                                Style="{StaticResource SecondaryActionButton}"
+                                Click="Close_Click" />
+                    </StackPanel>
+                </Grid>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

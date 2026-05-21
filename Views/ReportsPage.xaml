@@ -84,6 +84,12 @@
 
                 <!-- Configuration Sidebar -->
                 <StackPanel Grid.Column="0">
+                    <!-- Dashboard Navigation -->
+                    <Button Content="DASHBOARD" 
+                            Command="{Binding DataContext.ShowDashboardCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                            Style="{StaticResource MaterialDesignOutlinedButton}"
+                            Height="45" Margin="0,0,0,18"/>
+
                     <Border Style="{StaticResource ReportsCardStyle}">
                         <StackPanel>
                             <TextBlock Text="REPORT CONFIGURATION" FontSize="11" FontWeight="Bold" 

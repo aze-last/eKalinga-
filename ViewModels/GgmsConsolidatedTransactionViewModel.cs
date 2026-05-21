@@ -161,13 +161,17 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 var allTransactions = await _ggmsService.LoadTransactionsAsync();
                 
-                Transactions.Clear();
-                foreach (var tx in allTransactions)
+                System.Windows.Application.Current.Dispatcher.Invoke(() =>
                 {
-                    Transactions.Add(tx);
-                }
+                    Transactions.Clear();
+                    foreach (var tx in allTransactions)
+                    {
+                        Transactions.Add(tx);
+                    }
 
-                ApplyFilters();
+                    ApplyFilters();
+                });
+
                 StatusMessage = $"Loaded {Transactions.Count} transactions.";
             }
             catch (Exception ex)
@@ -215,12 +219,15 @@ namespace AttendanceShiftingManagement.ViewModels
                 (SelectedProjectFilter == "All Transactions" || t.ProjectName == SelectedProjectFilter)
             ).ToList();
 
-            PagedTransactions.Clear();
-            var paged = list.Skip((CurrentPage - 1) * PageSize).Take(PageSize);
-            foreach (var tx in paged)
+            System.Windows.Application.Current.Dispatcher.Invoke(() =>
             {
-                PagedTransactions.Add(tx);
-            }
+                PagedTransactions.Clear();
+                var paged = list.Skip((CurrentPage - 1) * PageSize).Take(PageSize);
+                foreach (var tx in paged)
+                {
+                    PagedTransactions.Add(tx);
+                }
+            });
         }
     }
 }
