@@ -37,6 +37,8 @@ namespace AttendanceShiftingManagement.Services
     {
         public IReadOnlyList<MasterListBeneficiary> Beneficiaries { get; init; } = Array.Empty<MasterListBeneficiary>();
         public int TotalBeneficiaries { get; init; }
+        public int ApprovedCount { get; init; }
+        public int PendingCount { get; init; }
         public int LinkedCivilRegistryCount { get; init; }
         public int SeniorCount { get; init; }
         public int PwdCount { get; init; }
@@ -93,6 +95,8 @@ namespace AttendanceShiftingManagement.Services
             {
                 Beneficiaries = beneficiaries,
                 TotalBeneficiaries = summary.TotalBeneficiaries,
+                ApprovedCount = summary.ApprovedCount,
+                PendingCount = summary.PendingCount,
                 LinkedCivilRegistryCount = summary.LinkedCivilRegistryCount,
                 SeniorCount = summary.SeniorCount,
                 PwdCount = summary.PwdCount,
@@ -108,7 +112,13 @@ namespace AttendanceShiftingManagement.Services
             const string sql =
                 """
                 SELECT
-                    COUNT(*) AS total_count,
+                    (SELECT COUNT(*) FROM val_beneficiaries) AS total_count,
+                    (SELECT COUNT(*) FROM val_beneficiaries v 
+                     LEFT JOIN BeneficiaryStaging s ON v.residents_id = s.ResidentsId 
+                     WHERE COALESCE(s.VerificationStatus, 0) = 1) AS approved_count,
+                    (SELECT COUNT(*) FROM val_beneficiaries v 
+                     LEFT JOIN BeneficiaryStaging s ON v.residents_id = s.ResidentsId 
+                     WHERE COALESCE(s.VerificationStatus, 0) = 0) AS pending_count,
                     SUM(CASE WHEN TRIM(COALESCE(v.civilregistry_id, '')) <> '' THEN 1 ELSE 0 END) AS linked_count,
                     SUM(CASE WHEN COALESCE(v.is_senior, 0) <> 0 THEN 1 ELSE 0 END) AS senior_count,
                     SUM(CASE WHEN COALESCE(v.is_pwd, 0) <> 0 THEN 1 ELSE 0 END) AS pwd_count,
@@ -121,11 +131,13 @@ namespace AttendanceShiftingManagement.Services
 
             if (!await reader.ReadAsync(cancellationToken))
             {
-                return new SummarySnapshot(0, 0, 0, 0, null);
+                return new SummarySnapshot(0, 0, 0, 0, 0, 0, null);
             }
 
             return new SummarySnapshot(
                 GetIntValue(reader, "total_count"),
+                GetIntValue(reader, "approved_count"),
+                GetIntValue(reader, "pending_count"),
                 GetIntValue(reader, "linked_count"),
                 GetIntValue(reader, "senior_count"),
                 GetIntValue(reader, "pwd_count"),
@@ -350,6 +362,8 @@ namespace AttendanceShiftingManagement.Services
 
         private sealed record SummarySnapshot(
             int TotalBeneficiaries,
+            int ApprovedCount,
+            int PendingCount,
             int LinkedCivilRegistryCount,
             int SeniorCount,
             int PwdCount,

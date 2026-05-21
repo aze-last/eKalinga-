@@ -271,6 +271,11 @@ namespace AttendanceShiftingManagement.Services
                     request.QrPayload,
                     request.Remarks);
 
+                if (result.IsSuccess && !string.IsNullOrWhiteSpace(request.QrPayload))
+                {
+                    await sessionService.UpdateLastScanAsync(request.SessionToken, request.QrPayload);
+                }
+
                 return Results.Json(new
                 {
                     success = result.IsSuccess,

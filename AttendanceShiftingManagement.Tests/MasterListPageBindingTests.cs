@@ -20,9 +20,16 @@ public sealed class MasterListPageBindingTests
         Assert.DoesNotContain("Text=\"Validated Beneficiaries\"", xaml, StringComparison.Ordinal);
         Assert.Contains("ItemsSource=\"{Binding PendingBeneficiaries}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("ItemsSource=\"{Binding ApprovedBeneficiaries}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Command=\"{Binding PreviousPageCommand}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Command=\"{Binding NextPageCommand}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"{Binding PageSummary}\"", xaml, StringComparison.Ordinal);
+        
+        // Independent pagination commands
+        Assert.Contains("Command=\"{Binding PreviousPendingPageCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding NextPendingPageCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding PreviousApprovedPageCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding NextApprovedPageCommand}\"", xaml, StringComparison.Ordinal);
+
+        Assert.Contains("Text=\"{Binding PendingPageSummary}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding ApprovedPageSummary}\"", xaml, StringComparison.Ordinal);
+        
         Assert.Contains("Background=\"{DynamicResource ThemeCardSubtleBrush}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("BlurEffect Radius=\"0\" x:Name=\"BackgroundBlur\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Binding=\"{Binding FullName}\"", xaml, StringComparison.Ordinal);

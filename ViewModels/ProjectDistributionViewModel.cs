@@ -1507,6 +1507,8 @@ namespace AttendanceShiftingManagement.ViewModels
                 DistributionScannerQrImage = QrCodeToolkitService.GenerateQrImage(sessionUrl, 8);
                 HasScannerSession = true;
 
+                _ = MonitorScannerSessionAsync(session.SessionToken);
+
                 SetSuccessStatus("Claim scanner session is ready. Scan a beneficiary Digital ID to review claim history and mark received.");
             }
             catch (Exception ex)
@@ -1516,6 +1518,33 @@ namespace AttendanceShiftingManagement.ViewModels
             finally
             {
                 IsBusy = false;
+            }
+        }
+
+        private async Task MonitorScannerSessionAsync(string sessionToken)
+        {
+            while (HasScannerSession)
+            {
+                try
+                {
+                    await using var context = new AppDbContext();
+                    var sessionService = new ScannerSessionService(context);
+                    var scanPayload = await sessionService.TryPopScanAsync(sessionToken);
+
+                    if (scanPayload != null)
+                    {
+                        // A claim was recorded via mobile scanner.
+                        // Refresh the local UI to reflect the updated status.
+                        await LoadProjectDetailsAsync();
+                        SetSuccessStatus($"Mobile Claim Received: {scanPayload}");
+                    }
+                }
+                catch
+                {
+                    // Ignore transient errors during polling
+                }
+
+                await Task.Delay(2000);
             }
         }
 

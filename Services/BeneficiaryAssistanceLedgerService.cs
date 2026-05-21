@@ -224,6 +224,11 @@ namespace AttendanceShiftingManagement.Services
             var query = _context.BeneficiaryAssistanceLedgerEntries
                 .AsNoTracking();
 
+            if (civilRegistryId != null && beneficiaryId != null)
+            {
+                return query.Where(item => item.CivilRegistryId == civilRegistryId || item.BeneficiaryId == beneficiaryId);
+            }
+
             if (civilRegistryId != null)
             {
                 return query.Where(item => item.CivilRegistryId == civilRegistryId);

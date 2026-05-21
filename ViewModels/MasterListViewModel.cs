@@ -32,8 +32,12 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly ObservableCollection<MasterListFilterOption> _filterOptions = new();
         private readonly ObservableCollection<BeneficiaryAssistanceLedgerEntry> _selectedBeneficiaryHistory = new();
         private readonly RelayCommand _refreshCommand;
-        private readonly RelayCommand _previousPageCommand;
-        private readonly RelayCommand _nextPageCommand;
+        
+        private readonly RelayCommand _previousPendingPageCommand;
+        private readonly RelayCommand _nextPendingPageCommand;
+        private readonly RelayCommand _previousApprovedPageCommand;
+        private readonly RelayCommand _nextApprovedPageCommand;
+
         private readonly RelayCommand _viewHistoryCommand;
         private readonly RelayCommand _printDigitalIdCommand;
         private readonly RelayCommand _processScanCommand;
@@ -60,12 +64,19 @@ namespace AttendanceShiftingManagement.ViewModels
         private bool _isDetailPanelOpen;
         private string _statusMessage = "Loading validated beneficiaries...";
         private Brush _statusBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#6B7280"));
-        private int _totalBeneficiaries;
+        
+        private int _totalApprovedBeneficiaries;
+        private int _totalPendingBeneficiaries;
         private int _linkedCivilRegistryCount;
         private int _seniorCount;
         private int _pwdCount;
-        private int _filteredBeneficiaryCount;
-        private int _currentPage = 1;
+        
+        private int _filteredPendingCount;
+        private int _filteredApprovedCount;
+        
+        private int _pendingCurrentPage = 1;
+        private int _approvedCurrentPage = 1;
+
         private bool _isHeaderCollapsed;
         private string _snapshotSourceSummary = "Validated beneficiaries snapshot";
         private string _lastUpdatedSummary = "Last refresh: --";
@@ -116,9 +127,15 @@ namespace AttendanceShiftingManagement.ViewModels
 
             InitializeFilterOptions();
             PageSizeOptions = new ObservableCollection<int> { 50, 100, 250, 500 };
+            
             _refreshCommand = new RelayCommand(async _ => await RefreshAsync(), _ => !IsBusy);
-            _previousPageCommand = new RelayCommand(async _ => await GoToPreviousPageAsync(), _ => !IsBusy && CurrentPage > 1);
-            _nextPageCommand = new RelayCommand(async _ => await GoToNextPageAsync(), _ => !IsBusy && CurrentPage < TotalPages);
+            
+            _previousPendingPageCommand = new RelayCommand(async _ => await GoToPreviousPendingPageAsync(), _ => !IsBusy && PendingCurrentPage > 1);
+            _nextPendingPageCommand = new RelayCommand(async _ => await GoToNextPendingPageAsync(), _ => !IsBusy && PendingCurrentPage < PendingTotalPages);
+            
+            _previousApprovedPageCommand = new RelayCommand(async _ => await GoToPreviousApprovedPageAsync(), _ => !IsBusy && ApprovedCurrentPage > 1);
+            _nextApprovedPageCommand = new RelayCommand(async _ => await GoToNextApprovedPageAsync(), _ => !IsBusy && ApprovedCurrentPage < ApprovedTotalPages);
+
             _viewHistoryCommand = new RelayCommand(async _ => await ExecuteViewHistoryAsync(), _ => SelectedBeneficiary != null);
             _printDigitalIdCommand = new RelayCommand(async _ => await ExecutePrintDigitalIdAsync(), _ => CanUseDigitalId());
             _processScanCommand = new RelayCommand(_ => ExecuteProcessScan());
@@ -387,8 +404,8 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private string BuildMetricTooltip(string label, int count)
         {
-            if (TotalBeneficiaries <= 0) return $"{count:N0} {label}";
-            var percent = (double)count / TotalBeneficiaries * 100;
+            if (TotalApprovedBeneficiaries <= 0) return $"{count:N0} {label}";
+            var percent = (double)count / TotalApprovedBeneficiaries * 100;
             return $"{count:N0} {label} ({percent:F1}% of registry)";
         }
 
@@ -1221,9 +1238,12 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 if (SetProperty(ref _selectedPageSize, value))
                 {
-                    OnPropertyChanged(nameof(TotalPages));
-                    OnPropertyChanged(nameof(PageIndicator));
-                    OnPropertyChanged(nameof(PageSummary));
+                    OnPropertyChanged(nameof(PendingTotalPages));
+                    OnPropertyChanged(nameof(ApprovedTotalPages));
+                    OnPropertyChanged(nameof(PendingPageIndicator));
+                    OnPropertyChanged(nameof(ApprovedPageIndicator));
+                    OnPropertyChanged(nameof(PendingPageSummary));
+                    OnPropertyChanged(nameof(ApprovedPageSummary));
                     QueueReloadFromFirstPage();
                 }
             }
@@ -1237,10 +1257,17 @@ namespace AttendanceShiftingManagement.ViewModels
                 if (SetProperty(ref _isBusy, value))
                 {
                     _refreshCommand.RaiseCanExecuteChanged();
-                    _previousPageCommand.RaiseCanExecuteChanged();
-                    _nextPageCommand.RaiseCanExecuteChanged();
+                    RaisePageActionCanExecuteChanged();
                 }
             }
+        }
+
+        private void RaisePageActionCanExecuteChanged()
+        {
+            _previousPendingPageCommand.RaiseCanExecuteChanged();
+            _nextPendingPageCommand.RaiseCanExecuteChanged();
+            _previousApprovedPageCommand.RaiseCanExecuteChanged();
+            _nextApprovedPageCommand.RaiseCanExecuteChanged();
         }
 
         public string StatusMessage
@@ -1255,10 +1282,16 @@ namespace AttendanceShiftingManagement.ViewModels
             private set => SetProperty(ref _statusBrush, value);
         }
 
-        public int TotalBeneficiaries
+        public int TotalApprovedBeneficiaries
         {
-            get => _totalBeneficiaries;
-            private set => SetProperty(ref _totalBeneficiaries, value);
+            get => _totalApprovedBeneficiaries;
+            private set => SetProperty(ref _totalApprovedBeneficiaries, value);
+        }
+
+        public int TotalPendingBeneficiaries
+        {
+            get => _totalPendingBeneficiaries;
+            private set => SetProperty(ref _totalPendingBeneficiaries, value);
         }
 
         public int LinkedCivilRegistryCount
@@ -1279,54 +1312,93 @@ namespace AttendanceShiftingManagement.ViewModels
             private set => SetProperty(ref _pwdCount, value);
         }
 
-        public int FilteredBeneficiaryCount
+        public int FilteredPendingCount
         {
-            get => _filteredBeneficiaryCount;
+            get => _filteredPendingCount;
             private set
             {
-                if (SetProperty(ref _filteredBeneficiaryCount, value))
+                if (SetProperty(ref _filteredPendingCount, value))
                 {
-                    OnPropertyChanged(nameof(TotalPages));
-                    OnPropertyChanged(nameof(PageIndicator));
-                    OnPropertyChanged(nameof(PageSummary));
-                    _previousPageCommand.RaiseCanExecuteChanged();
-                    _nextPageCommand.RaiseCanExecuteChanged();
+                    OnPropertyChanged(nameof(PendingTotalPages));
+                    OnPropertyChanged(nameof(PendingPageIndicator));
+                    OnPropertyChanged(nameof(PendingPageSummary));
+                    _previousPendingPageCommand.RaiseCanExecuteChanged();
+                    _nextPendingPageCommand.RaiseCanExecuteChanged();
                 }
             }
         }
 
-        public int CurrentPage
+        public int FilteredApprovedCount
         {
-            get => _currentPage;
+            get => _filteredApprovedCount;
             private set
             {
-                if (SetProperty(ref _currentPage, value))
+                if (SetProperty(ref _filteredApprovedCount, value))
                 {
-                    OnPropertyChanged(nameof(PageIndicator));
-                    OnPropertyChanged(nameof(PageSummary));
-                    _previousPageCommand.RaiseCanExecuteChanged();
-                    _nextPageCommand.RaiseCanExecuteChanged();
+                    OnPropertyChanged(nameof(ApprovedTotalPages));
+                    OnPropertyChanged(nameof(ApprovedPageIndicator));
+                    OnPropertyChanged(nameof(ApprovedPageSummary));
+                    _previousApprovedPageCommand.RaiseCanExecuteChanged();
+                    _nextApprovedPageCommand.RaiseCanExecuteChanged();
                 }
             }
         }
 
-        public int TotalPages => Math.Max(1, (int)Math.Ceiling((double)Math.Max(FilteredBeneficiaryCount, 1) / SelectedPageSize));
+        public int PendingCurrentPage
+        {
+            get => _pendingCurrentPage;
+            private set
+            {
+                if (SetProperty(ref _pendingCurrentPage, value))
+                {
+                    OnPropertyChanged(nameof(PendingPageIndicator));
+                    OnPropertyChanged(nameof(PendingPageSummary));
+                    _previousPendingPageCommand.RaiseCanExecuteChanged();
+                    _nextPendingPageCommand.RaiseCanExecuteChanged();
+                }
+            }
+        }
 
-        public string PageIndicator => $"Page {CurrentPage} of {TotalPages}";
+        public int ApprovedCurrentPage
+        {
+            get => _approvedCurrentPage;
+            private set
+            {
+                if (SetProperty(ref _approvedCurrentPage, value))
+                {
+                    OnPropertyChanged(nameof(ApprovedPageIndicator));
+                    OnPropertyChanged(nameof(ApprovedPageSummary));
+                    _previousApprovedPageCommand.RaiseCanExecuteChanged();
+                    _nextApprovedPageCommand.RaiseCanExecuteChanged();
+                }
+            }
+        }
 
-        public string PageSummary
+        public int PendingTotalPages => Math.Max(1, (int)Math.Ceiling((double)Math.Max(FilteredPendingCount, 1) / SelectedPageSize));
+        public int ApprovedTotalPages => Math.Max(1, (int)Math.Ceiling((double)Math.Max(FilteredApprovedCount, 1) / SelectedPageSize));
+
+        public string PendingPageIndicator => $"Page {PendingCurrentPage} of {PendingTotalPages}";
+        public string ApprovedPageIndicator => $"Page {ApprovedCurrentPage} of {ApprovedTotalPages}";
+
+        public string PendingPageSummary
         {
             get
             {
-                if (FilteredBeneficiaryCount == 0)
-                {
-                    return "Showing 0 validated beneficiaries";
-                }
+                if (FilteredPendingCount == 0) return "No pending records";
+                var start = ((PendingCurrentPage - 1) * SelectedPageSize) + 1;
+                var end = start + PendingBeneficiaries.Count - 1;
+                return $"Showing {start:N0}-{end:N0} of {FilteredPendingCount:N0} records";
+            }
+        }
 
-                var start = ((CurrentPage - 1) * SelectedPageSize) + 1;
-                var totalLoaded = PendingBeneficiaries.Count + ApprovedBeneficiaries.Count;
-                var end = start + totalLoaded - 1;
-                return $"Showing {start:N0}-{end:N0} of {FilteredBeneficiaryCount:N0} total records";
+        public string ApprovedPageSummary
+        {
+            get
+            {
+                if (FilteredApprovedCount == 0) return "No approved records";
+                var start = ((ApprovedCurrentPage - 1) * SelectedPageSize) + 1;
+                var end = start + ApprovedBeneficiaries.Count - 1;
+                return $"Showing {start:N0}-{end:N0} of {FilteredApprovedCount:N0} records";
             }
         }
 
@@ -1343,152 +1415,125 @@ namespace AttendanceShiftingManagement.ViewModels
         }
 
         public ICommand RefreshCommand => _refreshCommand;
-
-        public ICommand PreviousPageCommand => _previousPageCommand;
-
-        public ICommand NextPageCommand => _nextPageCommand;
+        
+        public ICommand PreviousPendingPageCommand => _previousPendingPageCommand;
+        public ICommand NextPendingPageCommand => _nextPendingPageCommand;
+        public ICommand PreviousApprovedPageCommand => _previousApprovedPageCommand;
+        public ICommand NextApprovedPageCommand => _nextApprovedPageCommand;
 
         public ICommand ViewHistoryCommand => _viewHistoryCommand;
-
         public ICommand PrintDigitalIdCommand => _printDigitalIdCommand;
-
         public ICommand CropDigitalIdPhotoCommand => _cropDigitalIdPhotoCommand;
 
-        internal Task RefreshAsync(CancellationToken cancellationToken = default)
+        internal async Task RefreshAsync(CancellationToken cancellationToken = default)
         {
-            return LoadPageAsync(CurrentPage, cancellationToken);
+            await Task.WhenAll(
+                LoadPendingPageAsync(1, cancellationToken),
+                LoadApprovedPageAsync(1, cancellationToken)
+            );
         }
 
-        internal Task GoToNextPageAsync(CancellationToken cancellationToken = default)
+        internal Task GoToNextPendingPageAsync(CancellationToken cancellationToken = default)
         {
-            if (CurrentPage >= TotalPages)
-            {
-                return Task.CompletedTask;
-            }
-
-            return LoadPageAsync(CurrentPage + 1, cancellationToken);
+            if (PendingCurrentPage >= PendingTotalPages) return Task.CompletedTask;
+            return LoadPendingPageAsync(PendingCurrentPage + 1, cancellationToken);
         }
 
-        internal Task GoToPreviousPageAsync(CancellationToken cancellationToken = default)
+        internal Task GoToPreviousPendingPageAsync(CancellationToken cancellationToken = default)
         {
-            if (CurrentPage <= 1)
-            {
-                return Task.CompletedTask;
-            }
-
-            return LoadPageAsync(CurrentPage - 1, cancellationToken);
+            if (PendingCurrentPage <= 1) return Task.CompletedTask;
+            return LoadPendingPageAsync(PendingCurrentPage - 1, cancellationToken);
         }
 
-        private async Task LoadPageAsync(int targetPage, CancellationToken cancellationToken)
+        internal Task GoToNextApprovedPageAsync(CancellationToken cancellationToken = default)
         {
-            _loadCts?.Cancel();
-            var loadCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            _loadCts = loadCts;
+            if (ApprovedCurrentPage >= ApprovedTotalPages) return Task.CompletedTask;
+            return LoadApprovedPageAsync(ApprovedCurrentPage + 1, cancellationToken);
+        }
 
+        internal Task GoToPreviousApprovedPageAsync(CancellationToken cancellationToken = default)
+        {
+            if (ApprovedCurrentPage <= 1) return Task.CompletedTask;
+            return LoadApprovedPageAsync(ApprovedCurrentPage - 1, cancellationToken);
+        }
+
+        private async Task LoadPendingPageAsync(int targetPage, CancellationToken cancellationToken)
+        {
             IsBusy = true;
-            SetNeutralStatus($"Loading validated beneficiaries page {Math.Max(1, targetPage):N0}...");
-
             try
             {
-                var selectedFilters = FilterOptions
-                    .Where(o => o.IsSelected)
-                    .Select(o => o.Label)
-                    .ToList();
-
                 var searchText = (SearchText ?? string.Empty).Trim();
+                var filters = FilterOptions.Where(o => o.IsSelected).Select(o => o.Label).ToList();
+                if (!filters.Contains(MasterListQuickFilters.Pending)) filters.Add(MasterListQuickFilters.Pending);
 
-                // Load Pending
-                var pendingFilters = new List<string>(selectedFilters);
-                if (!pendingFilters.Contains(MasterListQuickFilters.Pending))
-                    pendingFilters.Add(MasterListQuickFilters.Pending);
-
-                var pendingResult = await _queryService.LoadPageAsync(
-                    new MasterListPageRequest
-                    {
-                        SearchText = searchText,
-                        QuickFilters = pendingFilters,
-                        PageNumber = Math.Max(1, targetPage),
-                        PageSize = SelectedPageSize
-                    },
-                    loadCts.Token);
-
-                // Load Approved
-                var approvedFilters = new List<string>(selectedFilters);
-                if (!approvedFilters.Contains(MasterListQuickFilters.Approved))
-                    approvedFilters.Add(MasterListQuickFilters.Approved);
-
-                var approvedResult = await _queryService.LoadPageAsync(
-                    new MasterListPageRequest
-                    {
-                        SearchText = searchText,
-                        QuickFilters = approvedFilters,
-                        PageNumber = Math.Max(1, targetPage),
-                        PageSize = SelectedPageSize
-                    },
-                    loadCts.Token);
-
-                if (loadCts.IsCancellationRequested) return;
-
-                _pendingBeneficiaries.Clear();
-                if (pendingResult?.Beneficiaries != null)
+                var result = await _queryService.LoadPageAsync(new MasterListPageRequest
                 {
-                    foreach (var b in pendingResult.Beneficiaries) _pendingBeneficiaries.Add(b);
-                }
+                    SearchText = searchText,
+                    QuickFilters = filters,
+                    PageNumber = Math.Max(1, targetPage),
+                    PageSize = SelectedPageSize
+                }, cancellationToken);
 
-                _approvedBeneficiaries.Clear();
-                if (approvedResult?.Beneficiaries != null)
+                if (result != null)
                 {
-                    foreach (var b in approvedResult.Beneficiaries) _approvedBeneficiaries.Add(b);
+                    _pendingBeneficiaries.Clear();
+                    foreach (var b in result.Beneficiaries) _pendingBeneficiaries.Add(b);
+                    
+                    TotalPendingBeneficiaries = result.PendingCount;
+                    FilteredPendingCount = result.FilteredBeneficiaryCount;
+                    PendingCurrentPage = Math.Max(1, targetPage);
+                    
+                    SnapshotSourceSummary = $"Snapshot from {result.SourceDatabase} on {result.SourceServer}";
+                    LastUpdatedSummary = result.LastUpdatedAt.HasValue
+                        ? $"Last synced: {result.LastUpdatedAt.Value:MMM dd, yyyy hh:mm tt}"
+                        : "Last synced: --";
                 }
-                
-                OnPropertyChanged(nameof(NoResultsVisibility));
-
-                if (pendingResult != null && approvedResult != null)
-                {
-                    TotalBeneficiaries = pendingResult.TotalBeneficiaries;
-                    LinkedCivilRegistryCount = pendingResult.LinkedCivilRegistryCount;
-                    SeniorCount = pendingResult.SeniorCount;
-                    PwdCount = pendingResult.PwdCount;
-                    FilteredBeneficiaryCount = pendingResult.FilteredBeneficiaryCount + approvedResult.FilteredBeneficiaryCount;
-                    CurrentPage = Math.Max(1, targetPage);
-
-                    SnapshotSourceSummary = $"Validated beneficiaries snapshot from {pendingResult.SourceDatabase} on {pendingResult.SourceServer}";
-                    LastUpdatedSummary = pendingResult.LastUpdatedAt.HasValue
-                        ? $"Last synced data: {pendingResult.LastUpdatedAt.Value:MMMM dd, yyyy hh:mm tt}"
-                        : "Last synced data: unavailable";
-
-                    SelectedBeneficiary = PendingBeneficiaries.FirstOrDefault() ?? ApprovedBeneficiaries.FirstOrDefault();
-                }
-
-                SetSuccessStatus(
-                    FilteredBeneficiaryCount == 0
-                        ? "No validated beneficiaries matched the current filters."
-                        : $"Loaded {PageSummary.ToLowerInvariant()}.");
-            }
-            catch (OperationCanceledException) when (loadCts.IsCancellationRequested)
-            {
-            }
-            catch (Exception ex)
-            {
-                if (loadCts.IsCancellationRequested) return;
-                ClearResults();
-                SetErrorStatus(ex.Message);
             }
             finally
             {
-                if (ReferenceEquals(_loadCts, loadCts))
+                IsBusy = false;
+                OnPropertyChanged(nameof(NoResultsVisibility));
+            }
+        }
+
+        private async Task LoadApprovedPageAsync(int targetPage, CancellationToken cancellationToken)
+        {
+            IsBusy = true;
+            try
+            {
+                var searchText = (SearchText ?? string.Empty).Trim();
+                var filters = FilterOptions.Where(o => o.IsSelected).Select(o => o.Label).ToList();
+                if (!filters.Contains(MasterListQuickFilters.Approved)) filters.Add(MasterListQuickFilters.Approved);
+
+                var result = await _queryService.LoadPageAsync(new MasterListPageRequest
                 {
-                    _loadCts = null;
-                    IsBusy = false;
+                    SearchText = searchText,
+                    QuickFilters = filters,
+                    PageNumber = Math.Max(1, targetPage),
+                    PageSize = SelectedPageSize
+                }, cancellationToken);
+
+                if (result != null)
+                {
+                    _approvedBeneficiaries.Clear();
+                    foreach (var b in result.Beneficiaries) _approvedBeneficiaries.Add(b);
+                    
+                    TotalApprovedBeneficiaries = result.ApprovedCount;
+                    FilteredApprovedCount = result.FilteredBeneficiaryCount;
+                    ApprovedCurrentPage = Math.Max(1, targetPage);
                 }
-                loadCts.Dispose();
+            }
+            finally
+            {
+                IsBusy = false;
+                OnPropertyChanged(nameof(NoResultsVisibility));
             }
         }
 
         private void QueueReloadFromFirstPage()
         {
             if (!_autoRefresh) return;
-            _ = LoadPageAsync(1, CancellationToken.None);
+            _ = RefreshAsync();
         }
 
         private void ClearResults()
@@ -1498,14 +1543,12 @@ namespace AttendanceShiftingManagement.ViewModels
             SelectedBeneficiary = null;
             SelectedPendingBeneficiary = null;
             SelectedApprovedBeneficiary = null;
-            TotalBeneficiaries = 0;
-            LinkedCivilRegistryCount = 0;
-            SeniorCount = 0;
-            PwdCount = 0;
-            FilteredBeneficiaryCount = 0;
-            CurrentPage = 1;
-            SnapshotSourceSummary = "Validated beneficiaries snapshot unavailable";
-            LastUpdatedSummary = "Last synced data: unavailable";
+            TotalApprovedBeneficiaries = 0;
+            TotalPendingBeneficiaries = 0;
+            FilteredPendingCount = 0;
+            FilteredApprovedCount = 0;
+            PendingCurrentPage = 1;
+            ApprovedCurrentPage = 1;
         }
 
         private void SetNeutralStatus(string message)
