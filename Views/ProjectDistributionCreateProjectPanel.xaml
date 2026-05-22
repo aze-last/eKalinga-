@@ -129,13 +129,13 @@
 
                             <TextBlock Text="TYPE &amp; ALLOCATION" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,16"/>
 
-                            <ComboBox ItemsSource="{Binding NewProjectAvailableTypes}"
+                            <ComboBox ItemsSource="{Binding ProgramTypes}"
                                       SelectedItem="{Binding NewProjectSelectedType}"
                                       materialDesign:HintAssist.Hint="Assistance Category *"
                                       Style="{StaticResource MaterialDesignOutlinedComboBox}"
                                       Margin="0,0,0,16"/>
 
-                            <ComboBox ItemsSource="{Binding NewProjectAvailableReleaseKinds}"
+                            <ComboBox ItemsSource="{Binding ReleaseKinds}"
                                       SelectedItem="{Binding NewProjectSelectedReleaseKind}"
                                       materialDesign:HintAssist.Hint="Release Format *"
                                       Style="{StaticResource MaterialDesignOutlinedComboBox}"
@@ -215,7 +215,7 @@
                                         <TextBlock Text="AVAILABLE REGISTRY" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center"/>
                                     </Border>
                                     <ListBox Grid.Row="1"
-                                             ItemsSource="{Binding FilteredAvailableUnpickedBeneficiaries}"
+                                             ItemsSource="{Binding AvailableUnpickedBeneficiaries}"
                                              SelectedItem="{Binding SelectedAvailableUnpickedBeneficiary}"
                                              ItemContainerStyle="{StaticResource EnrollmentRowStyle}"
                                              BorderThickness="0" Margin="8">

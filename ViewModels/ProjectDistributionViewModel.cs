@@ -247,7 +247,17 @@ namespace AttendanceShiftingManagement.ViewModels
             }
         }
 
+        private DistributionBeneficiaryOption? _selectedAvailableUnpickedBeneficiary;
+
         public bool IsAnyOverlayOpen => IsAddBeneficiaryPanelOpen || IsScannerPanelOpen || IsCreateProjectPanelOpen || IsCreateProjectSuccessPanelOpen || IsPcScannerOpen;
+
+        public DistributionBeneficiaryOption? SelectedAvailableUnpickedBeneficiary
+        {
+            get => _selectedAvailableUnpickedBeneficiary;
+            set => SetProperty(ref _selectedAvailableUnpickedBeneficiary, value);
+        }
+
+        public bool NewProjectIsCashKind => NewProjectSelectedReleaseKind == AssistanceReleaseKind.Cash;
 
         public bool IsCreateProjectPanelOpen
         {
