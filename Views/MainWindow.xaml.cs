@@ -624,10 +624,14 @@ namespace AttendanceShiftingManagement.Views
 
                 var service = new SessionAnnouncementService();
                 service.RecordLogoutCheckpoint(ViewModel.CurrentUser.Id);
+                
+                // Clear user permissions on logout
+                UserPermissionService.Clear();
             }
             catch
             {
                 // Allow logout even if activity tracking fails.
+                UserPermissionService.Clear();
             }
 
             var loginWindow = new LoginWindow();

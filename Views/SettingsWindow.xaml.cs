@@ -37,6 +37,11 @@ namespace AttendanceShiftingManagement.Views
             ViewModel.AdvancedLoadTablesRequested += OpenAdvancedLoadTables;
             Loaded += SettingsWindow_Loaded;
             WindowBrandingService.ApplyWindowIcon(this);
+
+            if (UserManagementTab.DataContext is UserManagementViewModel userVm)
+            {
+                userVm.CurrentUser = currentUser;
+            }
         }
 
         private async void SettingsWindow_Loaded(object sender, RoutedEventArgs e)

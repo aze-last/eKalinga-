@@ -383,11 +383,13 @@ namespace AttendanceShiftingManagement.ViewModels
                 return;
             }
 
-            if (user.Role != UserRole.Admin)
+            if (user.Role != UserRole.Admin && user.Role != UserRole.SuperAdmin)
             {
-                SetErrorStatus("Only barangay admin accounts can access this portal.");
+                SetErrorStatus("Only authorized admin accounts can access this portal.");
                 return;
             }
+
+            UserPermissionService.LoadForUser(user);
 
             var dashboardWindow = new Views.MainWindow(user)
             {
@@ -479,7 +481,7 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             var configuration = BuildAppConfiguration();
             var resetDb = configuration.GetValue("Database:ResetOnStartup", false);
-            var migrateOnStartup = configuration.GetValue("Database:MigrateOnStartup", false);
+            var migrateOnStartup = configuration.GetValue("Database:MigrateOnStartup", true);
             DatabaseInitializer.Initialize(resetDb, migrateOnStartup);
         }
 

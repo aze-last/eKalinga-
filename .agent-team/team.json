@@ -284,6 +284,7 @@
     {
       "id": "permissions-officer@attendance-shifting-management",
       "role": "User Access & Permissions Officer",
+      "template": "permissions-officer.md",
       "allowedPaths": [
         "Models/User.cs",
         "Models/UserPermission.cs",

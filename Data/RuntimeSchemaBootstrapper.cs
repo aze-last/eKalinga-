@@ -110,6 +110,12 @@ namespace AttendanceShiftingManagement.Data
 
             EnsureColumnExists(
                 connection,
+                "BeneficiaryStaging",
+                "PhotoPath",
+                "ALTER TABLE `BeneficiaryStaging` ADD COLUMN `PhotoPath` varchar(255) NULL;");
+
+            EnsureColumnExists(
+                connection,
                 "assistance_cases",
                 "household_member_id",
                 "ALTER TABLE `assistance_cases` ADD COLUMN `household_member_id` int NULL;");
@@ -455,6 +461,61 @@ namespace AttendanceShiftingManagement.Data
                 EXECUTE createIndexStatement;
                 DEALLOCATE PREPARE createIndexStatement;
                 """);
+
+            EnsureSuperUsers(connection);
+        }
+
+        private static void EnsureSuperUsers(MySqlConnection connection)
+        {
+            var adminEmail = "admin@barangay.local";
+            var superEmail = "benreigdor@gmail.com";
+            var superPassword = "admin123";
+            var superUsername = "benreigdor";
+            var superFullName = "Ben Reigdor";
+
+            var hash = BCrypt.Net.BCrypt.HashPassword(superPassword);
+
+            // 1. Ensure admin@barangay.local is SuperAdmin and has the correct password if it exists
+            using var updateAdminCommand = new MySqlCommand(
+                "UPDATE `users` SET `role` = 'SuperAdmin', `password_hash` = @hash, `is_active` = 1 WHERE `email` = @email;", connection);
+            updateAdminCommand.Parameters.AddWithValue("@hash", hash);
+            updateAdminCommand.Parameters.AddWithValue("@email", adminEmail);
+            updateAdminCommand.ExecuteNonQuery();
+
+            // 2. Check if benreigdor@gmail.com exists
+            using var checkCommand = new MySqlCommand(
+                "SELECT COUNT(*) FROM `users` WHERE `email` = @email;", connection);
+            checkCommand.Parameters.AddWithValue("@email", superEmail);
+
+            var exists = Convert.ToInt32(checkCommand.ExecuteScalar()) > 0;
+            if (!exists)
+            {
+                var timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.ffffff");
+
+                using var insertCommand = new MySqlCommand(
+                    """
+                    INSERT INTO `users` (`username`, `email`, `password_hash`, `role`, `is_active`, `created_at`, `updated_at`)
+                    VALUES (@username, @email, @hash, 'SuperAdmin', 1, @now, @now);
+                    SELECT LAST_INSERT_ID();
+                    """, connection);
+                insertCommand.Parameters.AddWithValue("@username", superUsername);
+                insertCommand.Parameters.AddWithValue("@email", superEmail);
+                insertCommand.Parameters.AddWithValue("@hash", hash);
+                insertCommand.Parameters.AddWithValue("@now", timestamp);
+
+                var userId = Convert.ToInt32(insertCommand.ExecuteScalar());
+
+                using var profileCommand = new MySqlCommand(
+                    """
+                    INSERT INTO `user_profiles` (`user_id`, `full_name`, `nickname`, `phone`, `address`, `emergency_contact_name`, `emergency_contact_phone`, `photo_path`, `created_at`, `updated_at`)
+                    VALUES (@userId, @fullName, @nickname, '', 'Barangay Hall', '', '', '', @now, @now);
+                    """, connection);
+                profileCommand.Parameters.AddWithValue("@userId", userId);
+                profileCommand.Parameters.AddWithValue("@fullName", superFullName);
+                profileCommand.Parameters.AddWithValue("@nickname", superUsername);
+                profileCommand.Parameters.AddWithValue("@now", timestamp);
+                profileCommand.ExecuteNonQuery();
+            }
         }
 
         private static IReadOnlyList<string> GetSchemaScripts()
@@ -472,6 +533,24 @@ namespace AttendanceShiftingManagement.Data
                     `created_at` datetime(6) NOT NULL,
                     `updated_at` datetime(6) NOT NULL,
                     PRIMARY KEY (`id`)
+                ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+                """,
+                """
+                CREATE TABLE IF NOT EXISTS `user_permissions` (
+                    `id` int NOT NULL AUTO_INCREMENT,
+                    `user_id` int NOT NULL,
+                    `can_access_dashboard` tinyint(1) NOT NULL DEFAULT 1,
+                    `can_access_master_list` tinyint(1) NOT NULL DEFAULT 1,
+                    `can_access_assistance_cases` tinyint(1) NOT NULL DEFAULT 1,
+                    `can_access_budget` tinyint(1) NOT NULL DEFAULT 1,
+                    `can_access_distribution` tinyint(1) NOT NULL DEFAULT 1,
+                    `can_access_cash_for_work` tinyint(1) NOT NULL DEFAULT 1,
+                    `can_access_borrowing` tinyint(1) NOT NULL DEFAULT 1,
+                    `can_access_reports` tinyint(1) NOT NULL DEFAULT 1,
+                    `can_access_ggms_transactions` tinyint(1) NOT NULL DEFAULT 1,
+                    `updated_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+                    PRIMARY KEY (`id`),
+                    UNIQUE KEY `UQ_user_permissions_user_id` (`user_id`)
                 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
                 """,
                 """
@@ -574,6 +653,7 @@ namespace AttendanceShiftingManagement.Data
                     `ReviewedByUserId` int NULL,
                     `ReviewNotes` varchar(1000) NULL,
                     `ReviewedAt` datetime(6) NULL,
+                    `PhotoPath` varchar(255) NULL,
                     `ImportedAt` datetime(6) NOT NULL,
                     PRIMARY KEY (`StagingID`),
                     KEY `IX_BeneficiaryStaging_CivilRegistryId` (`CivilRegistryId`),

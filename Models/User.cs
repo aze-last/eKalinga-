@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -42,9 +42,11 @@ namespace AttendanceShiftingManagement.Models
 
     public enum UserRole
     {
+        SuperAdmin,
         Admin,
         Manager,
         HRStaff,
-        Crew
+        Crew,
+        ShiftManager
     }
 }

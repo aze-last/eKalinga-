@@ -21,7 +21,8 @@ namespace AttendanceShiftingManagement.Services
     {
         public static InitialAdminState GetState(AppDbContext context)
         {
-            var hasActiveAdmin = context.Users.Any(user => user.Role == UserRole.Admin && user.IsActive);
+            var hasActiveAdmin = context.Users.Any(user =>
+                (user.Role == UserRole.Admin || user.Role == UserRole.SuperAdmin) && user.IsActive);
             if (hasActiveAdmin)
             {
                 return new InitialAdminState(false, "An active admin account already exists for this database.");

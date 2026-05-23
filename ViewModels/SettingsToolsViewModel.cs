@@ -193,6 +193,8 @@ namespace AttendanceShiftingManagement.ViewModels
 
         public bool HasCurrentUser => _currentUser != null;
 
+        public Visibility UserManagementVisibility => UserPermissionService.CanManageUsers ? Visibility.Visible : Visibility.Collapsed;
+
         public string SystemName
         {
             get => _systemName;

@@ -206,6 +206,7 @@
                         Grid.Column="0"
                         Style="{StaticResource LaunchpadTileButtonStyle}"
                         Background="{StaticResource TileAidRequestBrush}"
+                        Visibility="{Binding DataContext.AssistanceCasesVisibility, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
                         Command="{Binding DataContext.ShowAssistanceCasesCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}" Click="Button_Click">
                     <StackPanel>
                         <materialDesign:PackIcon Kind="HandHeartOutline"
@@ -231,6 +232,7 @@
                         Grid.Column="1"
                         Style="{StaticResource LaunchpadTileButtonStyle}"
                         Background="{StaticResource TileMasterListBrush}"
+                        Visibility="{Binding DataContext.MasterListVisibility, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
                         Command="{Binding DataContext.ShowMasterListCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}">
                     <StackPanel>
                         <materialDesign:PackIcon Kind="AccountGroupOutline"
@@ -256,6 +258,7 @@
                         Grid.Column="2"
                         Style="{StaticResource LaunchpadTileButtonStyle}"
                         Background="{StaticResource TileBudgetBrush}"
+                        Visibility="{Binding DataContext.BudgetVisibility, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
                         Command="{Binding DataContext.ShowBudgetCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}">
                     <StackPanel>
                         <materialDesign:PackIcon Kind="CashMultiple"
@@ -281,6 +284,7 @@
                         Grid.Column="3"
                         Style="{StaticResource LaunchpadTileButtonStyle}"
                         Background="{StaticResource TileDistributionBrush}"
+                        Visibility="{Binding DataContext.DistributionVisibility, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
                         Command="{Binding DataContext.ShowDistributionCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}">
                     <StackPanel>
                         <materialDesign:PackIcon Kind="PackageVariantClosed"
@@ -494,6 +498,7 @@
                         Grid.Column="2"
                         Style="{StaticResource LaunchpadTileButtonStyle}"
                         Background="{StaticResource TileCashForWorkBrush}"
+                        Visibility="{Binding DataContext.CashForWorkVisibility, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
                         Command="{Binding DataContext.ShowCashForWorkCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}">
                     <StackPanel>
                         <materialDesign:PackIcon Kind="ClipboardTextClockOutline"
@@ -519,6 +524,7 @@
                         Grid.Column="3"
                         Style="{StaticResource LaunchpadTileButtonStyle}"
                         Background="{StaticResource TileReportsBrush}"
+                        Visibility="{Binding DataContext.ReportsVisibility, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
                         Command="{Binding DataContext.ShowReportsCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}">
                     <StackPanel>
                         <materialDesign:PackIcon Kind="ChartBoxOutline"
@@ -544,6 +550,7 @@
                         Grid.Column="0"
                         Style="{StaticResource LaunchpadTileButtonStyle}"
                         Background="#4F46E5"
+                        Visibility="{Binding DataContext.GgmsTransactionsVisibility, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
                         Command="{Binding DataContext.ShowGgmsTransactionsCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}">
                     <StackPanel>
                         <materialDesign:PackIcon Kind="DatabaseSync"
@@ -558,6 +565,32 @@
                                    Foreground="White"/>
                         <TextBlock Margin="0,8,0,0"
                                    Text="View and filter all eKalinga+ transactions synced to GGMS."
+                                   FontSize="13"
+                                   Foreground="White"
+                                   Opacity="0.82"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Button>
+
+                <Button Grid.Row="2"
+                        Grid.Column="1"
+                        Style="{StaticResource LaunchpadTileButtonStyle}"
+                        Background="#059669"
+                        Visibility="{Binding DataContext.BorrowingVisibility, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
+                        Command="{Binding DataContext.ShowBorrowingCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}">
+                    <StackPanel>
+                        <materialDesign:PackIcon Kind="HandExtended"
+                                                 Width="42"
+                                                 Height="42"
+                                                 Foreground="White"
+                                                 HorizontalAlignment="Left"/>
+                        <TextBlock Margin="0,26,0,0"
+                                   Text="EQUIPMENT BORROWING"
+                                   FontSize="18"
+                                   FontWeight="Bold"
+                                   Foreground="White"/>
+                        <TextBlock Margin="0,8,0,0"
+                                   Text="Manage loans and returns of community equipment."
                                    FontSize="13"
                                    Foreground="White"
                                    Opacity="0.82"

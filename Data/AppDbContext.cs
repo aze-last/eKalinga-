@@ -7,6 +7,7 @@ namespace AttendanceShiftingManagement.Data
     public class AppDbContext : DbContext
     {
         public DbSet<User> Users => Set<User>();
+        public DbSet<UserPermission> UserPermissions => Set<UserPermission>();
         public DbSet<ActivityLog> ActivityLogs => Set<ActivityLog>();
         public DbSet<UserProfile> UserProfiles => Set<UserProfile>();
         public DbSet<SystemRegistration> SystemRegistrations => Set<SystemRegistration>();
@@ -232,6 +233,16 @@ namespace AttendanceShiftingManagement.Data
 
             modelBuilder.Entity<EquipmentBorrowing>()
                 .HasIndex(borrowing => borrowing.BeneficiaryId);
+
+            modelBuilder.Entity<UserPermission>()
+                .HasOne(p => p.User)
+                .WithOne()
+                .HasForeignKey<UserPermission>(p => p.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<UserPermission>()
+                .HasIndex(p => p.UserId)
+                .IsUnique();
 
             modelBuilder.Entity<AyudaProjectBeneficiary>()
                 .HasOne(item => item.AyudaProgram)

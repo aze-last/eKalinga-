@@ -3,6 +3,7 @@ using AttendanceShiftingManagement.Models;
 using AttendanceShiftingManagement.Services;
 using AttendanceShiftingManagement.Views;
 using System.IO;
+using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 
@@ -131,6 +132,18 @@ namespace AttendanceShiftingManagement.ViewModels
         public bool IsGgmsTransactionsSelected => _currentSection == "GgmsTransactions";
         public bool IsReportsSelected => _currentSection == "Reports";
         public bool IsSecondarySectionVisible => _currentSection != "Dashboard";
+
+        public Visibility DashboardVisibility => UserPermissionService.CanAccessDashboard ? Visibility.Visible : Visibility.Collapsed;
+        public Visibility MasterListVisibility => UserPermissionService.CanAccessMasterList ? Visibility.Visible : Visibility.Collapsed;
+        public Visibility AssistanceCasesVisibility => UserPermissionService.CanAccessAssistanceCases ? Visibility.Visible : Visibility.Collapsed;
+        public Visibility BudgetVisibility => UserPermissionService.CanAccessBudget ? Visibility.Visible : Visibility.Collapsed;
+        public Visibility DistributionVisibility => UserPermissionService.CanAccessDistribution ? Visibility.Visible : Visibility.Collapsed;
+        public Visibility CashForWorkVisibility => UserPermissionService.CanAccessCashForWork ? Visibility.Visible : Visibility.Collapsed;
+        public Visibility BorrowingVisibility => UserPermissionService.CanAccessBorrowing ? Visibility.Visible : Visibility.Collapsed;
+        public Visibility ReportsVisibility => UserPermissionService.CanAccessReports ? Visibility.Visible : Visibility.Collapsed;
+        public Visibility GgmsTransactionsVisibility => UserPermissionService.CanAccessGgmsTransactions ? Visibility.Visible : Visibility.Collapsed;
+        public Visibility UserManagementVisibility => UserPermissionService.CanManageUsers ? Visibility.Visible : Visibility.Collapsed;
+
         public RelayCommand ShowDashboardCommand { get; }
         public RelayCommand ShowCashForWorkCommand { get; }
         public RelayCommand ShowBudgetCommand { get; }

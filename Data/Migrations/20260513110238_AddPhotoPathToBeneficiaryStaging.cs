@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -10,12 +10,20 @@ namespace AttendanceShiftingManagement.Data.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<string>(
-                name: "PhotoPath",
-                table: "BeneficiaryStaging",
-                type: "longtext",
-                nullable: true)
-                .Annotation("MySql:CharSet", "utf8mb4");
+            // Idempotent: column may already exist via RuntimeSchemaBootstrapper.EnsureColumnExists
+            migrationBuilder.Sql(
+                """
+                SET @colExists = (SELECT COUNT(*) FROM information_schema.COLUMNS
+                    WHERE TABLE_SCHEMA = DATABASE()
+                      AND TABLE_NAME = 'BeneficiaryStaging'
+                      AND COLUMN_NAME = 'PhotoPath');
+                SET @stmt = IF(@colExists > 0,
+                    'SELECT 1',
+                    'ALTER TABLE `BeneficiaryStaging` ADD COLUMN `PhotoPath` longtext NULL');
+                PREPARE addColStmt FROM @stmt;
+                EXECUTE addColStmt;
+                DEALLOCATE PREPARE addColStmt;
+                """);
 
             migrationBuilder.CreateIndex(
                 name: "IX_budget_ledger_entries_assistance_case_budget_id",
