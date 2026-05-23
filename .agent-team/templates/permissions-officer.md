@@ -2,11 +2,13 @@
 
 ## Objective
 
-Implement, maintain, and enforce per-user permission overrides for the eKalinga+ Ayuda Management System. This agent owns the full stack: database schema, model, service, ViewModel, UI dialog, and sidebar/dashboard visibility wiring.
+Implement, maintain, and enforce per-user permission overrides, user creation, and user editing workflows for the eKalinga+ Ayuda Management System. This agent owns the full stack: database schema, model, service, ViewModel, UI dialog, and sidebar/dashboard visibility wiring for User Management.
 
 ## Core Rules
 
-- **SuperAdmin is ALWAYS exempt** — no restrictions ever apply, no permission row is needed.
+- **SuperAdmin is ALWAYS exempt** — no restrictions ever apply, no permission row is needed. SuperAdmin accounts cannot be edited, disabled, or have their permissions toggled by other accounts in the User Management grid.
+- **SuperAdmin Unlock** — Protected Settings overlays (like Remote Snapshot or Database Backup) MUST explicitly allow `UserRole.SuperAdmin` in addition to `UserRole.Admin`.
+- **SuperAdmin Password Changes** — SuperAdmins must change their *own* passwords via the "Security" (My Account) tab. SuperAdmins can reset *other* users' passwords (Admin, Manager, Crew, etc.) via the "Edit User" overlay in the User Management grid.
 - **Default is open** — if a user has no permission row, they get full access.
 - **Permissions take effect on next login** — the current session is not interrupted.
 - **Enforcement = hiding** — remove buttons/tiles entirely via `Visibility.Collapsed`, never show "Access Denied."
@@ -21,6 +23,7 @@ Implement, maintain, and enforce per-user permission overrides for the eKalinga+
 
 ### Model
 - `Models/UserPermission.cs` — one `bool` property per page, all defaulting to `true`
+- `Models/User.cs` — core user entity
 
 ### Service
 - `Services/UserPermissionService.cs` — static service with:
@@ -33,15 +36,15 @@ Implement, maintain, and enforce per-user permission overrides for the eKalinga+
 
 ### ViewModel Layer
 - `ViewModels/BarangayMainViewModel.cs` — exposes `Visibility` properties per module (e.g., `DashboardVisibility`, `MasterListVisibility`) that read from `UserPermissionService`
-- `ViewModels/UserManagementViewModel.cs` — handles the permissions overlay panel:
-  - `OpenPermissionsCommand` — loads or creates a `UserPermission` clone for editing
-  - `SavePermissionsCommand` — upserts the row to DB
-  - `ToggleUserStatusCommand` — flips `IsActive` on a user
-  - `ClosePermissionsCommand` — closes the overlay
+- `ViewModels/UserManagementViewModel.cs` — handles the user grid and overlays:
+  - **Pagination:** Handles `CurrentPage`, `TotalPages`, `.Skip()`, and `.Take()` for the DataGrid.
+  - **Permissions:** `OpenPermissionsCommand` (clones permission row), `SavePermissionsCommand` (upserts DB).
+  - **User Lifecycle:** `OpenCreateUserCommand`, `OpenEditUserCommand`, `SaveNewUserCommand` (creates or updates, checks duplicates, hashes passwords, ensures min length of 6).
+  - **Toggle Status:** `ToggleUserStatusCommand` flips `IsActive`.
 
 ### UI Layer
-- `Views/UserManagementPage.xaml` — User list DataGrid + blurred overlay with permission checkboxes
-- `Views/BarangayDashboardPage.xaml` — sidebar buttons bound to `*Visibility` via `RelativeSource AncestorType={x:Type Window}`
+- `Views/UserManagementPage.xaml` — User list DataGrid + paginated footer + blurred overlays (`materialDesign:Card`).
+- `Views/BarangayDashboardPage.xaml` — sidebar buttons bound to `*Visibility` via `RelativeSource AncestorType={x:Type Window}`.
 
 ## Controllable Modules
 
@@ -55,9 +58,10 @@ These modules have per-user permission columns:
 | `can_access_budget` | Budget Management | ShowBudgetCommand |
 | `can_access_distribution` | Project Distribution | ShowDistributionCommand |
 | `can_access_cash_for_work` | Cash-for-Work / Seminar | ShowCashForWorkCommand |
-| `can_access_borrowing` | Equipment Borrowing | ShowBorrowingCommand |
 | `can_access_reports` | Reports | ShowReportsCommand |
 | `can_access_ggms_transactions` | GGMS Transactions | ShowGgmsTransactionsCommand |
+
+*(Note: `can_access_borrowing` exists in DB/Model but the Equipment Borrowing module has been permanently hidden from the UI per GEMINI.md mandate. Do not expose it in the permissions checklist).*
 
 ## Adding a New Controllable Page
 
@@ -79,18 +83,20 @@ When a new module is added:
 
 1. `dotnet build AttendanceShiftingManagement.sln`
 2. Login as SuperAdmin → verify all modules visible, User Management tab visible
-3. Create a permission row for a non-SuperAdmin user with some modules disabled
-4. Login as that user → verify disabled modules are hidden from sidebar
-5. Verify no "Access Denied" screens — buttons simply don't appear
+3. Edit a user, change password, save.
+4. Create a permission row for a non-SuperAdmin user with some modules disabled
+5. Login as that user → verify disabled modules are hidden from sidebar
+6. Verify no "Access Denied" screens — buttons simply don't appear
 
 ## Quality Checks
 
-- Every permission save and user status toggle MUST log via `AuditService`
-- The permissions dialog MUST only be openable for non-SuperAdmin users
-- The overlay MUST follow the blurred overlay standard (`#CC0F172A` backdrop, `BlurRadius=15`)
-- All colors MUST use dynamic brushes, not hardcoded hex values
-- The user list MUST be paginated (mandate: every list must be paginated)
+- Every permission save, user creation, user edit, and user status toggle MUST log via `AuditService`
+- The permissions and edit dialogs MUST only be openable for non-SuperAdmin users
+- Overlays MUST follow the blurred overlay standard (`#CC0F172A` backdrop, `BlurRadius=15`, wrapped in a `materialDesign:Card` with a branded `BrandMidnightBrush` header block)
+- The permission checkboxes MUST be structured cleanly (e.g., inside a `UniformGrid` with columns), never vertically dumped.
+- All colors MUST use dynamic brushes (`BrandMidnightBrush`, `BrandYellowBrush`, etc.), not hardcoded hex values, except for pure white/black/grays if necessary.
+- The user list MUST be paginated on the database layer using EF Core `.Skip().Take()`.
 
 ## Idle Rule
 
-This agent stays idle until the user or coordinator explicitly assigns a permission-related task.
+This agent stays idle until the user or coordinator explicitly assigns a permission-related or user-management task.

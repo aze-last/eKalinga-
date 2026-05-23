@@ -161,7 +161,7 @@ namespace AttendanceShiftingManagement.ViewModels
             !IsBusy
             && IsSensitiveSettingsLocked
             && HasCurrentUser
-            && _currentUser?.Role == UserRole.Admin
+            && (_currentUser?.Role == UserRole.Admin || _currentUser?.Role == UserRole.SuperAdmin)
             && !string.IsNullOrWhiteSpace(SensitiveSettingsUnlockPassword);
 
         public bool CanSendSensitiveSettingsOtp =>
@@ -294,7 +294,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 return;
             }
 
-            if (_currentUser.Role != UserRole.Admin)
+            if (_currentUser.Role != UserRole.Admin && _currentUser.Role != UserRole.SuperAdmin)
             {
                 SetSensitiveSettingsUnlockError("Only admin accounts can unlock protected settings.");
                 return;

@@ -139,7 +139,7 @@ namespace AttendanceShiftingManagement.ViewModels
         public Visibility BudgetVisibility => UserPermissionService.CanAccessBudget ? Visibility.Visible : Visibility.Collapsed;
         public Visibility DistributionVisibility => UserPermissionService.CanAccessDistribution ? Visibility.Visible : Visibility.Collapsed;
         public Visibility CashForWorkVisibility => UserPermissionService.CanAccessCashForWork ? Visibility.Visible : Visibility.Collapsed;
-        public Visibility BorrowingVisibility => UserPermissionService.CanAccessBorrowing ? Visibility.Visible : Visibility.Collapsed;
+        public Visibility BorrowingVisibility => Visibility.Collapsed; // Permanently hidden as per GEMINI.md
         public Visibility ReportsVisibility => UserPermissionService.CanAccessReports ? Visibility.Visible : Visibility.Collapsed;
         public Visibility GgmsTransactionsVisibility => UserPermissionService.CanAccessGgmsTransactions ? Visibility.Visible : Visibility.Collapsed;
         public Visibility UserManagementVisibility => UserPermissionService.CanManageUsers ? Visibility.Visible : Visibility.Collapsed;

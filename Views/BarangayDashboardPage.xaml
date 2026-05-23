@@ -572,32 +572,6 @@
                     </StackPanel>
                 </Button>
 
-                <Button Grid.Row="2"
-                        Grid.Column="1"
-                        Style="{StaticResource LaunchpadTileButtonStyle}"
-                        Background="#059669"
-                        Visibility="{Binding DataContext.BorrowingVisibility, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
-                        Command="{Binding DataContext.ShowBorrowingCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}">
-                    <StackPanel>
-                        <materialDesign:PackIcon Kind="HandExtended"
-                                                 Width="42"
-                                                 Height="42"
-                                                 Foreground="White"
-                                                 HorizontalAlignment="Left"/>
-                        <TextBlock Margin="0,26,0,0"
-                                   Text="EQUIPMENT BORROWING"
-                                   FontSize="18"
-                                   FontWeight="Bold"
-                                   Foreground="White"/>
-                        <TextBlock Margin="0,8,0,0"
-                                   Text="Manage loans and returns of community equipment."
-                                   FontSize="13"
-                                   Foreground="White"
-                                   Opacity="0.82"
-                                   TextWrapping="Wrap"/>
-                    </StackPanel>
-                </Button>
-
             </Grid>
         </ScrollViewer>
 

@@ -11,155 +11,180 @@
     </UserControl.Resources>
 
     <Grid>
+        <Grid.Effect>
+            <BlurEffect Radius="{Binding IsOverlayOpen, Converter={StaticResource BooleanToBlurRadiusConverter}, FallbackValue=0}"/>
+        </Grid.Effect>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="USER MANAGEMENT" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}" Margin="20,20,20,0"/>
+
         <!-- Main Content -->
-        <Border Background="{DynamicResource ThemeCardBrush}" 
+        <Border Grid.Row="1" Background="{DynamicResource ThemeCardBrush}" 
                 BorderBrush="{DynamicResource BrandBorderBrush}" 
                 BorderThickness="1" 
                 CornerRadius="20" 
                 Padding="24" 
                 Margin="20">
             <Grid>
-                <Grid.Effect>
-                    <BlurEffect Radius="{Binding IsOverlayOpen, Converter={StaticResource BooleanToBlurRadiusConverter}, FallbackValue=0}"/>
-                </Grid.Effect>
-
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
                 <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,20">
-                <TextBox materialDesign:HintAssist.Hint="Search users..." 
-                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                         Width="300"
-                         Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                         Margin="0,0,10,0"/>
-                <Button Content="REFRESH" Command="{Binding RefreshCommand}" Style="{StaticResource SecondaryActionButton}" Margin="0,0,10,0"/>
-                <Button Content="CREATE USER" Command="{Binding OpenCreateUserCommand}" Style="{StaticResource PrimaryActionButton}"/>
-            </StackPanel>
+                    <TextBox materialDesign:HintAssist.Hint="Search users..." 
+                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                             Width="300"
+                             Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                             Margin="0,0,10,0"/>
+                    <Button Content="REFRESH" Command="{Binding RefreshCommand}" Style="{StaticResource SecondaryActionButton}" Margin="0,0,10,0"/>
+                    <Button Content="CREATE USER" Command="{Binding OpenCreateUserCommand}" Style="{StaticResource PrimaryActionButton}"/>
+                </StackPanel>
 
-            <DataGrid Grid.Row="1"
-                      ItemsSource="{Binding Users}"
-                      SelectedItem="{Binding SelectedUser}"
-                      AutoGenerateColumns="False"
-                      IsReadOnly="True"
-                      SelectionMode="Single"
-                      materialDesign:DataGridAssist.CellPadding="10">
-                <DataGrid.Columns>
-                    <DataGridTextColumn Header="USERNAME" Binding="{Binding Username}" Width="*"/>
-                    <DataGridTextColumn Header="EMAIL" Binding="{Binding Email}" Width="*"/>
-                    <DataGridTextColumn Header="ROLE" Binding="{Binding Role}" Width="120"/>
-                    <DataGridCheckBoxColumn Header="ACTIVE" Binding="{Binding IsActive}" Width="80"/>
-                    <DataGridTemplateColumn Width="150">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                                <StackPanel Orientation="Horizontal">
-                                    <Button Style="{StaticResource MaterialDesignIconButton}" 
-                                            Command="{Binding DataContext.OpenPermissionsCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                            CommandParameter="{Binding}"
-                                            ToolTip="Permissions"
-                                            Foreground="{DynamicResource BrandMidnightBrush}">
-                                        <materialDesign:PackIcon Kind="ShieldLock"/>
-                                    </Button>
-                                    <Button Style="{StaticResource MaterialDesignIconButton}" 
-                                            Command="{Binding DataContext.ToggleUserStatusCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                            CommandParameter="{Binding}"
-                                            ToolTip="Toggle Status"
-                                            Foreground="{DynamicResource BrandRedBrush}">
-                                        <materialDesign:PackIcon Kind="Power"/>
-                                    </Button>
-                                </StackPanel>
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                    </DataGridTemplateColumn>
-                </DataGrid.Columns>
-            </DataGrid>
-            </Grid>
-        </Border>
+                <DataGrid Grid.Row="1"
+                          ItemsSource="{Binding Users}"
+                          SelectedItem="{Binding SelectedUser}"
+                          AutoGenerateColumns="False"
+                          IsReadOnly="True"
+                          SelectionMode="Single"
+                          materialDesign:DataGridAssist.CellPadding="10">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="USERNAME" Binding="{Binding Username}" Width="*"/>
+                        <DataGridTextColumn Header="EMAIL" Binding="{Binding Email}" Width="*"/>
+                        <DataGridTextColumn Header="ROLE" Binding="{Binding Role}" Width="120"/>
+                        <DataGridCheckBoxColumn Header="ACTIVE" Binding="{Binding IsActive}" Width="80"/>
+                        <DataGridTemplateColumn Width="150">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Button Style="{StaticResource MaterialDesignIconButton}" 
+                                                Command="{Binding DataContext.OpenEditUserCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                CommandParameter="{Binding}"
+                                                ToolTip="Edit User"
+                                                Foreground="{DynamicResource BrandMidnightBrush}">
+                                            <materialDesign:PackIcon Kind="AccountEdit"/>
+                                        </Button>
+                                        <Button Style="{StaticResource MaterialDesignIconButton}" 
+                                                Command="{Binding DataContext.OpenPermissionsCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                CommandParameter="{Binding}"
+                                                ToolTip="Permissions"
+                                                Foreground="{DynamicResource BrandMidnightBrush}">
+                                            <materialDesign:PackIcon Kind="ShieldLock"/>
+                                        </Button>
+                                        <Button Style="{StaticResource MaterialDesignIconButton}" 
+                                                Command="{Binding DataContext.ToggleUserStatusCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                CommandParameter="{Binding}"
+                                                ToolTip="Toggle Status"
+                                                Foreground="{DynamicResource BrandRedBrush}">
+                                            <materialDesign:PackIcon Kind="Power"/>
+                                        </Button>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                        </DataGrid>
 
-        <!-- Permissions Overlay (Blurred Overlay Standard) -->
-        <Border Background="#CC0F172A" Visibility="{Binding IsPermissionsPanelOpen, Converter={StaticResource BooleanToVisibilityConverter}}" Panel.ZIndex="100">
-            <materialDesign:Card Background="{DynamicResource ThemeCardBrush}" UniformCornerRadius="20" Width="500" VerticalAlignment="Center" HorizontalAlignment="Center" Padding="0">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-
-                    <Border Grid.Row="0" Background="{DynamicResource BrandMidnightBrush}" Padding="20,15">
-                        <StackPanel>
-                            <TextBlock Text="MANAGE PERMISSIONS" Foreground="White" FontSize="18" FontWeight="Bold"/>
-                            <TextBlock Text="{Binding SelectedUser.Username}" Foreground="White" Opacity="0.8" FontSize="12"/>
+                        <!-- Pagination -->
+                        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0">
+                        <Button Content="PREV" Command="{Binding PreviousPageCommand}" Style="{StaticResource MaterialDesignFlatButton}" Margin="0,0,10,0"/>
+                        <TextBlock VerticalAlignment="Center" Margin="0,0,10,0">
+                        <Run Text="Page "/>
+                        <Run Text="{Binding CurrentPage, Mode=OneWay}" FontWeight="Bold"/>
+                        <Run Text=" of "/>
+                        <Run Text="{Binding TotalPages, Mode=OneWay}"/>
+                        </TextBlock>
+                        <Button Content="NEXT" Command="{Binding NextPageCommand}" Style="{StaticResource MaterialDesignFlatButton}"/>
                         </StackPanel>
-                    </Border>
+                        </Grid>
+                        </Border>
 
-                    <ScrollViewer Grid.Row="1" MaxHeight="500" VerticalScrollBarVisibility="Auto">
-                        <StackPanel Margin="25">
-                            <TextBlock Text="CONTROLLED MODULES" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}" Margin="0,0,0,15"/>
-                            
-                            <CheckBox Content="Dashboard" IsChecked="{Binding EditingPermissions.CanAccessDashboard}" Margin="0,0,0,10"/>
-                            <CheckBox Content="Validated Beneficiaries (Masterlist)" IsChecked="{Binding EditingPermissions.CanAccessMasterList}" Margin="0,0,0,10"/>
-                            <CheckBox Content="Aid Request (Assistance Cases)" IsChecked="{Binding EditingPermissions.CanAccessAssistanceCases}" Margin="0,0,0,10"/>
-                            <CheckBox Content="Budget Management" IsChecked="{Binding EditingPermissions.CanAccessBudget}" Margin="0,0,0,10"/>
-                            <CheckBox Content="Project Distribution" IsChecked="{Binding EditingPermissions.CanAccessDistribution}" Margin="0,0,0,10"/>
-                            <CheckBox Content="Cash-for-Work" IsChecked="{Binding EditingPermissions.CanAccessCashForWork}" Margin="0,0,0,10"/>
-                            <CheckBox Content="Equipment Borrowing" IsChecked="{Binding EditingPermissions.CanAccessBorrowing}" Margin="0,0,0,10"/>
-                            <CheckBox Content="Reports" IsChecked="{Binding EditingPermissions.CanAccessReports}" Margin="0,0,0,10"/>
-                            <CheckBox Content="GGMS Transactions" IsChecked="{Binding EditingPermissions.CanAccessGgmsTransactions}" Margin="0,0,0,10"/>
+                        <!-- Permissions Overlay (Blurred Overlay Standard) -->
+                        <Border Background="#CC0F172A" Visibility="{Binding IsPermissionsPanelOpen, Converter={StaticResource BooleanToVisibilityConverter}}" Panel.ZIndex="100">
+                        <materialDesign:Card Background="{DynamicResource ThemeCardBrush}" UniformCornerRadius="20" Width="500" VerticalAlignment="Center" HorizontalAlignment="Center" Padding="0">
+                        <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
 
-                            <Border BorderThickness="0,1,0,0" BorderBrush="#E2E8F0" Margin="0,15,0,15"/>
-                            <TextBlock Text="* Changes will take effect on the user's next login." FontSize="11" Foreground="#64748B" FontStyle="Italic"/>
+                        <Border Grid.Row="0" Background="{DynamicResource BrandMidnightBrush}" Padding="20,15">
+                            <StackPanel>
+                                <TextBlock Text="MANAGE PERMISSIONS" Foreground="White" FontSize="18" FontWeight="Bold"/>
+                                <TextBlock Text="{Binding SelectedUser.Username}" Foreground="White" Opacity="0.8" FontSize="12"/>
+                            </StackPanel>
+                        </Border>
+
+                        <ScrollViewer Grid.Row="1" MaxHeight="500" VerticalScrollBarVisibility="Auto">
+                            <StackPanel Margin="25">
+                                <TextBlock Text="CONTROLLED MODULES" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}" Margin="0,0,0,15"/>
+
+                                <UniformGrid Columns="2" Margin="0,0,0,10">
+                                    <CheckBox Content="Dashboard" IsChecked="{Binding EditingPermissions.CanAccessDashboard}" Margin="0,0,10,10"/>
+                                    <CheckBox Content="Masterlist" IsChecked="{Binding EditingPermissions.CanAccessMasterList}" Margin="0,0,10,10"/>
+                                    <CheckBox Content="Assistance Cases" IsChecked="{Binding EditingPermissions.CanAccessAssistanceCases}" Margin="0,0,10,10"/>
+                                    <CheckBox Content="Budget Management" IsChecked="{Binding EditingPermissions.CanAccessBudget}" Margin="0,0,10,10"/>
+                                    <CheckBox Content="Project Distribution" IsChecked="{Binding EditingPermissions.CanAccessDistribution}" Margin="0,0,10,10"/>
+                                    <CheckBox Content="Cash-for-Work" IsChecked="{Binding EditingPermissions.CanAccessCashForWork}" Margin="0,0,10,10"/>
+                                    <CheckBox Content="Reports" IsChecked="{Binding EditingPermissions.CanAccessReports}" Margin="0,0,10,10"/>
+                                    <CheckBox Content="GGMS Transactions" IsChecked="{Binding EditingPermissions.CanAccessGgmsTransactions}" Margin="0,0,10,10"/>
+                                    </UniformGrid>
+                                <Border BorderThickness="0,1,0,0" BorderBrush="#E2E8F0" Margin="0,15,0,15"/>
+                                <TextBlock Text="* Changes will take effect on the user's next login." FontSize="11" Foreground="#64748B" FontStyle="Italic"/>
+                            </StackPanel>
+                        </ScrollViewer>
+
+                        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="20">
+                            <Button Content="CANCEL" Style="{StaticResource MaterialDesignFlatButton}" Command="{Binding ClosePermissionsCommand}" Foreground="#64748B" Margin="0,0,10,0"/>
+                            <Button Content="SAVE PERMISSIONS" Command="{Binding SavePermissionsCommand}" Style="{StaticResource PrimaryActionButton}" Background="{DynamicResource BrandYellowBrush}" BorderBrush="{DynamicResource BrandYellowBrush}"/>
                         </StackPanel>
-                    </ScrollViewer>
+                        </Grid>
+                        </materialDesign:Card>
+                        </Border>
+
+                        <!-- CREATE/EDIT USER OVERLAY -->
+                        <Border Background="#CC0F172A" Visibility="{Binding IsCreateUserPanelOpen, Converter={StaticResource BooleanToVisibilityConverter}}" Panel.ZIndex="100">
+                        <materialDesign:Card Background="{DynamicResource ThemeCardBrush}" UniformCornerRadius="20" Width="450" VerticalAlignment="Center" HorizontalAlignment="Center" Padding="0">
+                        <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <Border Grid.Row="0" Background="{DynamicResource BrandMidnightBrush}" Padding="20,15">
+                            <TextBlock Text="{Binding PanelTitle}" Foreground="White" FontSize="18" FontWeight="Bold"/>
+                        </Border>
+
+                        <StackPanel Grid.Row="1" Margin="25">
+                            <TextBox materialDesign:HintAssist.Hint="Username" 
+                                     Text="{Binding NewUsername, UpdateSourceTrigger=PropertyChanged}" 
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="0,0,0,15"/>
+
+                            <TextBox materialDesign:HintAssist.Hint="Email" 
+                                     Text="{Binding NewEmail, UpdateSourceTrigger=PropertyChanged}" 
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="0,0,0,15"/>
+
+                            <PasswordBox x:Name="NewPasswordBox" materialDesign:HintAssist.Hint="{Binding PasswordHint}" 
+                                         PasswordChanged="NewPasswordBox_PasswordChanged"
+                                         Style="{StaticResource MaterialDesignOutlinedPasswordBox}" Margin="0,0,0,15"/>
+                        <ComboBox materialDesign:HintAssist.Hint="Role" 
+                                  ItemsSource="{Binding AvailableRoles}" 
+                                  SelectedItem="{Binding NewRole}"
+                                  Style="{StaticResource MaterialDesignOutlinedComboBox}" Margin="0,0,0,10"/>
+                    </StackPanel>
 
                     <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="20">
-                        <Button Content="CANCEL" Style="{StaticResource MaterialDesignFlatButton}" Command="{Binding ClosePermissionsCommand}" Foreground="#64748B" Margin="0,0,10,0"/>
-                        <Button Content="SAVE PERMISSIONS" Command="{Binding SavePermissionsCommand}" Style="{StaticResource PrimaryActionButton}" Background="{DynamicResource BrandYellowBrush}" BorderBrush="{DynamicResource BrandYellowBrush}"/>
-                    </StackPanel>
-                </Grid>
-            </materialDesign:Card>
-        </Border>
-
-        <!-- CREATE USER OVERLAY -->
-        <Border Background="#CC0F172A" Visibility="{Binding IsCreateUserPanelOpen, Converter={StaticResource BooleanToVisibilityConverter}}" Panel.ZIndex="100">
-            <Border Background="{DynamicResource MainSurfaceBrush}" CornerRadius="16" Width="450" VerticalAlignment="Center" HorizontalAlignment="Center" Padding="30">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-
-                    <TextBlock Grid.Row="0" Text="Create New User" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource BrandBrush}" Margin="0,0,0,20"/>
-
-                    <TextBox Grid.Row="1" materialDesign:HintAssist.Hint="Username" 
-                             Text="{Binding NewUsername, UpdateSourceTrigger=PropertyChanged}" 
-                             Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="0,0,0,15"/>
-
-                    <TextBox Grid.Row="2" materialDesign:HintAssist.Hint="Email" 
-                             Text="{Binding NewEmail, UpdateSourceTrigger=PropertyChanged}" 
-                             Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="0,0,0,15"/>
-
-                    <PasswordBox Grid.Row="3" x:Name="NewPasswordBox" materialDesign:HintAssist.Hint="Password" 
-                                 PasswordChanged="NewPasswordBox_PasswordChanged"
-                                 Style="{StaticResource MaterialDesignOutlinedPasswordBox}" Margin="0,0,0,15"/>
-
-                    <ComboBox Grid.Row="4" materialDesign:HintAssist.Hint="Role" 
-                              ItemsSource="{Binding AvailableRoles}" 
-                              SelectedItem="{Binding NewRole}"
-                              Style="{StaticResource MaterialDesignOutlinedComboBox}" Margin="0,0,0,30"/>
-
-                    <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Right">
-                        <Button Content="CANCEL" Command="{Binding CloseCreateUserCommand}" Style="{StaticResource SecondaryActionButton}" Margin="0,0,10,0"/>
+                        <Button Content="CANCEL" Style="{StaticResource MaterialDesignFlatButton}" Command="{Binding CloseCreateUserCommand}" Foreground="#64748B" Margin="0,0,10,0"/>
                         <Button Content="SAVE USER" Command="{Binding SaveNewUserCommand}" Style="{StaticResource PrimaryActionButton}"/>
                     </StackPanel>
                 </Grid>
-            </Border>
+            </materialDesign:Card>
         </Border>
 
     </Grid>

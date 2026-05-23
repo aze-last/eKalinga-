@@ -10,12 +10,16 @@ namespace AttendanceShiftingManagement.Views
 {
     public enum SettingsWindowSection
     {
-        SystemProfile = 0,
-        DatabaseBackup = 1,
-        AppDatabase = 2,
-        GgmsBudgetSource = 3,
-        Updates = 4,
-        FeatureRules = 5
+        SystemUserManagement = 0,
+        SystemProfile = 1,
+        MyAccount = 2,
+        Security = 3,
+        RemoteSnapshot = 4,
+        DatabaseBackup = 5,
+        AppDatabase = 6,
+        GgmsBudgetSource = 7,
+        Updates = 8,
+        FeatureRules = 9
     }
 
     public partial class SettingsWindow : Window

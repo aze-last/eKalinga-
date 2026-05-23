@@ -174,7 +174,7 @@ All modules must strictly adhere to the following unified design system to ensur
 ### 1. Dashboard Stability (LOCKED)
 Keep the dashboard UI stable. **Do not redesign the dashboard unless explicitly asked.**
 *   **Dashboard Scope:** Only for module entry points and high-level summary cards.
-*   **Module Set:** Keep the existing dashboard module set (Validated Beneficiaries, Aid Request, Budget, Distribution, Cash-for-Work, Reports).
+*   **Module Set:** Keep the existing dashboard module set (Validated Beneficiaries, Aid Request, Budget, Distribution, Cash-for-Work, Reports). **The "Equipment Borrowing" module has been permanently hidden from the UI; do not expose its navigation, dashboard cards, or permission settings.**
 *   **Visual Direction:** Do not change dashboard visual direction when modifying module pages. Do not add random widgets or unrelated sections.
 
 ### 2. Core Color Palette

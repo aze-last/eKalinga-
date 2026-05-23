@@ -20,8 +20,16 @@ namespace AttendanceShiftingManagement.ViewModels
         private UserPermission _editingPermissions = new();
         private string _searchText = string.Empty;
 
-        // Create User Fields
+        // Pagination Fields
+        private int _currentPage = 1;
+        private int _pageSize = 15;
+        private int _totalUsers = 0;
+        private int _totalPages = 1;
+
+        // Create/Edit User Fields
         private bool _isCreateUserPanelOpen;
+        private bool _isEditMode;
+        private int _editingUserId;
         private string _newUsername = string.Empty;
         private string _newEmail = string.Empty;
         private string _newPassword = string.Empty;
@@ -43,6 +51,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 if (SetProperty(ref _selectedUser, value))
                 {
                     OnPropertyChanged(nameof(CanManagePermissions));
+                    OnPropertyChanged(nameof(CanEditUser));
                 }
             }
         }
@@ -54,9 +63,22 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 if (SetProperty(ref _searchText, value))
                 {
+                    CurrentPage = 1;
                     RefreshUsers();
                 }
             }
+        }
+
+        public int CurrentPage
+        {
+            get => _currentPage;
+            set => SetProperty(ref _currentPage, value);
+        }
+
+        public int TotalPages
+        {
+            get => _totalPages;
+            set => SetProperty(ref _totalPages, value);
         }
 
         public UserPermission EditingPermissions
@@ -66,8 +88,9 @@ namespace AttendanceShiftingManagement.ViewModels
         }
 
         public bool CanManagePermissions => SelectedUser != null && SelectedUser.Role != UserRole.SuperAdmin;
+        public bool CanEditUser => SelectedUser != null && SelectedUser.Role != UserRole.SuperAdmin;
 
-        // Create User Properties
+        // Create/Edit User Properties
         public bool IsCreateUserPanelOpen
         {
             get => _isCreateUserPanelOpen;
@@ -79,6 +102,22 @@ namespace AttendanceShiftingManagement.ViewModels
                 }
             }
         }
+
+        public bool IsEditMode
+        {
+            get => _isEditMode;
+            set
+            {
+                if (SetProperty(ref _isEditMode, value))
+                {
+                    OnPropertyChanged(nameof(PanelTitle));
+                    OnPropertyChanged(nameof(PasswordHint));
+                }
+            }
+        }
+
+        public string PanelTitle => IsEditMode ? "EDIT USER" : "CREATE NEW USER";
+        public string PasswordHint => IsEditMode ? "New Password (leave blank to keep current)" : "Password";
 
         public bool IsPermissionsPanelOpen
         {
@@ -127,20 +166,28 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand ToggleUserStatusCommand { get; }
         
         public ICommand OpenCreateUserCommand { get; }
+        public ICommand OpenEditUserCommand { get; }
         public ICommand CloseCreateUserCommand { get; }
         public ICommand SaveNewUserCommand { get; }
 
+        public ICommand PreviousPageCommand { get; }
+        public ICommand NextPageCommand { get; }
+
         public UserManagementViewModel()
         {
-            RefreshCommand = new RelayCommand(_ => RefreshUsers());
+            RefreshCommand = new RelayCommand(_ => { CurrentPage = 1; RefreshUsers(); });
             OpenPermissionsCommand = new RelayCommand(OpenPermissions, CanManagePermissionsUser);
             SavePermissionsCommand = new RelayCommand(_ => SavePermissions());
             ClosePermissionsCommand = new RelayCommand(_ => IsPermissionsPanelOpen = false);
             ToggleUserStatusCommand = new RelayCommand(ToggleUserStatus, CanManagePermissionsUser);
             
             OpenCreateUserCommand = new RelayCommand(_ => OpenCreateUser());
+            OpenEditUserCommand = new RelayCommand(OpenEditUser, _ => CanEditUser);
             CloseCreateUserCommand = new RelayCommand(_ => IsCreateUserPanelOpen = false);
             SaveNewUserCommand = new RelayCommand(_ => SaveNewUser(), _ => CanSaveNewUser());
+
+            PreviousPageCommand = new RelayCommand(_ => { if (CurrentPage > 1) { CurrentPage--; RefreshUsers(); } });
+            NextPageCommand = new RelayCommand(_ => { if (CurrentPage < TotalPages) { CurrentPage++; RefreshUsers(); } });
 
             RefreshUsers();
         }
@@ -162,7 +209,16 @@ namespace AttendanceShiftingManagement.ViewModels
                 query = query.Where(u => u.Username.ToLower().Contains(term) || u.Email.ToLower().Contains(term));
             }
 
-            Users = new ObservableCollection<User>(query.OrderBy(u => u.Username).ToList());
+            int totalCount = query.Count();
+            _totalUsers = totalCount;
+            TotalPages = (int)Math.Ceiling(totalCount / (double)_pageSize);
+            if (TotalPages == 0) TotalPages = 1;
+            if (CurrentPage > TotalPages) CurrentPage = TotalPages;
+
+            Users = new ObservableCollection<User>(query.OrderBy(u => u.Username)
+                                                        .Skip((CurrentPage - 1) * _pageSize)
+                                                        .Take(_pageSize)
+                                                        .ToList());
         }
 
         private void OpenPermissions(object? param)
@@ -242,8 +298,6 @@ namespace AttendanceShiftingManagement.ViewModels
             }
 
             IsPermissionsPanelOpen = false;
-            
-            // Reload if current user was changed (optional, usually takes effect on next login as per prompt)
         }
 
         private void ToggleUserStatus(object? param)
@@ -277,6 +331,8 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private void OpenCreateUser()
         {
+            IsEditMode = false;
+            _editingUserId = 0;
             NewUsername = string.Empty;
             NewEmail = string.Empty;
             NewPassword = string.Empty;
@@ -284,57 +340,124 @@ namespace AttendanceShiftingManagement.ViewModels
             IsCreateUserPanelOpen = true;
         }
 
+        private void OpenEditUser(object? param)
+        {
+            var user = param as User ?? SelectedUser;
+            if (user == null || user.Role == UserRole.SuperAdmin) return;
+
+            IsEditMode = true;
+            _editingUserId = user.Id;
+            NewUsername = user.Username;
+            NewEmail = user.Email;
+            NewPassword = string.Empty; // Leave blank to not update
+            NewRole = user.Role;
+            IsCreateUserPanelOpen = true;
+        }
+
         private bool CanSaveNewUser()
         {
-            return !string.IsNullOrWhiteSpace(NewUsername) &&
-                   !string.IsNullOrWhiteSpace(NewEmail) &&
-                   !string.IsNullOrWhiteSpace(NewPassword);
+            if (string.IsNullOrWhiteSpace(NewUsername) || string.IsNullOrWhiteSpace(NewEmail))
+                return false;
+
+            if (!NewEmail.Contains("@") || !NewEmail.Contains("."))
+                return false;
+
+            if (!IsEditMode && string.IsNullOrWhiteSpace(NewPassword))
+                return false; // Password required for new users
+
+            if (!IsEditMode && NewPassword.Length < 6)
+                return false; // Simple length validation
+
+            if (IsEditMode && !string.IsNullOrWhiteSpace(NewPassword) && NewPassword.Length < 6)
+                return false;
+
+            return true;
         }
 
         private void SaveNewUser()
         {
-            if (!CanSaveNewUser()) return;
-
-            using var context = new AppDbContext();
-
-            // Check duplicates
-            if (context.Users.Any(u => u.Username == NewUsername || u.Email == NewEmail))
+            if (!CanSaveNewUser())
             {
-                System.Windows.MessageBox.Show("Username or Email already exists.", "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                System.Windows.MessageBox.Show("Please ensure all fields are filled correctly. Passwords must be at least 6 characters.", "Validation Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
                 return;
             }
 
-            var newUser = new User
+            using var context = new AppDbContext();
+
+            if (IsEditMode)
             {
-                Username = NewUsername,
-                Email = NewEmail,
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword(NewPassword),
-                Role = NewRole,
-                IsActive = true,
-                CreatedAt = DateTime.Now,
-                UpdatedAt = DateTime.Now
-            };
+                var existingUser = context.Users.Find(_editingUserId);
+                if (existingUser == null) return;
 
-            context.Users.Add(newUser);
-            context.SaveChanges();
+                // Check duplicates (excluding current user)
+                if (context.Users.Any(u => u.Id != _editingUserId && (u.Username == NewUsername || u.Email == NewEmail)))
+                {
+                    System.Windows.MessageBox.Show("Username or Email already exists for another user.", "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                    return;
+                }
 
-            // Add default blank permissions
-            var newPermissions = new UserPermission
+                existingUser.Username = NewUsername;
+                existingUser.Email = NewEmail;
+                existingUser.Role = NewRole;
+                existingUser.UpdatedAt = DateTime.Now;
+
+                if (!string.IsNullOrWhiteSpace(NewPassword))
+                {
+                    existingUser.PasswordHash = BCrypt.Net.BCrypt.HashPassword(NewPassword);
+                }
+
+                context.SaveChanges();
+
+                var auditService = new AuditService(context);
+                auditService.LogActivity(
+                    userId: CurrentUser?.Id ?? 0,
+                    action: "Edited User",
+                    entity: "User",
+                    entityId: existingUser.Id,
+                    details: $"Updated user {existingUser.Username}"
+                );
+            }
+            else
             {
-                UserId = newUser.Id,
-                UpdatedAt = DateTime.Now
-            };
-            context.UserPermissions.Add(newPermissions);
-            context.SaveChanges();
+                // Check duplicates for new user
+                if (context.Users.Any(u => u.Username == NewUsername || u.Email == NewEmail))
+                {
+                    System.Windows.MessageBox.Show("Username or Email already exists.", "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                    return;
+                }
 
-            var auditService = new AuditService(context);
-            auditService.LogActivity(
-                userId: CurrentUser?.Id ?? 0,
-                action: "Created User",
-                entity: "User",
-                entityId: newUser.Id,
-                details: $"Created new user {newUser.Username} with role {newUser.Role}"
-            );
+                var newUser = new User
+                {
+                    Username = NewUsername,
+                    Email = NewEmail,
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(NewPassword),
+                    Role = NewRole,
+                    IsActive = true,
+                    CreatedAt = DateTime.Now,
+                    UpdatedAt = DateTime.Now
+                };
+
+                context.Users.Add(newUser);
+                context.SaveChanges();
+
+                // Add default blank permissions
+                var newPermissions = new UserPermission
+                {
+                    UserId = newUser.Id,
+                    UpdatedAt = DateTime.Now
+                };
+                context.UserPermissions.Add(newPermissions);
+                context.SaveChanges();
+
+                var auditService = new AuditService(context);
+                auditService.LogActivity(
+                    userId: CurrentUser?.Id ?? 0,
+                    action: "Created User",
+                    entity: "User",
+                    entityId: newUser.Id,
+                    details: $"Created new user {newUser.Username} with role {newUser.Role}"
+                );
+            }
 
             IsCreateUserPanelOpen = false;
             RefreshUsers();

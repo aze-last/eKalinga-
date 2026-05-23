@@ -287,8 +287,49 @@
                     Background="Transparent"
                     BorderThickness="0"
                     ItemContainerStyle="{StaticResource SettingsTabItemStyle}">
-            <TabItem Header="System User Management" Visibility="{Binding DataContext.UserManagementVisibility, RelativeSource={RelativeSource AncestorType={x:Type Window}}}">
-                <local:UserManagementPage x:Name="UserManagementTab" />
+            <TabItem Header="System User Management" Visibility="{Binding UserManagementVisibility}">
+                <Grid Margin="0,20,0,0">
+                    <Grid Style="{StaticResource ProtectedSettingsContentGridStyle}">
+                        <local:UserManagementPage x:Name="UserManagementTab" />
+                    </Grid>
+                    
+                    <Border Panel.ZIndex="10"
+                            Background="#70FFFFFF"
+                            Visibility="{Binding IsSensitiveSettingsLocked, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Border MaxWidth="560"
+                                Margin="24"
+                                Padding="22"
+                                CornerRadius="18"
+                                BorderBrush="{DynamicResource BrandBorderBrush}"
+                                BorderThickness="1"
+                                Background="{DynamicResource ThemeCardBrush}"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center">
+                            <StackPanel>
+                                <TextBlock Text="Protected settings"
+                                           FontSize="16"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource BrandMidnightBrush}" />
+                                <TextBlock Margin="0,8,0,0"
+                                           Text="{Binding SensitiveSettingsUnlockPromptText}"
+                                           Foreground="{DynamicResource BrandTextSecondaryBrush}"
+                                           TextWrapping="Wrap" />
+                                <PasswordBox Margin="0,16,0,0"
+                                             PasswordChanged="ProtectedSettingsUnlockPasswordBox_PasswordChanged"
+                                             Style="{StaticResource MaterialDesignOutlinedPasswordBox}"
+                                             materialDesign:HintAssist.Hint="Re-enter admin password" />
+                                <Button Margin="0,16,0,0"
+                                        Content="UNLOCK PROTECTED SETTINGS"
+                                        Style="{StaticResource PrimaryActionButton}"
+                                        Command="{Binding UnlockSensitiveSettingsCommand}" />
+                                <TextBlock Margin="0,12,0,0"
+                                           Text="{Binding SensitiveSettingsUnlockStatusMessage}"
+                                           Foreground="{Binding SensitiveSettingsUnlockStatusBrush}"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+                    </Border>
+                </Grid>
             </TabItem>
             
             <TabItem Header="System Profile">
