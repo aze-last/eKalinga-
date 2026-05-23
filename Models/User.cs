@@ -33,6 +33,9 @@ namespace AttendanceShiftingManagement.Models
         [Column("is_active")]
         public bool IsActive { get; set; } = true;
 
+        [Column("is_deleted")]
+        public bool IsDeleted { get; set; } = false;
+
         [Column("created_at")]
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 

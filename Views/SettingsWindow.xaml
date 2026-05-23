@@ -1361,7 +1361,7 @@
                 </Grid>
             </TabItem>
 
-            <TabItem Header="App Database">
+            <TabItem Header="App Database" Visibility="{Binding AppDatabaseVisibility}">
                 <Grid Margin="0,20,0,0">
                     <Grid Style="{StaticResource ProtectedSettingsContentGridStyle}">
                         <Border Background="{DynamicResource ThemeCardBrush}"

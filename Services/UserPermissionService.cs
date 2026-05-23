@@ -50,6 +50,8 @@ namespace AttendanceShiftingManagement.Services
         public static bool CanAccessBorrowing => Check(p => p.CanAccessBorrowing);
         public static bool CanAccessReports => Check(p => p.CanAccessReports);
         public static bool CanAccessGgmsTransactions => Check(p => p.CanAccessGgmsTransactions);
+        public static bool CanAccessAppDatabase => Check(p => p.CanAccessAppDatabase);
+        public static bool CanAccessGgmsBudgetSource => Check(p => p.CanAccessGgmsBudgetSource);
 
         public static bool CanManageUsers => _user?.Role == UserRole.SuperAdmin;
     }

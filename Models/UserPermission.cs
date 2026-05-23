@@ -42,6 +42,12 @@ namespace AttendanceShiftingManagement.Models
         [Column("can_access_ggms_transactions")]
         public bool CanAccessGgmsTransactions { get; set; } = true;
 
+        [Column("can_access_app_database")]
+        public bool CanAccessAppDatabase { get; set; } = true;
+
+        [Column("can_access_ggms_budget_source")]
+        public bool CanAccessGgmsBudgetSource { get; set; } = true;
+
         [Column("updated_at")]
         public DateTime UpdatedAt { get; set; } = DateTime.Now;
 

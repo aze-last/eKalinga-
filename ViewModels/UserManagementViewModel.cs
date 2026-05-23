@@ -169,6 +169,7 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand OpenEditUserCommand { get; }
         public ICommand CloseCreateUserCommand { get; }
         public ICommand SaveNewUserCommand { get; }
+        public ICommand DeleteUserCommand { get; }
 
         public ICommand PreviousPageCommand { get; }
         public ICommand NextPageCommand { get; }
@@ -185,6 +186,7 @@ namespace AttendanceShiftingManagement.ViewModels
             OpenEditUserCommand = new RelayCommand(OpenEditUser, _ => CanEditUser);
             CloseCreateUserCommand = new RelayCommand(_ => IsCreateUserPanelOpen = false);
             SaveNewUserCommand = new RelayCommand(_ => SaveNewUser(), _ => CanSaveNewUser());
+            DeleteUserCommand = new RelayCommand(DeleteUser, CanDeleteUser);
 
             PreviousPageCommand = new RelayCommand(_ => { if (CurrentPage > 1) { CurrentPage--; RefreshUsers(); } });
             NextPageCommand = new RelayCommand(_ => { if (CurrentPage < TotalPages) { CurrentPage++; RefreshUsers(); } });
@@ -201,7 +203,7 @@ namespace AttendanceShiftingManagement.ViewModels
         public void RefreshUsers()
         {
             using var context = new AppDbContext();
-            var query = context.Users.AsNoTracking().AsQueryable();
+            var query = context.Users.AsNoTracking().Where(u => !u.IsDeleted).AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(SearchText))
             {
@@ -219,6 +221,15 @@ namespace AttendanceShiftingManagement.ViewModels
                                                         .Skip((CurrentPage - 1) * _pageSize)
                                                         .Take(_pageSize)
                                                         .ToList());
+        }
+
+        private bool CanDeleteUser(object? param)
+        {
+            var user = param as User ?? SelectedUser;
+            if (user == null) return false;
+            // Prevent deleting the currently logged-in account
+            if (CurrentUser != null && user.Id == CurrentUser.Id) return false;
+            return true;
         }
 
         private void OpenPermissions(object? param)
@@ -280,6 +291,8 @@ namespace AttendanceShiftingManagement.ViewModels
                 existing.CanAccessBorrowing = EditingPermissions.CanAccessBorrowing;
                 existing.CanAccessReports = EditingPermissions.CanAccessReports;
                 existing.CanAccessGgmsTransactions = EditingPermissions.CanAccessGgmsTransactions;
+                existing.CanAccessAppDatabase = EditingPermissions.CanAccessAppDatabase;
+                existing.CanAccessGgmsBudgetSource = EditingPermissions.CanAccessGgmsBudgetSource;
                 existing.UpdatedAt = DateTime.Now;
                 context.UserPermissions.Update(existing);
             }
@@ -461,6 +474,49 @@ namespace AttendanceShiftingManagement.ViewModels
 
             IsCreateUserPanelOpen = false;
             RefreshUsers();
+        }
+
+        private void DeleteUser(object? param)
+        {
+            var user = param as User ?? SelectedUser;
+            if (user == null) return;
+            
+            if (CurrentUser != null && user.Id == CurrentUser.Id)
+            {
+                MessageBox.Show("You cannot delete your own account.", "Action Denied", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var result = MessageBox.Show($"Are you sure you want to delete the user '{user.Username}'?\nThis action cannot be fully undone from the UI.", 
+                                         "Confirm Deletion", 
+                                         MessageBoxButton.YesNo, 
+                                         MessageBoxImage.Warning);
+                                         
+            if (result == MessageBoxResult.Yes)
+            {
+                using var context = new AppDbContext();
+                var dbUser = context.Users.Find(user.Id);
+                if (dbUser != null)
+                {
+                    dbUser.IsDeleted = true;
+                    dbUser.IsActive = false; // Deactivate as well
+                    dbUser.UpdatedAt = DateTime.Now;
+                    
+                    if (CurrentUser != null)
+                    {
+                        var auditService = new AuditService(context);
+                        auditService.LogActivity(
+                            CurrentUser.Id,
+                            "UserDeleted",
+                            "User",
+                            dbUser.Id,
+                            $"User '{CurrentUser.Username}' deleted user '{dbUser.Username}'.");
+                    }
+                    
+                    context.SaveChanges();
+                    RefreshUsers();
+                }
+            }
         }
     }
 }

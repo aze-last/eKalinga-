@@ -398,6 +398,24 @@ namespace AttendanceShiftingManagement.Data
                 "is_deleted",
                 "ALTER TABLE `cash_for_work_attendance` ADD COLUMN `is_deleted` tinyint(1) NOT NULL DEFAULT 0;");
 
+            EnsureColumnExists(
+                connection,
+                "users",
+                "is_deleted",
+                "ALTER TABLE `users` ADD COLUMN `is_deleted` tinyint(1) NOT NULL DEFAULT 0;");
+
+            EnsureColumnExists(
+                connection,
+                "user_permissions",
+                "can_access_app_database",
+                "ALTER TABLE `user_permissions` ADD COLUMN `can_access_app_database` tinyint(1) NOT NULL DEFAULT 1;");
+
+            EnsureColumnExists(
+                connection,
+                "user_permissions",
+                "can_access_ggms_budget_source",
+                "ALTER TABLE `user_permissions` ADD COLUMN `can_access_ggms_budget_source` tinyint(1) NOT NULL DEFAULT 1;");
+
             ExecuteNonQuery(
                 connection,
                 """
@@ -530,6 +548,7 @@ namespace AttendanceShiftingManagement.Data
                     `password_hash` varchar(255) NOT NULL,
                     `role` longtext NOT NULL,
                     `is_active` tinyint(1) NOT NULL,
+                    `is_deleted` tinyint(1) NOT NULL DEFAULT 0,
                     `created_at` datetime(6) NOT NULL,
                     `updated_at` datetime(6) NOT NULL,
                     PRIMARY KEY (`id`)
@@ -548,6 +567,8 @@ namespace AttendanceShiftingManagement.Data
                     `can_access_borrowing` tinyint(1) NOT NULL DEFAULT 1,
                     `can_access_reports` tinyint(1) NOT NULL DEFAULT 1,
                     `can_access_ggms_transactions` tinyint(1) NOT NULL DEFAULT 1,
+                    `can_access_app_database` tinyint(1) NOT NULL DEFAULT 1,
+                    `can_access_ggms_budget_source` tinyint(1) NOT NULL DEFAULT 1,
                     `updated_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
                     PRIMARY KEY (`id`),
                     UNIQUE KEY `UQ_user_permissions_user_id` (`user_id`)
