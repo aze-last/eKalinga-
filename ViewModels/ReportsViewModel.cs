@@ -60,7 +60,8 @@ namespace AttendanceShiftingManagement.ViewModels
                 new(ReportsReportType.AidRequests, "Aid Request Summary", "Case volume, status mix, and assistance totals.", true),
                 new(ReportsReportType.ValidatedBeneficiaries, "Validated Beneficiaries", "Verification queue and approved-beneficiary registry snapshot.", false),
                 new(ReportsReportType.BudgetUtilization, "Budget Utilization", "Program caps versus released amounts and alert thresholds.", true),
-                new(ReportsReportType.DistributionClaims, "Distribution Claims", "One-claim-per-project distribution log.", true)
+                new(ReportsReportType.DistributionClaims, "Distribution Claims", "One-claim-per-project distribution log.", true),
+                new(ReportsReportType.AdminActivityAudit, "Admin Activity Audit", "Track actions (Create/Edit) performed by Admins and SuperAdmins.", true)
             };
 
             ProgramFilters = new ObservableCollection<AyudaProgramFilterOption> { AyudaProgramFilterOption.AllPrograms };

@@ -167,6 +167,12 @@ namespace AttendanceShiftingManagement.Services
             var actionValue = action ?? string.Empty;
             var entityValue = entity ?? string.Empty;
 
+            if (entityValue.Contains("AssistanceCase", StringComparison.OrdinalIgnoreCase) ||
+                actionValue.Contains("AidRequest", StringComparison.OrdinalIgnoreCase))
+            {
+                return "AidRequests";
+            }
+
             if (actionValue.Contains("Approve", StringComparison.OrdinalIgnoreCase) ||
                 actionValue.Contains("Reject", StringComparison.OrdinalIgnoreCase) ||
                 entityValue.Contains("Beneficiary", StringComparison.OrdinalIgnoreCase))
@@ -182,7 +188,8 @@ namespace AttendanceShiftingManagement.Services
 
             if (entityValue.Contains("Distribution", StringComparison.OrdinalIgnoreCase) ||
                 entityValue.Contains("Project", StringComparison.OrdinalIgnoreCase) ||
-                actionValue.Contains("Claim", StringComparison.OrdinalIgnoreCase))
+                actionValue.Contains("Claim", StringComparison.OrdinalIgnoreCase) ||
+                entityValue.Contains("AyudaProgram", StringComparison.OrdinalIgnoreCase))
             {
                 return "Distribution";
             }
@@ -191,12 +198,6 @@ namespace AttendanceShiftingManagement.Services
                 entityValue.Contains("Attendance", StringComparison.OrdinalIgnoreCase))
             {
                 return "CashForWork";
-            }
-
-            if (entityValue.Contains("Equipment", StringComparison.OrdinalIgnoreCase) ||
-                entityValue.Contains("Asset", StringComparison.OrdinalIgnoreCase))
-            {
-                return "Equipment";
             }
 
             if (entityValue.Contains("Report", StringComparison.OrdinalIgnoreCase))
@@ -211,12 +212,12 @@ namespace AttendanceShiftingManagement.Services
         {
             return categoryKey switch
             {
+                "AidRequests" => "Aid Requests",
                 "Approvals" => "Approvals",
                 "Budget" => "Budget",
                 "Distribution" => "Distribution",
                 "CashForWork" => "Cash-for-Work",
                 "Reports" => "Reports",
-                "Equipment" => "Equipment Borrowing",
                 _ => "General"
             };
         }

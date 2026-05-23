@@ -11,7 +11,8 @@ namespace AttendanceShiftingManagement.Services
         AidRequests,
         ValidatedBeneficiaries,
         BudgetUtilization,
-        DistributionClaims
+        DistributionClaims,
+        AdminActivityAudit
     }
 
     public sealed class ReportsQueryOptions
@@ -495,6 +496,66 @@ namespace AttendanceShiftingManagement.Services
                 Highlights = BuildHighlights(
                     rows.Count == 0 ? "No distribution claims matched the selected filters." : $"Latest claim in scope was recorded at {rows[0].ClaimedAt:MMM dd, yyyy hh:mm tt}.",
                     distinctPrograms == 0 ? "No distribution programs are represented in the current report." : $"{distinctPrograms:N0} program(s) are represented in the claims table.")
+            };
+        }
+
+        private static async Task<ReportsSnapshot> BuildAdminActivityAuditSnapshotAsync(
+            AppDbContext context,
+            ReportsQueryOptions options,
+            string programLabel,
+            CancellationToken cancellationToken)
+        {
+            var rangeEndExclusive = options.DateTo.AddDays(1);
+            
+            // Only include logs from Admin and SuperAdmin
+            var adminLogs = await context.ActivityLogs
+                .Include(al => al.User)
+                .Where(al => al.Timestamp >= options.DateFrom && al.Timestamp < rangeEndExclusive)
+                .Where(al => al.User != null && (al.User.Role == UserRole.Admin || al.User.Role == UserRole.SuperAdmin))
+                .OrderByDescending(al => al.Timestamp)
+                .ToListAsync(cancellationToken);
+
+            var table = CreateTable(
+                ("Timestamp", typeof(string)),
+                ("Admin", typeof(string)),
+                ("Role", typeof(string)),
+                ("Action", typeof(string)),
+                ("Module / Entity", typeof(string)),
+                ("Specific Details", typeof(string)));
+
+            foreach (var log in adminLogs)
+            {
+                table.Rows.Add(
+                    log.Timestamp.ToString("yyyy-MM-dd hh:mm tt", CultureInfo.InvariantCulture),
+                    log.User?.Username ?? "System",
+                    log.User?.Role.ToString() ?? "--",
+                    log.Action,
+                    log.Entity,
+                    log.Details);
+            }
+
+            var superAdminCount = adminLogs.Count(al => al.User?.Role == UserRole.SuperAdmin);
+            var adminCount = adminLogs.Count(al => al.User?.Role == UserRole.Admin);
+
+            return new ReportsSnapshot
+            {
+                Title = "Admin Activity Audit",
+                Subtitle = "Comprehensive trail of actions performed by Admin and SuperAdmin accounts across system modules.",
+                ExportFilePrefix = "admin-activity-audit",
+                RangeLabel = BuildRangeLabel(options),
+                ProgramLabel = programLabel,
+                SuggestedOrientation = "Landscape",
+                Table = table,
+                Metrics = new[]
+                {
+                    CreateMetric("Total Activities", adminLogs.Count.ToString("N0", CultureInfo.InvariantCulture), "Total actions recorded by admins in this period"),
+                    CreateMetric("SuperAdmin Logs", superAdminCount.ToString("N0", CultureInfo.InvariantCulture), "Actions performed by SuperAdmins"),
+                    CreateMetric("Admin Logs", adminCount.ToString("N0", CultureInfo.InvariantCulture), "Actions performed by Admins"),
+                    CreateMetric("Unique Admins", adminLogs.Select(al => al.UserId).Distinct().Count().ToString("N0", CultureInfo.InvariantCulture), "Number of distinct admins active in this range")
+                },
+                Highlights = BuildHighlights(
+                    adminLogs.Count == 0 ? "No admin activities were recorded in the selected date range." : $"Found {adminLogs.Count:N0} admin action(s) for the selected period.",
+                    $"This audit specifically filters for accounts with Admin or SuperAdmin roles.")
             };
         }
 

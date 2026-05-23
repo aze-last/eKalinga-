@@ -162,6 +162,7 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             var noun = categoryLabel switch
             {
+                "Aid Requests" => "aid request update",
                 "Approvals" => "record",
                 "Budget" => "budget update",
                 "Distribution" => "distribution update",
