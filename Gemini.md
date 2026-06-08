@@ -177,7 +177,17 @@ Keep the dashboard UI stable. **Do not redesign the dashboard unless explicitly 
 *   **Module Set:** Keep the existing dashboard module set (Validated Beneficiaries, Aid Request, Budget, Distribution, Cash-for-Work, Reports). **The "Equipment Borrowing" module has been permanently hidden from the UI; do not expose its navigation, dashboard cards, or permission settings.**
 *   **Visual Direction:** Do not change dashboard visual direction when modifying module pages. Do not add random widgets or unrelated sections.
 
-### 2. Core Color Palette
+### 2. User Management & Permissions (CRITICAL)
+Strictly enforce the following rules for User Management:
+*   **SuperAdmin Exemption:** The `SuperAdmin` role is the only role that can access the "System User Management" tab. SuperAdmins are exempt from all permission restrictions.
+*   **Self-Protection:** Users (including SuperAdmins) CANNOT delete or deactivate their own currently logged-in account.
+*   **Admin Deletion:** SuperAdmins have the authority to "Soft Delete" other accounts, including other SuperAdmin accounts (provided it is not themselves).
+*   **Permission Categorization:** In the permissions overlay, checkboxes must be categorized:
+    *   *MODULES:* Dashboard, Masterlist, Aid Requests, Budget, Distribution, Cash-for-Work, Reports, GGMS Transactions.
+    *   *SYSTEM SETTINGS:* App Database, GGMS Budget Source.
+*   **Protected Settings:** Security overlays for "Remote Snapshot," "App Database," and "GGMS Budget Source" MUST allow both `Admin` and `SuperAdmin` roles to unlock via password re-entry.
+
+### 3. Core Color Palette
 *   **Primary Brand (`BrandBrush`):** `#1E4E89` (Midnight Blue) - Used for headers, primary icons, and section titles.
 *   **Action Accent:** `#F59E0B` (Amber/Gold) - Reserved for high-priority operational buttons and specific CTAs.
 *   **Sidebar Background:** `#F8FAFC` (Light Slate/Off-white) - Use this lighter shade for the left action panels to maintain a clean, professional "Institutional" look. Avoid dark/Midnight sidebars.
