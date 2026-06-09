@@ -1,0 +1,167 @@
+<UserControl x:Class="AttendanceShiftingManagement.Views.ScanningPortalPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:AttendanceShiftingManagement.Views"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:helpers="clr-namespace:AttendanceShiftingManagement.Helpers"
+             mc:Ignorable="d" 
+             d:DesignHeight="800" d:DesignWidth="1200"
+             Focusable="True"
+             Loaded="UserControl_Loaded">
+
+    <UserControl.Resources>
+        <helpers:BooleanToBlurRadiusConverter x:Key="BooleanToBlurRadiusConverter" />
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+    </UserControl.Resources>
+
+    <Grid Background="{DynamicResource ThemeBackgroundBrush}">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="320"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Sidebar -->
+            <Border Grid.Column="0" Background="{DynamicResource BrandSidebarBrush}" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="0,0,1,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Navigation -->
+                    <StackPanel Grid.Row="0" Margin="20">
+                        <Button Content="DASHBOARD" 
+                                Command="{Binding DataContext.ShowDashboardCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                Style="{StaticResource MaterialDesignOutlinedButton}"
+                                Height="45" Margin="0,0,0,20"/>
+                        
+                        <TextBlock Text="PORTAL STATUS" Style="{StaticResource SidebarHeaderStyle}"/>
+                        <Border Background="{Binding StatusBrush}" CornerRadius="8" Padding="12" Margin="0,0,0,20">
+                            <StackPanel>
+                                <TextBlock Text="{Binding StatusMessage}" 
+                                         Foreground="White" 
+                                         FontWeight="Bold" 
+                                         FontSize="14" 
+                                         HorizontalAlignment="Center"
+                                         TextWrapping="Wrap"
+                                         TextAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <Border Padding="20,0">
+                            <StackPanel>
+                                <TextBlock Text="HARDWARE INFO" Style="{StaticResource SidebarHeaderStyle}"/>
+                                <TextBlock Text="Device: YHD-1100L (HID)" FontSize="12" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,4"/>
+                                <TextBlock Text="Mode: 1D Laser" FontSize="12" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,20"/>
+
+                                <TextBlock Text="INSTRUCTIONS" Style="{StaticResource SidebarHeaderStyle}"/>
+                                <TextBlock Text="1. Point the laser at the ID barcode." FontSize="12" Foreground="{DynamicResource BrandTextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                                <TextBlock Text="2. Pull the trigger." FontSize="12" Foreground="{DynamicResource BrandTextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                                <TextBlock Text="3. Profile will open automatically." FontSize="12" Foreground="{DynamicResource BrandTextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,20"/>
+                            </StackPanel>
+                        </Border>
+                    </ScrollViewer>
+
+                    <Border Grid.Row="2" Padding="20" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="0,1,0,0">
+                        <Button Content="MANUAL ENTRY" 
+                                Click="ManualEntry_Click"
+                                Style="{StaticResource MaterialDesignOutlinedButton}"
+                                Height="40"/>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <!-- Main Content Area -->
+            <Grid Grid.Column="1">
+                <Grid.Effect>
+                    <BlurEffect Radius="{Binding IsOverlayVisible, Converter={StaticResource BooleanToBlurRadiusConverter}}" />
+                </Grid.Effect>
+
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <materialDesign:PackIcon Kind="BarcodeScanner" Width="120" Height="120" Foreground="{DynamicResource BrandBrush}" HorizontalAlignment="Center" Opacity="0.1"/>
+                    <TextBlock Text="SCANNER GATEWAY ACTIVE" 
+                             FontSize="24" 
+                             FontWeight="Bold" 
+                             Foreground="{DynamicResource BrandMidnightBrush}" 
+                             HorizontalAlignment="Center" 
+                             Margin="0,20,0,0"/>
+                    <TextBlock Text="Waiting for incoming barcode signal..." 
+                             FontSize="14" 
+                             Foreground="{DynamicResource BrandTextSecondaryBrush}" 
+                             HorizontalAlignment="Center" 
+                             Margin="0,8,0,0"/>
+                </StackPanel>
+            </Grid>
+        </Grid>
+
+        <!-- PROFILE OVERLAY (Blurred Backdrop) -->
+        <Border Background="#CC0F172A" Visibility="{Binding IsOverlayVisible, Converter={StaticResource BooleanToVisibilityConverter}}" Panel.ZIndex="100">
+            <Border Background="White" 
+                    Width="500" 
+                    Height="Auto" 
+                    VerticalAlignment="Center" 
+                    HorizontalAlignment="Center" 
+                    CornerRadius="16" 
+                    Padding="30"
+                    BorderBrush="{DynamicResource BrandBorderBrush}"
+                    BorderThickness="1">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <Button HorizontalAlignment="Right" 
+                            Command="{Binding CloseOverlayCommand}"
+                            Style="{StaticResource MaterialDesignFlatButton}" 
+                            Padding="0" Width="32" Height="32">
+                        <materialDesign:PackIcon Kind="Close" Width="24" Height="24" Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
+                    </Button>
+
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,24">
+                        <Border Width="100" Height="125" CornerRadius="8" Background="#F1F5F9" ClipToBounds="True">
+                            <Image Source="{Binding ScannedBeneficiaryPhoto}" Stretch="UniformToFill"/>
+                        </Border>
+                        <StackPanel Margin="20,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="BENEFICIARY PROFILE" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource BrandBrush}"/>
+                            <TextBlock Text="{Binding ScannedBeneficiary.FullName}" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}" TextWrapping="Wrap"/>
+                            <TextBlock Text="{Binding ScannedBeneficiary.BeneficiaryId}" FontSize="14" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <Border Grid.Row="2" Background="#F8FAFC" CornerRadius="12" Padding="20" Margin="0,0,0,24">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,12">
+                                <TextBlock Text="REGISTRY STATUS" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
+                                <TextBlock Text="VALIDATED" HorizontalAlignment="Right" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource BrandSuccessBrush}"/>
+                            </Grid>
+                            <Separator Background="{DynamicResource BrandBorderBrush}" Margin="0,0,0,12"/>
+                            
+                            <Grid Margin="0,0,0,8">
+                                <TextBlock Text="Civil Registry ID" FontSize="12" Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
+                                <TextBlock Text="{Binding ScannedBeneficiary.CivilRegistryId}" HorizontalAlignment="Right" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource BrandMidnightBrush}"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <UniformGrid Grid.Row="3" Columns="2">
+                        <Button Content="VIEW FULL HISTORY" 
+                                Style="{StaticResource MaterialDesignOutlinedButton}" 
+                                Margin="0,0,10,0" Height="45"/>
+                        <Button Content="OPEN ACTIONS" 
+                                Style="{StaticResource GoldActionButton}" 
+                                Height="45"/>
+                    </UniformGrid>
+                </Grid>
+            </Border>
+        </Border>
+    </Grid>
+</UserControl>

@@ -38,6 +38,7 @@ namespace AttendanceShiftingManagement.ViewModels
             ShowBorrowingCommand = new RelayCommand(_ => SwitchSection("Borrowing"));
             ShowGgmsTransactionsCommand = new RelayCommand(_ => SwitchSection("GgmsTransactions"));
             ShowReportsCommand = new RelayCommand(_ => SwitchSection("Reports"));
+            ShowScanningPortalCommand = new RelayCommand(_ => SwitchSection("ScanningPortal"));
             RefreshBranding();
             RefreshConnectionSummary();
             LoadUserSummary();
@@ -143,12 +144,14 @@ namespace AttendanceShiftingManagement.ViewModels
         public Visibility ReportsVisibility => UserPermissionService.CanAccessReports ? Visibility.Visible : Visibility.Collapsed;
         public Visibility GgmsTransactionsVisibility => UserPermissionService.CanAccessGgmsTransactions ? Visibility.Visible : Visibility.Collapsed;
         public Visibility UserManagementVisibility => UserPermissionService.CanManageUsers ? Visibility.Visible : Visibility.Collapsed;
+        public Visibility ScanningPortalVisibility => UserPermissionService.CanAccessScanningPortal ? Visibility.Visible : Visibility.Collapsed;
 
         public RelayCommand ShowDashboardCommand { get; }
         public RelayCommand ShowCashForWorkCommand { get; }
         public RelayCommand ShowBudgetCommand { get; }
         public RelayCommand ShowDistributionCommand { get; }
         public RelayCommand ShowMasterListCommand { get; }
+        public RelayCommand ShowScanningPortalCommand { get; }
         public ICommand ShowAssistanceCasesCommand { get; }
         public ICommand ShowBorrowingCommand { get; }
         public ICommand ShowGgmsTransactionsCommand { get; }
@@ -237,6 +240,10 @@ namespace AttendanceShiftingManagement.ViewModels
                     CurrentSectionTitle = "Reports";
                     CurrentSectionSubtitle = "Generate centralized summaries, export CSV tables, and print polished reports for PDF output.";
                     return new ReportsPage(_currentUser);
+                case "ScanningPortal":
+                    CurrentSectionTitle = "Scanning Portal";
+                    CurrentSectionSubtitle = "Use the hardware scanner gun to instantly pull up beneficiary profiles and perform actions.";
+                    return new ScanningPortalPage(_currentUser);
                 default:
                     CurrentSectionTitle = "Attendance & Payouts";
                     CurrentSectionSubtitle = "Create work events or seminars, assign participants, and save attendance to release payouts.";

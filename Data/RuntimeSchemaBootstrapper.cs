@@ -416,6 +416,12 @@ namespace AttendanceShiftingManagement.Data
                 "can_access_ggms_budget_source",
                 "ALTER TABLE `user_permissions` ADD COLUMN `can_access_ggms_budget_source` tinyint(1) NOT NULL DEFAULT 1;");
 
+            EnsureColumnExists(
+                connection,
+                "user_permissions",
+                "can_access_scanning_portal",
+                "ALTER TABLE `user_permissions` ADD COLUMN `can_access_scanning_portal` tinyint(1) NOT NULL DEFAULT 1;");
+
             ExecuteNonQuery(
                 connection,
                 """

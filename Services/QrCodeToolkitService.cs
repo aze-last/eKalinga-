@@ -6,11 +6,40 @@ using System.IO;
 using System.Windows.Media.Imaging;
 using ZXing;
 using ZXing.Common;
+using ZXing.Windows.Compatibility;
 
 namespace AttendanceShiftingManagement.Services
 {
     public static class QrCodeToolkitService
     {
+        public static BitmapImage GenerateBarcodeImage(string payload, int width, int height)
+        {
+            var writer = new BarcodeWriter
+            {
+                Format = BarcodeFormat.CODE_128,
+                Options = new EncodingOptions
+                {
+                    Width = width,
+                    Height = height,
+                    Margin = 0,
+                    PureBarcode = true
+                }
+            };
+
+            using var bitmap = writer.Write(payload);
+            using var stream = new MemoryStream();
+            bitmap.Save(stream, ImageFormat.Png);
+            stream.Position = 0;
+            
+            var image = new BitmapImage();
+            image.BeginInit();
+            image.CacheOption = BitmapCacheOption.OnLoad;
+            image.StreamSource = stream;
+            image.EndInit();
+            image.Freeze();
+            return image;
+        }
+
         public static BitmapImage GenerateQrImage(string payload, int pixelsPerModule = 8)
         {
             var bytes = GenerateQrPngBytes(payload, pixelsPerModule);

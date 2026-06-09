@@ -547,6 +547,32 @@
                 </Button>
 
                 <Button Grid.Row="2"
+                        Grid.Column="1"
+                        Style="{StaticResource LaunchpadTileButtonStyle}"
+                        Background="#059669"
+                        Visibility="{Binding DataContext.ScanningPortalVisibility, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
+                        Command="{Binding DataContext.ShowScanningPortalCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}">
+                    <StackPanel>
+                        <materialDesign:PackIcon Kind="BarcodeScanner"
+                                                 Width="42"
+                                                 Height="42"
+                                                 Foreground="White"
+                                                 HorizontalAlignment="Left"/>
+                        <TextBlock Margin="0,26,0,0"
+                                   Text="SCANNING PORTAL"
+                                   FontSize="18"
+                                   FontWeight="Bold"
+                                   Foreground="White"/>
+                        <TextBlock Margin="0,8,0,0"
+                                   Text="Hardware scanner gateway for instant profile lookup."
+                                   FontSize="13"
+                                   Foreground="White"
+                                   Opacity="0.82"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Button>
+
+                <Button Grid.Row="2"
                         Grid.Column="0"
                         Style="{StaticResource LaunchpadTileButtonStyle}"
                         Background="#4F46E5"

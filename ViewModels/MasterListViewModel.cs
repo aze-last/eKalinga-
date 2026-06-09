@@ -1327,7 +1327,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 }
 
                 var digitalId = await digitalIdService.EnsureIssuedAsync(staging.StagingID, _currentUser.Id);
-                var qrImage = QrCodeToolkitService.GenerateQrImage(digitalId.QrPayload, 6);
+                var barcodeImage = QrCodeToolkitService.GenerateBarcodeImage(digitalId.QrPayload, 600, 100);
 
                 BitmapSource? photoImage = null;
                 if (!string.IsNullOrWhiteSpace(digitalId.PhotoPath))
@@ -1342,7 +1342,7 @@ namespace AttendanceShiftingManagement.ViewModels
                     SelectedBeneficiary.BeneficiaryId,
                     SelectedBeneficiary.CivilRegistryId,
                     photoImage,
-                    qrImage));
+                    barcodeImage));
 
                 SetSuccessStatus("Digital ID prepared.");
             }

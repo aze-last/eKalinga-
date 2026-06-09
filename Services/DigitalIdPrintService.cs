@@ -1,6 +1,7 @@
 using AttendanceShiftingManagement.Views;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
@@ -12,7 +13,7 @@ namespace AttendanceShiftingManagement.Services
         string BeneficiaryId,
         string CivilRegistryId,
         BitmapSource? PhotoImage,
-        BitmapSource? QrImage);
+        BitmapSource? BarcodeImage);
 
     public sealed class DigitalIdPrintService
     {
@@ -72,7 +73,6 @@ namespace AttendanceShiftingManagement.Services
 
             // WATERMARK
             var watermarkPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Images", "Gemini_Generated_Image_1ivs1t1ivs1t1ivs-removebg-preview.png");
-            // If running in dev, fallback to project path
             if (!System.IO.File.Exists(watermarkPath))
             {
                 watermarkPath = "Images/Gemini_Generated_Image_1ivs1t1ivs1t1ivs-removebg-preview.png";
@@ -84,24 +84,25 @@ namespace AttendanceShiftingManagement.Services
                 var watermark = new Image
                 {
                     Source = watermarkImage,
-                    Width = 220,
-                    Opacity = 0.22,
+                    Width = 180,
+                    Opacity = 0.05,
                     Stretch = Stretch.Uniform,
                     HorizontalAlignment = HorizontalAlignment.Center,
                     VerticalAlignment = VerticalAlignment.Center,
-                    Margin = new Thickness(0, 30, 0, 0),
+                    Margin = new Thickness(0),
                     SnapsToDevicePixels = true
                 };
                 RenderOptions.SetBitmapScalingMode(watermark, BitmapScalingMode.HighQuality);
                 
-                Grid.SetRowSpan(watermark, 2); // Span both Header (Row 0) and Body (Row 1)
+                Grid.SetRowSpan(watermark, 3);
                 root.Children.Add(watermark);
             }
 
             root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(38) });
             root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+            root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(45) });
 
-            // HEADER with GRADIENT
+            // HEADER
             var header = new Border
             {
                 Background = new LinearGradientBrush(
@@ -117,7 +118,7 @@ namespace AttendanceShiftingManagement.Services
             headerContent.Children.Add(new TextBlock
             {
                 Text = "eKalinga+",
-                FontSize = 15,
+                FontSize = 14,
                 FontWeight = FontWeights.ExtraBold,
                 Foreground = Brushes.White,
                 VerticalAlignment = VerticalAlignment.Center
@@ -125,14 +126,16 @@ namespace AttendanceShiftingManagement.Services
 
             var cardTypeBadge = new Border
             {
-                Background = new SolidColorBrush(Color.FromArgb(51, 255, 255, 255)), // rgba(255,255,255,0.2)
-                CornerRadius = new CornerRadius(4),
-                Padding = new Thickness(8, 3, 8, 3),
+                Background = new SolidColorBrush(Color.FromArgb(51, 255, 255, 255)),
+                BorderBrush = new SolidColorBrush(Color.FromArgb(76, 255, 255, 255)),
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(10),
+                Padding = new Thickness(6, 2, 6, 2),
                 VerticalAlignment = VerticalAlignment.Center,
                 Child = new TextBlock
                 {
                     Text = "Barangay Beneficiary ID".ToUpper(),
-                    FontSize = 8,
+                    FontSize = 7,
                     FontWeight = FontWeights.Bold,
                     Foreground = Brushes.White
                 }
@@ -140,14 +143,15 @@ namespace AttendanceShiftingManagement.Services
             Grid.SetColumn(cardTypeBadge, 1);
             headerContent.Children.Add(cardTypeBadge);
             header.Child = headerContent;
+            Grid.SetRow(header, 0);
             root.Children.Add(header);
 
             // BODY
             var body = new Grid
             {
-                Margin = new Thickness(14, 12, 14, 12)
+                Margin = new Thickness(14, 12, 14, 0)
             };
-            body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(78) });
+            body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(72) });
             body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(14) });
             body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             Grid.SetRow(body, 1);
@@ -156,20 +160,19 @@ namespace AttendanceShiftingManagement.Services
             // PHOTO
             var photoBorder = new Border
             {
-                Width = 78,
-                Height = 104,
+                Width = 72,
+                Height = 90,
                 CornerRadius = new CornerRadius(8),
                 Background = BrushFromHex("#F8FAFC"),
                 BorderBrush = Brushes.White,
-                BorderThickness = new Thickness(3),
+                BorderThickness = new Thickness(2),
                 ClipToBounds = true,
                 VerticalAlignment = VerticalAlignment.Top,
                 Effect = new System.Windows.Media.Effects.DropShadowEffect
                 {
-                    BlurRadius = 10,
-                    ShadowDepth = 6,
-                    Direction = 315,
-                    Opacity = 0.15,
+                    BlurRadius = 4,
+                    ShadowDepth = 2,
+                    Opacity = 0.1,
                     Color = Colors.Black
                 }
             };
@@ -180,7 +183,7 @@ namespace AttendanceShiftingManagement.Services
                     Text = "NO PHOTO",
                     HorizontalAlignment = HorizontalAlignment.Center,
                     VerticalAlignment = VerticalAlignment.Center,
-                    FontSize = 10,
+                    FontSize = 9,
                     FontWeight = FontWeights.Bold,
                     Foreground = BrushFromHex("#94A3B8")
                 }
@@ -196,73 +199,89 @@ namespace AttendanceShiftingManagement.Services
             // DETAILS
             var details = new StackPanel
             {
-                VerticalAlignment = VerticalAlignment.Top
+                VerticalAlignment = VerticalAlignment.Top,
+                Margin = new Thickness(0, 2, 0, 0)
             };
+
+            var nameLabel = new TextBlock
+            {
+                Text = "FULL NAME",
+                FontSize = 6,
+                FontWeight = FontWeights.Bold,
+                Foreground = BrushFromHex("#64748B"),
+                Margin = new Thickness(0, 0, 0, 1)
+            };
+            details.Children.Add(nameLabel);
 
             var nameBlock = new TextBlock
             {
                 Text = request.FullName.ToUpper(),
-                FontSize = 16,
+                FontSize = 14,
                 FontWeight = FontWeights.Black,
                 Foreground = BrushFromHex("#0F172A"),
                 TextWrapping = TextWrapping.Wrap,
-                Margin = new Thickness(0, 0, 0, 8),
-                Effect = CreateTextShadow()
+                Margin = new Thickness(0, 0, 0, 6)
             };
             details.Children.Add(nameBlock);
 
-            details.Children.Add(CreateDetailGroup("Beneficiary ID", request.BeneficiaryId));
-            details.Children.Add(CreateDetailGroup("Civil Registry ID", request.CivilRegistryId));
+            var fieldsGrid = new UniformGrid { Columns = 2 };
+            fieldsGrid.Children.Add(CreateDetailGroup("BENEFICIARY ID", request.BeneficiaryId));
+            fieldsGrid.Children.Add(CreateDetailGroup("CIVIL REGISTRY ID", request.CivilRegistryId));
+            details.Children.Add(fieldsGrid);
 
             Grid.SetColumn(details, 2);
             body.Children.Add(details);
 
-            // FOOTER - Card Number Badge
+            // FOOTER & BARCODE
+            var footer = new Grid
+            {
+                Margin = new Thickness(14, 0, 14, 12),
+                VerticalAlignment = VerticalAlignment.Bottom
+            };
+            footer.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            footer.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            Grid.SetRow(footer, 2);
+            root.Children.Add(footer);
+
             var cardNumberBadge = new Border
             {
                 HorizontalAlignment = HorizontalAlignment.Left,
-                VerticalAlignment = VerticalAlignment.Bottom,
-                Margin = new Thickness(14, 0, 0, 12),
-                Padding = new Thickness(10, 4, 10, 4),
-                CornerRadius = new CornerRadius(6),
-                Background = new SolidColorBrush(Color.FromArgb(230, 241, 245, 249)), // rgba(241, 245, 249, 0.9)
-                BorderBrush = BrushFromHex("#CBD5E1"),
+                Margin = new Thickness(0, 0, 0, 4),
+                Padding = new Thickness(6, 2, 6, 2),
+                CornerRadius = new CornerRadius(4),
+                Background = BrushFromHex("#F1F5F9"),
+                BorderBrush = BrushFromHex("#E2E8F0"),
                 BorderThickness = new Thickness(1),
                 Child = new TextBlock
                 {
-                    Text = request.CardNumber,
-                    FontSize = 9.5,
-                    FontWeight = FontWeights.ExtraBold,
-                    Foreground = BrushFromHex("#334155")
+                    Text = $"CARD NUMBER: {request.CardNumber}",
+                    FontSize = 6,
+                    FontWeight = FontWeights.Bold,
+                    Foreground = BrushFromHex("#64748B")
                 }
             };
-            Grid.SetRow(cardNumberBadge, 1);
-            root.Children.Add(cardNumberBadge);
+            Grid.SetRow(cardNumberBadge, 0);
+            footer.Children.Add(cardNumberBadge);
 
-            // QR CODE
-            var qrBorder = new Border
+            var barcodeContainer = new Border
             {
-                Width = 54,
-                Height = 54,
-                HorizontalAlignment = HorizontalAlignment.Right,
-                VerticalAlignment = VerticalAlignment.Bottom,
-                Margin = new Thickness(0, 0, 14, 12),
-                Padding = new Thickness(2),
+                Width = 220,
+                Height = 32,
+                HorizontalAlignment = HorizontalAlignment.Left,
                 Background = Brushes.White,
-                BorderBrush = BrushFromHex("#CBD5E1"),
-                BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(6),
-                Effect = new System.Windows.Media.Effects.DropShadowEffect
+                Child = request.BarcodeImage == null ? null : new Image
                 {
-                    BlurRadius = 4,
-                    ShadowDepth = 2,
-                    Opacity = 0.05,
-                    Color = Colors.Black
-                },
-                Child = request.QrImage == null ? null : BuildQrImage(request.QrImage)
+                    Source = request.BarcodeImage,
+                    Stretch = Stretch.Fill,
+                    SnapsToDevicePixels = true
+                }
             };
-            Grid.SetRow(qrBorder, 1);
-            root.Children.Add(qrBorder);
+            if (request.BarcodeImage != null)
+            {
+                RenderOptions.SetBitmapScalingMode(barcodeContainer.Child, BitmapScalingMode.NearestNeighbor);
+            }
+            Grid.SetRow(barcodeContainer, 1);
+            footer.Children.Add(barcodeContainer);
 
             return new Border
             {
@@ -279,35 +298,22 @@ namespace AttendanceShiftingManagement.Services
 
         private static StackPanel CreateDetailGroup(string label, string? value)
         {
-            var panel = new StackPanel { Margin = new Thickness(0, 0, 0, 6) };
+            var panel = new StackPanel { Margin = new Thickness(0, 0, 8, 4) };
             panel.Children.Add(new TextBlock
             {
                 Text = label.ToUpper(),
-                FontSize = 7.5,
+                FontSize = 6,
                 FontWeight = FontWeights.Bold,
                 Foreground = BrushFromHex("#64748B")
             });
             panel.Children.Add(new TextBlock
             {
                 Text = Fallback(value),
-                FontSize = 10.5,
+                FontSize = 9,
                 FontWeight = FontWeights.Bold,
-                Foreground = BrushFromHex("#1E293B"),
-                Effect = CreateTextShadow()
+                Foreground = BrushFromHex("#0F172A")
             });
             return panel;
-        }
-
-        private static System.Windows.Media.Effects.DropShadowEffect CreateTextShadow()
-        {
-            return new System.Windows.Media.Effects.DropShadowEffect
-            {
-                Color = Colors.White,
-                Opacity = 0.8,
-                BlurRadius = 0,
-                ShadowDepth = 1,
-                Direction = 315
-            };
         }
 
         private static SolidColorBrush BrushFromHex(string value)
@@ -318,19 +324,6 @@ namespace AttendanceShiftingManagement.Services
         private static string Fallback(string? value)
         {
             return string.IsNullOrWhiteSpace(value) ? "--" : value.Trim();
-        }
-
-        private static Image BuildQrImage(BitmapSource source)
-        {
-            var image = new Image
-            {
-                Source = source,
-                Stretch = Stretch.Uniform,
-                SnapsToDevicePixels = true
-            };
-
-            RenderOptions.SetBitmapScalingMode(image, BitmapScalingMode.NearestNeighbor);
-            return image;
         }
     }
 }
