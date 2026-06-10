@@ -59,6 +59,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly RelayCommand _processPcScanCommand;
         private readonly RelayCommand _confirmScannedClaimCommand;
         private readonly RelayCommand _cancelScannedClaimCommand;
+        private readonly RelayCommand _toggleSidebarCommand;
 
         private CashForWorkEvent? _selectedEvent;
         private CashForWorkSavedAttendanceRow? _selectedAttendanceRow;
@@ -118,6 +119,9 @@ namespace AttendanceShiftingManagement.ViewModels
         private ReportsSnapshot? _historySnapshot;
 
         private bool _isPcScannerOpen;
+        private bool _isSidebarCollapsed;
+        private bool _isSummaryCollapsed;
+        private GridLength _sidebarWidth = new GridLength(320);
         private CashForWorkParticipantListItem? _scannedBeneficiary;
         private string? _scannedBeneficiaryStatus;
         private BitmapSource? _scannedBeneficiaryPhoto;
@@ -171,6 +175,7 @@ namespace AttendanceShiftingManagement.ViewModels
             _navigateNextCommand = new RelayCommand(_ => NavigateNext(), _ => _currentIndex >= 0 && _currentIndex < Events.Count - 1);
             _openPcScannerCommand = new RelayCommand(_ => IsPcScannerOpen = true, _ => !IsBusy && HasSelectedEvent);
             _processPcScanCommand = new RelayCommand(payload => _ = ExecuteProcessPcScan(payload as string));
+            _toggleSidebarCommand = new RelayCommand(_ => ToggleSidebar());
             _confirmScannedClaimCommand = new RelayCommand(async _ => await ExecuteConfirmScannedAttendanceAsync(), _ => !IsBusy && ScannedBeneficiary != null);
             _cancelScannedClaimCommand = new RelayCommand(_ => ResetScannedResult());
 
@@ -216,6 +221,38 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand NavigateNextCommand => _navigateNextCommand;
         public ICommand OpenPcScannerCommand => _openPcScannerCommand;
         public ICommand ProcessPcScanCommand => _processPcScanCommand;
+
+        public bool IsSidebarCollapsed
+        {
+            get => _isSidebarCollapsed;
+            set
+            {
+                if (SetProperty(ref _isSidebarCollapsed, value))
+                {
+                    SidebarWidth = value ? new GridLength(0) : new GridLength(320);
+                }
+            }
+        }
+
+        public bool IsSummaryCollapsed
+        {
+            get => _isSummaryCollapsed;
+            set => SetProperty(ref _isSummaryCollapsed, value);
+        }
+
+        public GridLength SidebarWidth
+        {
+            get => _sidebarWidth;
+            private set => SetProperty(ref _sidebarWidth, value);
+        }
+
+        public ICommand ToggleSidebarCommand => _toggleSidebarCommand;
+        public ICommand ToggleSummaryCommand => new RelayCommand(_ => IsSummaryCollapsed = !IsSummaryCollapsed);
+
+        private void ToggleSidebar()
+        {
+            IsSidebarCollapsed = !IsSidebarCollapsed;
+        }
 
         public string EventSearchText
         {

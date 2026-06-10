@@ -56,8 +56,62 @@
     </UserControl.Resources>
 
     <Grid>
-        <!-- Main Layout Container with Blur Effect -->
-        <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header (Blue Theme Like Budget Module) -->
+        <Border Grid.Row="0" Background="{DynamicResource ThemePrimaryActionBrush}" Padding="20,15" Panel.ZIndex="10">
+            <Grid>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <materialDesign:PackIcon Kind="ClipboardTextClockOutline" Width="32" Height="32" Foreground="White" VerticalAlignment="Center"/>
+                    <StackPanel Margin="15,0,0,0">
+                        <TextBlock Text="CASH-FOR-WORK &amp; EVENTS" FontSize="24" FontWeight="Bold" Foreground="White"/>
+                        <TextBlock Text="Track attendance, manage work events, and process payouts." FontSize="12" Foreground="#CCFFFFFF"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <!-- Noticeable Sidebar Toggle -->
+                    <Button Command="{Binding ToggleSidebarCommand}"
+                            Style="{StaticResource MaterialDesignFlatButton}"
+                            Foreground="White"
+                            Width="150" Height="40" Padding="10,0"
+                            ToolTip="Toggle Sidebar View">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Width="20" Height="20" VerticalAlignment="Center" Margin="0,0,8,0">
+                                <materialDesign:PackIcon.Style>
+                                    <Style TargetType="materialDesign:PackIcon">
+                                        <Setter Property="Kind" Value="MenuOpen"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsSidebarCollapsed}" Value="True">
+                                                <Setter Property="Kind" Value="Menu"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </materialDesign:PackIcon.Style>
+                            </materialDesign:PackIcon>
+                            <TextBlock VerticalAlignment="Center" FontWeight="Bold">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Text" Value="HIDE SIDEBAR"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsSidebarCollapsed}" Value="True">
+                                                <Setter Property="Text" Value="SHOW SIDEBAR"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Main Content Area -->
+        <Grid Grid.Row="1">
             <Grid.Effect>
                 <BlurEffect Radius="0" x:Name="BackgroundBlur"/>
             </Grid.Effect>
@@ -86,12 +140,12 @@
 
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="320" />
+                    <ColumnDefinition Width="{Binding SidebarWidth, FallbackValue=320}" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
                 <!-- Sidebar Navigation -->
-                <Border Grid.Column="0" Background="{DynamicResource ThemeCardSubtleBrush}" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="0,0,1,0">
+                <Border Grid.Column="0" Background="{DynamicResource ThemeCardSubtleBrush}" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="0,0,1,0" x:Name="SidebarContainer">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
@@ -100,12 +154,12 @@
                         </Grid.RowDefinitions>
 
                         <!-- Dashboard Navigation -->
-                        <StackPanel Grid.Row="0" Margin="20,20,20,10">
+                        <Grid Grid.Row="0" Margin="20,20,20,10">
                             <Button Content="DASHBOARD" 
                                     Command="{Binding DataContext.ShowDashboardCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                     Style="{StaticResource MaterialDesignOutlinedButton}"
-                                    Height="45" Margin="0,0,0,20"/>
-                        </StackPanel>
+                                    Height="45" Margin="0,0,0,0"/>
+                        </Grid>
 
                         <!-- Sidebar Actions -->
                         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
@@ -113,7 +167,7 @@
                                 <StackPanel>
                                     <TextBlock Text="OPERATIONS" Style="{StaticResource SidebarHeaderStyle}"/>
 
-                                    <Button Content="NEW EVENT" 
+                                    <Button Content="CREATE EVENT" 
                                             Command="{Binding OpenCreateEventPanelCommand}"
                                             Style="{StaticResource GoldActionButton}" 
                                             HorizontalContentAlignment="Left" Height="45" Margin="0,0,0,8" FontSize="14"/>
@@ -176,81 +230,70 @@
                     </Grid>
                 </Border>
 
-                <!-- Main Content Area -->
-                <Grid Grid.Column="1" Margin="30">
+                <!-- Center Content: Search & List (Like Budget Module) -->
+                <Grid Grid.Column="1" Background="Transparent" Margin="30">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
 
-                    <!-- Header -->
-                    <Border Grid.Row="0" Style="{StaticResource DetailCardStyle}" Padding="20,15" Margin="0,0,0,24">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
+                    <!-- Empty State -->
+                    <StackPanel Grid.RowSpan="2" VerticalAlignment="Center" HorizontalAlignment="Center" 
+                                Visibility="{Binding HasSelectedEvent, Converter={StaticResource NullToHiddenConverter}, ConverterParameter=Inverse}">
+                        <materialDesign:PackIcon Kind="CalendarSearch" Width="80" Height="80" Foreground="{DynamicResource BrandBorderBrush}" HorizontalAlignment="Center"/>
+                        <TextBlock Text="No Event Selected" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,16,0,8" HorizontalAlignment="Center"/>
+                        <TextBlock Text="Select a cash-for-work event or seminar to manage attendance and payouts." FontSize="14" Foreground="{DynamicResource BrandTextSecondaryBrush}" HorizontalAlignment="Center"/>
+                        <Button Content="BROWSE EVENTS" Style="{StaticResource SecondaryActionButton}" Margin="0,24,0,0" Height="44" Click="Browse_Click"/>
+                    </StackPanel>
 
-                            <!-- Left: Title -->
-                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                <TextBlock Text="CASH-FOR-WORK WORKSPACE" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,4"/>
-                                <TextBlock Text="{Binding SelectedEventLabel}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}"/>
-                            </StackPanel>
+                    <!-- Page Content (When Event Selected) -->
+                    <ScrollViewer Grid.RowSpan="2" Visibility="{Binding HasSelectedEvent, Converter={StaticResource NullToHiddenConverter}}" 
+                                  VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <!-- Collapsible Summary Section (Metrics + Detail Card) -->
+                            <StackPanel Visibility="{Binding IsSummaryCollapsed, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                                <!-- Top Metric Row -->
+                                <Grid Margin="0,0,0,24">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="16"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="16"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
 
-                            <!-- Center: Navigation -->
-                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                <Button Style="{StaticResource MaterialDesignFlatButton}" 
-                                        Padding="8" Width="40" Height="40"
-                                        Command="{Binding NavigatePreviousCommand}"
-                                        ToolTip="Previous Event">
-                                    <materialDesign:PackIcon Kind="ChevronLeft" Width="24" Height="24" Foreground="{DynamicResource ThemePrimaryActionBrush}"/>
-                                </Button>
-                                
-                                <Border Margin="12,0" Background="{DynamicResource ThemeCardSubtleBrush}" CornerRadius="20" Padding="16,6" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="1">
-                                    <TextBlock VerticalAlignment="Center" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}">
-                                        <Run Text="{Binding CurrentPosition, Mode=OneWay}"/>
-                                    </TextBlock>
-                                </Border>
+                                    <!-- Total Approved -->
+                                    <materialDesign:Card Grid.Column="0" Padding="20">
+                                        <StackPanel>
+                                            <TextBlock Text="APPROVED PARTICIPANTS" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,8"/>
+                                            <TextBlock Text="{Binding ApprovedParticipantCount}" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}"/>
+                                        </StackPanel>
+                                    </materialDesign:Card>
 
-                                <Button Style="{StaticResource MaterialDesignFlatButton}" 
-                                        Padding="8" Width="40" Height="40"
-                                        Command="{Binding NavigateNextCommand}"
-                                        ToolTip="Next Event">
-                                    <materialDesign:PackIcon Kind="ChevronRight" Width="24" Height="24" Foreground="{DynamicResource ThemePrimaryActionBrush}"/>
-                                </Button>
-                            </StackPanel>
+                                    <!-- Present Count -->
+                                    <materialDesign:Card Grid.Column="2" Padding="20">
+                                        <StackPanel>
+                                            <TextBlock Text="PRESENT / LOGGED" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,8"/>
+                                            <TextBlock Text="{Binding PresentParticipantCount}" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource BrandSuccessBrush}"/>
+                                        </StackPanel>
+                                    </materialDesign:Card>
 
-                            <!-- Right: Global Actions -->
-                            <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                                <Button Content="BROWSE EVENTS" Click="Browse_Click" Style="{StaticResource SecondaryActionButton}" Height="40" Padding="20,0"/>
-                            </StackPanel>
-                        </Grid>
-                    </Border>
+                                    <!-- Budget Cap -->
+                                    <materialDesign:Card Grid.Column="4" Padding="20">
+                                        <StackPanel>
+                                            <TextBlock Text="REMAINING CFW BUDGET" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,8"/>
+                                            <TextBlock Text="{Binding GlobalCfwBudgetCapRemaining, StringFormat='PHP {0:N2}'}" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}"/>
+                                        </StackPanel>
+                                    </materialDesign:Card>
+                                </Grid>
 
-                    <!-- Page Content -->
-                    <Grid Grid.Row="1">
-                        <!-- Empty State -->
-                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" 
-                                    Visibility="{Binding HasSelectedEvent, Converter={StaticResource NullToHiddenConverter}, ConverterParameter=Inverse}">
-                            <materialDesign:PackIcon Kind="CalendarSearch" Width="80" Height="80" Foreground="{DynamicResource BrandBorderBrush}" HorizontalAlignment="Center"/>
-                            <TextBlock Text="No Event Selected" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,16,0,8" HorizontalAlignment="Center"/>
-                            <TextBlock Text="Select a cash-for-work event or seminar to manage attendance and payouts." FontSize="14" Foreground="{DynamicResource BrandTextSecondaryBrush}" HorizontalAlignment="Center"/>
-                            <Button Content="BROWSE EVENTS" Style="{StaticResource SecondaryActionButton}" Margin="0,24,0,0" Height="44" Click="Browse_Click"/>
-                        </StackPanel>
-
-                        <!-- Detail View -->
-                        <ScrollViewer Visibility="{Binding HasSelectedEvent, Converter={StaticResource NullToHiddenConverter}}" 
-                                      VerticalScrollBarVisibility="Auto">
-                            <StackPanel Margin="0,0,10,0">
-                                <!-- Main Summary Card -->
+                                <!-- Event Detail Header Card -->
                                 <Border Style="{StaticResource DetailCardStyle}" Padding="40,30">
                                     <Grid>
                                         <Grid.RowDefinitions>
                                             <RowDefinition Height="Auto"/>
                                             <RowDefinition Height="Auto"/>
                                             <RowDefinition Height="30"/>
-                                            <RowDefinition Height="Auto"/>
                                             <RowDefinition Height="Auto"/>
                                         </Grid.RowDefinitions>
 
@@ -264,6 +307,7 @@
                                             <StackPanel Grid.Column="0">
                                                 <TextBlock Text="EVENT TITLE" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,4"/>
                                                 <TextBlock Text="{Binding SelectedEvent.Title}" FontSize="28" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}" TextWrapping="Wrap"/>
+                                                <TextBlock Text="{Binding SelectedEvent.Location}" FontSize="16" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,4,0,0"/>
                                             </StackPanel>
 
                                             <Border Grid.Column="1" VerticalAlignment="Top" Padding="12,6" CornerRadius="20" Background="{Binding StatusBrush}">
@@ -272,21 +316,20 @@
                                             </Border>
                                         </Grid>
 
-                                        <!-- Primary Details Grid -->
-                                        <UniformGrid Grid.Row="1" Columns="2">
-                                            <StackPanel Margin="0,0,20,24">
-                                                <TextBlock Text="LOCATION" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,8"/>
-                                                <TextBlock Text="{Binding SelectedEvent.Location}" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource BrandMidnightBrush}" TextWrapping="Wrap"/>
+                                        <!-- Primary Details UniformGrid -->
+                                        <UniformGrid Grid.Row="1" Columns="3">
+                                            <StackPanel>
+                                                <TextBlock Text="EVENT DATE" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,8"/>
+                                                <TextBlock Text="{Binding SelectedEvent.EventDate, StringFormat='MMMM dd, yyyy'}" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource BrandMidnightBrush}"/>
                                             </StackPanel>
 
-                                            <StackPanel Margin="0,0,0,24">
-                                                <TextBlock Text="ATTENDANCE SUMMARY" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,8"/>
-                                                <TextBlock Text="{Binding AttendanceSummary}" FontSize="16" Foreground="{DynamicResource BrandMidnightBrush}" TextWrapping="Wrap"/>
-                                            </StackPanel>
-
-                                            <StackPanel Margin="0,0,20,0">
-                                                <TextBlock Text="PROGRAM CAP" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,8"/>
-                                                <TextBlock Text="{Binding GlobalCfwBudgetCapRemaining, StringFormat='PHP {0:N2}'}" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}"/>
+                                            <StackPanel>
+                                                <TextBlock Text="TIME WINDOW" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,8"/>
+                                                <TextBlock FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource BrandMidnightBrush}">
+                                                    <Run Text="{Binding SelectedEvent.StartTime, StringFormat='hh\\:mm'}"/>
+                                                    <Run Text=" - "/>
+                                                    <Run Text="{Binding SelectedEvent.EndTime, StringFormat='hh\\:mm'}"/>
+                                                </TextBlock>
                                             </StackPanel>
 
                                             <StackPanel>
@@ -295,105 +338,113 @@
                                             </StackPanel>
                                         </UniformGrid>
 
-                                        <!-- Timeline -->
-                                        <Border Grid.Row="3" Background="{DynamicResource ThemeCardSubtleBrush}" CornerRadius="12" Padding="20" Margin="0,20,0,0">
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="*"/>
-                                                </Grid.ColumnDefinitions>
-
-                                                <StackPanel Grid.Column="0">
-                                                    <TextBlock Text="EVENT DATE" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,4"/>
-                                                    <TextBlock Text="{Binding SelectedEvent.EventDate, StringFormat='MMMM dd, yyyy'}" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource BrandMidnightBrush}"/>
-                                                </StackPanel>
-
-                                                <StackPanel Grid.Column="1">
-                                                    <TextBlock Text="START TIME" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,4"/>
-                                                    <TextBlock Text="{Binding SelectedEvent.StartTime, StringFormat='hh\\:mm'}" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource BrandMidnightBrush}"/>
-                                                </StackPanel>
-
-                                                <StackPanel Grid.Column="2">
-                                                    <TextBlock Text="END TIME" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,4"/>
-                                                    <TextBlock Text="{Binding SelectedEvent.EndTime, StringFormat='hh\\:mm'}" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource BrandMidnightBrush}"/>
-                                                </StackPanel>
-                                            </Grid>
-                                        </Border>
-
                                         <!-- Actions -->
-                                        <StackPanel Grid.Row="4" Margin="0,30,0,0" Orientation="Horizontal">
-                                            <Button Content="EDIT EVENT DETAILS" Command="{Binding OpenEditEventPanelCommand}" Style="{StaticResource MaterialDesignOutlinedButton}" Height="45" Padding="20,0" Margin="0,0,12,0"/>
+                                        <StackPanel Grid.Row="3" Margin="0,30,0,0" Orientation="Horizontal">
+                                            <Button Content="EDIT EVENT" Command="{Binding OpenEditEventPanelCommand}" Style="{StaticResource MaterialDesignOutlinedButton}" Height="45" Padding="20,0" Margin="0,0,12,0"/>
                                             <Button Content="SAVE PDF SHEET" Command="{Binding SaveAttendanceSheetPdfCommand}" Style="{StaticResource GoldActionButton}" Height="45" Padding="20,0" Margin="0,0,12,0"/>
                                             <Button Content="PRINT PREVIEW" Command="{Binding PrintAttendanceSheetCommand}" Style="{StaticResource MaterialDesignFlatButton}" Height="45" Foreground="{DynamicResource ThemePrimaryActionBrush}"/>
                                         </StackPanel>
                                     </Grid>
                                 </Border>
-
-                                <!-- Attendance List Section -->
-                                <Border Style="{StaticResource DetailCardStyle}" Margin="0,10,0,30">
-                                    <StackPanel>
-                                        <DockPanel LastChildFill="False" Margin="0,0,0,20">
-                                            <StackPanel DockPanel.Dock="Left">
-                                                <TextBlock Text="ATTENDANCE LOG" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource ThemePrimaryActionBrush}" Typography.Capitals="AllSmallCaps" Margin="0,0,0,4"/>
-                                                <TextBlock Text="Recent captures for this workspace." Foreground="{DynamicResource BrandTextSecondaryBrush}" FontSize="12"/>
-                                            </StackPanel>
-                                            
-                                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                                                <Button Content="EDIT LOG" Command="{Binding EditAttendanceCommand}" Style="{StaticResource MaterialDesignFlatButton}" Foreground="{DynamicResource ThemePrimaryActionBrush}" Margin="0,0,8,0"/>
-                                                <Button Content="DELETE" Command="{Binding DeleteAttendanceCommand}" Style="{StaticResource MaterialDesignFlatButton}" Foreground="{DynamicResource BrandRedBrush}"/>
-                                            </StackPanel>
-                                        </DockPanel>
-
-                                        <DataGrid ItemsSource="{Binding SavedAttendanceRows}"
-                                                  SelectedItem="{Binding SelectedAttendanceRow}"
-                                                  AutoGenerateColumns="False"
-                                                  CanUserAddRows="False"
-                                                  IsReadOnly="True"
-                                                  Height="400"
-                                                  Background="Transparent"
-                                                  BorderThickness="0"
-                                                  HeadersVisibility="Column"
-                                                  materialDesign:DataGridAssist.CellPadding="12,8">
-                                            <DataGrid.Columns>
-                                                <DataGridTextColumn Header="NAME" Binding="{Binding FullName}" Width="*" FontWeight="SemiBold"/>
-                                                <DataGridTextColumn Header="BENEFICIARY ID" Binding="{Binding BeneficiaryId}" Width="130"/>
-                                                <DataGridTextColumn Header="STATUS" Binding="{Binding Status}" Width="110"/>
-                                                <DataGridTextColumn Header="SOURCE" Binding="{Binding Source}" Width="130"/>
-                                                <DataGridTextColumn Header="RECORDED" Binding="{Binding RecordedAt, StringFormat='{}{0:MMM dd, hh:mm tt}'}" Width="150"/>
-                                            </DataGrid.Columns>
-                                        </DataGrid>
-
-                                        <!-- Pagination -->
-                                        <Border Margin="0,20,0,0" Padding="0,15,0,0" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="0,1,0,0">
-                                            <Grid>
-                                                <TextBlock Text="{Binding AttendancePageSummary}" VerticalAlignment="Center" Foreground="{DynamicResource BrandTextSecondaryBrush}" FontSize="12"/>
-                                                
-                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                                    <Button Command="{Binding PreviousAttendancePageCommand}" Style="{StaticResource MaterialDesignFlatButton}" Width="40" Height="40" Padding="0">
-                                                        <materialDesign:PackIcon Kind="ChevronLeft" Width="24" Height="24"/>
-                                                    </Button>
-                                                    <TextBlock Text="{Binding AttendanceCurrentPage}" VerticalAlignment="Center" Margin="15,0" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}"/>
-                                                    <Button Command="{Binding NextAttendancePageCommand}" Style="{StaticResource MaterialDesignFlatButton}" Width="40" Height="40" Padding="0">
-                                                        <materialDesign:PackIcon Kind="ChevronRight" Width="24" Height="24"/>
-                                                    </Button>
-                                                </StackPanel>
-                                            </Grid>
-                                        </Border>
-                                    </StackPanel>
-                                </Border>
                             </StackPanel>
-                        </ScrollViewer>
-                    </Grid>
+
+                            <!-- Vertical Toggle Bar (Noticeable UI for Admin) -->
+                            <Button Command="{Binding ToggleSummaryCommand}"
+                                    Style="{StaticResource MaterialDesignFlatButton}"
+                                    HorizontalAlignment="Stretch" Height="40" Margin="0,0,0,20"
+                                    Background="{DynamicResource ThemeCardSubtleBrush}"
+                                    ToolTip="Toggle Workspace Summary">
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon Width="24" Height="24" Foreground="{DynamicResource BrandMidnightBrush}" VerticalAlignment="Center">
+                                        <materialDesign:PackIcon.Style>
+                                            <Style TargetType="materialDesign:PackIcon">
+                                                <Setter Property="Kind" Value="ChevronUp"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsSummaryCollapsed}" Value="True">
+                                                        <Setter Property="Kind" Value="ChevronDown"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </materialDesign:PackIcon.Style>
+                                    </materialDesign:PackIcon>
+                                    <TextBlock VerticalAlignment="Center" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}" Margin="8,0,0,0">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Text" Value="COLLAPSE SUMMARY"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsSummaryCollapsed}" Value="True">
+                                                        <Setter Property="Text" Value="EXPAND SUMMARY (SHOW METRICS &amp; DETAILS)"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Button>
+
+                            <!-- Clean DataGrid Section (Budget Style) -->
+                            <materialDesign:Card Padding="24" Margin="0,0,0,30">
+                                <StackPanel>
+                                    <DockPanel LastChildFill="False" Margin="0,0,0,20">
+                                        <StackPanel DockPanel.Dock="Left">
+                                            <TextBlock Text="ATTENDANCE LOG" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource ThemePrimaryActionBrush}" Typography.Capitals="AllSmallCaps" Margin="0,0,0,4"/>
+                                            <TextBlock Text="Recent captures for this workspace." Foreground="{DynamicResource BrandTextSecondaryBrush}" FontSize="12"/>
+                                        </StackPanel>
+                                        
+                                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                            <Button Content="EDIT LOG" Command="{Binding EditAttendanceCommand}" Style="{StaticResource MaterialDesignFlatButton}" Foreground="{DynamicResource ThemePrimaryActionBrush}" Margin="0,0,8,0"/>
+                                            <Button Content="DELETE" Command="{Binding DeleteAttendanceCommand}" Style="{StaticResource MaterialDesignFlatButton}" Foreground="{DynamicResource BrandRedBrush}"/>
+                                        </StackPanel>
+                                    </DockPanel>
+
+                                    <DataGrid ItemsSource="{Binding SavedAttendanceRows}"
+                                              SelectedItem="{Binding SelectedAttendanceRow}"
+                                              AutoGenerateColumns="False"
+                                              CanUserAddRows="False"
+                                              IsReadOnly="True"
+                                              MinHeight="400"
+                                              Background="Transparent"
+                                              BorderThickness="0"
+                                              HeadersVisibility="Column"
+                                              materialDesign:DataGridAssist.CellPadding="12,8">
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Header="NAME" Binding="{Binding FullName}" Width="*" FontWeight="SemiBold"/>
+                                            <DataGridTextColumn Header="BENEFICIARY ID" Binding="{Binding BeneficiaryId}" Width="130"/>
+                                            <DataGridTextColumn Header="STATUS" Binding="{Binding Status}" Width="110"/>
+                                            <DataGridTextColumn Header="SOURCE" Binding="{Binding Source}" Width="130"/>
+                                            <DataGridTextColumn Header="RECORDED" Binding="{Binding RecordedAt, StringFormat='{}{0:MMM dd, hh:mm tt}'}" Width="150"/>
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+
+                                    <!-- Pagination -->
+                                    <Border Margin="0,20,0,0" Padding="0,15,0,0" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="0,1,0,0">
+                                        <Grid>
+                                            <TextBlock Text="{Binding AttendancePageSummary}" VerticalAlignment="Center" Foreground="{DynamicResource BrandTextSecondaryBrush}" FontSize="12"/>
+                                            
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                                <Button Command="{Binding PreviousAttendancePageCommand}" Style="{StaticResource MaterialDesignFlatButton}" Width="40" Height="40" Padding="0">
+                                                    <materialDesign:PackIcon Kind="ChevronLeft" Width="24" Height="24"/>
+                                                </Button>
+                                                <TextBlock Text="{Binding AttendanceCurrentPage}" VerticalAlignment="Center" Margin="15,0" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}"/>
+                                                <Button Command="{Binding NextAttendancePageCommand}" Style="{StaticResource MaterialDesignFlatButton}" Width="40" Height="40" Padding="0">
+                                                    <materialDesign:PackIcon Kind="ChevronRight" Width="24" Height="24"/>
+                                                </Button>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </StackPanel>
+                            </materialDesign:Card>
+                        </StackPanel>
+                    </ScrollViewer>
                 </Grid>
             </Grid>
         </Grid>
 
         <!-- Backdrop for Overlays -->
-        <Border Background="#CC0F172A" Visibility="{Binding IsAnyOverlayOpen, Converter={StaticResource BooleanToVisibilityConverter}}" Panel.ZIndex="100"/>
+        <Border Grid.RowSpan="2" Background="#CC0F172A" Visibility="{Binding IsAnyOverlayOpen, Converter={StaticResource BooleanToVisibilityConverter}}" Panel.ZIndex="100"/>
 
         <!-- Operational Overlays -->
-        <Grid Panel.ZIndex="110" Visibility="{Binding IsDrawerOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+        <Grid Grid.RowSpan="2" Panel.ZIndex="110" Visibility="{Binding IsDrawerOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
             <Grid.Style>
                 <Style TargetType="Grid">
                     <Setter Property="Margin" Value="100,60" />
@@ -605,14 +656,6 @@
                                     <TextBlock Grid.Row="2" Text="Mark beneficiaries as present manually if scanning is not available." FontSize="11" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,12,0,0"/>
                                 </Grid>
                             </Border>
-                            
-                            <!-- Seminar Hint -->
-                            <Border Grid.Column="2" Visibility="{Binding SeminarScannerHintVisibility}" VerticalAlignment="Top" Style="{StaticResource DetailCardStyle}" Background="{DynamicResource ThemeAccentSoftBrush}" BorderBrush="{DynamicResource ThemeAccentBorderBrush}">
-                                <StackPanel>
-                                    <TextBlock Text="SEMINAR ATTENDANCE" FontWeight="Bold" Foreground="{DynamicResource ThemePrimaryActionBrush}" Margin="0,0,0,8"/>
-                                    <TextBlock Text="Seminar attendance is open scan-based. Beneficiaries register their attendance by scanning their QR IDs without prior assignment." Foreground="{DynamicResource BrandMidnightBrush}" TextWrapping="Wrap"/>
-                                </StackPanel>
-                            </Border>
                         </Grid>
 
                         <!-- Payout Panel -->
@@ -735,7 +778,7 @@
         </Grid>
 
         <!-- PC Scanner Overlay -->
-        <Grid Panel.ZIndex="120" Visibility="{Binding IsPcScannerOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+        <Grid Grid.RowSpan="2" Panel.ZIndex="120" Visibility="{Binding IsPcScannerOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
             <local:DesktopScannerOverlay QrCodeScanned="Scanner_QrCodeScanned"
                                        Closed="Scanner_Closed"/>
         </Grid>
