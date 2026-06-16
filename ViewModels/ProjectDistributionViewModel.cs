@@ -74,6 +74,9 @@ namespace AttendanceShiftingManagement.ViewModels
         private string? _lastScannedPayload;
         private string _scannerActionLabel = "CONFIRM CLAIM";
 
+        private bool _isSidebarCollapsed;
+        private bool _isSummaryCollapsed;
+        private GridLength _sidebarWidth = new GridLength(320);
 
         private bool _isCreateProjectPanelOpen;
         private bool _isCreateProjectSuccessPanelOpen;
@@ -157,6 +160,33 @@ namespace AttendanceShiftingManagement.ViewModels
         public ObservableCollection<AyudaProgramDistributionStatus> DistributionStatuses { get; }
         public ObservableCollection<DistributionBeneficiaryOption> AvailableUnpickedBeneficiaries { get; }
         public ObservableCollection<DistributionBeneficiaryOption> SelectedProjectBeneficiaries { get; } = new();
+
+        public bool IsSidebarCollapsed
+        {
+            get => _isSidebarCollapsed;
+            set
+            {
+                if (SetProperty(ref _isSidebarCollapsed, value))
+                {
+                    SidebarWidth = value ? new GridLength(0) : new GridLength(320);
+                }
+            }
+        }
+
+        public bool IsSummaryCollapsed
+        {
+            get => _isSummaryCollapsed;
+            set => SetProperty(ref _isSummaryCollapsed, value);
+        }
+
+        public GridLength SidebarWidth
+        {
+            get => _sidebarWidth;
+            private set => SetProperty(ref _sidebarWidth, value);
+        }
+
+        public ICommand ToggleSidebarCommand => new RelayCommand(_ => IsSidebarCollapsed = !IsSidebarCollapsed);
+        public ICommand ToggleSummaryCommand => new RelayCommand(_ => IsSummaryCollapsed = !IsSummaryCollapsed);
 
         public ICommand OpenCreateProjectPanelCommand { get; }
         public ICommand CloseCreateProjectPanelCommand { get; }
@@ -755,6 +785,11 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 if (SetProperty(ref _selectedProgram, value))
                 {
+                    if (value != null)
+                    {
+                        IsSummaryCollapsed = false;
+                    }
+
                     ResetSelectedProgramDetails(value);
                     ResetDistributionScannerSession();
                     SelectedProgramBeneficiary = null;
