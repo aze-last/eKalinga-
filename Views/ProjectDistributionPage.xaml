@@ -194,10 +194,7 @@
                                                                         Command="{Binding DataContext.OpenProgramAddBeneficiaryPanelCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
                                                                         CommandParameter="{Binding}" 
                                                                         Style="{StaticResource MaterialDesignOutlinedButton}" Height="36" FontSize="12" Margin="0,0,0,8"/>
-                                                                <Button Content="CONFIG MOBILE SCANNER" 
-                                                                        Command="{Binding DataContext.OpenProgramScannerPanelCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
-                                                                        CommandParameter="{Binding}" 
-                                                                        Style="{StaticResource MaterialDesignOutlinedButton}" Height="36" FontSize="12"/>
+                                                                <!-- Removed Mobile Scanner Config -->
                                                             </StackPanel>
                                                         </Grid>
                                                     </Button>
@@ -208,7 +205,15 @@
 
                                     <TextBlock Text="LIVE OPERATIONS" Style="{StaticResource SidebarHeaderStyle}"/>
                                     <Button Content="OPEN LIVE PREVIEW" Command="{Binding OpenLivePreviewCommand}" Style="{StaticResource MaterialDesignOutlinedButton}" HorizontalContentAlignment="Left" Height="45" Margin="0,0,0,8" FontSize="14"/>
-                                    <Button Content="SCAN VIA PC CAMERA" Command="{Binding OpenPcScannerCommand}" Style="{StaticResource GoldActionButton}" HorizontalContentAlignment="Left" Height="45" Margin="0,0,0,8" FontSize="14"/>
+                                    <TextBlock Text="BARCODE SCANNER" FontWeight="Bold" FontSize="11" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,8" />
+                                    <TextBox Text="{Binding ScannerInputText, UpdateSourceTrigger=PropertyChanged}" 
+                                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                             materialDesign:HintAssist.Hint="Scan ID Here (Auto-Enter)" 
+                                             HorizontalAlignment="Stretch" Margin="0,0,0,16">
+                                        <TextBox.InputBindings>
+                                            <KeyBinding Key="Return" Command="{Binding ProcessScanCommand}" />
+                                        </TextBox.InputBindings>
+                                    </TextBox>
                                 </StackPanel>
                             </Border>
                         </ScrollViewer>
@@ -511,16 +516,7 @@
             <local:ProjectDistributionAddBeneficiaryPanel/>
         </Grid>
 
-        <!-- Scanner Config Panel -->
-        <Grid Grid.RowSpan="2" Panel.ZIndex="110" Visibility="{Binding IsScannerPanelOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <local:ProjectDistributionScannerConfigPanel/>
-        </Grid>
-
-        <!-- PC Scanner Overlay -->
-        <Grid Grid.RowSpan="2" Panel.ZIndex="120" Visibility="{Binding IsPcScannerOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <local:DesktopScannerOverlay QrCodeScanned="Scanner_QrCodeScanned"
-                                       Closed="Scanner_Closed"/>
-        </Grid>
+        <!-- Removed Scanner Panels -->
 
         <!-- Scanned Claim Result Dialog -->
         <Grid Grid.RowSpan="2" Panel.ZIndex="130" Visibility="{Binding IsScannedResultVisible, Converter={StaticResource BooleanToVisibilityConverter}}">

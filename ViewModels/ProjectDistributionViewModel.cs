@@ -33,10 +33,16 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _selectedProgramReleaseSummary = "No released beneficiary history loaded yet.";
         private string _selectedProgramDescriptionText = "Select a project to review distribution performance and beneficiary history.";
         private string _programReleaseEmptyStateMessage = "Select a project to review released beneficiary history.";
-        private string _distributionScannerSessionUrl = string.Empty;
+        private string _scannerInputText = string.Empty;
+
+        public string ScannerInputText
+        {
+            get => _scannerInputText;
+            set => SetProperty(ref _scannerInputText, value);
+        }
         private string _distributionScannerSessionPin = string.Empty;
         private string _distributionScannerSessionExpiresAtText = string.Empty;
-        private BitmapSource? _distributionScannerQrImage;
+
         private string _livePreviewProgramName = "No active project selected";
         private string _livePreviewPrimaryLabel = "--";
         private string _livePreviewSecondaryLabel = "Select a project to prepare the queue monitor.";
@@ -114,9 +120,7 @@ namespace AttendanceShiftingManagement.ViewModels
             AddBeneficiaryCommand = new RelayCommand(async _ => await IncludeBeneficiaryAsync(), _ => CanAddBeneficiary());
             MarkBeneficiaryPendingCommand = new RelayCommand(async _ => await UpdateSelectedBeneficiaryStatusAsync(DistributionBeneficiaryStatus.Pending), _ => CanUpdateSelectedBeneficiaryStatus(DistributionBeneficiaryStatus.Pending));
             RejectBeneficiaryCommand = new RelayCommand(async _ => await UpdateSelectedBeneficiaryStatusAsync(DistributionBeneficiaryStatus.Rejected), _ => CanUpdateSelectedBeneficiaryStatus(DistributionBeneficiaryStatus.Rejected));
-            CreateDistributionScannerSessionCommand = new RelayCommand(
-                async _ => await CreateDistributionScannerSessionAsync(),
-                _ => CanCreateDistributionScannerSession());
+
             OpenLivePreviewCommand = new RelayCommand(_ => OpenLivePreview(), _ => CanOpenLivePreview());
             NextLivePreviewItemCommand = new RelayCommand(_ => AdvanceLivePreviewQueue(), _ => CanAdvanceLivePreviewQueue());
             OpenScannerPanelCommand = new RelayCommand(_ => OpenScannerPanel(), _ => CanOpenScannerPanel());
@@ -198,7 +202,7 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand MoveAllToSelectedCommand { get; }
         public ICommand MoveAllToAvailableCommand { get; }
         public ICommand OpenPcScannerCommand => _openPcScannerCommand;
-        public ICommand ProcessPcScanCommand => _processPcScanCommand;
+        public ICommand ProcessScanCommand => _processPcScanCommand;
         public ICommand ConfirmScannedClaimCommand => _confirmScannedClaimCommand;
         public ICommand CancelScannedClaimCommand => _cancelScannedClaimCommand;
 
@@ -734,7 +738,7 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand AddBeneficiaryCommand { get; }
         public ICommand MarkBeneficiaryPendingCommand { get; }
         public ICommand RejectBeneficiaryCommand { get; }
-        public ICommand CreateDistributionScannerSessionCommand { get; }
+
         public ICommand OpenLivePreviewCommand { get; }
         public ICommand NextLivePreviewItemCommand { get; }
         public ICommand OpenScannerPanelCommand { get; }
@@ -791,7 +795,6 @@ namespace AttendanceShiftingManagement.ViewModels
                     }
 
                     ResetSelectedProgramDetails(value);
-                    ResetDistributionScannerSession();
                     SelectedProgramBeneficiary = null;
                     if (AddBeneficiaryCommand is RelayCommand add)
                     {
@@ -808,10 +811,7 @@ namespace AttendanceShiftingManagement.ViewModels
                         scannerPanel.RaiseCanExecuteChanged();
                     }
 
-                    if (CreateDistributionScannerSessionCommand is RelayCommand scanner)
-                    {
-                        scanner.RaiseCanExecuteChanged();
-                    }
+
 
                     if (OpenLivePreviewCommand is RelayCommand preview)
                     {
@@ -902,29 +902,7 @@ namespace AttendanceShiftingManagement.ViewModels
             private set => SetProperty(ref _programReleaseEmptyStateMessage, value);
         }
 
-        public string DistributionScannerSessionUrl
-        {
-            get => _distributionScannerSessionUrl;
-            private set => SetProperty(ref _distributionScannerSessionUrl, value);
-        }
 
-        public string DistributionScannerSessionPin
-        {
-            get => _distributionScannerSessionPin;
-            private set => SetProperty(ref _distributionScannerSessionPin, value);
-        }
-
-        public string DistributionScannerSessionExpiresAtText
-        {
-            get => _distributionScannerSessionExpiresAtText;
-            private set => SetProperty(ref _distributionScannerSessionExpiresAtText, value);
-        }
-
-        public BitmapSource? DistributionScannerQrImage
-        {
-            get => _distributionScannerQrImage;
-            private set => SetProperty(ref _distributionScannerQrImage, value);
-        }
 
         public string LivePreviewProgramName
         {
@@ -1091,10 +1069,7 @@ namespace AttendanceShiftingManagement.ViewModels
                         reject.RaiseCanExecuteChanged();
                     }
 
-                    if (CreateDistributionScannerSessionCommand is RelayCommand scanner)
-                    {
-                        scanner.RaiseCanExecuteChanged();
-                    }
+
 
                     if (OpenLivePreviewCommand is RelayCommand preview)
                     {
@@ -1591,96 +1566,13 @@ namespace AttendanceShiftingManagement.ViewModels
             }
         }
 
-        private bool CanCreateDistributionScannerSession()
-        {
-            return !IsBusy && SelectedProgram != null;
-        }
 
-        private bool CanOpenLivePreview()
-        {
-            return SelectedProgram != null;
-        }
-
-        private async Task CreateDistributionScannerSessionAsync()
-        {
-            var selectedProgram = SelectedProgram;
-            if (selectedProgram == null)
-            {
-                SetErrorStatus("Select a project before creating a claim scanner session.");
-                return;
-            }
-
-            if (selectedProgram.DistributionStatus != AyudaProgramDistributionStatus.Open)
-            {
-                SetErrorStatus("Claim scanner sessions are only available for projects marked Open.");
-                return;
-            }
-
-            IsBusy = true;
-            SetNeutralStatus("Preparing the claim scanner session...");
-
-            try
-            {
-                var baseUrl = await LocalScannerGatewayService.Shared.EnsureStartedAsync();
-                await using var context = new AppDbContext();
-                var sessionService = new ScannerSessionService(context);
-                var session = await sessionService.CreateDistributionSessionAsync(
-                    selectedProgram.Id,
-                    _currentUser.Id,
-                    TimeSpan.FromMinutes(SelectedScannerSessionDurationMinutes));
-                var sessionUrl = $"{baseUrl}/scanner?session={Uri.EscapeDataString(session.SessionToken)}";
-
-                DistributionScannerSessionUrl = sessionUrl;
-                DistributionScannerSessionPin = session.Pin;
-                DistributionScannerSessionExpiresAtText = $"Expires {session.ExpiresAt:MMMM dd, yyyy hh:mm tt}";
-                DistributionScannerQrImage = QrCodeToolkitService.GenerateQrImage(sessionUrl, 8);
-                HasScannerSession = true;
-
-                _ = MonitorScannerSessionAsync(session.SessionToken);
-
-                SetSuccessStatus("Claim scanner session is ready. Scan a beneficiary Digital ID to review claim history and mark received.");
-            }
-            catch (Exception ex)
-            {
-                SetErrorStatus($"Unable to start the claim scanner session: {ex.Message}");
-            }
-            finally
-            {
-                IsBusy = false;
-            }
-        }
-
-        private async Task MonitorScannerSessionAsync(string sessionToken)
-        {
-            while (HasScannerSession)
-            {
-                try
-                {
-                    await using var context = new AppDbContext();
-                    var sessionService = new ScannerSessionService(context);
-                    var scanPayload = await sessionService.TryPopScanAsync(sessionToken);
-
-                    if (scanPayload != null)
-                    {
-                        // A claim was recorded via mobile scanner.
-                        // Refresh the local UI to reflect the updated status.
-                        await LoadProjectDetailsAsync();
-                        SetSuccessStatus($"Mobile Claim Received: {scanPayload}");
-                    }
-                }
-                catch
-                {
-                    // Ignore transient errors during polling
-                }
-
-                await Task.Delay(2000);
-            }
-        }
 
         private async Task ExecuteProcessPcScan(string? payload)
         {
             if (string.IsNullOrWhiteSpace(payload) || SelectedProgram == null) return;
             
+            ScannerInputText = string.Empty;
             IsBusy = true;
             SetNeutralStatus("Analyzing ID card...");
 
@@ -1777,13 +1669,9 @@ namespace AttendanceShiftingManagement.ViewModels
             IsScannedResultVisible = false;
         }
 
-        private void ResetDistributionScannerSession()
+        private bool CanOpenLivePreview()
         {
-            DistributionScannerSessionUrl = string.Empty;
-            DistributionScannerSessionPin = string.Empty;
-            DistributionScannerSessionExpiresAtText = string.Empty;
-            DistributionScannerQrImage = null;
-            HasScannerSession = false;
+            return SelectedProgram != null;
         }
 
         private void OpenLivePreview()
