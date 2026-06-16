@@ -84,95 +84,106 @@ namespace AttendanceShiftingManagement.Services
                 var watermark = new Image
                 {
                     Source = watermarkImage,
-                    Width = 180,
-                    Opacity = 0.05,
+                    Width = 160,
+                    Opacity = 0.04,
                     Stretch = Stretch.Uniform,
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                    VerticalAlignment = VerticalAlignment.Center,
-                    Margin = new Thickness(0),
+                    HorizontalAlignment = HorizontalAlignment.Right,
+                    VerticalAlignment = VerticalAlignment.Bottom,
+                    Margin = new Thickness(0, 0, -20, -20),
                     SnapsToDevicePixels = true
                 };
                 RenderOptions.SetBitmapScalingMode(watermark, BitmapScalingMode.HighQuality);
                 
-                Grid.SetRowSpan(watermark, 3);
                 root.Children.Add(watermark);
             }
-
-            root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(38) });
-            root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-            root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(45) });
 
             // HEADER
             var header = new Border
             {
-                Background = new LinearGradientBrush(
-                    BrushFromHex("#1E3A8A").Color,
-                    BrushFromHex("#3B82F6").Color,
-                    0),
-                Padding = new Thickness(14, 0, 14, 0)
+                Background = BrushFromHex("#1E4E89"), // Brand Midnight Blue
+                Height = 50,
+                VerticalAlignment = VerticalAlignment.Top,
+                Padding = new Thickness(16, 0, 16, 0)
             };
+            
             var headerContent = new Grid();
             headerContent.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             headerContent.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
-            headerContent.Children.Add(new TextBlock
+            var logoStack = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+            logoStack.Children.Add(new TextBlock
             {
-                Text = "eKalinga+",
-                FontSize = 14,
-                FontWeight = FontWeights.ExtraBold,
+                Text = "eKalinga",
+                FontSize = 16,
+                FontWeight = FontWeights.Black,
                 Foreground = Brushes.White,
-                VerticalAlignment = VerticalAlignment.Center
+                Margin = new Thickness(0, 0, 1, 0)
             });
+            logoStack.Children.Add(new TextBlock
+            {
+                Text = "+",
+                FontSize = 16,
+                FontWeight = FontWeights.Black,
+                Foreground = BrushFromHex("#F59E0B"), // Brand Gold
+            });
+            headerContent.Children.Add(logoStack);
 
             var cardTypeBadge = new Border
             {
-                Background = new SolidColorBrush(Color.FromArgb(51, 255, 255, 255)),
-                BorderBrush = new SolidColorBrush(Color.FromArgb(76, 255, 255, 255)),
-                BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(10),
-                Padding = new Thickness(6, 2, 6, 2),
+                Background = BrushFromHex("#F59E0B"),
+                CornerRadius = new CornerRadius(12),
+                Padding = new Thickness(10, 4, 10, 4),
                 VerticalAlignment = VerticalAlignment.Center,
                 Child = new TextBlock
                 {
-                    Text = "Barangay Beneficiary ID".ToUpper(),
-                    FontSize = 7,
+                    Text = "BENEFICIARY ID",
+                    FontSize = 8,
                     FontWeight = FontWeights.Bold,
-                    Foreground = Brushes.White
+                    Foreground = BrushFromHex("#FFFFFF")
                 }
             };
             Grid.SetColumn(cardTypeBadge, 1);
             headerContent.Children.Add(cardTypeBadge);
             header.Child = headerContent;
-            Grid.SetRow(header, 0);
             root.Children.Add(header);
+
+            // ACCENT LINE
+            var accentLine = new Border
+            {
+                Height = 3,
+                Background = BrushFromHex("#F59E0B"),
+                VerticalAlignment = VerticalAlignment.Top,
+                Margin = new Thickness(0, 50, 0, 0)
+            };
+            root.Children.Add(accentLine);
 
             // BODY
             var body = new Grid
             {
-                Margin = new Thickness(14, 12, 14, 0)
+                Margin = new Thickness(16, 65, 16, 16)
             };
-            body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(72) });
-            body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(14) });
-            body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            Grid.SetRow(body, 1);
+            body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(80) }); // Photo
+            body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(16) }); // Spacer
+            body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) }); // Details
+            
             root.Children.Add(body);
 
             // PHOTO
             var photoBorder = new Border
             {
-                Width = 72,
-                Height = 90,
+                Width = 80,
+                Height = 100,
                 CornerRadius = new CornerRadius(8),
                 Background = BrushFromHex("#F8FAFC"),
-                BorderBrush = Brushes.White,
-                BorderThickness = new Thickness(2),
+                BorderBrush = BrushFromHex("#E2E8F0"),
+                BorderThickness = new Thickness(1),
                 ClipToBounds = true,
                 VerticalAlignment = VerticalAlignment.Top,
                 Effect = new System.Windows.Media.Effects.DropShadowEffect
                 {
-                    BlurRadius = 4,
+                    BlurRadius = 8,
                     ShadowDepth = 2,
-                    Opacity = 0.1,
+                    Opacity = 0.15,
                     Color = Colors.Black
                 }
             };
@@ -183,7 +194,7 @@ namespace AttendanceShiftingManagement.Services
                     Text = "NO PHOTO",
                     HorizontalAlignment = HorizontalAlignment.Center,
                     VerticalAlignment = VerticalAlignment.Center,
-                    FontSize = 9,
+                    FontSize = 10,
                     FontWeight = FontWeights.Bold,
                     Foreground = BrushFromHex("#94A3B8")
                 }
@@ -200,73 +211,49 @@ namespace AttendanceShiftingManagement.Services
             var details = new StackPanel
             {
                 VerticalAlignment = VerticalAlignment.Top,
-                Margin = new Thickness(0, 2, 0, 0)
+                Margin = new Thickness(0, 0, 0, 0)
             };
 
             var nameLabel = new TextBlock
             {
                 Text = "FULL NAME",
-                FontSize = 6,
+                FontSize = 7,
                 FontWeight = FontWeights.Bold,
-                Foreground = BrushFromHex("#64748B"),
-                Margin = new Thickness(0, 0, 0, 1)
+                Foreground = BrushFromHex("#94A3B8"),
+                Margin = new Thickness(0, 0, 0, 2)
             };
             details.Children.Add(nameLabel);
 
             var nameBlock = new TextBlock
             {
                 Text = request.FullName.ToUpper(),
-                FontSize = 14,
+                FontSize = 16,
                 FontWeight = FontWeights.Black,
                 Foreground = BrushFromHex("#0F172A"),
                 TextWrapping = TextWrapping.Wrap,
-                Margin = new Thickness(0, 0, 0, 6)
+                Margin = new Thickness(0, 0, 0, 8),
+                LineHeight = 18,
+                LineStackingStrategy = LineStackingStrategy.BlockLineHeight
             };
             details.Children.Add(nameBlock);
 
             var fieldsGrid = new UniformGrid { Columns = 2 };
             fieldsGrid.Children.Add(CreateDetailGroup("BENEFICIARY ID", request.BeneficiaryId));
-            fieldsGrid.Children.Add(CreateDetailGroup("CIVIL REGISTRY ID", request.CivilRegistryId));
+            fieldsGrid.Children.Add(CreateDetailGroup("CIVIL REG ID", request.CivilRegistryId));
             details.Children.Add(fieldsGrid);
 
-            Grid.SetColumn(details, 2);
-            body.Children.Add(details);
-
-            // FOOTER & BARCODE
+            // BARCODE AND CARD NUMBER
             var footer = new Grid
             {
-                Margin = new Thickness(14, 0, 14, 12),
+                Margin = new Thickness(0, 10, 0, 0),
                 VerticalAlignment = VerticalAlignment.Bottom
             };
-            footer.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            footer.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            Grid.SetRow(footer, 2);
-            root.Children.Add(footer);
-
-            var cardNumberBadge = new Border
-            {
-                HorizontalAlignment = HorizontalAlignment.Left,
-                Margin = new Thickness(0, 0, 0, 4),
-                Padding = new Thickness(6, 2, 6, 2),
-                CornerRadius = new CornerRadius(4),
-                Background = BrushFromHex("#F1F5F9"),
-                BorderBrush = BrushFromHex("#E2E8F0"),
-                BorderThickness = new Thickness(1),
-                Child = new TextBlock
-                {
-                    Text = $"CARD NUMBER: {request.CardNumber}",
-                    FontSize = 6,
-                    FontWeight = FontWeights.Bold,
-                    Foreground = BrushFromHex("#64748B")
-                }
-            };
-            Grid.SetRow(cardNumberBadge, 0);
-            footer.Children.Add(cardNumberBadge);
-
+            footer.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            
             var barcodeContainer = new Border
             {
-                Width = 220,
-                Height = 32,
+                Height = 28,
                 HorizontalAlignment = HorizontalAlignment.Left,
                 Background = Brushes.White,
                 Child = request.BarcodeImage == null ? null : new Image
@@ -280,14 +267,32 @@ namespace AttendanceShiftingManagement.Services
             {
                 RenderOptions.SetBitmapScalingMode(barcodeContainer.Child, BitmapScalingMode.NearestNeighbor);
             }
-            Grid.SetRow(barcodeContainer, 1);
+            Grid.SetColumn(barcodeContainer, 0);
             footer.Children.Add(barcodeContainer);
+
+            var cardNumberBlock = new TextBlock
+            {
+                Text = $"CARD NO.\n{request.CardNumber}",
+                FontSize = 6,
+                FontWeight = FontWeights.ExtraBold,
+                Foreground = BrushFromHex("#64748B"),
+                TextAlignment = TextAlignment.Right,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(8, 0, 0, 0)
+            };
+            Grid.SetColumn(cardNumberBlock, 1);
+            footer.Children.Add(cardNumberBlock);
+
+            details.Children.Add(footer);
+
+            Grid.SetColumn(details, 2);
+            body.Children.Add(details);
 
             return new Border
             {
                 Width = 324,
                 Height = 204,
-                CornerRadius = new CornerRadius(12),
+                CornerRadius = new CornerRadius(16),
                 Background = Brushes.White,
                 BorderBrush = BrushFromHex("#CBD5E1"),
                 BorderThickness = new Thickness(1),

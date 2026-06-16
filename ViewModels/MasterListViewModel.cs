@@ -72,6 +72,10 @@ namespace AttendanceShiftingManagement.ViewModels
         private string? _lastScannedPayload;
         private string _scannerActionLabel = "CONFIRM SEARCH";
 
+        private bool _isSidebarCollapsed;
+        private bool _isSummaryCollapsed;
+        private GridLength _sidebarWidth = new GridLength(320);
+
         private string _statusMessage = "Loading validated beneficiaries...";
         private Brush _statusBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#6B7280"));
         
@@ -626,6 +630,11 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 if (SetProperty(ref _selectedBeneficiary, value))
                 {
+                    if (value != null)
+                    {
+                        IsSummaryCollapsed = false;
+                    }
+
                     _selectedBeneficiaryHistory.Clear();
                     OnPropertyChanged(nameof(HistoryEmptyStateVisibility));
                     _viewHistoryCommand.RaiseCanExecuteChanged();
@@ -1553,6 +1562,33 @@ namespace AttendanceShiftingManagement.ViewModels
             get => _lastUpdatedSummary;
             private set => SetProperty(ref _lastUpdatedSummary, value);
         }
+
+        public bool IsSidebarCollapsed
+        {
+            get => _isSidebarCollapsed;
+            set
+            {
+                if (SetProperty(ref _isSidebarCollapsed, value))
+                {
+                    SidebarWidth = value ? new GridLength(0) : new GridLength(320);
+                }
+            }
+        }
+
+        public bool IsSummaryCollapsed
+        {
+            get => _isSummaryCollapsed;
+            set => SetProperty(ref _isSummaryCollapsed, value);
+        }
+
+        public GridLength SidebarWidth
+        {
+            get => _sidebarWidth;
+            private set => SetProperty(ref _sidebarWidth, value);
+        }
+
+        public ICommand ToggleSidebarCommand => new RelayCommand(_ => IsSidebarCollapsed = !IsSidebarCollapsed);
+        public ICommand ToggleSummaryCommand => new RelayCommand(_ => IsSummaryCollapsed = !IsSummaryCollapsed);
 
         public ICommand RefreshCommand => _refreshCommand;
         

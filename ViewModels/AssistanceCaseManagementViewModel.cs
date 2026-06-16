@@ -113,6 +113,9 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly RelayCommand _createLookupScannerSessionCommand;
 
         private bool _isPcScannerOpen;
+        private bool _isSidebarCollapsed;
+        private bool _isSummaryCollapsed;
+        private GridLength _sidebarWidth = new GridLength(320);
         private AssistanceValidatedBeneficiaryOption? _scannedBeneficiary;
         private string? _scannedBeneficiaryStatus;
         private BitmapSource? _scannedBeneficiaryPhoto;
@@ -246,6 +249,11 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 if (SetProperty(ref _selectedCase, value))
                 {
+                    if (value != null)
+                    {
+                        IsSummaryCollapsed = false;
+                    }
+
                     SyncEditorFromSelection();
                     UpdateCurrentIndex();
                     OnPropertyChanged(nameof(IsSelectedCaseLocked));
@@ -610,6 +618,33 @@ namespace AttendanceShiftingManagement.ViewModels
             IsSelectedCaseLocked
                 ? CreateBrush("#FEE2E2")
                 : CreateBrush("#F8FAFC");
+
+        public bool IsSidebarCollapsed
+        {
+            get => _isSidebarCollapsed;
+            set
+            {
+                if (SetProperty(ref _isSidebarCollapsed, value))
+                {
+                    SidebarWidth = value ? new GridLength(0) : new GridLength(320);
+                }
+            }
+        }
+
+        public bool IsSummaryCollapsed
+        {
+            get => _isSummaryCollapsed;
+            set => SetProperty(ref _isSummaryCollapsed, value);
+        }
+
+        public GridLength SidebarWidth
+        {
+            get => _sidebarWidth;
+            private set => SetProperty(ref _sidebarWidth, value);
+        }
+
+        public ICommand ToggleSidebarCommand => new RelayCommand(_ => IsSidebarCollapsed = !IsSidebarCollapsed);
+        public ICommand ToggleSummaryCommand => new RelayCommand(_ => IsSummaryCollapsed = !IsSummaryCollapsed);
 
         public ICommand RefreshCommand => _refreshCommand;
         public ICommand NewCaseCommand => _newCaseCommand;
