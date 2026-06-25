@@ -157,7 +157,8 @@
                             <Border Padding="20,0,20,20">
                                 <StackPanel>
                                     <TextBlock Text="PROJECT MANAGEMENT" Style="{StaticResource SidebarHeaderStyle}"/>
-                                    <Button Content="CREATE PROJECT" Command="{Binding OpenCreateProjectPanelCommand}" Style="{StaticResource GoldActionButton}" HorizontalContentAlignment="Left" Height="45" Margin="0,0,0,8" FontSize="14"/>
+                                    <Button Content="BROWSE PROJECTS" Click="ChangeProject_Click" Style="{StaticResource GoldActionButton}" HorizontalContentAlignment="Left" Height="45" Margin="0,0,0,8" FontSize="14"/>
+                                    <Button Content="CREATE PROJECT" Command="{Binding OpenCreateProjectPanelCommand}" Style="{StaticResource GoldActionButton}" HorizontalContentAlignment="Left" Height="45" Margin="0,0,0,8" FontSize="14" Visibility="Collapsed"/>
                                     <Button Content="REFRESH PROJECTS" Command="{Binding RefreshCommand}" Style="{StaticResource MaterialDesignOutlinedButton}" HorizontalContentAlignment="Left" Height="45" Margin="0,0,0,20" FontSize="14"/>
                                     
                                     <!-- Browse Projects List -->
@@ -183,13 +184,19 @@
                                                             <Grid.RowDefinitions>
                                                                 <RowDefinition Height="Auto"/>
                                                                 <RowDefinition Height="Auto"/>
+                                                                <RowDefinition Height="Auto"/>
+                                                                <RowDefinition Height="Auto"/>
                                                             </Grid.RowDefinitions>
                                                             
                                                             <TextBlock Text="{Binding ProgramName}" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}" TextWrapping="Wrap"/>
                                                             <TextBlock Grid.Row="1" Text="{Binding DistributionStatus}" FontSize="11" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,4,0,0"/>
+                                                            <Border Grid.Row="2" Background="#EBF4FB" CornerRadius="3" Padding="5,2" Margin="0,4,0,0"
+                                                                    Visibility="{Binding SourceFundLabel, Converter={StaticResource StringToVisibilityConverter}}">
+                                                                <TextBlock Text="{Binding SourceFundLabel}" FontSize="10" Foreground="#1E4E89" FontWeight="SemiBold"/>
+                                                            </Border>
 
                                                             <!-- Inline Action Menu for the selected project -->
-                                                            <StackPanel Grid.Row="2" Visibility="{Binding IsActionMenuOpen, Converter={StaticResource BooleanToVisibilityConverter}}" Margin="0,12,0,4">
+                                                            <StackPanel Grid.Row="3" Margin="0,12,0,4">
                                                                 <Button Content="ADD BENEFICIARIES" 
                                                                         Command="{Binding DataContext.OpenProgramAddBeneficiaryPanelCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
                                                                         CommandParameter="{Binding}" 
@@ -205,15 +212,54 @@
 
                                     <TextBlock Text="LIVE OPERATIONS" Style="{StaticResource SidebarHeaderStyle}"/>
                                     <Button Content="OPEN LIVE PREVIEW" Command="{Binding OpenLivePreviewCommand}" Style="{StaticResource MaterialDesignOutlinedButton}" HorizontalContentAlignment="Left" Height="45" Margin="0,0,0,8" FontSize="14"/>
-                                    <TextBlock Text="BARCODE SCANNER" FontWeight="Bold" FontSize="11" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,8" />
-                                    <TextBox Text="{Binding ScannerInputText, UpdateSourceTrigger=PropertyChanged}" 
-                                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                             materialDesign:HintAssist.Hint="Scan ID Here (Auto-Enter)" 
-                                             HorizontalAlignment="Stretch" Margin="0,0,0,16">
-                                        <TextBox.InputBindings>
-                                            <KeyBinding Key="Return" Command="{Binding ProcessScanCommand}" />
-                                        </TextBox.InputBindings>
+                                    <TextBox x:Name="HiddenScannerTextBox" Text="{Binding ScannerInputText, UpdateSourceTrigger=PropertyChanged}" 
+                                             Opacity="0" Width="1" Height="1" Focusable="True"
+                                             HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,0,0,16"
+                                             KeyDown="HiddenScannerTextBox_KeyDown">
                                     </TextBox>
+                                    <Border CornerRadius="6" Padding="12" Margin="0,0,0,8">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Background" Value="{DynamicResource ThemeCardSubtleBrush}"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsScannerActive}" Value="True">
+                                                        <Setter Property="Background" Value="#E8F5E9"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <StackPanel Orientation="Horizontal">
+                                            <materialDesign:PackIcon Kind="BarcodeScan" Width="20" Height="20" VerticalAlignment="Center">
+                                                <materialDesign:PackIcon.Style>
+                                                    <Style TargetType="materialDesign:PackIcon">
+                                                        <Setter Property="Foreground" Value="{DynamicResource BrandTextSecondaryBrush}"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsScannerActive}" Value="True">
+                                                                <Setter Property="Foreground" Value="{DynamicResource BrandSuccessBrush}"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </materialDesign:PackIcon.Style>
+                                            </materialDesign:PackIcon>
+                                            <TextBlock FontWeight="Bold" FontSize="11" VerticalAlignment="Center" Margin="8,0,0,0">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Text" Value="SCANNER INACTIVE"/>
+                                                        <Setter Property="Foreground" Value="{DynamicResource BrandTextSecondaryBrush}"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsScannerActive}" Value="True">
+                                                                <Setter Property="Text" Value="POS SCANNER READY"/>
+                                                                <Setter Property="Foreground" Value="{DynamicResource BrandSuccessBrush}"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </StackPanel>
+                                    </Border>
+                                    <!-- Last Scan Summary -->
+                                    <TextBlock Text="{Binding LastScanSummaryText}" Foreground="{Binding LastScanSummaryBrush}" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,16" TextWrapping="Wrap"
+                                               Visibility="{Binding LastScanSummaryText, Converter={StaticResource NullToHiddenConverter}}"/>
                                 </StackPanel>
                             </Border>
                         </ScrollViewer>
@@ -520,41 +566,121 @@
 
         <!-- Scanned Claim Result Dialog -->
         <Grid Grid.RowSpan="2" Panel.ZIndex="130" Visibility="{Binding IsScannedResultVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <Border Style="{StaticResource PanelCardStyle}" HorizontalAlignment="Center" VerticalAlignment="Center" Width="450">
+            <Border Style="{StaticResource PanelCardStyle}" HorizontalAlignment="Center" VerticalAlignment="Center" Width="900" Height="500">
                 <Grid>
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <Border Grid.Row="0" Padding="20" Background="{DynamicResource ThemeCardSubtleBrush}" CornerRadius="16,16,0,0" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="0,0,0,1">
-                        <TextBlock Text="SCAN RESULT" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource ThemePrimaryActionBrush}"/>
-                    </Border>
+                    <Grid Grid.Row="0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="200"/>
+                            <ColumnDefinition Width="1"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="1"/>
+                            <ColumnDefinition Width="300"/>
+                        </Grid.ColumnDefinitions>
 
-                    <StackPanel Grid.Row="1" Margin="30" HorizontalAlignment="Center">
-                        <Border Width="100" Height="100" CornerRadius="50" Background="{DynamicResource ThemeCardSubtleBrush}" Margin="0,0,0,20">
-                            <Ellipse Width="100" Height="100">
-                                <Ellipse.Fill>
-                                    <ImageBrush ImageSource="{Binding ScannedBeneficiaryPhoto}" Stretch="UniformToFill"/>
-                                </Ellipse.Fill>
-                            </Ellipse>
-                        </Border>
-
-                        <TextBlock Text="{Binding ScannedBeneficiary.FullName}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}" TextAlignment="Center" TextWrapping="Wrap"/>
-                        <TextBlock Text="{Binding ScannedBeneficiary.BeneficiaryId}" FontSize="14" Foreground="{DynamicResource BrandTextSecondaryBrush}" TextAlignment="Center" Margin="0,4,0,20"/>
-
-                        <Border Background="{DynamicResource ThemeCardSubtleBrush}" Padding="16" CornerRadius="8">
-                            <TextBlock Text="{Binding ScannedBeneficiaryStatus}" FontSize="13" Foreground="{DynamicResource BrandTextSecondaryBrush}" TextAlignment="Center" TextWrapping="Wrap"/>
-                        </Border>
-                    </StackPanel>
-
-                    <Border Grid.Row="2" Padding="20" Background="{DynamicResource ThemeCardSubtleBrush}" CornerRadius="0,0,16,16" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="0,1,0,0">
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                            <Button Content="CANCEL" Command="{Binding CancelScannedClaimCommand}" Style="{StaticResource MaterialDesignFlatButton}" Margin="0,0,12,0"/>
-                            <Button Content="{Binding ScannerActionLabel}" Command="{Binding ConfirmScannedClaimCommand}" Style="{StaticResource GoldActionButton}" Height="40" Padding="20,0"/>
+                        <!-- Left Side: Visual Prompt -->
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <materialDesign:PackIcon Kind="BarcodeScan" Width="80" Height="80" Foreground="{DynamicResource ThemePrimaryActionBrush}" HorizontalAlignment="Center"/>
+                            <TextBlock Text="SCAN NEXT ID" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}" TextAlignment="Center" Margin="0,16,0,8"/>
+                            <TextBlock Text="System is listening..." FontSize="12" Foreground="{DynamicResource BrandTextSecondaryBrush}" TextAlignment="Center"/>
                         </StackPanel>
+
+                        <Border Grid.Column="1" Background="{DynamicResource BrandBorderBrush}" Margin="0,30"/>
+
+                        <!-- Center: Beneficiary Profile -->
+                        <StackPanel Grid.Column="2" Margin="30,40" HorizontalAlignment="Center">
+                            <TextBlock Text="BENEFICIARY PROFILE" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,20" TextAlignment="Center"/>
+                            
+                            <Border Width="120" Height="120" CornerRadius="60" Background="{DynamicResource ThemeCardSubtleBrush}" Margin="0,0,0,20">
+                                <Ellipse Width="120" Height="120">
+                                    <Ellipse.Fill>
+                                        <ImageBrush ImageSource="{Binding ScannedBeneficiaryPhoto}" Stretch="UniformToFill"/>
+                                    </Ellipse.Fill>
+                                </Ellipse>
+                            </Border>
+
+                            <TextBlock Text="{Binding ScannedBeneficiary.FullName}" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}" TextAlignment="Center" TextWrapping="Wrap"/>
+                            <TextBlock Text="{Binding ScannedBeneficiary.BeneficiaryId}" FontSize="14" Foreground="{DynamicResource BrandTextSecondaryBrush}" TextAlignment="Center" Margin="0,4,0,20"/>
+
+                            <!-- Dynamic Status Badge -->
+                            <Border Background="{Binding ScannedBeneficiaryStatusColor}" Padding="20,10" CornerRadius="8">
+                                <TextBlock Text="{Binding ScannedBeneficiaryStatus}" FontSize="14" FontWeight="Bold" Foreground="White" TextAlignment="Center" TextWrapping="Wrap"/>
+                            </Border>
+                        </StackPanel>
+
+                        <Border Grid.Column="3" Background="{DynamicResource BrandBorderBrush}" Margin="0,30"/>
+
+                        <!-- Right Side: Distribution History -->
+                        <Grid Grid.Column="4" Margin="20,40">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Text="DISTRIBUTION HISTORY" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,16"/>
+                            
+                            <ItemsControl Grid.Row="1" ItemsSource="{Binding ScannedBeneficiaryHistory}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="{DynamicResource ThemeSurfaceBrush}" CornerRadius="8" Padding="12" Margin="0,0,0,8">
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding AssistanceLabel}" FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource BrandMidnightBrush}"/>
+                                                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                                    <TextBlock Text="{Binding ReleasedAt, StringFormat=MMM yyyy}" FontSize="11" Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
+                                                    <TextBlock Text=" - " FontSize="11" Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
+                                                    <TextBlock Text="Released" FontWeight="Bold" FontSize="11" Foreground="{DynamicResource BrandSuccessBrush}"/>
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            
+                            <TextBlock Grid.Row="1" Text="No previous distributions." FontSize="13" Foreground="{DynamicResource BrandTextSecondaryBrush}" 
+                                       Visibility="{Binding HasScannedHistory, Converter={StaticResource InverseBooleanToVisibilityConverter}}"
+                                       VerticalAlignment="Top" Margin="0,10,0,0"/>
+                        </Grid>
+                    </Grid>
+
+                    <!-- Bottom: Action Bar -->
+                    <Border Grid.Row="1" Padding="20" Background="{DynamicResource BrandMidnightBrush}" CornerRadius="0,0,16,16">
+                        <Grid>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <StackPanel Margin="0,0,30,0">
+                                    <TextBlock Text="FUNDING SOURCE" FontSize="10" Foreground="#A0B0C0" FontWeight="Bold"/>
+                                    <TextBlock Text="{Binding SelectedProgram.FundSourceCode}" FontSize="14" Foreground="White" FontWeight="SemiBold"/>
+                                </StackPanel>
+                                <StackPanel Margin="0,0,30,0">
+                                    <TextBlock Text="PROJECT" FontSize="10" Foreground="#A0B0C0" FontWeight="Bold"/>
+                                    <TextBlock Text="{Binding SelectedProgram.ProgramName}" FontSize="14" Foreground="White" FontWeight="SemiBold"/>
+                                </StackPanel>
+                                <StackPanel>
+                                    <TextBlock Text="AMOUNT" FontSize="10" Foreground="#A0B0C0" FontWeight="Bold"/>
+                                    <TextBlock Text="{Binding SelectedProgram.UnitAmount, StringFormat='PHP {0:N2}'}" FontSize="18" Foreground="{DynamicResource BrandYellowBrush}" FontWeight="Bold"/>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                <Button Content="CANCEL" Command="{Binding CancelScannedClaimCommand}" Style="{StaticResource MaterialDesignFlatButton}" Foreground="White" Margin="0,0,16,0"/>
+                                <Button Content="{Binding ScannerActionLabel}" Command="{Binding ConfirmScannedClaimCommand}" Style="{StaticResource GoldActionButton}" Height="45" Padding="30,0" FontSize="16"/>
+                            </StackPanel>
+                        </Grid>
                     </Border>
+                    <!-- Success Overlay -->
+                    <Grid Grid.RowSpan="2" Visibility="{Binding IsReleaseSuccessState, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Border Background="#DD15803D" CornerRadius="16">
+                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                <materialDesign:PackIcon Kind="CheckCircleOutline" Width="80" Height="80" Foreground="White" HorizontalAlignment="Center"/>
+                                <TextBlock Text="RELEASE SUCCESSFUL" FontSize="28" FontWeight="Bold" Foreground="White" TextAlignment="Center" Margin="0,16,0,8"/>
+                                <TextBlock Text="{Binding ScannedBeneficiary.FullName}" FontSize="18" Foreground="#DDFFFFFF" TextAlignment="Center"/>
+                                <TextBlock Text="{Binding SelectedProgram.ProgramName}" FontSize="14" Foreground="#AAFFFFFF" TextAlignment="Center" Margin="0,4,0,0"/>
+                                <TextBlock Text="Auto closes in 1.5 seconds..." FontSize="11" Foreground="#88FFFFFF" TextAlignment="Center" Margin="0,20,0,0" FontStyle="Italic"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
                 </Grid>
             </Border>
         </Grid>

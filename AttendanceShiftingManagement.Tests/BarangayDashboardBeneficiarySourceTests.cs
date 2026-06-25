@@ -77,10 +77,9 @@ public sealed class BarangayDashboardBeneficiarySourceTests
         Assert.Contains("Text=\"{Binding DataContext.OfficeInitials, RelativeSource={RelativeSource AncestorType={x:Type Window}}}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"{Binding DataContext.SoftwareTitle, RelativeSource={RelativeSource AncestorType={x:Type Window}}}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"{Binding DataContext.SoftwareSubtitle, RelativeSource={RelativeSource AncestorType={x:Type Window}}}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"Aid Request\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"Validated Beneficiaries\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"Budget\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"Distribution\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"AID REQUEST\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"MASTERLIST\"", xaml, StringComparison.Ordinal);
+
         Assert.Contains("Text=\"Cash-for-Work\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"Reports\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"Software Trademark\"", xaml, StringComparison.Ordinal);
@@ -160,7 +159,10 @@ public sealed class BarangayDashboardBeneficiarySourceTests
                     .Replace("x:Class=\"AttendanceShiftingManagement.Views.BarangayDashboardPage\"", string.Empty, StringComparison.Ordinal)
                     .Replace(" Click=\"SettingsButton_Click\"", string.Empty, StringComparison.Ordinal)
                     .Replace(" Click=\"CheckForUpdateButton_Click\"", string.Empty, StringComparison.Ordinal)
-                    .Replace(" Click=\"LogoutButton_Click\"", string.Empty, StringComparison.Ordinal);
+                    .Replace(" Click=\"LogoutButton_Click\"", string.Empty, StringComparison.Ordinal)
+                    .Replace(" Click=\"Button_Click\"", string.Empty, StringComparison.Ordinal)
+                    .Replace(" Click=\"SyncRemoteAndLocalButton_Click\"", string.Empty, StringComparison.Ordinal)
+                    .Replace("xmlns:helpers=\"clr-namespace:AttendanceShiftingManagement.Helpers\"", "xmlns:helpers=\"clr-namespace:AttendanceShiftingManagement.Helpers;assembly=AttendanceShiftingManagement\"", StringComparison.Ordinal);
 
                 _ = XamlReader.Parse(xaml);
             }

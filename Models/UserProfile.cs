@@ -7,6 +7,8 @@ namespace AttendanceShiftingManagement.Models
     [Table("user_profiles")]
     public class UserProfile
     {
+        public Guid SyncId { get; set; } = Guid.NewGuid();
+
         [Key]
         [Column("id")]
         public int Id { get; set; }

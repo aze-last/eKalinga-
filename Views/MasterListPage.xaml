@@ -169,7 +169,9 @@
                                     <TextBlock Text="VALIDATION ACTIONS" Style="{StaticResource SidebarHeaderStyle}"/>
                                     <Button Content="APPROVE SELECTED" Command="{Binding ApproveCommand}" Margin="0,0,0,8" Height="44" Style="{StaticResource GoldActionButton}"/>
                                     <Button Content="REJECT SELECTED" Command="{Binding RejectCommand}" Margin="0,0,0,8" Height="40" Style="{StaticResource MaterialDesignOutlinedButton}" Foreground="{DynamicResource BrandRedBrush}"/>
-                                    <Button Content="RETURN TO PENDING" Command="{Binding ReturnToPendingCommand}" Margin="0,0,0,20" Height="40" Style="{StaticResource MaterialDesignOutlinedButton}"/>
+                                    <Button Content="RETURN TO PENDING" Command="{Binding ReturnToPendingCommand}" Margin="0,0,0,8" Height="40" Style="{StaticResource MaterialDesignOutlinedButton}"/>
+
+                                    <Button Content="ENROLL IN PROJECT..." Command="{Binding OpenEnrollmentPanelCommand}" Margin="0,12,0,20" Height="44" Style="{StaticResource GoldActionButton}"/>
 
                                     <TextBlock Text="DIGITAL ID &amp; TOOLS" Style="{StaticResource SidebarHeaderStyle}"/>
                                     <Button Content="PRINT DIGITAL ID" Command="{Binding PrintDigitalIdCommand}" Margin="0,0,0,8" Height="40" Style="{StaticResource MaterialDesignOutlinedButton}"/>
@@ -392,8 +394,9 @@
                                         </TabItem>
                                         <TabItem Header="APPROVED REGISTRY" FontSize="12" FontWeight="Bold">
                                             <StackPanel Margin="0,20,0,0">
-                                                <DataGrid ItemsSource="{Binding ApprovedBeneficiaries}"
+                                                <DataGrid x:Name="ApprovedDataGrid" ItemsSource="{Binding ApprovedBeneficiaries}"
                                                           SelectedItem="{Binding SelectedApprovedBeneficiary}"
+                                                          SelectionMode="Extended"
                                                           AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" MinHeight="450"
                                                           Background="Transparent" BorderThickness="0" HeadersVisibility="Column"
                                                           materialDesign:DataGridAssist.CellPadding="12,8">
@@ -508,5 +511,44 @@
             <local:DesktopScannerOverlay QrCodeScanned="Scanner_QrCodeScanned"
                                        Closed="Scanner_Closed"/>
         </Grid>
+
+        <!-- Enrollment Overlay -->
+        <Border Grid.RowSpan="2" Panel.ZIndex="130" Background="#CC0F172A" Visibility="{Binding IsEnrollmentPanelOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <materialDesign:Card Width="500" VerticalAlignment="Center" HorizontalAlignment="Center">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0" Background="{DynamicResource ThemePrimaryActionBrush}" Padding="20,15">
+                        <TextBlock Text="ENROLL IN PROJECT" Foreground="White" FontSize="18" FontWeight="Bold"/>
+                    </Border>
+
+                    <StackPanel Grid.Row="1" Margin="25">
+                        <TextBlock Text="SELECT TARGET PROJECT" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource ThemePrimaryActionBrush}" Margin="0,0,0,15"/>
+                        <ComboBox materialDesign:HintAssist.Hint="Active Projects" 
+                                  Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                  ItemsSource="{Binding ActiveProjects}"
+                                  SelectedItem="{Binding SelectedProjectToEnroll}"
+                                  DisplayMemberPath="ProgramName"
+                                  Margin="0,0,0,20"/>
+                        
+                        <TextBlock Text="The selected approved beneficiaries will be added to this project's distribution list." 
+                                   FontSize="12" TextWrapping="Wrap" Foreground="#64748B"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="20">
+                        <Button Content="CANCEL" Style="{StaticResource MaterialDesignFlatButton}" Command="{Binding CloseEnrollmentPanelCommand}" Margin="0,0,10,0" Foreground="#64748B"/>
+                        <Button Content="CONFIRM ENROLLMENT" 
+                                Command="{Binding ConfirmEnrollmentCommand}" 
+                                CommandParameter="{Binding ElementName=ApprovedDataGrid, Path=SelectedItems}"
+                                Style="{StaticResource MaterialDesignRaisedButton}" 
+                                Background="{DynamicResource BrandYellowBrush}" BorderBrush="{DynamicResource BrandYellowBrush}" Foreground="White"/>
+                    </StackPanel>
+                </Grid>
+            </materialDesign:Card>
+        </Border>
     </Grid>
 </UserControl>

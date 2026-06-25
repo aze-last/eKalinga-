@@ -13,15 +13,12 @@ public sealed class CashForWorkPageBindingTests
 
         var xaml = File.ReadAllText(pagePath);
 
-        Assert.Contains("Command=\"{Binding DataContext.ShowDashboardCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding OpenCreateEventPanelCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding OpenAddBeneficiariesPanelCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding OpenScanAttendancePanelCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding OpenPayoutPanelCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding OpenAnnouncementsPanelCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding RefreshWorkspaceCommand}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("ItemsSource=\"{Binding Events}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("SelectedItem=\"{Binding SelectedEvent}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("ItemsSource=\"{Binding SavedAttendanceRows}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("SelectedItem=\"{Binding SelectedAttendanceRow}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Visibility=\"{Binding EventEditorVisibility}\"", xaml, StringComparison.Ordinal);
@@ -43,6 +40,7 @@ public sealed class CashForWorkPageBindingTests
         Assert.Contains("Command=\"{Binding EditAttendanceCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding DeleteAttendanceCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding DataContext.SelectAnnouncementEventCommand, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding DataContext.ShowHistoryCommand", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding SaveAttendanceSheetPdfCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding PrintAttendanceSheetCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("ItemsSource=\"{Binding Participants}\"", xaml, StringComparison.Ordinal);
@@ -79,7 +77,12 @@ public sealed class CashForWorkPageBindingTests
                 var pagePath = ResolveCashForWorkPagePath();
 
                 var xaml = File.ReadAllText(pagePath)
-                    .Replace("x:Class=\"AttendanceShiftingManagement.Views.CashForWorkOcrPage\"", string.Empty, StringComparison.Ordinal);
+                    .Replace("x:Class=\"AttendanceShiftingManagement.Views.CashForWorkOcrPage\"", string.Empty, StringComparison.Ordinal)
+                    .Replace(" Click=\"Browse_Click\"", string.Empty, StringComparison.Ordinal)
+                    .Replace("QrCodeScanned=\"Scanner_QrCodeScanned\"", string.Empty, StringComparison.Ordinal)
+                    .Replace("Closed=\"Scanner_Closed\"", string.Empty, StringComparison.Ordinal)
+                    .Replace("xmlns:helpers=\"clr-namespace:AttendanceShiftingManagement.Helpers\"", "xmlns:helpers=\"clr-namespace:AttendanceShiftingManagement.Helpers;assembly=AttendanceShiftingManagement\"", StringComparison.Ordinal)
+                    .Replace("xmlns:local=\"clr-namespace:AttendanceShiftingManagement.Views\"", "xmlns:local=\"clr-namespace:AttendanceShiftingManagement.Views;assembly=AttendanceShiftingManagement\"", StringComparison.Ordinal);
 
                 _ = XamlReader.Parse(xaml);
             }

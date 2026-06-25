@@ -47,7 +47,7 @@ public sealed class CashForWorkOcrViewModelTests
                 Assert.Equal(DateTime.Today.AddHours(12), viewModel.EventEndTime);
                 Assert.Equal(string.Empty, viewModel.EventNotes);
                 Assert.Equal("CREATE EVENT", viewModel.EventEditorSubmitLabel);
-                Assert.Equal("Create Event", viewModel.DrawerTitle);
+                Assert.Equal("New Event", viewModel.DrawerTitle);
                 Assert.DoesNotContain("update", viewModel.DrawerSubtitle, StringComparison.OrdinalIgnoreCase);
             }
             catch (Exception ex)

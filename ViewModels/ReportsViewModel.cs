@@ -241,7 +241,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private async Task LoadProgramFiltersAsync()
         {
-            await using var context = new AppDbContext();
+            await using var context = new LocalDbContext();
             var programs = await context.AyudaPrograms
                 .AsNoTracking()
                 .OrderBy(item => item.ProgramName)

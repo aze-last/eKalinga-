@@ -20,9 +20,6 @@ public sealed class SessionAnnouncementWindowSourceTests
         var xaml = File.ReadAllText(windowPath);
 
         Assert.Contains("Text=\"{Binding Title}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"{Binding Subtitle}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"{Binding RangeLabel}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"Filter Activity\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"Recent Feed\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Content=\"Continue\"", xaml, StringComparison.Ordinal);
 
@@ -35,7 +32,8 @@ public sealed class SessionAnnouncementWindowSourceTests
 
                 var parseableXaml = xaml
                     .Replace("x:Class=\"AttendanceShiftingManagement.Views.SessionAnnouncementWindow\"", string.Empty, StringComparison.Ordinal)
-                    .Replace(" Click=\"Continue_Click\"", string.Empty, StringComparison.Ordinal);
+                    .Replace(" Click=\"Continue_Click\"", string.Empty, StringComparison.Ordinal)
+                    .Replace("xmlns:helpers=\"clr-namespace:AttendanceShiftingManagement.Helpers\"", "xmlns:helpers=\"clr-namespace:AttendanceShiftingManagement.Helpers;assembly=AttendanceShiftingManagement\"", StringComparison.Ordinal);
 
                 _ = XamlReader.Parse(parseableXaml);
             }

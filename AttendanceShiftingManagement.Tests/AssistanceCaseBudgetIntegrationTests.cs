@@ -61,7 +61,7 @@ public sealed class AssistanceCaseBudgetIntegrationTests
         Assert.Empty(context.BudgetLedgerEntries);
     }
 
-    private static User SeedAdmin(Data.AppDbContext context)
+    private static User SeedAdmin(Data.LocalDbContext context)
     {
         var user = new User
         {
@@ -77,7 +77,7 @@ public sealed class AssistanceCaseBudgetIntegrationTests
         return user;
     }
 
-    private static Household SeedHousehold(Data.AppDbContext context)
+    private static Household SeedHousehold(Data.LocalDbContext context)
     {
         var household = new Household
         {
@@ -94,7 +94,7 @@ public sealed class AssistanceCaseBudgetIntegrationTests
         return household;
     }
 
-    private static AyudaProgram SeedProgram(Data.AppDbContext context, int createdByUserId)
+    private static AyudaProgram SeedProgram(Data.LocalDbContext context, int createdByUserId)
     {
         var program = new AyudaProgram
         {
@@ -113,7 +113,7 @@ public sealed class AssistanceCaseBudgetIntegrationTests
         return program;
     }
 
-    private static void SeedGovernmentSnapshot(Data.AppDbContext context, decimal allocatedAmount)
+    private static void SeedGovernmentSnapshot(Data.LocalDbContext context, decimal allocatedAmount)
     {
         context.GovernmentBudgetSnapshots.Add(new GovernmentBudgetSnapshot
         {
@@ -132,7 +132,7 @@ public sealed class AssistanceCaseBudgetIntegrationTests
         context.SaveChanges();
     }
 
-    private static AssistanceCase SeedApprovedCase(Data.AppDbContext context, int householdId, int createdByUserId, int ayudaProgramId, decimal approvedAmount)
+    private static AssistanceCase SeedApprovedCase(Data.LocalDbContext context, int householdId, int createdByUserId, int ayudaProgramId, decimal approvedAmount)
     {
         var assistanceCase = new AssistanceCase
         {
@@ -158,7 +158,7 @@ public sealed class AssistanceCaseBudgetIntegrationTests
         return assistanceCase;
     }
 
-    private static void SeedGlobalAidRequestBudget(Data.AppDbContext context, int adminId)
+    private static void SeedGlobalAidRequestBudget(Data.LocalDbContext context, int adminId)
     {
         context.AssistanceCaseBudgets.Add(new AssistanceCaseBudget
         {

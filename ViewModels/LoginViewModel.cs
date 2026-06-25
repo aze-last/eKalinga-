@@ -280,7 +280,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 try
                 {
                     EnsureDatabaseReady();
-                    using var context = new AppDbContext();
+                    using var context = new LocalDbContext();
                     var companySerialCheck = BuildCompanySerialValidationResult(context);
 
                     InvokeOnUiThread(() =>
@@ -365,7 +365,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 return;
             }
 
-            using (var validationContext = new AppDbContext())
+            using (var validationContext = new LocalDbContext())
             {
                 var companySerialCheck = ValidateCompanySerial(validationContext);
                 if (!companySerialCheck.IsSuccess)
@@ -429,7 +429,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 return;
             }
 
-            using var context = new AppDbContext();
+            using var context = new LocalDbContext();
             var companySerialCheck = ValidateCompanySerial(context);
             if (!companySerialCheck.IsSuccess)
             {
@@ -485,7 +485,7 @@ namespace AttendanceShiftingManagement.ViewModels
             DatabaseInitializer.Initialize(resetDb, migrateOnStartup);
         }
 
-        private CompanySerialValidationResult BuildCompanySerialValidationResult(AppDbContext context)
+        private CompanySerialValidationResult BuildCompanySerialValidationResult(LocalDbContext context)
         {
             _ = context;
             var localCompanySerial = (SystemProfileSettingsService.Load().InstallSerial ?? string.Empty)
@@ -498,7 +498,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 localCompanySerial);
         }
 
-        private CompanySerialValidationResult ValidateCompanySerial(AppDbContext context)
+        private CompanySerialValidationResult ValidateCompanySerial(LocalDbContext context)
         {
             var result = BuildCompanySerialValidationResult(context);
             _isCompanySerialAccessValid = result.IsSuccess;

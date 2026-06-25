@@ -79,7 +79,7 @@ public sealed class GgmsConsolidatedTransactionReleaseTests
         var cashForWorkEvent = await service.CreateEventAsync(
             "Canal Clearing",
             "Sitio Uno",
-            new DateTime(2026, 4, 22),
+            DateTime.Today,
             new TimeSpan(7, 0, 0),
             new TimeSpan(11, 0, 0),
             "Morning batch",
@@ -105,7 +105,7 @@ public sealed class GgmsConsolidatedTransactionReleaseTests
         Assert.Equal(3000m, fakeGgms.CashForWorkReleases[0].TotalAmount);
     }
 
-    private static User SeedAdmin(AppDbContext context, string username)
+    private static User SeedAdmin(LocalDbContext context, string username)
     {
         var user = new User
         {
@@ -122,7 +122,7 @@ public sealed class GgmsConsolidatedTransactionReleaseTests
     }
 
     private static BeneficiaryStaging SeedApprovedBeneficiary(
-        AppDbContext context,
+        LocalDbContext context,
         int stagingId,
         string firstName,
         string lastName,
@@ -146,7 +146,7 @@ public sealed class GgmsConsolidatedTransactionReleaseTests
         return beneficiary;
     }
 
-    private static AyudaProgram SeedProgram(AppDbContext context, int createdByUserId, string programCode, AyudaProgramType programType, decimal unitAmount)
+    private static AyudaProgram SeedProgram(LocalDbContext context, int createdByUserId, string programCode, AyudaProgramType programType, decimal unitAmount)
     {
         var program = new AyudaProgram
         {
@@ -168,7 +168,7 @@ public sealed class GgmsConsolidatedTransactionReleaseTests
     }
 
     private static AssistanceCase SeedApprovedAssistanceCase(
-        AppDbContext context,
+        LocalDbContext context,
         int createdByUserId,
         int ayudaProgramId,
         BeneficiaryStaging beneficiary,
@@ -200,7 +200,7 @@ public sealed class GgmsConsolidatedTransactionReleaseTests
         return assistanceCase;
     }
 
-    private static void SeedGovernmentSnapshot(AppDbContext context, decimal allocatedAmount)
+    private static void SeedGovernmentSnapshot(LocalDbContext context, decimal allocatedAmount)
     {
         context.GovernmentBudgetSnapshots.Add(new GovernmentBudgetSnapshot
         {
@@ -219,7 +219,7 @@ public sealed class GgmsConsolidatedTransactionReleaseTests
         context.SaveChanges();
     }
 
-    private static void SeedGlobalAidRequestBudget(AppDbContext context, int adminId)
+    private static void SeedGlobalAidRequestBudget(LocalDbContext context, int adminId)
     {
         context.AssistanceCaseBudgets.Add(new AssistanceCaseBudget
         {
@@ -234,7 +234,7 @@ public sealed class GgmsConsolidatedTransactionReleaseTests
         context.SaveChanges();
     }
 
-    private static void SeedGlobalCfwBudget(AppDbContext context, int adminId)
+    private static void SeedGlobalCfwBudget(LocalDbContext context, int adminId)
     {
         context.CashForWorkBudgets.Add(new CashForWorkBudget
         {
@@ -256,19 +256,19 @@ public sealed class GgmsConsolidatedTransactionReleaseTests
         public List<(AyudaProgram? Program, AyudaProjectClaim Claim)> ProjectClaimWrites { get; } = [];
         public List<CashForWorkReleaseCall> CashForWorkReleases { get; } = [];
 
-        public Task<string?> TryWriteAssistanceCaseReleaseAsync(AppDbContext context, AssistanceCase assistanceCase)
+        public Task<string?> TryWriteAssistanceCaseReleaseAsync(LocalDbContext context, AssistanceCase assistanceCase)
         {
             AssistanceCaseReleases.Add(assistanceCase);
             return Task.FromResult(AssistanceCaseWarning);
         }
 
-        public Task<string?> TryWriteProjectDistributionClaimAsync(AppDbContext context, AyudaProgram? program, AyudaProjectClaim claim)
+        public Task<string?> TryWriteProjectDistributionClaimAsync(LocalDbContext context, AyudaProgram? program, AyudaProjectClaim claim)
         {
             ProjectClaimWrites.Add((program, claim));
             return Task.FromResult<string?>(null);
         }
 
-        public Task<string?> TryWriteBulkProjectDistributionClaimsAsync(AppDbContext context, AyudaProgram? program, IReadOnlyCollection<AyudaProjectClaim> claims)
+        public Task<string?> TryWriteBulkProjectDistributionClaimsAsync(LocalDbContext context, AyudaProgram? program, IReadOnlyCollection<AyudaProjectClaim> claims)
         {
             foreach (var claim in claims)
             {
@@ -278,7 +278,7 @@ public sealed class GgmsConsolidatedTransactionReleaseTests
         }
 
         public Task<string?> TryWriteCashForWorkReleaseAsync(
-            AppDbContext context,
+            LocalDbContext context,
             CashForWorkEvent cashForWorkEvent,
             IReadOnlyCollection<CashForWorkParticipant> participants,
             IReadOnlyCollection<int> releasedParticipantIds,
@@ -296,6 +296,8 @@ public sealed class GgmsConsolidatedTransactionReleaseTests
         {
             return Task.FromResult(new List<GgmsConsolidatedTransaction>());
         }
+
+        public Task FlushPendingTransactionsAsync(LocalDbContext context) => Task.CompletedTask;
     }
 
     private sealed record CashForWorkReleaseCall(

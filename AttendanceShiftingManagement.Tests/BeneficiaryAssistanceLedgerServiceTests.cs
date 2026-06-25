@@ -79,7 +79,7 @@ public sealed class BeneficiaryAssistanceLedgerServiceTests
         Assert.Equal("BEN-4001", summary.BeneficiaryId);
     }
 
-    private static User SeedAdmin(AppDbContext context)
+    private static User SeedAdmin(LocalDbContext context)
     {
         var user = new User
         {
@@ -95,7 +95,7 @@ public sealed class BeneficiaryAssistanceLedgerServiceTests
         return user;
     }
 
-    private static BeneficiaryStaging SeedStagedBeneficiary(AppDbContext context, string? civilRegistryId, string? beneficiaryId)
+    private static BeneficiaryStaging SeedStagedBeneficiary(LocalDbContext context, string? civilRegistryId, string? beneficiaryId)
     {
         var row = new BeneficiaryStaging
         {

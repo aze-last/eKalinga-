@@ -23,12 +23,12 @@ namespace AttendanceShiftingManagement.Services
 
     public sealed class AssistanceCaseManagementService
     {
-        private readonly AppDbContext _context;
+        private readonly LocalDbContext _context;
         private readonly AuditService _auditService;
         private readonly IGgmsConsolidatedTransactionService _ggmsConsolidatedTransactionService;
 
         public AssistanceCaseManagementService(
-            AppDbContext context,
+            LocalDbContext context,
             AuditService? auditService = null,
             IGgmsConsolidatedTransactionService? ggmsConsolidatedTransactionService = null)
         {

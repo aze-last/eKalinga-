@@ -10,7 +10,7 @@ public sealed class StartupMigrationTests
     [Fact]
     public void AppAssembly_DefinesEfCoreMigrations_ForStartupMigrationMode()
     {
-        var migrationTypes = typeof(AppDbContext).Assembly
+        var migrationTypes = typeof(LocalDbContext).Assembly
             .GetTypes()
             .Where(type => !type.IsAbstract && typeof(Migration).IsAssignableFrom(type))
             .ToList();
@@ -21,7 +21,7 @@ public sealed class StartupMigrationTests
     [Fact]
     public void AppAssembly_MigrationSnapshot_ContainsBudgetSchema()
     {
-        var snapshotType = typeof(AppDbContext).Assembly
+        var snapshotType = typeof(LocalDbContext).Assembly
             .GetTypes()
             .Single(type => !type.IsAbstract && typeof(ModelSnapshot).IsAssignableFrom(type));
 

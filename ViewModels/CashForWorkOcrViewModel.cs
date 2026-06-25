@@ -916,7 +916,7 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             try
             {
-                await using var context = new AppDbContext();
+                await using var context = new LocalDbContext();
                 var budgetService = new BudgetManagementService(context);
                 var globalBudget = await budgetService.GetGlobalCashForWorkBudgetAsync();
                 GlobalCfwBudgetCapRemaining = globalBudget?.BudgetCap ?? 0m;
@@ -932,7 +932,7 @@ namespace AttendanceShiftingManagement.ViewModels
             var selectedEventId = preferredEventId ?? SelectedEvent?.Id;
             Events.Clear();
 
-            await using var context = new AppDbContext();
+            await using var context = new LocalDbContext();
             var cfwService = new CashForWorkService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
             foreach (var cashForWorkEvent in cfwService.GetEvents())
             {
@@ -952,7 +952,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private async Task LoadEligibleBeneficiariesAsync()
         {
             EligibleBeneficiaries.Clear();
-            await using var context = new AppDbContext();
+            await using var context = new LocalDbContext();
             var cfwService = new CashForWorkService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
             foreach (var beneficiary in cfwService.GetEligibleBeneficiaries())
             {
@@ -963,7 +963,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private async Task LoadAnnouncementsAsync()
         {
             OpenAnnouncements.Clear();
-            await using var context = new AppDbContext();
+            await using var context = new LocalDbContext();
             var cfwService = new CashForWorkService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
 
             foreach (var cashForWorkEvent in cfwService.GetOpenEvents())
@@ -998,7 +998,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 return;
             }
 
-            await using var context = new AppDbContext();
+            await using var context = new LocalDbContext();
             var cfwService = new CashForWorkService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
             foreach (var participant in cfwService.GetParticipants(SelectedEvent.Id))
             {
@@ -1029,7 +1029,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 return;
             }
 
-            await using var context = new AppDbContext();
+            await using var context = new LocalDbContext();
             var cfwService = new CashForWorkService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
             var attendanceRecords = cfwService.GetAttendanceRecords(SelectedEvent.Id);
             var presentParticipantIds = attendanceRecords
@@ -1116,7 +1116,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 return;
             }
 
-            await using var context = new AppDbContext();
+            await using var context = new LocalDbContext();
             var cfwService = new CashForWorkService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
             var summary = cfwService.GetReleaseReadySummary(SelectedEvent.Id);
             ReleaseSummaryEventLabel = $"{summary.EventTitle} | {summary.EventDate:MMM dd, yyyy} | {summary.Location}";
@@ -1454,7 +1454,7 @@ namespace AttendanceShiftingManagement.ViewModels
             IsBusy = true;
             try
             {
-                await using var context = new AppDbContext();
+                await using var context = new LocalDbContext();
                 var cfwService = new CashForWorkService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
                 var isEditing = _editingEventId.HasValue;
                 
@@ -1538,7 +1538,7 @@ namespace AttendanceShiftingManagement.ViewModels
             IsBusy = true;
             try
             {
-                await using var context = new AppDbContext();
+                await using var context = new LocalDbContext();
                 var cfwService = new CashForWorkService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
                 cfwService.DeleteEvent(deletedEvent.Id, _currentUser.Id);
                 await LoadAnnouncementsAsync();
@@ -1580,7 +1580,7 @@ namespace AttendanceShiftingManagement.ViewModels
             IsBusy = true;
             try
             {
-                await using var context = new AppDbContext();
+                await using var context = new LocalDbContext();
                 var cfwService = new CashForWorkService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
                 cfwService.AddParticipant(SelectedEvent.Id, SelectedEligibleBeneficiary.BeneficiaryStagingId, _currentUser.Id);
                 await LoadParticipantsAsync();
@@ -1627,7 +1627,7 @@ namespace AttendanceShiftingManagement.ViewModels
             IsBusy = true;
             try
             {
-                await using var context = new AppDbContext();
+                await using var context = new LocalDbContext();
                 var cfwService = new CashForWorkService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
                 var savedCount = cfwService.SaveManualAttendance(SelectedEvent.Id, _currentUser.Id, selectedParticipantIds);
                 await LoadSavedAttendanceAsync();
@@ -1674,7 +1674,7 @@ namespace AttendanceShiftingManagement.ViewModels
             IsBusy = true;
             try
             {
-                await using var context = new AppDbContext();
+                await using var context = new LocalDbContext();
                 var cfwService = new CashForWorkService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
                 var updatedAttendance = cfwService.UpdateAttendance(
                     selectedAttendance.AttendanceId,
@@ -1722,7 +1722,7 @@ namespace AttendanceShiftingManagement.ViewModels
             IsBusy = true;
             try
             {
-                await using var context = new AppDbContext();
+                await using var context = new LocalDbContext();
                 var cfwService = new CashForWorkService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
                 cfwService.DeleteAttendance(selectedAttendance.AttendanceId, _currentUser.Id);
                 await LoadSavedAttendanceAsync();
@@ -1802,7 +1802,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 await EnsureAttendanceScannerDigitalIdsReadyAsync();
 
                 var baseUrl = await LocalScannerGatewayService.Shared.EnsureStartedAsync();
-                await using var context = new AppDbContext();
+                await using var context = new LocalDbContext();
                 var sessionService = new ScannerSessionService(context);
                 var selectedEvent = SelectedEvent
                     ?? throw new InvalidOperationException("Select an event before opening the phone scanner.");
@@ -1844,7 +1844,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
             try
             {
-                await using var context = new AppDbContext();
+                await using var context = new LocalDbContext();
                 var digitalIdService = new BeneficiaryDigitalIdService(context);
                 var lookup = await digitalIdService.LookupByQrPayloadAsync(payload);
 
@@ -1891,7 +1891,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
             try
             {
-                await using var context = new AppDbContext();
+                await using var context = new LocalDbContext();
                 var cfwService = new CashForWorkService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
                 
                 var success = await cfwService.SaveScannerAttendanceAsync(
@@ -1958,7 +1958,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
             try
             {
-                await using var context = new AppDbContext();
+                await using var context = new LocalDbContext();
                 var cfwService = new CashForWorkService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
                 var result = await cfwService.ReleaseEventAsync(
                     SelectedEvent.Id,
@@ -2073,7 +2073,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 throw new InvalidOperationException("The selected event does not contain scanner-ready beneficiaries.");
             }
 
-            await using var context = new AppDbContext();
+            await using var context = new LocalDbContext();
             var digitalIdService = new BeneficiaryDigitalIdService(context);
 
             foreach (var stagingId in beneficiaryStagingIds)

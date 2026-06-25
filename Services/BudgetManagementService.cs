@@ -4,6 +4,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AttendanceShiftingManagement.Services
 {
+    public sealed record ProjectBudgetSourceRequestDto(
+        int BudgetBucketId,
+        string BudgetBucketType,
+        int Priority);
+
     public sealed record AyudaProgramRequest(
         string ProgramCode,
         string ProgramName,
@@ -13,10 +18,15 @@ namespace AttendanceShiftingManagement.Services
         AssistanceReleaseKind ReleaseKind,
         decimal? UnitAmount,
         string? ItemDescription,
+        string? ItemName,
+        decimal? QuantityPerBeneficiary,
+        string? UnitOfMeasure,
         DateTime? StartDate,
         DateTime? EndDate,
         decimal? BudgetCap,
-        AyudaProgramDistributionStatus DistributionStatus);
+        AyudaProgramDistributionStatus DistributionStatus,
+        int? SourceDonationId = null,
+        int? SourceGGMSBudgetId = null);
 
     public sealed record AyudaProgramOperationResult(bool IsSuccess, string Message, int? ProgramId = null);
 
@@ -45,7 +55,10 @@ namespace AttendanceShiftingManagement.Services
         decimal SpentAmount,
         string? SourceRowId,
         GovernmentBudgetSyncStatus SyncStatus,
-        DateTime SyncedAt);
+        DateTime SyncedAt,
+        int? TargetProgramId = null,
+        int? TargetAssistanceCaseBudgetId = null,
+        int? TargetCashForWorkBudgetId = null);
 
     public sealed record GovernmentBudgetSnapshotOperationResult(bool IsSuccess, string Message, int? SnapshotId = null);
 
@@ -58,7 +71,10 @@ namespace AttendanceShiftingManagement.Services
         string? Remarks,
         DonationProofType ProofType,
         string? ProofReferenceNumber,
-        string? ProofFilePath);
+        string? ProofFilePath,
+        int? TargetProgramId = null,
+        int? TargetAssistanceCaseBudgetId = null,
+        int? TargetCashForWorkBudgetId = null);
 
     public sealed record PrivateDonationOperationResult(bool IsSuccess, string Message, int? DonationId = null, int? LedgerEntryId = null);
 
@@ -72,7 +88,8 @@ namespace AttendanceShiftingManagement.Services
         DateTime ReleasedAt,
         string? Remarks,
         int? AssistanceCaseBudgetId = null,
-        int? CashForWorkBudgetId = null);
+        int? CashForWorkBudgetId = null,
+        string? ForcedBudgetBucketType = null);
 
     public sealed record BudgetReleaseOperationResult(bool IsSuccess, string Message, int? LedgerEntryId = null);
 
@@ -80,7 +97,11 @@ namespace AttendanceShiftingManagement.Services
         decimal GovernmentAllocated,
         decimal GovernmentSpentReference,
         decimal GovernmentAvailable,
+        decimal GovernmentUnrestrictedAvailable,
+        decimal GovernmentLockedAvailable,
         decimal PrivateAvailable,
+        decimal PrivateUnrestrictedAvailable,
+        decimal PrivateLockedAvailable,
         decimal CombinedAvailable,
         decimal ReleasedTotal,
         decimal GovernmentReleasedTotal,
@@ -91,12 +112,23 @@ namespace AttendanceShiftingManagement.Services
         string? OfficeCode,
         string? OfficeName);
 
+    public sealed record EarmarkedBudgetStatus(
+        int TargetId,
+        string TargetType,
+        string TargetName,
+        decimal AllocatedAmount,
+        decimal ConsumedAmount,
+        decimal RemainingAmount,
+        bool IsDormant);
+
+    public sealed record ReallocationOperationResult(bool IsSuccess, string Message, int? LedgerEntryId = null);
+
     public sealed class BudgetManagementService
     {
-        private readonly AppDbContext _context;
+        private readonly LocalDbContext _context;
         private readonly AuditService _auditService;
 
-        public BudgetManagementService(AppDbContext context, AuditService? auditService = null)
+        public BudgetManagementService(LocalDbContext context, AuditService? auditService = null)
         {
             _context = context;
             _auditService = auditService ?? new AuditService(context);
@@ -106,6 +138,8 @@ namespace AttendanceShiftingManagement.Services
         {
             return await _context.AyudaPrograms
                 .AsNoTracking()
+                .Include(p => p.SourceDonation)
+                .Include(p => p.SourceGGMSBudget)
                 .OrderBy(program => program.ProgramName)
                 .ToListAsync();
         }
@@ -323,9 +357,9 @@ namespace AttendanceShiftingManagement.Services
             }
 
             if (request.ReleaseKind == AssistanceReleaseKind.Goods &&
-                string.IsNullOrWhiteSpace(itemDescription))
+                string.IsNullOrWhiteSpace(request.ItemName))
             {
-                return new AyudaProgramOperationResult(false, "Goods distribution projects require an item description or package detail.");
+                return new AyudaProgramOperationResult(false, "Goods distribution projects require an item name.");
             }
 
             var ayudaProgram = new AyudaProgram
@@ -338,10 +372,15 @@ namespace AttendanceShiftingManagement.Services
                 ReleaseKind = request.ReleaseKind,
                 UnitAmount = request.UnitAmount,
                 ItemDescription = itemDescription,
+                ItemName = NormalizeNullable(request.ItemName),
+                QuantityPerBeneficiary = request.QuantityPerBeneficiary,
+                UnitOfMeasure = NormalizeNullable(request.UnitOfMeasure),
                 StartDate = request.StartDate?.Date,
                 EndDate = request.EndDate?.Date,
                 BudgetCap = request.BudgetCap,
                 DistributionStatus = request.DistributionStatus,
+                SourceDonationId = request.SourceDonationId,
+                SourceGGMSBudgetId = request.SourceGGMSBudgetId,
                 CreatedByUserId = createdByUserId,
                 IsActive = true,
                 CreatedAt = DateTime.Now,
@@ -374,6 +413,13 @@ namespace AttendanceShiftingManagement.Services
                 return new GovernmentBudgetSnapshotOperationResult(false, "Budget amounts cannot be negative.");
             }
 
+            if ((request.TargetProgramId.HasValue ? 1 : 0) +
+                (request.TargetAssistanceCaseBudgetId.HasValue ? 1 : 0) +
+                (request.TargetCashForWorkBudgetId.HasValue ? 1 : 0) > 1)
+            {
+                return new GovernmentBudgetSnapshotOperationResult(false, "An allocation can only have a single target.");
+            }
+
             var snapshot = new GovernmentBudgetSnapshot
             {
                 OfficeCode = NormalizeRequired(request.OfficeCode),
@@ -384,6 +430,9 @@ namespace AttendanceShiftingManagement.Services
                 SourceRowId = NormalizeNullable(request.SourceRowId),
                 SyncStatus = request.SyncStatus,
                 SyncedAt = request.SyncedAt,
+                TargetProgramId = request.TargetProgramId,
+                TargetAssistanceCaseBudgetId = request.TargetAssistanceCaseBudgetId,
+                TargetCashForWorkBudgetId = request.TargetCashForWorkBudgetId,
                 CreatedAt = DateTime.Now,
                 UpdatedAt = DateTime.Now
             };
@@ -408,6 +457,13 @@ namespace AttendanceShiftingManagement.Services
                 return new PrivateDonationOperationResult(false, "Donation amount must be greater than zero.");
             }
 
+            if ((request.TargetProgramId.HasValue ? 1 : 0) +
+                (request.TargetAssistanceCaseBudgetId.HasValue ? 1 : 0) +
+                (request.TargetCashForWorkBudgetId.HasValue ? 1 : 0) > 1)
+            {
+                return new PrivateDonationOperationResult(false, "A donation can only have a single target.");
+            }
+
             var donorName = NormalizeRequired(request.DonorName);
             var donation = new PrivateDonation
             {
@@ -421,6 +477,9 @@ namespace AttendanceShiftingManagement.Services
                 ProofReferenceNumber = NormalizeNullable(request.ProofReferenceNumber),
                 ProofFilePath = NormalizeNullable(request.ProofFilePath),
                 ReceivedByUserId = recordedByUserId,
+                TargetProgramId = request.TargetProgramId,
+                TargetAssistanceCaseBudgetId = request.TargetAssistanceCaseBudgetId,
+                TargetCashForWorkBudgetId = request.TargetCashForWorkBudgetId,
                 CreatedAt = DateTime.Now
             };
 
@@ -487,6 +546,8 @@ namespace AttendanceShiftingManagement.Services
             CashForWorkBudget? cashForWorkBudget = null;
             string budgetOwnerLabel;
             decimal? budgetCap;
+            int? sourceDonationId = null;
+            int? sourceGgmsBudgetId = null;
 
             if (request.CashForWorkBudgetId.HasValue)
             {
@@ -515,6 +576,8 @@ namespace AttendanceShiftingManagement.Services
 
                 budgetOwnerLabel = ayudaProgram.ProgramName;
                 budgetCap = ayudaProgram.BudgetCap;
+                sourceDonationId = ayudaProgram.SourceDonationId;
+                sourceGgmsBudgetId = ayudaProgram.SourceGGMSBudgetId;
             }
             else if (request.AssistanceCaseBudgetId.HasValue)
             {
@@ -535,11 +598,82 @@ namespace AttendanceShiftingManagement.Services
                 return new BudgetReleaseOperationResult(false, "A release must be assigned to a distribution program, cash-for-work budget, or assistance case budget.");
             }
 
-            var overview = await GetOverviewAsync();
-            if (request.TotalAmount > overview.CombinedAvailable)
+            decimal governmentPortion = 0m;
+            decimal privatePortion = 0m;
+
+            if (sourceDonationId.HasValue)
             {
-                var shortfall = request.TotalAmount - overview.CombinedAvailable;
-                return new BudgetReleaseOperationResult(false, $"Release cannot continue. Budget short by {shortfall:N2}.");
+                var donation = await _context.PrivateDonations.AsNoTracking().FirstOrDefaultAsync(d => d.Id == sourceDonationId.Value);
+                if (donation == null) return new BudgetReleaseOperationResult(false, "Source donation not found.");
+
+                var sharingProgramIds = await _context.AyudaPrograms.AsNoTracking()
+                    .Where(p => p.SourceDonationId == sourceDonationId.Value)
+                    .Select(p => p.Id)
+                    .ToListAsync();
+
+                var spent = await _context.BudgetLedgerEntries.AsNoTracking()
+                    .Where(e => e.EntryType == BudgetLedgerEntryType.Release && e.ProgramId.HasValue && sharingProgramIds.Contains(e.ProgramId.Value))
+                    .SumAsync(e => (decimal?)e.TotalAmount) ?? 0m;
+
+                var remaining = donation.Amount - spent;
+                if (request.TotalAmount > remaining)
+                {
+                    return new BudgetReleaseOperationResult(false, $"Release cannot continue. Source donation budget short by {request.TotalAmount - remaining:N2}.");
+                }
+                
+                privatePortion = request.TotalAmount;
+            }
+            else if (sourceGgmsBudgetId.HasValue)
+            {
+                var ggms = await _context.GovernmentBudgetSnapshots.AsNoTracking().FirstOrDefaultAsync(g => g.Id == sourceGgmsBudgetId.Value);
+                if (ggms == null) return new BudgetReleaseOperationResult(false, "Source GGMS budget not found.");
+
+                var sharingProgramIds = await _context.AyudaPrograms.AsNoTracking()
+                    .Where(p => p.SourceGGMSBudgetId == sourceGgmsBudgetId.Value)
+                    .Select(p => p.Id)
+                    .ToListAsync();
+
+                var spent = await _context.BudgetLedgerEntries.AsNoTracking()
+                    .Where(e => e.EntryType == BudgetLedgerEntryType.Release && e.ProgramId.HasValue && sharingProgramIds.Contains(e.ProgramId.Value))
+                    .SumAsync(e => (decimal?)e.TotalAmount) ?? 0m;
+
+                var remaining = ggms.AllocatedAmount - spent;
+                if (request.TotalAmount > remaining)
+                {
+                    return new BudgetReleaseOperationResult(false, $"Release cannot continue. Source GGMS budget short by {request.TotalAmount - remaining:N2}.");
+                }
+
+                governmentPortion = request.TotalAmount;
+            }
+            else
+            {
+                var overview = await GetOverviewAsync();
+                if (request.ForcedBudgetBucketType == "Government")
+                {
+                    if (request.TotalAmount > overview.GovernmentAvailable)
+                    {
+                        return new BudgetReleaseOperationResult(false, $"Release cannot continue. Government budget short by {request.TotalAmount - overview.GovernmentAvailable:N2}.");
+                    }
+                    governmentPortion = request.TotalAmount;
+                }
+                else if (request.ForcedBudgetBucketType == "Private")
+                {
+                    if (request.TotalAmount > overview.PrivateAvailable)
+                    {
+                        return new BudgetReleaseOperationResult(false, $"Release cannot continue. Private donation budget short by {request.TotalAmount - overview.PrivateAvailable:N2}.");
+                    }
+                    privatePortion = request.TotalAmount;
+                }
+                else
+                {
+                    if (request.TotalAmount > overview.CombinedAvailable)
+                    {
+                        var shortfall = request.TotalAmount - overview.CombinedAvailable;
+                        return new BudgetReleaseOperationResult(false, $"Release cannot continue. Budget short by {shortfall:N2}.");
+                    }
+                    governmentPortion = Math.Min(request.TotalAmount, overview.GovernmentAvailable);
+                    privatePortion = request.TotalAmount - governmentPortion;
+                }
             }
 
             if (budgetCap.HasValue)
@@ -559,8 +693,6 @@ namespace AttendanceShiftingManagement.Services
                 }
             }
 
-            var governmentPortion = Math.Min(request.TotalAmount, overview.GovernmentAvailable);
-            var privatePortion = request.TotalAmount - governmentPortion;
             var ledgerEntry = new BudgetLedgerEntry
             {
                 EntryType = BudgetLedgerEntryType.Release,
@@ -591,6 +723,18 @@ namespace AttendanceShiftingManagement.Services
                 $"Recorded release of {ledgerEntry.TotalAmount:N2} for '{budgetOwnerLabel}' from {request.FeatureSource}.");
 
             return new BudgetReleaseOperationResult(true, "Recorded release budget entry.", ledgerEntry.Id);
+        }
+
+        public async Task<BudgetReleaseOperationResult> RecordWaterfallReleaseAsync(BudgetReleaseRequest request, int recordedByUserId)
+        {
+            if (!request.AyudaProgramId.HasValue)
+            {
+                return new BudgetReleaseOperationResult(false, "Waterfall release requires an Ayuda Program ID.");
+            }
+
+            // Under the new funding-first architecture, projects tied to explicit sources do not use waterfalls.
+            // All project releases are routed to the central RecordReleaseAsync which handles 1:1 fund derivation.
+            return await RecordReleaseAsync(request, recordedByUserId);
         }
 
         public async Task<BudgetOverviewSnapshot> GetOverviewAsync()
@@ -646,11 +790,49 @@ namespace AttendanceShiftingManagement.Services
             var governmentAvailable = Math.Max(0m, governmentBaseAvailable - governmentReleasedSinceLastSync);
             var privateAvailable = Math.Max(0m, donationTotal - privateReleasedTotal);
 
+            var privateLockedAllocated = await _context.PrivateDonations
+                .AsNoTracking()
+                .Where(d => d.TargetProgramId != null || d.TargetAssistanceCaseBudgetId != null || d.TargetCashForWorkBudgetId != null)
+                .SumAsync(d => (decimal?)d.Amount) ?? 0m;
+
+            var privateLockedReleased = await releaseEntries
+                .Where(e => e.ProgramId != null || e.AssistanceCaseBudgetId != null || e.CashForWorkBudgetId != null)
+                .SumAsync(e => (decimal?)e.PrivatePortion) ?? 0m;
+                
+            var privateLockedReallocated = await _context.BudgetLedgerEntries
+                .AsNoTracking()
+                .Where(e => e.EntryType == BudgetLedgerEntryType.Reallocation)
+                .SumAsync(e => (decimal?)e.PrivatePortion) ?? 0m;
+
+            var privateLockedAvailable = Math.Max(0m, privateLockedAllocated - privateLockedReleased - privateLockedReallocated);
+            var privateUnrestrictedAvailable = Math.Max(0m, privateAvailable - privateLockedAvailable);
+
+            var governmentLockedAllocated = await _context.GovernmentBudgetSnapshots
+                .AsNoTracking()
+                .Where(s => s.TargetProgramId != null || s.TargetAssistanceCaseBudgetId != null || s.TargetCashForWorkBudgetId != null)
+                .SumAsync(s => (decimal?)s.AllocatedAmount) ?? 0m;
+
+            var governmentLockedReleased = await releaseEntries
+                .Where(e => e.ProgramId != null || e.AssistanceCaseBudgetId != null || e.CashForWorkBudgetId != null)
+                .SumAsync(e => (decimal?)e.GovernmentPortion) ?? 0m;
+                
+            var governmentLockedReallocated = await _context.BudgetLedgerEntries
+                .AsNoTracking()
+                .Where(e => e.EntryType == BudgetLedgerEntryType.Reallocation)
+                .SumAsync(e => (decimal?)e.GovernmentPortion) ?? 0m;
+
+            var governmentLockedAvailable = Math.Max(0m, governmentLockedAllocated - governmentLockedReleased - governmentLockedReallocated);
+            var governmentUnrestrictedAvailable = Math.Max(0m, governmentAvailable - governmentLockedAvailable);
+
             return new BudgetOverviewSnapshot(
                 governmentAllocated,
                 governmentSpentReference,
                 governmentAvailable,
+                governmentUnrestrictedAvailable,
+                governmentLockedAvailable,
                 privateAvailable,
+                privateUnrestrictedAvailable,
+                privateLockedAvailable,
                 governmentAvailable + privateAvailable,
                 governmentReleasedTotal + privateReleasedTotal,
                 governmentReleasedTotal,
@@ -660,6 +842,98 @@ namespace AttendanceShiftingManagement.Services
                 latestSnapshot?.SyncedAt,
                 latestSnapshot?.OfficeCode,
                 latestSnapshot?.OfficeName);
+        }
+
+        public async Task<ReallocationOperationResult> ReallocateEarmarkAsync(int targetId, string targetType, string remarks, int recordedByUserId)
+        {
+            var isProgram = targetType == "AyudaProgram";
+            var isCase = targetType == "AssistanceCaseBudget";
+            var isCfw = targetType == "CashForWorkBudget";
+
+            var privateAllocated = await _context.PrivateDonations
+                .AsNoTracking()
+                .Where(d => (isProgram && d.TargetProgramId == targetId) ||
+                            (isCase && d.TargetAssistanceCaseBudgetId == targetId) ||
+                            (isCfw && d.TargetCashForWorkBudgetId == targetId))
+                .SumAsync(d => (decimal?)d.Amount) ?? 0m;
+
+            var govAllocated = await _context.GovernmentBudgetSnapshots
+                .AsNoTracking()
+                .Where(s => (isProgram && s.TargetProgramId == targetId) ||
+                            (isCase && s.TargetAssistanceCaseBudgetId == targetId) ||
+                            (isCfw && s.TargetCashForWorkBudgetId == targetId))
+                .SumAsync(s => (decimal?)s.AllocatedAmount) ?? 0m;
+
+            var privateReleased = await _context.BudgetLedgerEntries
+                .AsNoTracking()
+                .Where(e => e.EntryType == BudgetLedgerEntryType.Release &&
+                            ((isProgram && e.ProgramId == targetId) ||
+                             (isCase && e.AssistanceCaseBudgetId == targetId) ||
+                             (isCfw && e.CashForWorkBudgetId == targetId)))
+                .SumAsync(e => (decimal?)e.PrivatePortion) ?? 0m;
+
+            var govReleased = await _context.BudgetLedgerEntries
+                .AsNoTracking()
+                .Where(e => e.EntryType == BudgetLedgerEntryType.Release &&
+                            ((isProgram && e.ProgramId == targetId) ||
+                             (isCase && e.AssistanceCaseBudgetId == targetId) ||
+                             (isCfw && e.CashForWorkBudgetId == targetId)))
+                .SumAsync(e => (decimal?)e.GovernmentPortion) ?? 0m;
+
+            var privateReallocated = await _context.BudgetLedgerEntries
+                .AsNoTracking()
+                .Where(e => e.EntryType == BudgetLedgerEntryType.Reallocation &&
+                            ((isProgram && e.ProgramId == targetId) ||
+                             (isCase && e.AssistanceCaseBudgetId == targetId) ||
+                             (isCfw && e.CashForWorkBudgetId == targetId)))
+                .SumAsync(e => (decimal?)e.PrivatePortion) ?? 0m;
+
+            var govReallocated = await _context.BudgetLedgerEntries
+                .AsNoTracking()
+                .Where(e => e.EntryType == BudgetLedgerEntryType.Reallocation &&
+                            ((isProgram && e.ProgramId == targetId) ||
+                             (isCase && e.AssistanceCaseBudgetId == targetId) ||
+                             (isCfw && e.CashForWorkBudgetId == targetId)))
+                .SumAsync(e => (decimal?)e.GovernmentPortion) ?? 0m;
+
+            var privateRemaining = Math.Max(0m, privateAllocated - privateReleased - privateReallocated);
+            var govRemaining = Math.Max(0m, govAllocated - govReleased - govReallocated);
+            var totalRemaining = privateRemaining + govRemaining;
+
+            if (totalRemaining <= 0)
+            {
+                return new ReallocationOperationResult(false, "No remaining earmarked funds to reallocate.");
+            }
+
+            var ledgerEntry = new BudgetLedgerEntry
+            {
+                EntryType = BudgetLedgerEntryType.Reallocation,
+                FeatureSource = BudgetLedgerFeatureSource.BudgetModule,
+                SourceRecordId = $"reallocation:{targetType}:{targetId}",
+                ProgramId = isProgram ? targetId : null,
+                AssistanceCaseBudgetId = isCase ? targetId : null,
+                CashForWorkBudgetId = isCfw ? targetId : null,
+                RecipientCount = 0,
+                TotalAmount = totalRemaining,
+                GovernmentPortion = govRemaining,
+                PrivatePortion = privateRemaining,
+                EntryDate = DateTime.Today,
+                Remarks = NormalizeNullable(remarks) ?? "Reallocated dormant/unused earmarked funds to general pool.",
+                RecordedByUserId = recordedByUserId,
+                CreatedAt = DateTime.Now
+            };
+
+            _context.BudgetLedgerEntries.Add(ledgerEntry);
+            await _context.SaveChangesAsync();
+
+            await _auditService.LogActivityAsync(
+                recordedByUserId,
+                "BudgetReallocated",
+                "BudgetLedgerEntry",
+                ledgerEntry.Id,
+                $"Reallocated {totalRemaining:N2} from {targetType} {targetId} back to general funds.");
+
+            return new ReallocationOperationResult(true, "Funds successfully reallocated.", ledgerEntry.Id);
         }
 
         private static string NormalizeRequired(string value)

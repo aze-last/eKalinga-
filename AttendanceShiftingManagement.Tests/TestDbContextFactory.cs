@@ -5,12 +5,12 @@ namespace AttendanceShiftingManagement.Tests;
 
 internal static class TestDbContextFactory
 {
-    public static AppDbContext CreateContext(string? databaseName = null)
+    public static LocalDbContext CreateContext(string? databaseName = null)
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
+        var options = new DbContextOptionsBuilder<LocalDbContext>()
             .UseInMemoryDatabase(databaseName ?? Guid.NewGuid().ToString("N"))
             .Options;
 
-        return new AppDbContext(options);
+        return new LocalDbContext(options);
     }
 }

@@ -29,37 +29,22 @@ namespace AttendanceShiftingManagement
 
             Log("Application OnStartup triggered.");
 
-            // Uncomment the line below if we need to force a dialog to see if it even gets here
-            // MessageBox.Show("Application is starting...", "Debug", MessageBoxButton.OK, MessageBoxImage.Information);
-
             try
             {
-                Log("Applying theme...");
-                AppThemeService.ApplySavedTheme();
-                Log("Theme applied.");
-
                 base.OnStartup(e);
                 Log("Base OnStartup completed.");
 
-                try
-                {
-                    Log("Performing startup maintenance...");
-                    AppUpdatePackageService.PerformStartupMaintenance();
-                    Log("Maintenance completed.");
-                }
-                catch (Exception ex)
-                {
-                    Log($"Maintenance failed (non-critical): {ex.Message}");
-                }
-
-                Log("Starting background update check...");
-                AppUpdateCoordinator.StartBackgroundCheck();
-                Log("Background check started.");
+                // Show splash screen immediately; it handles theme, maintenance, and DB init internally.
+                Log("Showing splash screen...");
+                var splash = new Views.SplashWindow();
+                MainWindow = splash;
+                splash.Show();
+                Log("Splash screen shown.");
             }
             catch (Exception ex)
             {
                 LogException("OnStartup Critical", ex);
-                MessageBox.Show($"Application failed to start: {ex.Message}\n\nCheck the log at: {LogFilePath}", 
+                MessageBox.Show($"Application failed to start: {ex.Message}\n\nCheck the log at: {LogFilePath}",
                     "Startup Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 Shutdown();
             }

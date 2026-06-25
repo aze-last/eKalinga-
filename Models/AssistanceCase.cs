@@ -6,6 +6,8 @@ namespace AttendanceShiftingManagement.Models
     [Table("assistance_cases")]
     public class AssistanceCase
     {
+        public Guid SyncId { get; set; } = Guid.NewGuid();
+
         [Key]
         [Column("id")]
         public int Id { get; set; }

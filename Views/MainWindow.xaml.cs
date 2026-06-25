@@ -613,7 +613,7 @@ namespace AttendanceShiftingManagement.Views
 
             try
             {
-                using var context = new AppDbContext();
+                using var context = new LocalDbContext();
                 var auditService = new AuditService(context);
                 auditService.LogActivity(
                     ViewModel.CurrentUser.Id,

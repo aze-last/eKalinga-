@@ -22,6 +22,7 @@ namespace AttendanceShiftingManagement.Data
         public DbSet<AyudaProgram> AyudaPrograms => Set<AyudaProgram>();
         public DbSet<AyudaProjectBeneficiary> AyudaProjectBeneficiaries => Set<AyudaProjectBeneficiary>();
         public DbSet<AyudaProjectClaim> AyudaProjectClaims => Set< AyudaProjectClaim>();
+        public DbSet<ProjectBudgetSource> ProjectBudgetSources => Set<ProjectBudgetSource>();
         public DbSet<GovernmentBudgetSnapshot> GovernmentBudgetSnapshots => Set<GovernmentBudgetSnapshot>();
         public DbSet<PrivateDonation> PrivateDonations => Set<PrivateDonation>();
         public DbSet<BudgetLedgerEntry> BudgetLedgerEntries => Set<BudgetLedgerEntry>();
@@ -135,6 +136,20 @@ namespace AttendanceShiftingManagement.Data
             modelBuilder.Entity<PrivateDonation>()
                 .Property(donation => donation.ProofType)
                 .HasConversion<string>();
+
+            modelBuilder.Entity<PrivateDonation>()
+                .HasCheckConstraint("CK_PrivateDonation_SingleTarget",
+                    "(target_program_id IS NOT NULL AND target_assistance_case_budget_id IS NULL AND target_cash_for_work_budget_id IS NULL) OR " +
+                    "(target_program_id IS NULL AND target_assistance_case_budget_id IS NOT NULL AND target_cash_for_work_budget_id IS NULL) OR " +
+                    "(target_program_id IS NULL AND target_assistance_case_budget_id IS NULL AND target_cash_for_work_budget_id IS NOT NULL) OR " +
+                    "(target_program_id IS NULL AND target_assistance_case_budget_id IS NULL AND target_cash_for_work_budget_id IS NULL)");
+
+            modelBuilder.Entity<GovernmentBudgetSnapshot>()
+                .HasCheckConstraint("CK_GovernmentBudgetSnapshot_SingleTarget",
+                    "(target_program_id IS NOT NULL AND target_assistance_case_budget_id IS NULL AND target_cash_for_work_budget_id IS NULL) OR " +
+                    "(target_program_id IS NULL AND target_assistance_case_budget_id IS NOT NULL AND target_cash_for_work_budget_id IS NULL) OR " +
+                    "(target_program_id IS NULL AND target_assistance_case_budget_id IS NULL AND target_cash_for_work_budget_id IS NOT NULL) OR " +
+                    "(target_program_id IS NULL AND target_assistance_case_budget_id IS NULL AND target_cash_for_work_budget_id IS NULL)");
 
             modelBuilder.Entity<BudgetLedgerEntry>()
                 .Property(entry => entry.EntryType)
@@ -267,6 +282,15 @@ namespace AttendanceShiftingManagement.Data
                 .WithMany()
                 .HasForeignKey(item => item.AyudaProgramId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<ProjectBudgetSource>()
+                .HasOne(item => item.AyudaProgram)
+                .WithMany()
+                .HasForeignKey(item => item.AyudaProgramId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<ProjectBudgetSource>()
+                .HasIndex(item => new { item.AyudaProgramId, item.Priority });
 
             modelBuilder.Entity<UserProfile>()
                 .HasOne<User>()

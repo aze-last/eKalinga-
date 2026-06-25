@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 
@@ -40,7 +40,7 @@ namespace AttendanceShiftingManagement.Data.Migrations
                 migrationBuilder,
                 "ayuda_project_beneficiaries",
                 "status",
-                "ALTER TABLE `ayuda_project_beneficiaries` ADD COLUMN `status` longtext NOT NULL DEFAULT 'Pending';");
+                "ALTER TABLE `ayuda_project_beneficiaries` ADD COLUMN `status` varchar(50) NOT NULL DEFAULT 'Pending';");
 
             EnsureColumnExists(
                 migrationBuilder,

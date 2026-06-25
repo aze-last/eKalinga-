@@ -193,7 +193,7 @@ namespace AttendanceShiftingManagement.ViewModels
             IsBusy = true;
             try
             {
-                await using var context = new AppDbContext();
+                await using var context = new LocalDbContext();
                 var service = new EquipmentBorrowingService(context);
 
                 var filter = FilterMode switch
@@ -261,7 +261,7 @@ namespace AttendanceShiftingManagement.ViewModels
             IsBusy = true;
             try
             {
-                await using var context = new AppDbContext();
+                await using var context = new LocalDbContext();
                 
                 // 1. Try Asset Lookup
                 var asset = await context.BarangayAssets
@@ -344,7 +344,7 @@ namespace AttendanceShiftingManagement.ViewModels
             IsBusy = true;
             try
             {
-                await using var context = new AppDbContext();
+                await using var context = new LocalDbContext();
                 var service = new EquipmentBorrowingService(context);
 
                 if (_dialogMode == "ISSUE")
@@ -397,7 +397,7 @@ namespace AttendanceShiftingManagement.ViewModels
             IsBusy = true;
             try
             {
-                await using var context = new AppDbContext();
+                await using var context = new LocalDbContext();
                 var service = new EquipmentBorrowingService(context);
 
                 var result = await service.AddAssetAsync(NewAssetTag, NewAssetCategory, NewAssetDescription);

@@ -478,7 +478,7 @@ public sealed class CashForWorkServiceTests
             action => string.Equals(action, "CashForWorkAttendanceDeleted", StringComparison.Ordinal));
     }
 
-    private static User SeedAdmin(Data.AppDbContext context)
+    private static User SeedAdmin(Data.LocalDbContext context)
     {
         var user = new User
         {
@@ -495,7 +495,7 @@ public sealed class CashForWorkServiceTests
     }
 
     private static BeneficiaryStaging SeedApprovedBeneficiary(
-        Data.AppDbContext context,
+        Data.LocalDbContext context,
         int stagingId = 1001,
         string fullName = "Pedro Santos",
         VerificationStatus verificationStatus = VerificationStatus.Approved)
@@ -515,7 +515,7 @@ public sealed class CashForWorkServiceTests
         return beneficiary;
     }
 
-    private static AyudaProgram SeedProgram(Data.AppDbContext context, int createdByUserId, AyudaProgramType programType)
+    private static AyudaProgram SeedProgram(Data.LocalDbContext context, int createdByUserId, AyudaProgramType programType)
     {
         var programCode = $"CFW-{Guid.NewGuid():N}";
         var program = new AyudaProgram

@@ -6,6 +6,9 @@ namespace AttendanceShiftingManagement.Models
     [Table("scanner_sessions")]
     public class ScannerSession
     {
+        public Guid SyncId { get; set; } = Guid.NewGuid();
+        public DateTime UpdatedAt { get; set; } = DateTime.Now;
+
         [Key]
         [Column("id")]
         public int Id { get; set; }

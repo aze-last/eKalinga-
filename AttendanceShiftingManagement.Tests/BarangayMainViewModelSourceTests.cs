@@ -18,8 +18,8 @@ public sealed class BarangayMainViewModelSourceTests
 
         Assert.Contains("case \"MasterList\":", source, StringComparison.Ordinal);
         Assert.Contains("CurrentSectionTitle = \"Validated Beneficiaries\";", source, StringComparison.Ordinal);
-        Assert.Contains("CurrentSectionSubtitle = \"Read the local val_beneficiaries snapshot, keep new rows pending by default, and approve or reject them before downstream use.\";", source, StringComparison.Ordinal);
-        Assert.Contains("return new BeneficiaryVerificationPage(_currentUser);", source, StringComparison.Ordinal);
+        Assert.Contains("CurrentSectionSubtitle = \"Browse the full registry of validated beneficiaries, search by name or ID, and view individual profiles.\";", source, StringComparison.Ordinal);
+        Assert.Contains("return new MasterListPage(_currentUser);", source, StringComparison.Ordinal);
         Assert.DoesNotContain("ShowBeneficiariesCommand", source, StringComparison.Ordinal);
         Assert.DoesNotContain("ShowGrievancesCommand", source, StringComparison.Ordinal);
         Assert.DoesNotContain("case \"Beneficiaries\":", source, StringComparison.Ordinal);

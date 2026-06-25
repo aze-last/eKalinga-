@@ -51,7 +51,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly RelayCommand _saveAccountCommand;
         private readonly RelayCommand _changePasswordCommand;
         private readonly User? _currentUser;
-        private readonly Func<AppDbContext> _dbContextFactory;
+        private readonly Func<LocalDbContext> _dbContextFactory;
 
         private string _systemName = string.Empty;
         private string _systemOwner = string.Empty;
@@ -137,10 +137,10 @@ namespace AttendanceShiftingManagement.ViewModels
         private bool _isBusy;
         private bool _lastPasswordChangeSucceeded;
 
-        public SettingsToolsViewModel(User? currentUser = null, Func<AppDbContext>? dbContextFactory = null)
+        public SettingsToolsViewModel(User? currentUser = null, Func<LocalDbContext>? dbContextFactory = null)
         {
             _currentUser = currentUser;
-            _dbContextFactory = dbContextFactory ?? (() => new AppDbContext());
+            _dbContextFactory = dbContextFactory ?? (() => new LocalDbContext());
 
             PreviewOptions = new ObservableCollection<string>
             {

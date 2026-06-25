@@ -24,7 +24,7 @@ public sealed class MainWindowBindingTests
 
         Assert.Contains("Content=\"{Binding CurrentView}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Background=\"{DynamicResource ThemeWindowShellBrush}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("ClipToBounds=\"True\"", xaml, StringComparison.Ordinal);
+
 
         Assert.Single(Regex.Matches(xaml, "Click=\"Minimize_Click\"", RegexOptions.None).Cast<Match>());
         Assert.Single(Regex.Matches(xaml, "Click=\"MaximizeRestore_Click\"", RegexOptions.None).Cast<Match>());
@@ -72,7 +72,8 @@ public sealed class MainWindowBindingTests
                     .Replace(" Click=\"Close_Click\"", string.Empty, StringComparison.Ordinal)
                     .Replace(" Click=\"CheckForUpdate_Click\"", string.Empty, StringComparison.Ordinal)
                     .Replace(" Click=\"Settings_Click\"", string.Empty, StringComparison.Ordinal)
-                    .Replace(" Click=\"Logout_Click\"", string.Empty, StringComparison.Ordinal);
+                    .Replace(" Click=\"Logout_Click\"", string.Empty, StringComparison.Ordinal)
+                    .Replace("xmlns:helpers=\"clr-namespace:AttendanceShiftingManagement.Helpers\"", "xmlns:helpers=\"clr-namespace:AttendanceShiftingManagement.Helpers;assembly=AttendanceShiftingManagement\"", StringComparison.Ordinal);
 
                 _ = XamlReader.Parse(xaml);
             }

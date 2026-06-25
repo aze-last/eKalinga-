@@ -16,7 +16,7 @@ public sealed class MasterListPageBindingTests
 
         var xaml = File.ReadAllText(pagePath);
 
-        Assert.Contains("Text=\"Masterlist Management\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"MASTERLIST &amp; REGISTRY\"", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Text=\"Validated Beneficiaries\"", xaml, StringComparison.Ordinal);
         Assert.Contains("ItemsSource=\"{Binding PendingBeneficiaries}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("ItemsSource=\"{Binding ApprovedBeneficiaries}\"", xaml, StringComparison.Ordinal);
@@ -31,7 +31,7 @@ public sealed class MasterListPageBindingTests
         Assert.Contains("Text=\"{Binding ApprovedPageSummary}\"", xaml, StringComparison.Ordinal);
         
         Assert.Contains("Background=\"{DynamicResource ThemeCardSubtleBrush}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("BlurEffect Radius=\"0\" x:Name=\"BackgroundBlur\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Background=\"#CC0F172A\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Binding=\"{Binding FullName}\"", xaml, StringComparison.Ordinal);
     }
 

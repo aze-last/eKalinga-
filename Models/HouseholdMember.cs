@@ -6,6 +6,8 @@ namespace AttendanceShiftingManagement.Models
     [Table("household_members")]
     public class HouseholdMember
     {
+        public Guid SyncId { get; set; } = Guid.NewGuid();
+
         [Key]
         [Column("id")]
         public int Id { get; set; }

@@ -128,6 +128,7 @@ public sealed class AssistanceCaseManagementServiceTests
         var admin = SeedAdmin(context);
         var household = SeedHousehold(context);
         SeedGlobalAidRequestBudget(context, admin.Id);
+        SeedGovernmentSnapshot(context, 10000m, 2, "OFF-2026-0006");
         
         var assistanceCase = SeedAssistanceCase(context, household.Id, null, admin.Id);
         var program = SeedProgram(context, admin.Id, AyudaProgramType.GeneralPurpose);
@@ -235,7 +236,7 @@ public sealed class AssistanceCaseManagementServiceTests
         Assert.Empty(context.AssistanceCases);
     }
 
-    private static User SeedAdmin(Data.AppDbContext context)
+    private static User SeedAdmin(Data.LocalDbContext context)
     {
         var user = new User
         {
@@ -251,7 +252,7 @@ public sealed class AssistanceCaseManagementServiceTests
         return user;
     }
 
-    private static Household SeedHousehold(Data.AppDbContext context)
+    private static Household SeedHousehold(Data.LocalDbContext context)
     {
         var household = new Household
         {
@@ -268,7 +269,7 @@ public sealed class AssistanceCaseManagementServiceTests
         return household;
     }
 
-    private static HouseholdMember SeedMember(Data.AppDbContext context, int householdId)
+    private static HouseholdMember SeedMember(Data.LocalDbContext context, int householdId)
     {
         var member = new HouseholdMember
         {
@@ -287,7 +288,7 @@ public sealed class AssistanceCaseManagementServiceTests
         return member;
     }
 
-    private static AssistanceCase SeedAssistanceCase(Data.AppDbContext context, int householdId, int? householdMemberId, int createdByUserId)
+    private static AssistanceCase SeedAssistanceCase(Data.LocalDbContext context, int householdId, int? householdMemberId, int createdByUserId)
     {
         var assistanceCase = new AssistanceCase
         {
@@ -312,7 +313,7 @@ public sealed class AssistanceCaseManagementServiceTests
         return assistanceCase;
     }
 
-    private static AyudaProgram SeedProgram(Data.AppDbContext context, int createdByUserId, AyudaProgramType programType)
+    private static AyudaProgram SeedProgram(Data.LocalDbContext context, int createdByUserId, AyudaProgramType programType)
     {
         var program = new AyudaProgram
         {
@@ -330,7 +331,7 @@ public sealed class AssistanceCaseManagementServiceTests
         return program;
     }
 
-    private static void SeedGlobalAidRequestBudget(Data.AppDbContext context, int adminId)
+    private static void SeedGlobalAidRequestBudget(Data.LocalDbContext context, int adminId)
     {
         context.AssistanceCaseBudgets.Add(new AssistanceCaseBudget
         {
@@ -342,6 +343,25 @@ public sealed class AssistanceCaseManagementServiceTests
             CreatedAt = DateTime.Now,
             UpdatedAt = DateTime.Now
         });
+        context.SaveChanges();
+    }
+
+    private static void SeedGovernmentSnapshot(Data.LocalDbContext context, decimal allocatedAmount, int yearlyBudgetId, string officeCode)
+    {
+        context.GovernmentBudgetSnapshots.Add(new GovernmentBudgetSnapshot
+        {
+            OfficeCode = officeCode,
+            OfficeName = "Ayuda",
+            YearlyBudgetId = yearlyBudgetId,
+            AllocatedAmount = allocatedAmount,
+            SpentAmount = 0m,
+            SourceRowId = yearlyBudgetId.ToString(),
+            SyncStatus = GovernmentBudgetSyncStatus.Synced,
+            SyncedAt = DateTime.Now,
+            CreatedAt = DateTime.Now,
+            UpdatedAt = DateTime.Now
+        });
+
         context.SaveChanges();
     }
 }

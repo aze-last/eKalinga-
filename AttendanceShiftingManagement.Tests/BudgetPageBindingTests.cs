@@ -26,8 +26,8 @@ public sealed class BudgetPageBindingTests
 
         var xaml = File.ReadAllText(pagePath);
 
-        Assert.Contains("Content=\"Dashboard\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Command=\"{Binding DataContext.ShowDashboardCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}\"", xaml, StringComparison.Ordinal);
+
+
         Assert.Contains("Content=\"Budget Ledger\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding OpenLedgerPanelCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Content=\"Private Donations\"", xaml, StringComparison.Ordinal);

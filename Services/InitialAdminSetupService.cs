@@ -19,7 +19,7 @@ namespace AttendanceShiftingManagement.Services
 
     public static class InitialAdminSetupService
     {
-        public static InitialAdminState GetState(AppDbContext context)
+        public static InitialAdminState GetState(LocalDbContext context)
         {
             var hasActiveAdmin = context.Users.Any(user =>
                 (user.Role == UserRole.Admin || user.Role == UserRole.SuperAdmin) && user.IsActive);
@@ -29,12 +29,44 @@ namespace AttendanceShiftingManagement.Services
             }
 
             var hasAnyUsers = context.Users.Any();
-            return hasAnyUsers
-                ? new InitialAdminState(true, "No active admin account exists for this database. Create one now to restore access.")
-                : new InitialAdminState(true, "Create the first admin account for this database. No default password is shipped with the app.");
+            if (!hasAnyUsers)
+            {
+                var timestamp = DateTime.Now;
+                var user = new User
+                {
+                    Username = "admin",
+                    Email = "admin@barangay.local",
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("admin123"),
+                    Role = UserRole.SuperAdmin,
+                    IsActive = true,
+                    CreatedAt = timestamp,
+                    UpdatedAt = timestamp
+                };
+                context.Users.Add(user);
+                context.SaveChanges();
+
+                context.UserProfiles.Add(new UserProfile
+                {
+                    UserId = user.Id,
+                    FullName = "System Administrator",
+                    Nickname = "admin",
+                    Address = "Barangay Hall",
+                    Phone = string.Empty,
+                    EmergencyContactName = string.Empty,
+                    EmergencyContactPhone = string.Empty,
+                    PhotoPath = string.Empty,
+                    CreatedAt = timestamp,
+                    UpdatedAt = timestamp
+                });
+                context.SaveChanges();
+
+                return new InitialAdminState(false, "Default admin seeded.");
+            }
+
+            return new InitialAdminState(true, "No active admin account exists for this database. Create one now to restore access.");
         }
 
-        public static InitialAdminSetupResult CreateInitialAdmin(AppDbContext context, InitialAdminSetupRequest request)
+        public static InitialAdminSetupResult CreateInitialAdmin(LocalDbContext context, InitialAdminSetupRequest request)
         {
             var state = GetState(context);
             if (!state.RequiresSetup)

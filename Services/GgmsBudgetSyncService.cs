@@ -16,7 +16,7 @@ namespace AttendanceShiftingManagement.Services
             _options = options ?? BudgetRuntimeOptions.Load();
         }
 
-        public async Task<GgmsBudgetSyncResult> SyncAyudaBudgetAsync(AppDbContext context, int recordedByUserId)
+        public async Task<GgmsBudgetSyncResult> SyncAyudaBudgetAsync(LocalDbContext context, int recordedByUserId)
         {
             if (!HasConnectionDetails(_options.GgmsConnection))
             {

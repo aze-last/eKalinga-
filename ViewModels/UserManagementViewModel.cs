@@ -33,7 +33,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _newUsername = string.Empty;
         private string _newEmail = string.Empty;
         private string _newPassword = string.Empty;
-        private UserRole _newRole = UserRole.Crew;
+        private UserRole _newRole = UserRole.Admin;
 
         public User? CurrentUser { get; set; }
 
@@ -202,7 +202,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
         public void RefreshUsers()
         {
-            using var context = new AppDbContext();
+            using var context = new LocalDbContext();
             var query = context.Users.AsNoTracking().Where(u => !u.IsDeleted).AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(SearchText))
@@ -239,7 +239,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
             SelectedUser = user;
 
-            using var context = new AppDbContext();
+            using var context = new LocalDbContext();
             var permissions = context.UserPermissions
                 .FirstOrDefault(p => p.UserId == SelectedUser.Id);
 
@@ -271,7 +271,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private void SavePermissions()
         {
-            using var context = new AppDbContext();
+            using var context = new LocalDbContext();
             
             var existing = context.UserPermissions.FirstOrDefault(p => p.UserId == EditingPermissions.UserId);
             
@@ -318,7 +318,7 @@ namespace AttendanceShiftingManagement.ViewModels
             var userTarget = param as User ?? SelectedUser;
             if (userTarget == null || userTarget.Role == UserRole.SuperAdmin) return;
 
-            using var context = new AppDbContext();
+            using var context = new LocalDbContext();
             var user = context.Users.Find(userTarget.Id);
             if (user != null)
             {
@@ -349,7 +349,7 @@ namespace AttendanceShiftingManagement.ViewModels
             NewUsername = string.Empty;
             NewEmail = string.Empty;
             NewPassword = string.Empty;
-            NewRole = UserRole.Crew;
+            NewRole = UserRole.Admin;
             IsCreateUserPanelOpen = true;
         }
 
@@ -395,7 +395,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 return;
             }
 
-            using var context = new AppDbContext();
+            using var context = new LocalDbContext();
 
             if (IsEditMode)
             {
@@ -494,7 +494,7 @@ namespace AttendanceShiftingManagement.ViewModels
                                          
             if (result == MessageBoxResult.Yes)
             {
-                using var context = new AppDbContext();
+                using var context = new LocalDbContext();
                 var dbUser = context.Users.Find(user.Id);
                 if (dbUser != null)
                 {

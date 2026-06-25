@@ -7,6 +7,9 @@ namespace AttendanceShiftingManagement.Models
     [Table("activity_logs")]
     public class ActivityLog
     {
+        public Guid SyncId { get; set; } = Guid.NewGuid();
+        public DateTime UpdatedAt { get; set; } = DateTime.Now;
+
         [Key]
         [Column("id")]
         public int Id { get; set; }

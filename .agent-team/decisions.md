@@ -15,3 +15,9 @@
 - UI/UX completion rule: the assigned worker must double-check margins, row and column assignments, spans, alignment, and scaling behavior before reporting UI work complete
 - Workflow review rule: use `workflow-reviewer@attendance-shifting-management` to ensure cross-module logic consistency and alignment with user goals before closing tasks that touch business logic
 - Database deletion rule: Agents are strictly prohibited from deleting rows in the database. Deletions must be handled manually by the developer or implemented as "Soft Deletes" if requested.
+- **Project-Budget Waterfall Architecture (Approved 2026-06-18):**
+    - **Module Responsibility:** Project Creation and financial planning are moved to the **Budget Module**. Distribution is strictly for release execution.
+    - **Funding Model:** Implements a **Waterfall Logic** where a Project can draw from multiple Budget Buckets sequentially based on priority.
+    - **Enrollment Flow:** Beneficiaries are bulk-enrolled into Projects via the **Masterlist Module** after the project is created in the Budget module.
+    - **Capacity Validation:** Projects must define a `MaxPayoutPerBeneficiary` to validate funding availability against enrollment targets.
+    - **Relational Ledger:** Uses `ProjectBudgetSource` (Waterfall mapping) and `ProjectBeneficiary` (Enrollment tracking) tables for strict financial auditability.

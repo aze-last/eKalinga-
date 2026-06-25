@@ -487,6 +487,15 @@ namespace AttendanceShiftingManagement.Data
                 """);
 
             EnsureSuperUsers(connection);
+
+            // Normalize existing beneficiary digital ID payloads to the new scanner-safe format
+            ExecuteNonQuery(
+                connection,
+                """
+                UPDATE `beneficiary_digital_ids`
+                SET `qr_payload` = REPLACE(REPLACE(`qr_payload`, '|', ''), 'ASM-BID', 'ASMBID')
+                WHERE `qr_payload` LIKE 'ASM-BID|%';
+                """);
         }
 
         private static void EnsureSuperUsers(MySqlConnection connection)

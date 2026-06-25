@@ -7,6 +7,8 @@ namespace AttendanceShiftingManagement.Models
     [Table("users")]
     public class User
     {
+        public Guid SyncId { get; set; } = Guid.NewGuid();
+
         [Key]
         [Column("id")]
         public int Id { get; set; }
@@ -46,10 +48,6 @@ namespace AttendanceShiftingManagement.Models
     public enum UserRole
     {
         SuperAdmin,
-        Admin,
-        Manager,
-        HRStaff,
-        Crew,
-        ShiftManager
+        Admin
     }
 }

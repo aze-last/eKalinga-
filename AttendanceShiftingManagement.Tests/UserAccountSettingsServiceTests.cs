@@ -139,7 +139,7 @@ public sealed class UserAccountSettingsServiceTests
     }
 
     private static User SeedUser(
-        Data.AppDbContext context,
+        Data.LocalDbContext context,
         string username,
         string email,
         string password,

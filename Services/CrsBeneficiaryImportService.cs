@@ -72,7 +72,7 @@ namespace AttendanceShiftingManagement.Services
                     sourceConnection);
 
                 await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-                await using var context = new AppDbContext();
+                await using var context = new LocalDbContext();
 
                 var existingCivilRegistryIds = new HashSet<string>(
                     await context.BeneficiaryStaging

@@ -9,7 +9,7 @@ namespace AttendanceShiftingManagement.Services
         private const string RemotePresetKey = "Remote";
         private static readonly AsyncLocal<int> RemoteWriteDepth = new();
 
-        public static bool ShouldRouteToRemote(AppDbContext context)
+        public static bool ShouldRouteToRemote(LocalDbContext context)
         {
             ArgumentNullException.ThrowIfNull(context);
 
@@ -23,8 +23,8 @@ namespace AttendanceShiftingManagement.Services
         }
 
         public static async Task<TResult> ExecuteRemoteWriteAsync<TResult>(
-            AppDbContext currentContext,
-            Func<AppDbContext, Task<TResult>> remoteAction,
+            LocalDbContext currentContext,
+            Func<LocalDbContext, Task<TResult>> remoteAction,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(currentContext);
@@ -38,11 +38,11 @@ namespace AttendanceShiftingManagement.Services
             }
 
             var remoteConnectionString = ConnectionSettingsService.BuildConnectionString(remotePreset);
-            var options = new DbContextOptionsBuilder<AppDbContext>()
+            var options = new DbContextOptionsBuilder<LocalDbContext>()
                 .UseMySql(remoteConnectionString, ServerVersion.AutoDetect(remoteConnectionString))
                 .Options;
 
-            await using var remoteContext = new AppDbContext(options);
+            await using var remoteContext = new LocalDbContext(options);
             EnterRemoteWriteScope();
             TResult result;
             try
@@ -57,7 +57,7 @@ namespace AttendanceShiftingManagement.Services
             return result;
         }
 
-        private static bool IsRemoteContext(AppDbContext context, ConnectionSettingsModel settings)
+        private static bool IsRemoteContext(LocalDbContext context, ConnectionSettingsModel settings)
         {
             var remotePreset = settings.GetPreset(RemotePresetKey);
             if (!ConnectionSettingsService.IsPresetConfigured(remotePreset))
@@ -75,7 +75,7 @@ namespace AttendanceShiftingManagement.Services
             return string.Equals(currentConnectionString, remoteConnectionString, StringComparison.Ordinal);
         }
 
-        private static bool IsInMemoryProvider(AppDbContext context)
+        private static bool IsInMemoryProvider(LocalDbContext context)
         {
             return string.Equals(
                 context.Database.ProviderName,

@@ -107,7 +107,7 @@ namespace AttendanceShiftingManagement.Services
 
             app.MapPost("/api/session/unlock", async Task<IResult> (ScannerPinRequest request) =>
             {
-                await using var db = new AppDbContext();
+                await using var db = new LocalDbContext();
                 var sessionService = new ScannerSessionService(db);
                 var isValid = await sessionService.ValidatePinAsync(request.SessionToken, request.Pin);
                 if (!isValid)
@@ -185,7 +185,7 @@ namespace AttendanceShiftingManagement.Services
 
             app.MapPost("/api/attendance/mark", async Task<IResult> (ScannerAttendanceRequest request) =>
             {
-                await using var db = new AppDbContext();
+                await using var db = new LocalDbContext();
                 var sessionService = new ScannerSessionService(db);
                 if (!await sessionService.ValidatePinAsync(request.SessionToken, request.Pin))
                 {
@@ -247,7 +247,7 @@ namespace AttendanceShiftingManagement.Services
 
             app.MapPost("/api/distribution/claim", async Task<IResult> (ScannerDistributionClaimRequest request) =>
             {
-                await using var db = new AppDbContext();
+                await using var db = new LocalDbContext();
                 var sessionService = new ScannerSessionService(db);
                 if (!await sessionService.ValidatePinAsync(request.SessionToken, request.Pin))
                 {
@@ -285,7 +285,7 @@ namespace AttendanceShiftingManagement.Services
 
             app.MapGet("/api/photo/{stagingId:int}", async Task<IResult> (int stagingId, string session, string pin) =>
             {
-                await using var db = new AppDbContext();
+                await using var db = new LocalDbContext();
                 var sessionService = new ScannerSessionService(db);
                 if (!await sessionService.ValidatePinAsync(session, pin))
                 {
@@ -316,7 +316,7 @@ namespace AttendanceShiftingManagement.Services
 
         private static async Task<IResult> LookupAsync(string sessionToken, string pin, string qrPayload)
         {
-            await using var db = new AppDbContext();
+            await using var db = new LocalDbContext();
             var sessionService = new ScannerSessionService(db);
             if (!await sessionService.ValidatePinAsync(sessionToken, pin))
             {
@@ -471,7 +471,7 @@ namespace AttendanceShiftingManagement.Services
             });
         }
 
-        private static async Task<ScannerAttendanceLookupResult?> BuildAttendanceLookupAsync(AppDbContext db, ScannerSession session, int beneficiaryStagingId)
+        private static async Task<ScannerAttendanceLookupResult?> BuildAttendanceLookupAsync(LocalDbContext db, ScannerSession session, int beneficiaryStagingId)
         {
             CashForWorkParticipant? participant = null;
             CashForWorkEvent? cashForWorkEvent = null;

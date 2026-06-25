@@ -6,6 +6,8 @@ namespace AttendanceShiftingManagement.Models
     [Table("cash_for_work_events")]
     public class CashForWorkEvent
     {
+        public Guid SyncId { get; set; } = Guid.NewGuid();
+
         [Key]
         [Column("id")]
         public int Id { get; set; }

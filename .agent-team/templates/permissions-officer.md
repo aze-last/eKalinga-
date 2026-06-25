@@ -8,7 +8,7 @@ Implement, maintain, and enforce per-user permission overrides, user creation, a
 
 - **SuperAdmin is ALWAYS exempt** — no restrictions ever apply, no permission row is needed. SuperAdmin accounts cannot be edited, disabled, or have their permissions toggled by other accounts in the User Management grid.
 - **SuperAdmin Unlock** — Protected Settings overlays (like Remote Snapshot or Database Backup) MUST explicitly allow `UserRole.SuperAdmin` in addition to `UserRole.Admin`.
-- **SuperAdmin Password Changes** — SuperAdmins must change their *own* passwords via the "Security" (My Account) tab. SuperAdmins can reset *other* users' passwords (Admin, Manager, Crew, etc.) via the "Edit User" overlay in the User Management grid.
+- **SuperAdmin Password Changes** — SuperAdmins must change their *own* passwords via the "Security" (My Account) tab. SuperAdmins can reset *other* users' passwords (Admin) via the "Edit User" overlay in the User Management grid.
 - **Default is open** — if a user has no permission row, they get full access.
 - **Permissions take effect on next login** — the current session is not interrupted.
 - **Enforcement = hiding** — remove buttons/tiles entirely via `Visibility.Collapsed`, never show "Access Denied."

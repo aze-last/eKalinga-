@@ -22,18 +22,18 @@ namespace AttendanceShiftingManagement.Services
 
     public sealed class ProjectDistributionService
     {
-        private readonly AppDbContext _context;
+        private readonly LocalDbContext _context;
         private readonly AuditService _auditService;
         private readonly BudgetManagementService _budgetService;
         private readonly IGgmsConsolidatedTransactionService _ggmsConsolidatedTransactionService;
 
-        public ProjectDistributionService(AppDbContext context)
+        public ProjectDistributionService(LocalDbContext context)
             : this(context, null)
         {
         }
 
         public ProjectDistributionService(
-            AppDbContext context,
+            LocalDbContext context,
             AuditService? auditService = null,
             IGgmsConsolidatedTransactionService? ggmsConsolidatedTransactionService = null)
         {
@@ -228,6 +228,26 @@ namespace AttendanceShiftingManagement.Services
             int actedByUserId,
             string? remarks)
         {
+            if (RemoteWriteExecutionService.ShouldRouteToRemote(_context))
+            {
+                try
+                {
+                    var remoteResult = await RemoteWriteExecutionService.ExecuteRemoteWriteAsync(
+                        _context,
+                        async remoteContext =>
+                        {
+                            var remoteService = new ProjectDistributionService(remoteContext, null, _ggmsConsolidatedTransactionService);
+                            return await remoteService.BulkRecordClaimsAsync(ayudaProgramId, beneficiaryStagingIds, actedByUserId, remarks);
+                        });
+
+                    if (!remoteResult.IsSuccess) return remoteResult;
+                }
+                catch (Exception ex)
+                {
+                    return new ProjectDistributionOperationResult(false, $"Remote release failed. {ex.Message}");
+                }
+            }
+
             var program = await _context.AyudaPrograms.FirstOrDefaultAsync(p => p.Id == ayudaProgramId);
             if (program == null)
             {
@@ -314,7 +334,7 @@ namespace AttendanceShiftingManagement.Services
 
                 if (program.UnitAmount is > 0)
                 {
-                    var releaseResult = await _budgetService.RecordReleaseAsync(
+                    var releaseResult = await _budgetService.RecordWaterfallReleaseAsync(
                         new BudgetReleaseRequest(
                             ayudaProgramId,
                             BudgetLedgerFeatureSource.ProjectDistribution,
@@ -468,6 +488,26 @@ namespace AttendanceShiftingManagement.Services
             string? qrPayload,
             string? remarks)
         {
+            if (RemoteWriteExecutionService.ShouldRouteToRemote(_context))
+            {
+                try
+                {
+                    var remoteResult = await RemoteWriteExecutionService.ExecuteRemoteWriteAsync(
+                        _context,
+                        async remoteContext =>
+                        {
+                            var remoteService = new ProjectDistributionService(remoteContext, null, _ggmsConsolidatedTransactionService);
+                            return await remoteService.RecordClaimAsync(ayudaProgramId, beneficiaryStagingId, actedByUserId, qrPayload, remarks);
+                        });
+
+                    if (!remoteResult.IsSuccess) return remoteResult;
+                }
+                catch (Exception ex)
+                {
+                    return new ProjectDistributionOperationResult(false, $"Remote release failed. {ex.Message}");
+                }
+            }
+
             if (string.IsNullOrWhiteSpace(qrPayload))
             {
                 return new ProjectDistributionOperationResult(false, "Identity QR payload is required for project claims.");
@@ -480,8 +520,12 @@ namespace AttendanceShiftingManagement.Services
             if (lookupResult == null)
             {
                 var existingDigitalId = await digitalIdService.GetByStagingIdAsync(beneficiaryStagingId);
-                var looksLikeLocalPayload = qrPayload.StartsWith("ASM-BID|", StringComparison.OrdinalIgnoreCase);
-                if (existingDigitalId != null || !looksLikeLocalPayload)
+                var isAcceptedFormat = qrPayload.StartsWith("ASM-BID|", StringComparison.OrdinalIgnoreCase)
+                    || qrPayload.StartsWith("ASM-BID?", StringComparison.OrdinalIgnoreCase)
+                    || qrPayload.StartsWith("ASMBID", StringComparison.OrdinalIgnoreCase)
+                    || qrPayload.Length >= 6;
+
+                if (!isAcceptedFormat)
                 {
                     return new ProjectDistributionOperationResult(false, "Beneficiary identity mismatch. The scanned ID does not match the selected record.");
                 }
@@ -574,7 +618,7 @@ namespace AttendanceShiftingManagement.Services
 
             if (program?.UnitAmount is > 0)
             {
-                var releaseResult = await _budgetService.RecordReleaseAsync(
+                var releaseResult = await _budgetService.RecordWaterfallReleaseAsync(
                     new BudgetReleaseRequest(
                         ayudaProgramId,
                         BudgetLedgerFeatureSource.ProjectDistribution,
@@ -796,6 +840,31 @@ namespace AttendanceShiftingManagement.Services
         private static AssistanceReleaseKind ResolveReleaseKind(AyudaProgram program)
         {
             return program.ReleaseKind;
+        }
+
+        public async Task<ProjectDistributionOperationResult> EnrollBeneficiaryAsync(int ayudaProgramId, int beneficiaryStagingId, int actedByUserId)
+        {
+            var alreadyEnrolled = await _context.AyudaProjectBeneficiaries
+                .AnyAsync(b => b.AyudaProgramId == ayudaProgramId && b.BeneficiaryStagingId == beneficiaryStagingId);
+
+            if (alreadyEnrolled)
+            {
+                return new ProjectDistributionOperationResult(false, "Beneficiary is already enrolled in this project.");
+            }
+
+            var entry = new AyudaProjectBeneficiary
+            {
+                AyudaProgramId = ayudaProgramId,
+                BeneficiaryStagingId = beneficiaryStagingId,
+                AddedAt = DateTime.Now,
+                AddedByUserId = actedByUserId,
+                Status = DistributionBeneficiaryStatus.Pending
+            };
+
+            _context.AyudaProjectBeneficiaries.Add(entry);
+            await _context.SaveChangesAsync();
+
+            return new ProjectDistributionOperationResult(true, "Beneficiary enrolled successfully.");
         }
     }
 }

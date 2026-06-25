@@ -19,12 +19,12 @@ namespace AttendanceShiftingManagement.Services
 
     public sealed class BeneficiaryDigitalIdService
     {
-        private readonly AppDbContext _context;
+        private readonly LocalDbContext _context;
         private readonly AuditService _auditService;
         private readonly BeneficiaryAssistanceLedgerService _ledgerService;
 
         public BeneficiaryDigitalIdService(
-            AppDbContext context,
+            LocalDbContext context,
             AuditService? auditService = null,
             BeneficiaryAssistanceLedgerService? ledgerService = null)
         {
@@ -148,9 +148,46 @@ namespace AttendanceShiftingManagement.Services
                 return null;
             }
 
+            // 1. Try exact match first (works for new format and exact old format)
             var digitalId = await _context.BeneficiaryDigitalIds
                 .AsNoTracking()
                 .FirstOrDefaultAsync(item => item.IsActive && item.QrPayload == normalizedPayload);
+
+            // 2. Try replacing '?' with '|' (in case database has not run bootstrap repairs yet)
+            if (digitalId == null && normalizedPayload.Contains('?'))
+            {
+                var fallbackPayload = normalizedPayload.Replace('?', '|');
+                digitalId = await _context.BeneficiaryDigitalIds
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(item => item.IsActive && item.QrPayload == fallbackPayload);
+            }
+
+            // 3. Fallback: Normalize by stripping delimiters ('|', '?', '-', spaces) to match database payload
+            if (digitalId == null)
+            {
+                var cleanPayload = normalizedPayload.Replace("|", "").Replace("?", "").Replace("-", "").Replace(" ", "");
+
+                // If it looks like our local format, extract staging ID to do an indexed query
+                if (cleanPayload.StartsWith("ASMBID", StringComparison.OrdinalIgnoreCase) && cleanPayload.Length >= 12)
+                {
+                    var stagingIdStr = cleanPayload.Substring(6, 6);
+                    if (int.TryParse(stagingIdStr, out var stagingId))
+                    {
+                        var potentialId = await _context.BeneficiaryDigitalIds
+                            .AsNoTracking()
+                            .FirstOrDefaultAsync(item => item.IsActive && item.BeneficiaryStagingId == stagingId);
+
+                        if (potentialId != null)
+                        {
+                            var dbCleanPayload = potentialId.QrPayload.Replace("|", "").Replace("?", "").Replace("-", "").Replace(" ", "");
+                            if (string.Equals(dbCleanPayload, cleanPayload, StringComparison.OrdinalIgnoreCase))
+                            {
+                                digitalId = potentialId;
+                            }
+                        }
+                    }
+                }
+            }
 
             if (digitalId == null)
             {
@@ -183,7 +220,7 @@ namespace AttendanceShiftingManagement.Services
         private static string BuildQrPayload(int stagingId)
         {
             var randomSuffix = Convert.ToHexString(RandomNumberGenerator.GetBytes(8));
-            return $"ASM-BID|{stagingId:D6}|{randomSuffix}";
+            return $"ASMBID{stagingId:D6}{randomSuffix}";
         }
 
         private static string BuildDisplayName(BeneficiaryStaging row)

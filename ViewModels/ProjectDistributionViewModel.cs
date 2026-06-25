@@ -78,7 +78,13 @@ namespace AttendanceShiftingManagement.ViewModels
         private BitmapSource? _scannedBeneficiaryPhoto;
         private bool _isScannedResultVisible;
         private string? _lastScannedPayload;
+        private DateTime _lastScannedTime = DateTime.MinValue;
         private string _scannerActionLabel = "CONFIRM CLAIM";
+        private bool _isScannerActive;
+        private bool _isScannedBeneficiaryEligible;
+        private bool _isReleaseSuccessState;
+        private string _lastScanSummaryText = string.Empty;
+        private Brush _lastScanSummaryBrush = Brushes.DimGray;
 
         private bool _isSidebarCollapsed;
         private bool _isSummaryCollapsed;
@@ -152,7 +158,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
             _openPcScannerCommand = new RelayCommand(_ => IsPcScannerOpen = true, _ => !IsBusy && SelectedProgram != null);
             _processPcScanCommand = new RelayCommand(payload => _ = ExecuteProcessPcScan(payload as string));
-            _confirmScannedClaimCommand = new RelayCommand(async _ => await ExecuteConfirmScannedClaimAsync(), _ => !IsBusy && ScannedBeneficiary != null);
+            _confirmScannedClaimCommand = new RelayCommand(async _ => await ExecuteConfirmScannedClaimAsync(), _ => !IsBusy && IsScannedBeneficiaryEligible);
             _cancelScannedClaimCommand = new RelayCommand(_ => ResetScannedResult());
 
             ResetCreateProjectForm();
@@ -224,6 +230,22 @@ namespace AttendanceShiftingManagement.ViewModels
             private set => SetProperty(ref _scannedBeneficiaryStatus, value);
         }
 
+        private Brush _scannedBeneficiaryStatusColor = Brushes.DimGray;
+        public Brush ScannedBeneficiaryStatusColor
+        {
+            get => _scannedBeneficiaryStatusColor;
+            private set => SetProperty(ref _scannedBeneficiaryStatusColor, value);
+        }
+
+        private ObservableCollection<ProjectDistributionReleaseListItem> _scannedBeneficiaryHistory = new();
+        public ObservableCollection<ProjectDistributionReleaseListItem> ScannedBeneficiaryHistory
+        {
+            get => _scannedBeneficiaryHistory;
+            private set => SetProperty(ref _scannedBeneficiaryHistory, value);
+        }
+
+        public bool HasScannedHistory => ScannedBeneficiaryHistory.Count > 0;
+
         public BitmapSource? ScannedBeneficiaryPhoto
         {
             get => _scannedBeneficiaryPhoto;
@@ -233,8 +255,58 @@ namespace AttendanceShiftingManagement.ViewModels
         public bool IsScannedResultVisible
         {
             get => _isScannedResultVisible;
-            private set => SetProperty(ref _isScannedResultVisible, value);
+            private set
+            {
+                if (SetProperty(ref _isScannedResultVisible, value))
+                {
+                    OnPropertyChanged(nameof(IsAnyOverlayOpen));
+                }
+            }
         }
+
+        public bool IsScannerActive
+        {
+            get => _isScannerActive;
+            set => SetProperty(ref _isScannerActive, value);
+        }
+
+        public bool IsScannedBeneficiaryEligible
+        {
+            get => _isScannedBeneficiaryEligible;
+            private set
+            {
+                if (SetProperty(ref _isScannedBeneficiaryEligible, value))
+                {
+                    _confirmScannedClaimCommand.RaiseCanExecuteChanged();
+                }
+            }
+        }
+
+        public bool IsReleaseSuccessState
+        {
+            get => _isReleaseSuccessState;
+            private set
+            {
+                if (SetProperty(ref _isReleaseSuccessState, value))
+                {
+                    OnPropertyChanged(nameof(IsAnyOverlayOpen));
+                }
+            }
+        }
+
+        public string LastScanSummaryText
+        {
+            get => _lastScanSummaryText;
+            private set => SetProperty(ref _lastScanSummaryText, value);
+        }
+
+        public Brush LastScanSummaryBrush
+        {
+            get => _lastScanSummaryBrush;
+            private set => SetProperty(ref _lastScanSummaryBrush, value);
+        }
+
+        public event Action? RequestScannerFocus;
 
         public string ScannerActionLabel
         {
@@ -283,7 +355,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private DistributionBeneficiaryOption? _selectedAvailableUnpickedBeneficiary;
 
-        public bool IsAnyOverlayOpen => IsAddBeneficiaryPanelOpen || IsScannerPanelOpen || IsCreateProjectPanelOpen || IsCreateProjectSuccessPanelOpen || IsPcScannerOpen;
+        public bool IsAnyOverlayOpen => IsAddBeneficiaryPanelOpen || IsScannerPanelOpen || IsCreateProjectPanelOpen || IsCreateProjectSuccessPanelOpen || IsPcScannerOpen || IsScannedResultVisible || IsReleaseSuccessState;
 
         public DistributionBeneficiaryOption? SelectedAvailableUnpickedBeneficiary
         {
@@ -515,7 +587,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private async Task LoadAvailableUnpickedBeneficiariesAsync()
         {
-            await using var context = new AppDbContext();
+            await using var context = new LocalDbContext();
             
             // Filter: Approved (cross-event listing is allowed; only exclude if already in the current picker session)
             var search = NewProjectSearchText?.Trim();
@@ -650,7 +722,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
             try
             {
-                await using var context = new AppDbContext();
+                await using var context = new LocalDbContext();
                 var budgetService = new BudgetManagementService(context);
                 var distributionService = new ProjectDistributionService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
 
@@ -665,6 +737,9 @@ namespace AttendanceShiftingManagement.ViewModels
                         NewProjectSelectedReleaseKind,
                         unitAmount,
                         NormalizeNullable(NewProjectItemDescription),
+                        null, // ItemName
+                        null, // QuantityPerBeneficiary
+                        null, // UnitOfMeasure
                         NewProjectStartDate,
                         NewProjectEndDate,
                         budgetCap,
@@ -1226,7 +1301,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private async Task LoadProgramsAsync(int? selectedProgramId = null)
         {
-            await using var context = new AppDbContext();
+            await using var context = new LocalDbContext();
             _ = context.AyudaPrograms;
             var budgetService = new BudgetManagementService(context);
             var claimsByProgram = await context.AyudaProjectClaims
@@ -1261,7 +1336,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private async Task LoadAvailableBeneficiariesAsync()
         {
-            await using var context = new AppDbContext();
+            await using var context = new LocalDbContext();
 
             // Filter: Approved AND not already in the SELECTED project (if any)
             var selectedProgramId = SelectedProgram?.Id;
@@ -1352,7 +1427,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 // Parallelize database queries using SEPARATE contexts for thread safety
                 var membershipsTask = Task.Run(async () =>
                 {
-                    await using var ctx = new AppDbContext();
+                    await using var ctx = new LocalDbContext();
                     return await ctx.AyudaProjectBeneficiaries
                         .AsNoTracking()
                         .Where(item => item.AyudaProgramId == programId)
@@ -1363,7 +1438,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
                 var legacyProjectClaimsTask = Task.Run(async () =>
                 {
-                    await using var ctx = new AppDbContext();
+                    await using var ctx = new LocalDbContext();
                     return await ctx.AyudaProjectClaims
                         .AsNoTracking()
                         .Where(item => item.AyudaProgramId == programId)
@@ -1373,7 +1448,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
                 var distributedAmountTask = Task.Run(async () =>
                 {
-                    await using var ctx = new AppDbContext();
+                    await using var ctx = new LocalDbContext();
                     return await ctx.BudgetLedgerEntries
                         .AsNoTracking()
                         .Where(item => item.ProgramId == programId && item.EntryType == BudgetLedgerEntryType.Release)
@@ -1389,7 +1464,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 var stagingIds = memberships.Select(m => m.BeneficiaryStagingId).ToList();
                 
                 // Final context for sequential parts
-                await using var context = new AppDbContext();
+                await using var context = new LocalDbContext();
                 var digitalIdsByStagingId = await context.BeneficiaryDigitalIds
                     .AsNoTracking()
                     .Where(item => stagingIds.Contains(item.BeneficiaryStagingId) && item.IsActive)
@@ -1495,7 +1570,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
             try
             {
-                await using var context = new AppDbContext();
+                await using var context = new LocalDbContext();
                 var service = new ProjectDistributionService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
                 var result = await ExecuteProgramBeneficiaryAddAsync(service, SelectedProgram.Id, SelectedAvailableBeneficiary.StagingId, _currentUser.Id);
                 if (!result.IsSuccess)
@@ -1538,7 +1613,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
             try
             {
-                await using var context = new AppDbContext();
+                await using var context = new LocalDbContext();
                 var service = new ProjectDistributionService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
                 var result = await service.UpdateBeneficiaryStatusAsync(
                     SelectedProgram.Id,
@@ -1571,19 +1646,38 @@ namespace AttendanceShiftingManagement.ViewModels
         private async Task ExecuteProcessPcScan(string? payload)
         {
             if (string.IsNullOrWhiteSpace(payload) || SelectedProgram == null) return;
-            
+
+            // Queue protection: ignore scans while a dialog is active
+            if (IsScannedResultVisible || IsReleaseSuccessState) return;
+
+            payload = payload.Trim();
+
+            // Success-only cooldown: only block if last SUCCESSFUL lookup matches within 1 second
+            if (_lastScannedPayload != null &&
+                string.Equals(payload, _lastScannedPayload, StringComparison.OrdinalIgnoreCase) &&
+                (DateTime.Now - _lastScannedTime).TotalSeconds < 1.0)
+            {
+                ScannerInputText = string.Empty;
+                return;
+            }
+
             ScannerInputText = string.Empty;
             IsBusy = true;
+            IsScannedBeneficiaryEligible = false;
             SetNeutralStatus("Analyzing ID card...");
 
             try
             {
-                await using var context = new AppDbContext();
+                await using var context = new LocalDbContext();
                 var digitalIdService = new BeneficiaryDigitalIdService(context);
                 var lookup = await digitalIdService.LookupByQrPayloadAsync(payload);
 
                 if (lookup == null)
                 {
+                    // Do NOT set cooldown on failed lookup (allows instant retry)
+                    _ = Task.Run(() => { try { Console.Beep(400, 600); } catch { } });
+                    LastScanSummaryText = "Last Scan: Not Found";
+                    LastScanSummaryBrush = (Brush)Application.Current.Resources["BrandDangerBrush"];
                     SetErrorStatus("Invalid QR code or beneficiary not found.");
                     return;
                 }
@@ -1603,7 +1697,52 @@ namespace AttendanceShiftingManagement.ViewModels
                 ScannedBeneficiaryStatus = qualification.Message;
                 ScannedBeneficiaryPhoto = string.IsNullOrWhiteSpace(lookup.PhotoPath) ? null : LocalImageLoader.Load(lookup.PhotoPath) as BitmapSource;
                 
+                if (qualification.BeneficiaryStatus == DistributionBeneficiaryStatus.Released)
+                {
+                    ScannedBeneficiaryStatus = "ALREADY CLAIMED";
+                    ScannedBeneficiaryStatusColor = (Brush)Application.Current.Resources["BrandDangerBrush"];
+                    IsScannedBeneficiaryEligible = false;
+                    _ = Task.Run(() => { try { Console.Beep(400, 600); } catch { } });
+                }
+                else if (qualification.BeneficiaryStatus == DistributionBeneficiaryStatus.Pending)
+                {
+                    ScannedBeneficiaryStatus = "READY FOR RELEASE";
+                    ScannedBeneficiaryStatusColor = (Brush)Application.Current.Resources["BrandSuccessBrush"];
+                    IsScannedBeneficiaryEligible = true;
+                }
+                else
+                {
+                    ScannedBeneficiaryStatus = "NOT ENROLLED IN THIS PROJECT";
+                    ScannedBeneficiaryStatusColor = (Brush)Application.Current.Resources["BrandWarningBrush"];
+                    IsScannedBeneficiaryEligible = false;
+                    _ = Task.Run(() => { try { Console.Beep(400, 600); } catch { } });
+                }
+
+                var history = await context.BudgetLedgerEntries
+                    .AsNoTracking()
+                    .Include(e => e.Program)
+                    .Where(e => e.SourceRecordId == lookup.BeneficiaryStagingId.ToString() && e.ProgramId != SelectedProgram.Id && e.EntryType == BudgetLedgerEntryType.Release)
+                    .OrderByDescending(e => e.EntryDate)
+                    .Select(e => new ProjectDistributionReleaseListItem
+                    {
+                        IdentityKey = e.ProgramId.ToString() ?? "",
+                        AssistanceLabel = e.Program != null ? e.Program.ProgramName : "Unknown Project",
+                        ReleasedAt = e.EntryDate,
+                        ReferenceLabel = e.Remarks ?? ""
+                    })
+                    .Take(5)
+                    .ToListAsync();
+
+                ScannedBeneficiaryHistory.Clear();
+                foreach(var item in history)
+                {
+                    ScannedBeneficiaryHistory.Add(item);
+                }
+                OnPropertyChanged(nameof(HasScannedHistory));
+
+                // Save cooldown ONLY after successful lookup
                 _lastScannedPayload = payload;
+                _lastScannedTime = DateTime.Now;
                 IsScannedResultVisible = true;
                 SetNeutralStatus($"ID analyzed: {lookup.FullName}. Please review and confirm release.");
             }
@@ -1624,12 +1763,13 @@ namespace AttendanceShiftingManagement.ViewModels
                 return;
             }
 
+            var beneficiaryName = ScannedBeneficiary.FullName;
             IsBusy = true;
-            SetNeutralStatus($"Recording claim for {ScannedBeneficiary.FullName}...");
+            SetNeutralStatus($"Recording claim for {beneficiaryName}...");
 
             try
             {
-                await using var context = new AppDbContext();
+                await using var context = new LocalDbContext();
                 var distributionService = new ProjectDistributionService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
                 var result = await distributionService.RecordClaimAsync(
                     SelectedProgram.Id,
@@ -1640,13 +1780,25 @@ namespace AttendanceShiftingManagement.ViewModels
 
                 if (result.IsSuccess)
                 {
+                    // Success beep
+                    _ = Task.Run(() => { try { Console.Beep(1000, 200); } catch { } });
+
+                    // Show auto-close success overlay
+                    IsReleaseSuccessState = true;
                     SetSuccessStatus(result.Message);
+
+                    // Hold success screen for 1.5 seconds
+                    await Task.Delay(1500);
+
+                    IsReleaseSuccessState = false;
+                    LastScanSummaryText = $"Last Scan: {beneficiaryName} (Released)";
+                    LastScanSummaryBrush = (Brush)Application.Current.Resources["BrandSuccessBrush"];
                     await LoadProjectDetailsAsync();
                     ResetScannedResult();
-                    IsPcScannerOpen = false;
                 }
                 else
                 {
+                    _ = Task.Run(() => { try { Console.Beep(400, 600); } catch { } });
                     SetErrorStatus(result.Message);
                 }
             }
@@ -1665,8 +1817,11 @@ namespace AttendanceShiftingManagement.ViewModels
             ScannedBeneficiary = null;
             ScannedBeneficiaryStatus = null;
             ScannedBeneficiaryPhoto = null;
-            _lastScannedPayload = null;
+            ScannedBeneficiaryHistory.Clear();
+            OnPropertyChanged(nameof(HasScannedHistory));
+            IsScannedBeneficiaryEligible = false;
             IsScannedResultVisible = false;
+            RequestScannerFocus?.Invoke();
         }
 
         private bool CanOpenLivePreview()
@@ -2149,7 +2304,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
             try
             {
-                await using var context = new AppDbContext();
+                await using var context = new LocalDbContext();
                 var service = new ProjectDistributionService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
                 var result = await ExecuteProgramBeneficiariesBulkAddAsync(service, selectedProgram.Id, selectedIds, _currentUser.Id);
 
@@ -2484,7 +2639,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
             try
             {
-                await using var context = new AppDbContext();
+                await using var context = new LocalDbContext();
                 var service = new ProjectDistributionService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
                 var result = await service.RecordClaimAsync(
                     SelectedProgram.Id,
@@ -2548,6 +2703,7 @@ namespace AttendanceShiftingManagement.ViewModels
         public string ClaimCountText { get; init; } = string.Empty;
         public string ClaimedAmountText { get; init; } = string.Empty;
         public string LatestClaimText { get; init; } = string.Empty;
+        public string SourceFundLabel { get; init; } = string.Empty;
 
         public bool IsActionMenuOpen
         {
@@ -2572,7 +2728,12 @@ namespace AttendanceShiftingManagement.ViewModels
                 ClaimedAmountText = $"Claimed: {FormatCurrency(totalClaimed)}",
                 LatestClaimText = latestClaimedAt.HasValue
                     ? $"Latest claim: {latestClaimedAt:MMM dd, yyyy hh:mm tt}"
-                    : "No claim recorded yet"
+                    : "No claim recorded yet",
+                SourceFundLabel = program.SourceDonation != null
+                    ? $"\uD83D\uDCB0 {program.SourceDonation.DonorName}"
+                    : program.SourceGGMSBudget != null
+                        ? $"\uD83C\uDFDB GGMS - {program.SourceGGMSBudget.OfficeName}"
+                        : string.Empty
             };
         }
 

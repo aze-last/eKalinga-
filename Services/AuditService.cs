@@ -9,9 +9,9 @@ namespace AttendanceShiftingManagement.Services
 {
     public class AuditService
     {
-        private readonly AppDbContext _context;
+        private readonly LocalDbContext _context;
 
-        public AuditService(AppDbContext context)
+        public AuditService(LocalDbContext context)
         {
             _context = context;
         }

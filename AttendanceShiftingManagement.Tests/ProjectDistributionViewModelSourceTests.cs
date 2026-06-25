@@ -16,7 +16,7 @@ public sealed class ProjectDistributionViewModelSourceTests
 
         var source = File.ReadAllText(viewModelPath);
 
-        Assert.DoesNotContain("_context = new AppDbContext()", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("_context = new LocalDbContext()", source, StringComparison.Ordinal);
         Assert.Contains("ConfirmReleaseAsync", source, StringComparison.Ordinal);
         Assert.Contains("PendingBeneficiaries.Clear();", source, StringComparison.Ordinal);
         Assert.Contains("ReleasedClaims.Clear();", source, StringComparison.Ordinal);
@@ -28,7 +28,7 @@ public sealed class ProjectDistributionViewModelSourceTests
         Assert.Contains("GroupBy(b => b.AyudaProgramId)", source, StringComparison.Ordinal);
         Assert.Contains("ToDictionaryAsync(x => x.ProgramId)", source, StringComparison.Ordinal);
         Assert.Contains("if (!IsBusy)", source, StringComparison.Ordinal);
-        Assert.Contains("await using var context = new AppDbContext();", source, StringComparison.Ordinal);
+        Assert.Contains("await using var context = new LocalDbContext();", source, StringComparison.Ordinal);
         Assert.Contains("context.AyudaPrograms", source, StringComparison.Ordinal);
         Assert.Contains("context.AyudaProjectBeneficiaries", source, StringComparison.Ordinal);
         Assert.Contains("context.AyudaProjectClaims", source, StringComparison.Ordinal);

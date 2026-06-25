@@ -72,7 +72,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
             try
             {
-                await using var context = new AppDbContext();
+                await using var context = new LocalDbContext();
                 var digitalIdService = new BeneficiaryDigitalIdService(context);
                 
                 // Lookup by barcode (which matches the QrPayload in the DB)

@@ -27,7 +27,7 @@ namespace AttendanceShiftingManagement.Services
 
     public static class UserAccountSettingsService
     {
-        public static AccountSettingsSnapshot Load(AppDbContext context, int userId)
+        public static AccountSettingsSnapshot Load(LocalDbContext context, int userId)
         {
             var user = context.Users.FirstOrDefault(item => item.Id == userId);
             var profile = context.UserProfiles.FirstOrDefault(item => item.UserId == userId);
@@ -40,7 +40,7 @@ namespace AttendanceShiftingManagement.Services
         }
 
         public static AccountSettingsResult SaveAccount(
-            AppDbContext context,
+            LocalDbContext context,
             User sessionUser,
             AccountSettingsUpdateRequest request)
         {
@@ -129,7 +129,7 @@ namespace AttendanceShiftingManagement.Services
         }
 
         public static AccountSettingsResult ChangePassword(
-            AppDbContext context,
+            LocalDbContext context,
             User sessionUser,
             PasswordChangeRequest request)
         {
@@ -179,7 +179,7 @@ namespace AttendanceShiftingManagement.Services
         }
 
         public static AccountSettingsResult VerifyCurrentPassword(
-            AppDbContext context,
+            LocalDbContext context,
             User sessionUser,
             string currentPassword)
         {

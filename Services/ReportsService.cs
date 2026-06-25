@@ -49,7 +49,7 @@ namespace AttendanceShiftingManagement.Services
         {
             var normalizedOptions = Normalize(options);
 
-            await using var context = new AppDbContext();
+            await using var context = new LocalDbContext();
             var programLabel = await ResolveProgramLabelAsync(context, normalizedOptions.ReportType, normalizedOptions.AyudaProgramId, cancellationToken);
 
             return normalizedOptions.ReportType switch
@@ -65,7 +65,7 @@ namespace AttendanceShiftingManagement.Services
             int eventId,
             CancellationToken cancellationToken = default)
         {
-            await using var context = new AppDbContext();
+            await using var context = new LocalDbContext();
 
             var cashForWorkEvent = await context.CashForWorkEvents
                 .AsNoTracking()
@@ -180,7 +180,7 @@ namespace AttendanceShiftingManagement.Services
             };
         }
 
-        private static async Task<string> ResolveProgramLabelAsync(AppDbContext context, ReportsReportType reportType, int? ayudaProgramId, CancellationToken cancellationToken)
+        private static async Task<string> ResolveProgramLabelAsync(LocalDbContext context, ReportsReportType reportType, int? ayudaProgramId, CancellationToken cancellationToken)
         {
             if (!ayudaProgramId.HasValue)
             {
@@ -197,7 +197,7 @@ namespace AttendanceShiftingManagement.Services
         }
 
         private static async Task<ReportsSnapshot> BuildAidRequestsSnapshotAsync(
-            AppDbContext context,
+            LocalDbContext context,
             ReportsQueryOptions options,
             string programLabel,
             CancellationToken cancellationToken)
@@ -265,7 +265,7 @@ namespace AttendanceShiftingManagement.Services
         }
 
         private static async Task<ReportsSnapshot> BuildValidatedBeneficiariesSnapshotAsync(
-            AppDbContext context,
+            LocalDbContext context,
             ReportsQueryOptions options,
             string programLabel,
             CancellationToken cancellationToken)
@@ -322,7 +322,7 @@ namespace AttendanceShiftingManagement.Services
         }
 
         private static async Task<ReportsSnapshot> BuildBudgetUtilizationSnapshotAsync(
-            AppDbContext context,
+            LocalDbContext context,
             ReportsQueryOptions options,
             string programLabel,
             CancellationToken cancellationToken)
@@ -439,7 +439,7 @@ namespace AttendanceShiftingManagement.Services
         }
 
         private static async Task<ReportsSnapshot> BuildDistributionClaimsSnapshotAsync(
-            AppDbContext context,
+            LocalDbContext context,
             ReportsQueryOptions options,
             string programLabel,
             CancellationToken cancellationToken)
@@ -500,7 +500,7 @@ namespace AttendanceShiftingManagement.Services
         }
 
         private static async Task<ReportsSnapshot> BuildAdminActivityAuditSnapshotAsync(
-            AppDbContext context,
+            LocalDbContext context,
             ReportsQueryOptions options,
             string programLabel,
             CancellationToken cancellationToken)

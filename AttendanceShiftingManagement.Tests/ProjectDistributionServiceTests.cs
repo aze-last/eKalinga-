@@ -160,9 +160,9 @@ public sealed class ProjectDistributionServiceTests
         Assert.Equal("BEN-2026-MANUAL-40405", claim.BeneficiaryId);
     }
 
-    private static object CreateService(AppDbContext context)
+    private static object CreateService(LocalDbContext context)
     {
-        var serviceType = typeof(AppDbContext).Assembly.GetType("AttendanceShiftingManagement.Services.ProjectDistributionService");
+        var serviceType = typeof(LocalDbContext).Assembly.GetType("AttendanceShiftingManagement.Services.ProjectDistributionService");
         Assert.NotNull(serviceType);
 
         var service = Activator.CreateInstance(serviceType!, context);
@@ -191,9 +191,9 @@ public sealed class ProjectDistributionServiceTests
         return (bool)(property!.GetValue(instance) ?? false);
     }
 
-    private static int GetEntityCount(AppDbContext context, string entityTypeName)
+    private static int GetEntityCount(LocalDbContext context, string entityTypeName)
     {
-        var entityType = typeof(AppDbContext).Assembly.GetType(entityTypeName);
+        var entityType = typeof(LocalDbContext).Assembly.GetType(entityTypeName);
         Assert.NotNull(entityType);
 
         var setMethod = typeof(DbContext)
@@ -206,7 +206,7 @@ public sealed class ProjectDistributionServiceTests
         return queryable!.Cast<object>().Count();
     }
 
-    private static User SeedAdmin(AppDbContext context)
+    private static User SeedAdmin(LocalDbContext context)
     {
         var user = new User
         {
@@ -222,7 +222,7 @@ public sealed class ProjectDistributionServiceTests
         return user;
     }
 
-    private static AyudaProgram SeedProgram(AppDbContext context, int createdByUserId, decimal unitAmount = 1000m, AssistanceReleaseKind releaseKind = AssistanceReleaseKind.Cash)
+    private static AyudaProgram SeedProgram(LocalDbContext context, int createdByUserId, decimal unitAmount = 1000m, AssistanceReleaseKind releaseKind = AssistanceReleaseKind.Cash)
     {
         var program = new AyudaProgram
         {
@@ -244,7 +244,7 @@ public sealed class ProjectDistributionServiceTests
     }
 
     private static BeneficiaryStaging SeedApprovedBeneficiary(
-        AppDbContext context,
+        LocalDbContext context,
         int stagingId = 1001,
         string fullName = "Pedro Beneficiary",
         string? beneficiaryId = null,
@@ -267,7 +267,7 @@ public sealed class ProjectDistributionServiceTests
         return beneficiary;
     }
 
-    private static void SeedGovernmentSnapshot(AppDbContext context, decimal allocatedAmount, int yearlyBudgetId, string officeCode)
+    private static void SeedGovernmentSnapshot(LocalDbContext context, decimal allocatedAmount, int yearlyBudgetId, string officeCode)
     {
         context.GovernmentBudgetSnapshots.Add(new GovernmentBudgetSnapshot
         {

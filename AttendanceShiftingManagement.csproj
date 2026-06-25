@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
-    <DefaultItemExcludes>$(DefaultItemExcludes);artifacts\**;bin_*\**;obj_*\**</DefaultItemExcludes>
+    <DefaultItemExcludes>$(DefaultItemExcludes);artifacts\**;bin_*\**;obj_*\**;bin\**;obj\**</DefaultItemExcludes>
     <Version>1.0.6</Version>
     <AssemblyVersion>1.0.6.0</AssemblyVersion>
     <FileVersion>1.0.6.0</FileVersion>
@@ -15,6 +15,8 @@
     <AssemblyTitle>eKalinga+</AssemblyTitle>
     <Product>eKalinga+</Product>
     <Description>eKalinga+ desktop application.</Description>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
   </PropertyGroup>
 
   <ItemGroup>
@@ -35,6 +37,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="9.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.0" />
     <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="9.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.0" />
     <PackageReference Include="QRCoder" Version="1.6.0" />
     <PackageReference Include="ZXing.Net.Bindings.Windows.Compatibility" Version="0.16.10" />
   </ItemGroup>
@@ -57,15 +60,19 @@
     <Compile Remove="AttendanceShiftingManagement.Tests\**\*.cs" />
     <Compile Remove="artifacts\**\*.cs" />
     <Compile Remove="unofficial\**\*.cs" />
+    <Compile Remove="TempBarcodeTest\**\*.cs" />
     <EmbeddedResource Remove="AttendanceShiftingManagement.Tests\**\*" />
     <EmbeddedResource Remove="artifacts\**\*" />
     <EmbeddedResource Remove="unofficial\**\*" />
+    <EmbeddedResource Remove="TempBarcodeTest\**\*" />
     <None Remove="AttendanceShiftingManagement.Tests\**\*" />
     <None Remove="artifacts\**\*" />
     <None Remove="unofficial\**\*" />
+    <None Remove="TempBarcodeTest\**\*" />
     <Page Remove="AttendanceShiftingManagement.Tests\**\*" />
     <Page Remove="artifacts\**\*" />
     <Page Remove="unofficial\**\*" />
+    <Page Remove="TempBarcodeTest\**\*" />
     <ApplicationDefinition Remove="artifacts\**\*" />
     <Resource Remove="artifacts\**\*" />
     <Content Remove="artifacts\**\*" />

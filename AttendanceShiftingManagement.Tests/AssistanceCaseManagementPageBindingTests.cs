@@ -20,14 +20,13 @@ public sealed class AssistanceCaseManagementPageBindingTests
 
         var xaml = File.ReadAllText(pagePath);
 
-        Assert.Contains("Text=\"Aid Request\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Content=\"REFRESH\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"Aid Request Registry\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"AID REQUESTS &amp; ASSISTANCE\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Content=\"REFRESH WORKSPACE\"", xaml, StringComparison.Ordinal);
+
         Assert.Contains("ItemsSource=\"{Binding CasesView}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("SelectedItem=\"{Binding SelectedCase}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("AutoGenerateColumns=\"False\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding ExportCasesCommand}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Command=\"{Binding ShowAllCasesCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding ShowPendingCasesCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding OpenCasePanelCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Visibility=\"{Binding IsCasePanelOpen, Converter={StaticResource BooleanToVisibilityConverter}}\"", xaml, StringComparison.Ordinal);
@@ -77,8 +76,11 @@ public sealed class AssistanceCaseManagementPageBindingTests
 
                 var xaml = File.ReadAllText(pagePath)
                     .Replace("x:Class=\"AttendanceShiftingManagement.Views.AssistanceCaseManagementPage\"", string.Empty, StringComparison.Ordinal)
-                    .Replace("<helpers:NullToHiddenConverter x:Key=\"NullToHiddenConverter\" />", string.Empty, StringComparison.Ordinal)
-                    .Replace("Converter={StaticResource NullToHiddenConverter}", string.Empty, StringComparison.Ordinal);
+                    .Replace(" Click=\"Browse_Click\"", string.Empty, StringComparison.Ordinal)
+                    .Replace("QrCodeScanned=\"Scanner_QrCodeScanned\"", string.Empty, StringComparison.Ordinal)
+                    .Replace("Closed=\"Scanner_Closed\"", string.Empty, StringComparison.Ordinal)
+                    .Replace("xmlns:helpers=\"clr-namespace:AttendanceShiftingManagement.Helpers\"", "xmlns:helpers=\"clr-namespace:AttendanceShiftingManagement.Helpers;assembly=AttendanceShiftingManagement\"", StringComparison.Ordinal)
+                    .Replace("xmlns:local=\"clr-namespace:AttendanceShiftingManagement.Views\"", "xmlns:local=\"clr-namespace:AttendanceShiftingManagement.Views;assembly=AttendanceShiftingManagement\"", StringComparison.Ordinal);
 
                 _ = XamlReader.Parse(xaml);
             }

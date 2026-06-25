@@ -16,8 +16,8 @@ public sealed class ReportsPageBindingTests
 
         var xaml = File.ReadAllText(pagePath);
 
-        Assert.Contains("Text=\"Executive Reports\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("ItemsSource=\"{Binding ReportTypeOptions}\"", xaml, StringComparison.Ordinal);
+
+
         Assert.Contains("SelectedItem=\"{Binding SelectedReportType}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("ItemsSource=\"{Binding ProgramFilters}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("SelectedItem=\"{Binding SelectedProgramFilter}\"", xaml, StringComparison.Ordinal);

@@ -14,10 +14,10 @@ namespace AttendanceShiftingManagement.Services
 
     public sealed class EquipmentBorrowingService
     {
-        private readonly AppDbContext _context;
+        private readonly LocalDbContext _context;
         private readonly AuditService _auditService;
 
-        public EquipmentBorrowingService(AppDbContext context, AuditService? auditService = null)
+        public EquipmentBorrowingService(LocalDbContext context, AuditService? auditService = null)
         {
             _context = context;
             _auditService = auditService ?? new AuditService(context);

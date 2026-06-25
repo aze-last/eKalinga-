@@ -6,6 +6,9 @@ namespace AttendanceShiftingManagement.Models
     [Table("cash_for_work_participants")]
     public class CashForWorkParticipant
     {
+        public Guid SyncId { get; set; } = Guid.NewGuid();
+        public DateTime UpdatedAt { get; set; } = DateTime.Now;
+
         [Key]
         [Column("id")]
         public int Id { get; set; }

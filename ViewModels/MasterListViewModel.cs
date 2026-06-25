@@ -50,6 +50,9 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly RelayCommand _openPcScannerCommand;
         private readonly RelayCommand _processPcScanCommand;
         private readonly RelayCommand _createLookupScannerSessionCommand;
+        private readonly RelayCommand _openEnrollmentPanelCommand;
+        private readonly RelayCommand _closeEnrollmentPanelCommand;
+        private readonly RelayCommand _confirmEnrollmentCommand;
 
         private readonly IMasterListQueryService _queryService;
         private readonly bool _autoRefresh;
@@ -74,6 +77,9 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private bool _isSidebarCollapsed;
         private bool _isSummaryCollapsed;
+        private bool _isEnrollmentPanelOpen;
+        private AyudaProgram? _selectedProjectToEnroll;
+        private readonly ObservableCollection<AyudaProgram> _activeProjects = new();
         private GridLength _sidebarWidth = new GridLength(320);
 
         private string _statusMessage = "Loading validated beneficiaries...";
@@ -167,10 +173,98 @@ namespace AttendanceShiftingManagement.ViewModels
             _confirmScannedClaimCommand = new RelayCommand(_ => ExecuteConfirmScannedLookup(), _ => !IsBusy && ScannedBeneficiary != null);
             _cancelScannedClaimCommand = new RelayCommand(_ => ResetScannedResult());
             _createLookupScannerSessionCommand = new RelayCommand(async _ => await CreateLookupScannerSessionAsync(), _ => CanCreateLookupScannerSession());
+            _openEnrollmentPanelCommand = new RelayCommand(async _ => await OpenEnrollmentPanelAsync(), _ => !IsBusy);
+            _closeEnrollmentPanelCommand = new RelayCommand(_ => IsEnrollmentPanelOpen = false);
+            _confirmEnrollmentCommand = new RelayCommand(async param => await ConfirmEnrollmentAsync(param), _ => !IsBusy && SelectedProjectToEnroll != null);
 
             if (autoLoad)
             {
                 _ = RefreshAsync();
+            }
+        }
+
+        public bool IsEnrollmentPanelOpen
+        {
+            get => _isEnrollmentPanelOpen;
+            set
+            {
+                if (SetProperty(ref _isEnrollmentPanelOpen, value))
+                {
+                    OnPropertyChanged(nameof(IsAnyOverlayOpen));
+                }
+            }
+        }
+
+        public AyudaProgram? SelectedProjectToEnroll
+        {
+            get => _selectedProjectToEnroll;
+            set { if (SetProperty(ref _selectedProjectToEnroll, value)) _confirmEnrollmentCommand.RaiseCanExecuteChanged(); }
+        }
+
+        public ObservableCollection<AyudaProgram> ActiveProjects => _activeProjects;
+
+        public ICommand OpenEnrollmentPanelCommand => _openEnrollmentPanelCommand;
+        public ICommand CloseEnrollmentPanelCommand => _closeEnrollmentPanelCommand;
+        public ICommand ConfirmEnrollmentCommand => _confirmEnrollmentCommand;
+
+        private async Task OpenEnrollmentPanelAsync()
+        {
+            IsBusy = true;
+            try
+            {
+                await using var context = new LocalDbContext();
+                var projects = await context.AyudaPrograms
+                    .Where(p => p.IsActive && p.DistributionStatus != AyudaProgramDistributionStatus.Closed)
+                    .OrderByDescending(p => p.StartDate)
+                    .ToListAsync();
+
+                _activeProjects.Clear();
+                foreach (var p in projects) _activeProjects.Add(p);
+
+                IsEnrollmentPanelOpen = true;
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
+        private async Task ConfirmEnrollmentAsync(object? parameter)
+        {
+            if (SelectedProjectToEnroll == null || parameter is not System.Collections.IList selectedItems || selectedItems.Count == 0)
+            {
+                SetErrorStatus("Select a project and at least one beneficiary.");
+                return;
+            }
+
+            IsBusy = true;
+            SetNeutralStatus($"Enrolling {selectedItems.Count} beneficiaries into {SelectedProjectToEnroll.ProgramName}...");
+
+            try
+            {
+                await using var context = new LocalDbContext();
+                var distributionService = new ProjectDistributionService(context);
+
+                int count = 0;
+                foreach (var item in selectedItems.Cast<MasterListBeneficiary>())
+                {
+                    var staging = await context.BeneficiaryStaging.FirstOrDefaultAsync(s => s.ResidentsId == item.ResidentsId);
+                    if (staging == null) continue;
+
+                    var result = await distributionService.AddBeneficiaryAsync(SelectedProjectToEnroll.Id, staging.StagingID, _currentUser?.Id ?? 0);
+                    if (result.IsSuccess) count++;
+                }
+
+                IsEnrollmentPanelOpen = false;
+                SetSuccessStatus($"Successfully enrolled {count} beneficiaries.");
+            }
+            catch (Exception ex)
+            {
+                SetErrorStatus($"Enrollment failed: {ex.Message}");
+            }
+            finally
+            {
+                IsBusy = false;
             }
         }
 
@@ -199,7 +293,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
             try
             {
-                await using var context = new AppDbContext();
+                await using var context = new LocalDbContext();
                 var digitalIdService = new BeneficiaryDigitalIdService(context);
                 var lookup = await digitalIdService.LookupByQrPayloadAsync(payload);
 
@@ -659,7 +753,7 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             try
             {
-                await using var context = new AppDbContext();
+                await using var context = new LocalDbContext();
                 
                 // Fetch or Create Staging Record
                 var staging = await context.BeneficiaryStaging
@@ -799,7 +893,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
             try
             {
-                await using var context = new AppDbContext();
+                await using var context = new LocalDbContext();
                 var stagingId = await EnsureStagingRecordAsync(context);
                 
                 var verificationService = new BeneficiaryVerificationService(context);
@@ -837,7 +931,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
             try
             {
-                await using var context = new AppDbContext();
+                await using var context = new LocalDbContext();
                 var verificationService = new BeneficiaryVerificationService(context);
                 var result = await verificationService.ReturnToPendingAsync(_selectedStagingId.Value, _currentUser.Id, EditableReviewNotes);
 
@@ -891,7 +985,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
             try
             {
-                await using var context = new AppDbContext();
+                await using var context = new LocalDbContext();
                 var stagingId = await EnsureStagingRecordAsync(context);
 
                 var verificationService = new BeneficiaryVerificationService(context);
@@ -934,7 +1028,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
             try
             {
-                await using var context = new AppDbContext();
+                await using var context = new LocalDbContext();
                 var stagingId = await EnsureStagingRecordAsync(context);
 
                 var verificationService = new BeneficiaryVerificationService(context);
@@ -961,7 +1055,7 @@ namespace AttendanceShiftingManagement.ViewModels
             }
         }
 
-        private async Task<int> EnsureStagingRecordAsync(AppDbContext context)
+        private async Task<int> EnsureStagingRecordAsync(LocalDbContext context)
         {
             if (_selectedStagingId.HasValue) return _selectedStagingId.Value;
             if (SelectedBeneficiary == null) throw new InvalidOperationException("No beneficiary selected.");
@@ -1053,7 +1147,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private async Task<VerificationStatus> GetStagingStatusAsync(long residentsId)
         {
-            await using var context = new AppDbContext();
+            await using var context = new LocalDbContext();
             var staging = await context.BeneficiaryStaging
                 .AsNoTracking()
                 .FirstOrDefaultAsync(s => s.ResidentsId == residentsId);
@@ -1077,7 +1171,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
             try
             {
-                await using var context = new AppDbContext();
+                await using var context = new LocalDbContext();
                 var stagingId = await EnsureStagingRecordAsync(context);
 
                 // Encode cropped BitmapSource to a temp PNG file
@@ -1141,7 +1235,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
             try
             {
-                await using var context = new AppDbContext();
+                await using var context = new LocalDbContext();
                 var stagingId = await EnsureStagingRecordAsync(context);
 
                 var photoPath = await SavePhotoAsync(openFileDialog.FileName, stagingId);
@@ -1226,7 +1320,7 @@ namespace AttendanceShiftingManagement.ViewModels
             try
             {
                 var baseUrl = await LocalScannerGatewayService.Shared.EnsureStartedAsync();
-                await using var context = new AppDbContext();
+                await using var context = new LocalDbContext();
                 var sessionService = new ScannerSessionService(context);
                 var session = await sessionService.CreateLookupSessionAsync(_currentUser?.Id ?? 0, TimeSpan.FromMinutes(15));
 
@@ -1257,7 +1351,7 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 try
                 {
-                    await using var context = new AppDbContext();
+                    await using var context = new LocalDbContext();
                     var sessionService = new ScannerSessionService(context);
                     var scanPayload = await sessionService.TryPopScanAsync(sessionToken);
 
@@ -1291,7 +1385,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
             try
             {
-                await using var context = new AppDbContext();
+                await using var context = new LocalDbContext();
                 var ledgerService = new BeneficiaryAssistanceLedgerService(context);
                 var entries = await ledgerService.GetEntriesAsync(SelectedBeneficiary.CivilRegistryId, SelectedBeneficiary.BeneficiaryId);
 
@@ -1322,7 +1416,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
             try
             {
-                await using var context = new AppDbContext();
+                await using var context = new LocalDbContext();
                 var digitalIdService = new BeneficiaryDigitalIdService(context);
                 
                 var staging = await context.BeneficiaryStaging

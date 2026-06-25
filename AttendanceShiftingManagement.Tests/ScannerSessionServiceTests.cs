@@ -62,7 +62,7 @@ public sealed class ScannerSessionServiceTests
         Assert.Equal(ScannerSessionMode.Distribution, stored.Mode);
     }
 
-    private static User SeedAdmin(Data.AppDbContext context)
+    private static User SeedAdmin(Data.LocalDbContext context)
     {
         var user = new User
         {
@@ -78,7 +78,7 @@ public sealed class ScannerSessionServiceTests
         return user;
     }
 
-    private static CashForWorkEvent SeedEvent(Data.AppDbContext context, int createdByUserId)
+    private static CashForWorkEvent SeedEvent(Data.LocalDbContext context, int createdByUserId)
     {
         var cashForWorkEvent = new CashForWorkEvent
         {
@@ -96,7 +96,7 @@ public sealed class ScannerSessionServiceTests
         return cashForWorkEvent;
     }
 
-    private static AyudaProgram SeedProgram(Data.AppDbContext context, int createdByUserId)
+    private static AyudaProgram SeedProgram(Data.LocalDbContext context, int createdByUserId)
     {
         var program = new AyudaProgram
         {

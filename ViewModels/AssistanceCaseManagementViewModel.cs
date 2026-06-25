@@ -774,7 +774,7 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             var preferredValidatedBeneficiary = SelectedValidatedBeneficiary;
 
-            await using var context = new AppDbContext();
+            await using var context = new LocalDbContext();
 
             var assistanceCases = await context.AssistanceCases
                 .AsNoTracking()
@@ -845,7 +845,7 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             try
             {
-                await using var context = new AppDbContext();
+                await using var context = new LocalDbContext();
                 
                 var globalBudget = await context.AssistanceCaseBudgets
                     .AsNoTracking()
@@ -890,7 +890,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
             try
             {
-                await using var context = new AppDbContext();
+                await using var context = new LocalDbContext();
                 var digitalIdService = new BeneficiaryDigitalIdService(context);
                 var lookup = await digitalIdService.LookupByQrPayloadAsync(payload);
 
@@ -960,7 +960,7 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             try
             {
-                await using var context = new AppDbContext();
+                await using var context = new LocalDbContext();
                 var releasedCases = await context.AssistanceCases
                     .AsNoTracking()
                     .Where(c => c.Status == AssistanceCaseStatus.Released)
@@ -1187,7 +1187,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
             try
             {
-                await using var context = new AppDbContext();
+                await using var context = new LocalDbContext();
                 var service = new AssistanceCaseManagementService(
                     context,
                     ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
@@ -1255,7 +1255,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
             try
             {
-                await using var context = new AppDbContext();
+                await using var context = new LocalDbContext();
                 var service = new AssistanceCaseManagementService(
                     context,
                     ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
@@ -1302,7 +1302,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
             try
             {
-                await using var context = new AppDbContext();
+                await using var context = new LocalDbContext();
                 var service = new AssistanceCaseManagementService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
                 var result = await service.RejectCaseAsync(assistanceCaseId, EditableResolutionNotes, _currentUser.Id);
 
@@ -1343,7 +1343,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
             try
             {
-                await using var context = new AppDbContext();
+                await using var context = new LocalDbContext();
                 var service = new AssistanceCaseManagementService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
                 var result = await service.CancelCaseAsync(assistanceCaseId, EditableResolutionNotes, _currentUser.Id);
 
@@ -1399,7 +1399,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
             try
             {
-                await using var context = new AppDbContext();
+                await using var context = new LocalDbContext();
                 var service = new AssistanceCaseManagementService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
                 var result = await service.FastTrackReleaseAsync(assistanceCaseId, assistanceAmount.Value, _currentUser.Id, EditableSummary);
 
@@ -1444,7 +1444,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
             try
             {
-                await using var context = new AppDbContext();
+                await using var context = new LocalDbContext();
                 var service = new AssistanceCaseManagementService(
                     context,
                     ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
@@ -1483,7 +1483,7 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 var preferredMatch = SelectedValidatedBeneficiary;
 
-                await using var context = new AppDbContext();
+                await using var context = new LocalDbContext();
                 var query = context.BeneficiaryStaging
                     .AsNoTracking()
                     .Where(item => item.VerificationStatus == VerificationStatus.Approved);
@@ -1557,7 +1557,7 @@ namespace AttendanceShiftingManagement.ViewModels
             try
             {
                 var baseUrl = await LocalScannerGatewayService.Shared.EnsureStartedAsync();
-                await using var context = new AppDbContext();
+                await using var context = new LocalDbContext();
                 var sessionService = new ScannerSessionService(context);
                 var session = await sessionService.CreateLookupSessionAsync(_currentUser?.Id ?? 0, TimeSpan.FromMinutes(15));
 
@@ -1588,7 +1588,7 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 try
                 {
-                    await using var context = new AppDbContext();
+                    await using var context = new LocalDbContext();
                     var sessionService = new ScannerSessionService(context);
                     var scanPayload = await sessionService.TryPopScanAsync(sessionToken);
 

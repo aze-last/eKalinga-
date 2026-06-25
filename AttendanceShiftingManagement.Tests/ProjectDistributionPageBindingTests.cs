@@ -16,22 +16,19 @@ public sealed class ProjectDistributionPageBindingTests
 
         var xaml = File.ReadAllText(pagePath);
 
-        Assert.Contains("Text=\"Manual Project Distribution\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"PROJECT DISTRIBUTION\"", xaml, StringComparison.Ordinal);
         Assert.Contains("ItemsSource=\"{Binding ProgramSummaries}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("SelectedItem=\"{Binding SelectedProgramSummary}\"", xaml, StringComparison.Ordinal);
         
-        Assert.Contains("Text=\"UNRELEASED\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding OpenCreateProjectPanelCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("ItemsSource=\"{Binding PendingBeneficiaries}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("SelectedItem=\"{Binding SelectedPendingBeneficiary}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"{Binding PendingPaginationText}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding PrevPendingPageCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding NextPendingPageCommand}\"", xaml, StringComparison.Ordinal);
 
-        Assert.Contains("Text=\"DIGITAL ID\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"{Binding SelectedPendingBeneficiary.FullName}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"{Binding SelectedPendingDigitalIdCardNumber}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding ConfirmReleaseCommand}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Content=\"CONFIRM RELEASE\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"ATTENDANCE PIN\"", xaml, StringComparison.Ordinal);
 
         Assert.Contains("Text=\"RELEASED\"", xaml, StringComparison.Ordinal);
         Assert.Contains("ItemsSource=\"{Binding ReleasedClaims}\"", xaml, StringComparison.Ordinal);

@@ -47,14 +47,14 @@ namespace AttendanceShiftingManagement.Services
             WriteIndented = true
         };
 
-        private readonly Func<AppDbContext> _contextFactory;
+        private readonly Func<LocalDbContext> _contextFactory;
         private readonly string _runtimePath;
 
         public SessionAnnouncementService(
-            Func<AppDbContext>? contextFactory = null,
+            Func<LocalDbContext>? contextFactory = null,
             string? runtimePath = null)
         {
-            _contextFactory = contextFactory ?? (() => new AppDbContext());
+            _contextFactory = contextFactory ?? (() => new LocalDbContext());
             _runtimePath = runtimePath ?? GetRuntimePath();
         }
 
@@ -105,7 +105,7 @@ namespace AttendanceShiftingManagement.Services
                 .Where(item =>
                     item.Timestamp > windowStart &&
                     item.Timestamp <= windowEnd &&
-                    item.Action != "Login" &&
+                    !item.Action.StartsWith("Login") &&
                     item.Action != "Logout")
                 .OrderByDescending(item => item.Timestamp)
                 .Take(maxItems)

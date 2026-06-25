@@ -20,7 +20,7 @@ namespace AttendanceShiftingManagement.Services
                 return;
             }
 
-            using var context = new AppDbContext();
+            using var context = new LocalDbContext();
             _current = context.UserPermissions
                 .AsNoTracking()
                 .FirstOrDefault(p => p.UserId == user.Id);

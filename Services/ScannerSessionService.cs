@@ -16,9 +16,9 @@ namespace AttendanceShiftingManagement.Services
 
     public sealed class ScannerSessionService
     {
-        private readonly AppDbContext _context;
+        private readonly LocalDbContext _context;
 
-        public ScannerSessionService(AppDbContext context)
+        public ScannerSessionService(LocalDbContext context)
         {
             _context = context;
         }

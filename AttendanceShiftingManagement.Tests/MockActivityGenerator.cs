@@ -12,15 +12,15 @@ namespace AttendanceShiftingManagement.Tests
 {
     public class MockActivityGenerator
     {
-        [Fact]
+        [Fact(Skip = "Disabled per GEMINI.md policy regarding demo data")]
         public async Task GenerateMockActivity()
         {
-            var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
+            var optionsBuilder = new DbContextOptionsBuilder<LocalDbContext>();
             var connectionString = ConnectionSettingsService.GetEffectiveConnectionString();
             var serverVersion = new MySqlServerVersion(new Version(8, 0, 36));
             optionsBuilder.UseMySql(connectionString, serverVersion);
 
-            using var context = new AppDbContext(optionsBuilder.Options);
+            using var context = new LocalDbContext(optionsBuilder.Options);
 
             // 1. Get Mock Beneficiaries
             var basePath = @"C:\Users\ASUS\source\repos\AttendanceShiftingManagement\AttendanceShiftingManagement\AttendanceShiftingManagement";

@@ -416,7 +416,7 @@ public sealed class BeneficiaryVerificationServiceTests
         Assert.Equal("BeneficiaryMarkedInactive", auditLog.Action);
     }
 
-    private static User SeedAdmin(Data.AppDbContext context)
+    private static User SeedAdmin(Data.LocalDbContext context)
     {
         var user = new User
         {
@@ -432,7 +432,7 @@ public sealed class BeneficiaryVerificationServiceTests
         return user;
     }
 
-    private static Household SeedHousehold(Data.AppDbContext context)
+    private static Household SeedHousehold(Data.LocalDbContext context)
     {
         var household = new Household
         {
@@ -449,7 +449,7 @@ public sealed class BeneficiaryVerificationServiceTests
         return household;
     }
 
-    private static HouseholdMember SeedMember(Data.AppDbContext context, int householdId)
+    private static HouseholdMember SeedMember(Data.LocalDbContext context, int householdId)
     {
         var member = new HouseholdMember
         {
@@ -468,7 +468,7 @@ public sealed class BeneficiaryVerificationServiceTests
         return member;
     }
 
-    private static AyudaProgram SeedProgram(Data.AppDbContext context, int createdByUserId)
+    private static AyudaProgram SeedProgram(Data.LocalDbContext context, int createdByUserId)
     {
         var program = new AyudaProgram
         {
@@ -487,7 +487,7 @@ public sealed class BeneficiaryVerificationServiceTests
         return program;
     }
 
-    private static BeneficiaryStaging SeedStaging(Data.AppDbContext context, VerificationStatus status = VerificationStatus.Pending)
+    private static BeneficiaryStaging SeedStaging(Data.LocalDbContext context, VerificationStatus status = VerificationStatus.Pending)
     {
         var row = new BeneficiaryStaging
         {

@@ -74,7 +74,7 @@ namespace AttendanceShiftingManagement.Services
 
             var masterListMetrics = await LoadMasterListMetricsAsync(activePreset, cancellationToken);
 
-            await using var context = new AppDbContext();
+            await using var context = new LocalDbContext();
 
             var aidRequestCount = await context.AssistanceCases
                 .AsNoTracking()
@@ -223,11 +223,10 @@ namespace AttendanceShiftingManagement.Services
                 return releasedTotal >= item.BudgetCap * 0.8m;
             });
 
-            var upcomingEvents = await context.CashForWorkEvents
+            var upcomingEventsData = await context.CashForWorkEvents
                 .AsNoTracking()
                 .Where(cashForWorkEvent => cashForWorkEvent.EventDate >= today)
                 .OrderBy(cashForWorkEvent => cashForWorkEvent.EventDate)
-                .ThenBy(cashForWorkEvent => cashForWorkEvent.StartTime)
                 .Select(cashForWorkEvent => new DashboardUpcomingEventSnapshot
                 {
                     Title = cashForWorkEvent.Title,
@@ -237,8 +236,14 @@ namespace AttendanceShiftingManagement.Services
                     Status = cashForWorkEvent.Status,
                     ParticipantCount = cashForWorkEvent.Participants.Count
                 })
-                .Take(5)
+                .Take(20)
                 .ToListAsync(cancellationToken);
+
+            var upcomingEvents = upcomingEventsData
+                .OrderBy(e => e.EventDate)
+                .ThenBy(e => e.StartTime)
+                .Take(5)
+                .ToList();
 
             var recentImports = await context.BeneficiaryStaging
                 .AsNoTracking()

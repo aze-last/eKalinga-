@@ -52,7 +52,7 @@ public sealed class BeneficiaryDigitalIdServiceTests
         Assert.Contains(lookup.ReleaseHistory, entry => entry.SourceModule == BeneficiaryAssistanceSourceModule.CashForWork);
     }
 
-    private static User SeedAdmin(Data.AppDbContext context)
+    private static User SeedAdmin(Data.LocalDbContext context)
     {
         var user = new User
         {
@@ -68,7 +68,7 @@ public sealed class BeneficiaryDigitalIdServiceTests
         return user;
     }
 
-    private static BeneficiaryStaging SeedApprovedStaging(Data.AppDbContext context)
+    private static BeneficiaryStaging SeedApprovedStaging(Data.LocalDbContext context)
     {
         var row = new BeneficiaryStaging
         {

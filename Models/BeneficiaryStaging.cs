@@ -7,6 +7,9 @@ namespace AttendanceShiftingManagement.Models
     [Table("BeneficiaryStaging")]
     public class BeneficiaryStaging
     {
+        public Guid SyncId { get; set; } = Guid.NewGuid();
+        public DateTime UpdatedAt { get; set; } = DateTime.Now;
+
         [Key]
         public int StagingID { get; set; }
 

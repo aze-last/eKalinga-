@@ -74,7 +74,7 @@ namespace AttendanceShiftingManagement.Services
             var requestedPageNumber = Math.Max(1, request.PageNumber);
             var pageSize = Math.Clamp(request.PageSize, 1, MaxPageSize);
 
-            await using var context = new AppDbContext();
+            await using var context = new LocalDbContext();
 
             var summaryCounts = await context.BeneficiaryStaging
                 .AsNoTracking()

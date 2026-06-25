@@ -149,8 +149,11 @@ public sealed class BudgetManagementServiceTests
                 "Quarterly rice support",
                 "Rice Assistance",
                 AssistanceReleaseKind.Cash,
-                2500m,
-                "1 sack of rice",
+                1500m,
+                "Goods details",
+                null,
+                null,
+                null,
                 null,
                 null,
                 100000m,
@@ -170,7 +173,88 @@ public sealed class BudgetManagementServiceTests
         Assert.Null(program.EndDate);
     }
 
-    private static User SeedAdmin(Data.AppDbContext context)
+    [Fact]
+    public async Task RecordReleaseAsync_EvaluatesStrictSourceDonationId_WhenProgramHasSourceDonationId()
+    {
+        using var context = TestDbContextFactory.CreateContext();
+        var admin = SeedAdmin(context);
+        
+        var service = new BudgetManagementService(context);
+
+        await service.RecordPrivateDonationAsync(
+            new PrivateDonationRequest(
+                PrivateDonationDonorType.Person,
+                "Private Donor",
+                5000m,
+                new DateTime(2026, 3, 27),
+                "DON-100",
+                "Source-based support",
+                DonationProofType.Cash,
+                null,
+                null),
+            admin.Id);
+
+        var donation = context.PrivateDonations.First();
+
+        var createResult = await service.CreateProgramAsync(
+            new AyudaProgramRequest(
+                "SOURCE-01",
+                "Source Project",
+                AyudaProgramType.GeneralPurpose,
+                "Testing strict sources",
+                "General Assistance",
+                AssistanceReleaseKind.Cash,
+                1500m,
+                "Goods details",
+                null,
+                null,
+                null,
+                null,
+                null,
+                20000m,
+                AyudaProgramDistributionStatus.Open,
+                donation.Id,
+                null),
+            admin.Id);
+
+        Assert.True(createResult.IsSuccess);
+        var programId = createResult.ProgramId!.Value;
+
+        var releaseResult1 = await service.RecordReleaseAsync(
+            new BudgetReleaseRequest(
+                programId,
+                BudgetLedgerFeatureSource.ProjectDistribution,
+                "project-claim:source:1",
+                1,
+                AssistanceReleaseKind.Cash,
+                1500m,
+                new DateTime(2026, 3, 27),
+                "First claim against donation"),
+            admin.Id);
+
+        Assert.True(releaseResult1.IsSuccess);
+        var ledger1 = context.BudgetLedgerEntries.First(e => e.Remarks == "First claim against donation");
+        Assert.Equal(0m, ledger1.GovernmentPortion);
+        Assert.Equal(1500m, ledger1.PrivatePortion);
+
+        // Remaining should be 3500. Attempt 4000
+        var releaseResult2 = await service.RecordReleaseAsync(
+            new BudgetReleaseRequest(
+                programId,
+                BudgetLedgerFeatureSource.ProjectDistribution,
+                "project-claim:source:2",
+                1,
+                AssistanceReleaseKind.Cash,
+                4000m,
+                new DateTime(2026, 3, 27),
+                "Second claim against donation"),
+            admin.Id);
+
+        Assert.False(releaseResult2.IsSuccess);
+        Assert.Contains("short by", releaseResult2.Message);
+    }
+
+    private static User SeedAdmin(Data.LocalDbContext context)
     {
         var user = new User
         {
@@ -186,7 +270,7 @@ public sealed class BudgetManagementServiceTests
         return user;
     }
 
-    private static AyudaProgram SeedProgram(Data.AppDbContext context, int createdByUserId)
+    private static AyudaProgram SeedProgram(Data.LocalDbContext context, int createdByUserId)
     {
         var program = new AyudaProgram
         {
@@ -205,7 +289,7 @@ public sealed class BudgetManagementServiceTests
         return program;
     }
 
-    private static void SeedGovernmentSnapshot(Data.AppDbContext context, decimal allocatedAmount, int yearlyBudgetId, string officeCode)
+    private static void SeedGovernmentSnapshot(Data.LocalDbContext context, decimal allocatedAmount, int yearlyBudgetId, string officeCode)
     {
         context.GovernmentBudgetSnapshots.Add(new GovernmentBudgetSnapshot
         {

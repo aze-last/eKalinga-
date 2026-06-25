@@ -18,7 +18,7 @@ public sealed class CashForWorkBudgetIntegrationTests
         var cashForWorkEvent = await service.CreateEventAsync(
             "Canal Clearing",
             "Sitio Uno",
-            new DateTime(2026, 3, 27),
+            DateTime.Today,
             new TimeSpan(7, 0, 0),
             new TimeSpan(11, 0, 0),
             "Morning batch",
@@ -60,7 +60,7 @@ public sealed class CashForWorkBudgetIntegrationTests
         var cashForWorkEvent = await service.CreateEventAsync(
             "Road Clearing",
             "Purok 2",
-            new DateTime(2026, 3, 27),
+            DateTime.Today,
             new TimeSpan(7, 0, 0),
             new TimeSpan(11, 0, 0),
             "Morning batch",
@@ -81,7 +81,7 @@ public sealed class CashForWorkBudgetIntegrationTests
         Assert.Null(context.CashForWorkEvents.Single().BudgetLedgerEntryId);
     }
 
-    private static User SeedAdmin(Data.AppDbContext context)
+    private static User SeedAdmin(Data.LocalDbContext context)
     {
         var user = new User
         {
@@ -97,7 +97,7 @@ public sealed class CashForWorkBudgetIntegrationTests
         return user;
     }
 
-    private static BeneficiaryStaging SeedApprovedBeneficiary(Data.AppDbContext context, int stagingId = 2001, string fullName = "Joel Cruz")
+    private static BeneficiaryStaging SeedApprovedBeneficiary(Data.LocalDbContext context, int stagingId = 2001, string fullName = "Joel Cruz")
     {
         var beneficiary = new BeneficiaryStaging
         {
@@ -114,7 +114,7 @@ public sealed class CashForWorkBudgetIntegrationTests
         return beneficiary;
     }
 
-    private static CashForWorkBudget SeedGlobalBudget(Data.AppDbContext context, int createdByUserId)
+    private static CashForWorkBudget SeedGlobalBudget(Data.LocalDbContext context, int createdByUserId)
     {
         var budget = new CashForWorkBudget
         {
@@ -133,7 +133,7 @@ public sealed class CashForWorkBudgetIntegrationTests
         return budget;
     }
 
-    private static void SeedGovernmentSnapshot(Data.AppDbContext context, decimal allocatedAmount)
+    private static void SeedGovernmentSnapshot(Data.LocalDbContext context, decimal allocatedAmount)
     {
         context.GovernmentBudgetSnapshots.Add(new GovernmentBudgetSnapshot
         {

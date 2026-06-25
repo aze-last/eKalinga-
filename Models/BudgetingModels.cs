@@ -6,6 +6,8 @@ namespace AttendanceShiftingManagement.Models
     [Table("ayuda_programs")]
     public class AyudaProgram
     {
+        public Guid SyncId { get; set; } = Guid.NewGuid();
+
         [Key]
         [Column("id")]
         public int Id { get; set; }
@@ -41,6 +43,17 @@ namespace AttendanceShiftingManagement.Models
         [MaxLength(250)]
         public string? ItemDescription { get; set; }
 
+        [Column("item_name")]
+        [MaxLength(100)]
+        public string? ItemName { get; set; }
+
+        [Column("quantity_per_beneficiary", TypeName = "decimal(18,2)")]
+        public decimal? QuantityPerBeneficiary { get; set; }
+
+        [Column("unit_of_measure")]
+        [MaxLength(30)]
+        public string? UnitOfMeasure { get; set; }
+
         [Column("start_date")]
         public DateTime? StartDate { get; set; }
 
@@ -64,11 +77,28 @@ namespace AttendanceShiftingManagement.Models
 
         [Column("updated_at")]
         public DateTime UpdatedAt { get; set; } = DateTime.Now;
+
+        [Column("source_donation_id")]
+        public int? SourceDonationId { get; set; }
+
+        [Column("source_ggms_budget_id")]
+        public int? SourceGGMSBudgetId { get; set; }
+
+        [ForeignKey(nameof(SourceDonationId))]
+        public PrivateDonation? SourceDonation { get; set; }
+
+        [ForeignKey(nameof(SourceGGMSBudgetId))]
+        public GovernmentBudgetSnapshot? SourceGGMSBudget { get; set; }
+
+        [NotMapped]
+        public decimal? LinkedFundingAmount => SourceDonation?.Amount ?? SourceGGMSBudget?.AllocatedAmount;
     }
 
     [Table("assistance_case_budgets")]
     public class AssistanceCaseBudget
     {
+        public Guid SyncId { get; set; } = Guid.NewGuid();
+
         [Key]
         [Column("id")]
         public int Id { get; set; }
@@ -110,6 +140,8 @@ namespace AttendanceShiftingManagement.Models
     [Table("cash_for_work_budgets")]
     public class CashForWorkBudget
     {
+        public Guid SyncId { get; set; } = Guid.NewGuid();
+
         [Key]
         [Column("id")]
         public int Id { get; set; }
@@ -147,6 +179,8 @@ namespace AttendanceShiftingManagement.Models
     [Table("ayuda_project_beneficiaries")]
     public class AyudaProjectBeneficiary
     {
+        public Guid SyncId { get; set; } = Guid.NewGuid();
+
         [Key]
         [Column("id")]
         public int Id { get; set; }
@@ -202,6 +236,8 @@ namespace AttendanceShiftingManagement.Models
     [Table("ayuda_project_claims")]
     public class AyudaProjectClaim
     {
+        public Guid SyncId { get; set; } = Guid.NewGuid();
+
         [Key]
         [Column("id")]
         public int Id { get; set; }
@@ -242,6 +278,17 @@ namespace AttendanceShiftingManagement.Models
         [MaxLength(250)]
         public string? ItemDescriptionSnapshot { get; set; }
 
+        [Column("item_name_snapshot")]
+        [MaxLength(100)]
+        public string? ItemNameSnapshot { get; set; }
+
+        [Column("quantity_snapshot", TypeName = "decimal(18,2)")]
+        public decimal? QuantitySnapshot { get; set; }
+
+        [Column("unit_of_measure_snapshot")]
+        [MaxLength(30)]
+        public string? UnitOfMeasureSnapshot { get; set; }
+
         [Column("unit_amount_snapshot", TypeName = "decimal(18,2)")]
         public decimal? UnitAmountSnapshot { get; set; }
 
@@ -263,9 +310,37 @@ namespace AttendanceShiftingManagement.Models
         public AyudaProgram? AyudaProgram { get; set; }
     }
 
+    [Table("ayuda_project_budget_sources")]
+    public class ProjectBudgetSource
+    {
+        public Guid SyncId { get; set; } = Guid.NewGuid();
+
+        [Key]
+        [Column("id")]
+        public int Id { get; set; }
+
+        [Column("ayuda_program_id")]
+        public int AyudaProgramId { get; set; }
+
+        [Column("budget_bucket_id")]
+        public int BudgetBucketId { get; set; }
+
+        [Column("budget_bucket_type")]
+        [MaxLength(50)]
+        public string BudgetBucketType { get; set; } = string.Empty; // "AssistanceCase", "CashForWork", "Government", "Private"
+
+        [Column("priority")]
+        public int Priority { get; set; }
+
+        [ForeignKey(nameof(AyudaProgramId))]
+        public AyudaProgram? AyudaProgram { get; set; }
+    }
+
     [Table("government_budget_snapshots")]
     public class GovernmentBudgetSnapshot
     {
+        public Guid SyncId { get; set; } = Guid.NewGuid();
+
         [Key]
         [Column("id")]
         public int Id { get; set; }
@@ -299,16 +374,36 @@ namespace AttendanceShiftingManagement.Models
         [Column("synced_at")]
         public DateTime SyncedAt { get; set; } = DateTime.Now;
 
+        [Column("target_program_id")]
+        public int? TargetProgramId { get; set; }
+
+        [Column("target_assistance_case_budget_id")]
+        public int? TargetAssistanceCaseBudgetId { get; set; }
+
+        [Column("target_cash_for_work_budget_id")]
+        public int? TargetCashForWorkBudgetId { get; set; }
+
         [Column("created_at")]
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 
         [Column("updated_at")]
         public DateTime UpdatedAt { get; set; } = DateTime.Now;
+
+        [ForeignKey(nameof(TargetProgramId))]
+        public AyudaProgram? TargetProgram { get; set; }
+
+        [ForeignKey(nameof(TargetAssistanceCaseBudgetId))]
+        public AssistanceCaseBudget? TargetAssistanceCaseBudget { get; set; }
+
+        [ForeignKey(nameof(TargetCashForWorkBudgetId))]
+        public CashForWorkBudget? TargetCashForWorkBudget { get; set; }
     }
 
     [Table("private_donations")]
     public class PrivateDonation
     {
+        public Guid SyncId { get; set; } = Guid.NewGuid();
+
         [Key]
         [Column("id")]
         public int Id { get; set; }
@@ -349,13 +444,34 @@ namespace AttendanceShiftingManagement.Models
         [Column("received_by_user_id")]
         public int ReceivedByUserId { get; set; }
 
+        [Column("target_program_id")]
+        public int? TargetProgramId { get; set; }
+
+        [Column("target_assistance_case_budget_id")]
+        public int? TargetAssistanceCaseBudgetId { get; set; }
+
+        [Column("target_cash_for_work_budget_id")]
+        public int? TargetCashForWorkBudgetId { get; set; }
+
         [Column("created_at")]
         public DateTime CreatedAt { get; set; } = DateTime.Now;
+
+        [ForeignKey(nameof(TargetProgramId))]
+        public AyudaProgram? TargetProgram { get; set; }
+
+        [ForeignKey(nameof(TargetAssistanceCaseBudgetId))]
+        public AssistanceCaseBudget? TargetAssistanceCaseBudget { get; set; }
+
+        [ForeignKey(nameof(TargetCashForWorkBudgetId))]
+        public CashForWorkBudget? TargetCashForWorkBudget { get; set; }
     }
 
     [Table("budget_ledger_entries")]
     public class BudgetLedgerEntry
     {
+        public Guid SyncId { get; set; } = Guid.NewGuid();
+        public DateTime UpdatedAt { get; set; } = DateTime.Now;
+
         [Key]
         [Column("id")]
         public int Id { get; set; }
@@ -464,7 +580,8 @@ namespace AttendanceShiftingManagement.Models
     public enum BudgetLedgerEntryType
     {
         Donation,
-        Release
+        Release,
+        Reallocation
     }
 
     public enum BudgetLedgerFeatureSource

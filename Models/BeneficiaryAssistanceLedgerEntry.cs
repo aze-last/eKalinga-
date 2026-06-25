@@ -6,6 +6,9 @@ namespace AttendanceShiftingManagement.Models
     [Table("beneficiary_assistance_ledger")]
     public class BeneficiaryAssistanceLedgerEntry
     {
+        public Guid SyncId { get; set; } = Guid.NewGuid();
+        public DateTime UpdatedAt { get; set; } = DateTime.Now;
+
         [Key]
         [Column("id")]
         public int Id { get; set; }

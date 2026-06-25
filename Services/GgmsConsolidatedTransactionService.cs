@@ -5,23 +5,25 @@ using MySqlConnector;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace AttendanceShiftingManagement.Services
 {
     public interface IGgmsConsolidatedTransactionService
     {
-        Task<string?> TryWriteAssistanceCaseReleaseAsync(AppDbContext context, AssistanceCase assistanceCase);
-        Task<string?> TryWriteProjectDistributionClaimAsync(AppDbContext context, AyudaProgram? program, AyudaProjectClaim claim);
-        Task<string?> TryWriteBulkProjectDistributionClaimsAsync(AppDbContext context, AyudaProgram? program, IReadOnlyCollection<AyudaProjectClaim> claims);
+        Task<string?> TryWriteAssistanceCaseReleaseAsync(LocalDbContext context, AssistanceCase assistanceCase);
+        Task<string?> TryWriteProjectDistributionClaimAsync(LocalDbContext context, AyudaProgram? program, AyudaProjectClaim claim);
+        Task<string?> TryWriteBulkProjectDistributionClaimsAsync(LocalDbContext context, AyudaProgram? program, IReadOnlyCollection<AyudaProjectClaim> claims);
         Task<string?> TryWriteCashForWorkReleaseAsync(
-            AppDbContext context,
+            LocalDbContext context,
             CashForWorkEvent cashForWorkEvent,
             IReadOnlyCollection<CashForWorkParticipant> participants,
             IReadOnlyCollection<int> releasedParticipantIds,
             decimal totalAmount);
         
         Task<List<GgmsConsolidatedTransaction>> LoadTransactionsAsync(string? projectNameFilter = null);
+        Task FlushPendingTransactionsAsync(LocalDbContext context);
     }
 
     public sealed class NullGgmsConsolidatedTransactionService : IGgmsConsolidatedTransactionService
@@ -30,11 +32,12 @@ namespace AttendanceShiftingManagement.Services
 
         private NullGgmsConsolidatedTransactionService() { }
 
-        public Task<string?> TryWriteAssistanceCaseReleaseAsync(AppDbContext context, AssistanceCase assistanceCase) => Task.FromResult<string?>(null);
-        public Task<string?> TryWriteProjectDistributionClaimAsync(AppDbContext context, AyudaProgram? program, AyudaProjectClaim claim) => Task.FromResult<string?>(null);
-        public Task<string?> TryWriteBulkProjectDistributionClaimsAsync(AppDbContext context, AyudaProgram? program, IReadOnlyCollection<AyudaProjectClaim> claims) => Task.FromResult<string?>(null);
-        public Task<string?> TryWriteCashForWorkReleaseAsync(AppDbContext context, CashForWorkEvent cashForWorkEvent, IReadOnlyCollection<CashForWorkParticipant> participants, IReadOnlyCollection<int> releasedParticipantIds, decimal totalAmount) => Task.FromResult<string?>(null);
+        public Task<string?> TryWriteAssistanceCaseReleaseAsync(LocalDbContext context, AssistanceCase assistanceCase) => Task.FromResult<string?>(null);
+        public Task<string?> TryWriteProjectDistributionClaimAsync(LocalDbContext context, AyudaProgram? program, AyudaProjectClaim claim) => Task.FromResult<string?>(null);
+        public Task<string?> TryWriteBulkProjectDistributionClaimsAsync(LocalDbContext context, AyudaProgram? program, IReadOnlyCollection<AyudaProjectClaim> claims) => Task.FromResult<string?>(null);
+        public Task<string?> TryWriteCashForWorkReleaseAsync(LocalDbContext context, CashForWorkEvent cashForWorkEvent, IReadOnlyCollection<CashForWorkParticipant> participants, IReadOnlyCollection<int> releasedParticipantIds, decimal totalAmount) => Task.FromResult<string?>(null);
         public Task<List<GgmsConsolidatedTransaction>> LoadTransactionsAsync(string? projectNameFilter = null) => Task.FromResult(new List<GgmsConsolidatedTransaction>());
+        public Task FlushPendingTransactionsAsync(LocalDbContext context) => Task.CompletedTask;
     }
 
     public sealed class GgmsConsolidatedTransactionService : IGgmsConsolidatedTransactionService
@@ -131,7 +134,7 @@ namespace AttendanceShiftingManagement.Services
             return results;
         }
 
-        public async Task<string?> TryWriteAssistanceCaseReleaseAsync(AppDbContext context, AssistanceCase assistanceCase)
+        public async Task<string?> TryWriteAssistanceCaseReleaseAsync(LocalDbContext context, AssistanceCase assistanceCase)
         {
             ArgumentNullException.ThrowIfNull(context);
             ArgumentNullException.ThrowIfNull(assistanceCase);
@@ -169,7 +172,7 @@ namespace AttendanceShiftingManagement.Services
             }
         }
 
-        public async Task<string?> TryWriteProjectDistributionClaimAsync(AppDbContext context, AyudaProgram? program, AyudaProjectClaim claim)
+        public async Task<string?> TryWriteProjectDistributionClaimAsync(LocalDbContext context, AyudaProgram? program, AyudaProjectClaim claim)
         {
             ArgumentNullException.ThrowIfNull(context);
             ArgumentNullException.ThrowIfNull(claim);
@@ -214,7 +217,7 @@ namespace AttendanceShiftingManagement.Services
             }
         }
 
-        public async Task<string?> TryWriteBulkProjectDistributionClaimsAsync(AppDbContext context, AyudaProgram? program, IReadOnlyCollection<AyudaProjectClaim> claims)
+        public async Task<string?> TryWriteBulkProjectDistributionClaimsAsync(LocalDbContext context, AyudaProgram? program, IReadOnlyCollection<AyudaProjectClaim> claims)
         {
             ArgumentNullException.ThrowIfNull(context);
             ArgumentNullException.ThrowIfNull(claims);
@@ -266,7 +269,7 @@ namespace AttendanceShiftingManagement.Services
         }
 
         public async Task<string?> TryWriteCashForWorkReleaseAsync(
-            AppDbContext context,
+            LocalDbContext context,
             CashForWorkEvent cashForWorkEvent,
             IReadOnlyCollection<CashForWorkParticipant> participants,
             IReadOnlyCollection<int> releasedParticipantIds,
@@ -343,6 +346,26 @@ namespace AttendanceShiftingManagement.Services
         {
             if (entries.Count == 0) return null;
 
+            if (!ConnectivityService.Instance.IsGgmsAvailable)
+            {
+                try
+                {
+                    var payload = JsonSerializer.Serialize(entries);
+                    using var localDb = new LocalDbContext();
+                    localDb.GgmsPendingTransactionCache.Add(new GgmsPendingTransactionCache
+                    {
+                        PayloadJson = payload,
+                        CreatedAt = DateTime.Now
+                    });
+                    await localDb.SaveChangesAsync();
+                    return null; // Gracefully skipped, stored for later sync
+                }
+                catch (Exception ex)
+                {
+                    return $"Failed to save offline GGMS transaction locally: {ex.Message}";
+                }
+            }
+
             try
             {
                 await using var connection = new MySqlConnection(ConnectionSettingsService.BuildConnectionString(_ggmsConnection));
@@ -381,6 +404,41 @@ namespace AttendanceShiftingManagement.Services
             catch (Exception ex)
             {
                 return $"GGMS Database Write Error: {ex.Message}";
+            }
+        }
+
+        public async Task FlushPendingTransactionsAsync(LocalDbContext context)
+        {
+            if (!ConnectivityService.Instance.IsGgmsAvailable) return;
+
+            var pendingRecords = await context.GgmsPendingTransactionCache.ToListAsync();
+            if (pendingRecords.Count == 0) return;
+
+            foreach (var record in pendingRecords)
+            {
+                try
+                {
+                    var entries = JsonSerializer.Deserialize<List<GgmsConsolidatedTransactionEntry>>(record.PayloadJson);
+                    if (entries != null && entries.Count > 0)
+                    {
+                        var error = await TryInsertEntriesAsync(entries);
+                        if (string.IsNullOrEmpty(error))
+                        {
+                            context.GgmsPendingTransactionCache.Remove(record);
+                            await context.SaveChangesAsync();
+                        }
+                    }
+                    else
+                    {
+                        // Invalid payload, remove it to prevent endless loops
+                        context.GgmsPendingTransactionCache.Remove(record);
+                        await context.SaveChangesAsync();
+                    }
+                }
+                catch (Exception)
+                {
+                    // If it fails, keep it in the cache and try again later.
+                }
             }
         }
 
@@ -433,7 +491,7 @@ namespace AttendanceShiftingManagement.Services
         }
 
         private static async Task<GgmsBeneficiaryIdentity> ResolveBeneficiaryAsync(
-            AppDbContext context,
+            LocalDbContext context,
             string? beneficiaryId,
             string? civilRegistryId,
             string? fullName,

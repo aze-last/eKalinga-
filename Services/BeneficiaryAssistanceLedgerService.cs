@@ -23,10 +23,10 @@ namespace AttendanceShiftingManagement.Services
 
     public sealed class BeneficiaryAssistanceLedgerService
     {
-        private readonly AppDbContext _context;
+        private readonly LocalDbContext _context;
         private readonly AuditService _auditService;
 
-        public BeneficiaryAssistanceLedgerService(AppDbContext context, AuditService? auditService = null)
+        public BeneficiaryAssistanceLedgerService(LocalDbContext context, AuditService? auditService = null)
         {
             _context = context;
             _auditService = auditService ?? new AuditService(context);

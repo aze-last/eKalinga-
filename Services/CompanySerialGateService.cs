@@ -12,13 +12,13 @@ namespace AttendanceShiftingManagement.Services
 
     public static class CompanySerialGateService
     {
-        public static CompanySerialValidationResult ValidateOrBind(AppDbContext context, SystemProfileSettingsModel localSettings)
+        public static CompanySerialValidationResult ValidateOrBind(LocalDbContext context, SystemProfileSettingsModel localSettings)
         {
             return ValidateOrBind(context, localSettings, enforceGate: true);
         }
 
         public static CompanySerialValidationResult ValidateOrBind(
-            AppDbContext context,
+            LocalDbContext context,
             SystemProfileSettingsModel localSettings,
             bool enforceGate)
         {

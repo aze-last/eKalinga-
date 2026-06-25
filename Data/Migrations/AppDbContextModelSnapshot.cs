@@ -59,9 +59,15 @@ namespace AttendanceShiftingManagement.Data.Migrations
                         .HasColumnType("varchar(50)")
                         .HasColumnName("ip_address");
 
+                    b.Property<Guid>("SyncId")
+                        .HasColumnType("char(36)");
+
                     b.Property<DateTime>("Timestamp")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("timestamp");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
 
                     b.Property<int?>("UserId")
                         .HasColumnType("int")
@@ -173,6 +179,9 @@ namespace AttendanceShiftingManagement.Data.Migrations
                         .HasColumnType("varchar(250)")
                         .HasColumnName("summary");
 
+                    b.Property<Guid>("SyncId")
+                        .HasColumnType("char(36)");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("updated_at");
@@ -256,6 +265,9 @@ namespace AttendanceShiftingManagement.Data.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("tinyint(1)")
                         .HasColumnName("is_active");
+
+                    b.Property<Guid>("SyncId")
+                        .HasColumnType("char(36)");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime(6)")
@@ -344,6 +356,9 @@ namespace AttendanceShiftingManagement.Data.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("start_date");
 
+                    b.Property<Guid>("SyncId")
+                        .HasColumnType("char(36)");
+
                     b.Property<decimal?>("UnitAmount")
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("unit_amount");
@@ -427,6 +442,9 @@ namespace AttendanceShiftingManagement.Data.Migrations
                         .HasColumnType("int")
                         .HasColumnName("status_updated_by_user_id");
 
+                    b.Property<Guid>("SyncId")
+                        .HasColumnType("char(36)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("AyudaProgramId", "BeneficiaryStagingId")
@@ -507,6 +525,9 @@ namespace AttendanceShiftingManagement.Data.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("varchar(1000)")
                         .HasColumnName("remarks");
+
+                    b.Property<Guid>("SyncId")
+                        .HasColumnType("char(36)");
 
                     b.Property<decimal?>("UnitAmountSnapshot")
                         .HasColumnType("decimal(18,2)")
@@ -614,6 +635,12 @@ namespace AttendanceShiftingManagement.Data.Migrations
                         .HasColumnType("varchar(80)")
                         .HasColumnName("source_record_id");
 
+                    b.Property<Guid>("SyncId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("BeneficiaryId");
@@ -680,6 +707,12 @@ namespace AttendanceShiftingManagement.Data.Migrations
                     b.Property<DateTime?>("RevokedAt")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("revoked_at");
+
+                    b.Property<Guid>("SyncId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
 
                     b.HasKey("Id");
 
@@ -778,6 +811,12 @@ namespace AttendanceShiftingManagement.Data.Migrations
                     b.Property<string>("Sex")
                         .HasColumnType("longtext");
 
+                    b.Property<Guid>("SyncId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
                     b.Property<int>("VerificationStatus")
                         .HasColumnType("int");
 
@@ -860,9 +899,15 @@ namespace AttendanceShiftingManagement.Data.Migrations
                         .HasColumnType("varchar(80)")
                         .HasColumnName("source_record_id");
 
+                    b.Property<Guid>("SyncId")
+                        .HasColumnType("char(36)");
+
                     b.Property<decimal>("TotalAmount")
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("total_amount");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
 
                     b.HasKey("Id");
 
@@ -921,6 +966,12 @@ namespace AttendanceShiftingManagement.Data.Migrations
                         .HasColumnType("longtext")
                         .HasColumnName("status");
 
+                    b.Property<Guid>("SyncId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ParticipantId");
@@ -972,6 +1023,9 @@ namespace AttendanceShiftingManagement.Data.Migrations
                         .HasColumnType("tinyint(1)")
                         .HasColumnName("is_active");
 
+                    b.Property<Guid>("SyncId")
+                        .HasColumnType("char(36)");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("updated_at");
@@ -996,6 +1050,16 @@ namespace AttendanceShiftingManagement.Data.Migrations
                     b.Property<int?>("AyudaProgramId")
                         .HasColumnType("int")
                         .HasColumnName("ayuda_program_id");
+
+                    b.Property<string>("BenefitDescription")
+                        .HasMaxLength(250)
+                        .HasColumnType("varchar(250)")
+                        .HasColumnName("benefit_description");
+
+                    b.Property<string>("BenefitType")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("benefit_type");
 
                     b.Property<int?>("BudgetLedgerEntryId")
                         .HasColumnType("int")
@@ -1025,6 +1089,10 @@ namespace AttendanceShiftingManagement.Data.Migrations
                         .IsRequired()
                         .HasColumnType("longtext")
                         .HasColumnName("event_kind");
+
+                    b.Property<DateTime?>("FinishDate")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("finish_date");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("tinyint(1)")
@@ -1058,11 +1126,18 @@ namespace AttendanceShiftingManagement.Data.Migrations
                         .HasColumnType("longtext")
                         .HasColumnName("status");
 
+                    b.Property<Guid>("SyncId")
+                        .HasColumnType("char(36)");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(150)
                         .HasColumnType("varchar(150)")
                         .HasColumnName("title");
+
+                    b.Property<decimal>("UnitAmount")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("unit_amount");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime(6)")
@@ -1113,6 +1188,12 @@ namespace AttendanceShiftingManagement.Data.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("tinyint(1)")
                         .HasColumnName("is_deleted");
+
+                    b.Property<Guid>("SyncId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
 
                     b.HasKey("Id");
 
@@ -1225,6 +1306,9 @@ namespace AttendanceShiftingManagement.Data.Migrations
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("spent_amount");
 
+                    b.Property<Guid>("SyncId")
+                        .HasColumnType("char(36)");
+
                     b.Property<string>("SyncStatus")
                         .IsRequired()
                         .HasColumnType("longtext")
@@ -1233,6 +1317,18 @@ namespace AttendanceShiftingManagement.Data.Migrations
                     b.Property<DateTime>("SyncedAt")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("synced_at");
+
+                    b.Property<int?>("TargetAssistanceCaseBudgetId")
+                        .HasColumnType("int")
+                        .HasColumnName("target_assistance_case_budget_id");
+
+                    b.Property<int?>("TargetCashForWorkBudgetId")
+                        .HasColumnType("int")
+                        .HasColumnName("target_cash_for_work_budget_id");
+
+                    b.Property<int?>("TargetProgramId")
+                        .HasColumnType("int")
+                        .HasColumnName("target_program_id");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime(6)")
@@ -1244,7 +1340,16 @@ namespace AttendanceShiftingManagement.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("government_budget_snapshots");
+                    b.HasIndex("TargetAssistanceCaseBudgetId");
+
+                    b.HasIndex("TargetCashForWorkBudgetId");
+
+                    b.HasIndex("TargetProgramId");
+
+                    b.ToTable("government_budget_snapshots", t =>
+                        {
+                            t.HasCheckConstraint("CK_GovernmentBudgetSnapshot_SingleTarget", "(target_program_id IS NOT NULL AND target_assistance_case_budget_id IS NULL AND target_cash_for_work_budget_id IS NULL) OR (target_program_id IS NULL AND target_assistance_case_budget_id IS NOT NULL AND target_cash_for_work_budget_id IS NULL) OR (target_program_id IS NULL AND target_assistance_case_budget_id IS NULL AND target_cash_for_work_budget_id IS NOT NULL) OR (target_program_id IS NULL AND target_assistance_case_budget_id IS NULL AND target_cash_for_work_budget_id IS NULL)");
+                        });
                 });
 
             modelBuilder.Entity("AttendanceShiftingManagement.Models.Household", b =>
@@ -1294,6 +1399,9 @@ namespace AttendanceShiftingManagement.Data.Migrations
                         .IsRequired()
                         .HasColumnType("longtext")
                         .HasColumnName("status");
+
+                    b.Property<Guid>("SyncId")
+                        .HasColumnType("char(36)");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime(6)")
@@ -1350,6 +1458,9 @@ namespace AttendanceShiftingManagement.Data.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("varchar(100)")
                         .HasColumnName("relationship_to_head");
+
+                    b.Property<Guid>("SyncId")
+                        .HasColumnType("char(36)");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime(6)")
@@ -1423,9 +1534,70 @@ namespace AttendanceShiftingManagement.Data.Migrations
                         .HasColumnType("varchar(1000)")
                         .HasColumnName("remarks");
 
+                    b.Property<Guid>("SyncId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<int?>("TargetAssistanceCaseBudgetId")
+                        .HasColumnType("int")
+                        .HasColumnName("target_assistance_case_budget_id");
+
+                    b.Property<int?>("TargetCashForWorkBudgetId")
+                        .HasColumnType("int")
+                        .HasColumnName("target_cash_for_work_budget_id");
+
+                    b.Property<int?>("TargetProgramId")
+                        .HasColumnType("int")
+                        .HasColumnName("target_program_id");
+
                     b.HasKey("Id");
 
-                    b.ToTable("private_donations");
+                    b.HasIndex("TargetAssistanceCaseBudgetId");
+
+                    b.HasIndex("TargetCashForWorkBudgetId");
+
+                    b.HasIndex("TargetProgramId");
+
+                    b.ToTable("private_donations", t =>
+                        {
+                            t.HasCheckConstraint("CK_PrivateDonation_SingleTarget", "(target_program_id IS NOT NULL AND target_assistance_case_budget_id IS NULL AND target_cash_for_work_budget_id IS NULL) OR (target_program_id IS NULL AND target_assistance_case_budget_id IS NOT NULL AND target_cash_for_work_budget_id IS NULL) OR (target_program_id IS NULL AND target_assistance_case_budget_id IS NULL AND target_cash_for_work_budget_id IS NOT NULL) OR (target_program_id IS NULL AND target_assistance_case_budget_id IS NULL AND target_cash_for_work_budget_id IS NULL)");
+                        });
+                });
+
+            modelBuilder.Entity("AttendanceShiftingManagement.Models.ProjectBudgetSource", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AyudaProgramId")
+                        .HasColumnType("int")
+                        .HasColumnName("ayuda_program_id");
+
+                    b.Property<int>("BudgetBucketId")
+                        .HasColumnType("int")
+                        .HasColumnName("budget_bucket_id");
+
+                    b.Property<string>("BudgetBucketType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)")
+                        .HasColumnName("budget_bucket_type");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("int")
+                        .HasColumnName("priority");
+
+                    b.Property<Guid>("SyncId")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AyudaProgramId", "Priority");
+
+                    b.ToTable("ayuda_project_budget_sources");
                 });
 
             modelBuilder.Entity("AttendanceShiftingManagement.Models.ScannerSession", b =>
@@ -1489,6 +1661,12 @@ namespace AttendanceShiftingManagement.Data.Migrations
                         .HasMaxLength(80)
                         .HasColumnType("varchar(80)")
                         .HasColumnName("session_token");
+
+                    b.Property<Guid>("SyncId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
 
                     b.HasKey("Id");
 
@@ -1561,6 +1739,10 @@ namespace AttendanceShiftingManagement.Data.Migrations
                         .HasColumnType("tinyint(1)")
                         .HasColumnName("is_active");
 
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
+
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasMaxLength(255)
@@ -1571,6 +1753,9 @@ namespace AttendanceShiftingManagement.Data.Migrations
                         .IsRequired()
                         .HasColumnType("longtext")
                         .HasColumnName("role");
+
+                    b.Property<Guid>("SyncId")
+                        .HasColumnType("char(36)");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime(6)")
@@ -1591,6 +1776,82 @@ namespace AttendanceShiftingManagement.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("users");
+                });
+
+            modelBuilder.Entity("AttendanceShiftingManagement.Models.UserPermission", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("CanAccessAppDatabase")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("can_access_app_database");
+
+                    b.Property<bool>("CanAccessAssistanceCases")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("can_access_assistance_cases");
+
+                    b.Property<bool>("CanAccessBorrowing")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("can_access_borrowing");
+
+                    b.Property<bool>("CanAccessBudget")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("can_access_budget");
+
+                    b.Property<bool>("CanAccessCashForWork")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("can_access_cash_for_work");
+
+                    b.Property<bool>("CanAccessDashboard")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("can_access_dashboard");
+
+                    b.Property<bool>("CanAccessDistribution")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("can_access_distribution");
+
+                    b.Property<bool>("CanAccessGgmsBudgetSource")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("can_access_ggms_budget_source");
+
+                    b.Property<bool>("CanAccessGgmsTransactions")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("can_access_ggms_transactions");
+
+                    b.Property<bool>("CanAccessMasterList")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("can_access_master_list");
+
+                    b.Property<bool>("CanAccessReports")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("can_access_reports");
+
+                    b.Property<bool>("CanAccessScanningPortal")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("can_access_scanning_portal");
+
+                    b.Property<Guid>("SyncId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("user_permissions");
                 });
 
             modelBuilder.Entity("AttendanceShiftingManagement.Models.UserProfile", b =>
@@ -1647,6 +1908,9 @@ namespace AttendanceShiftingManagement.Data.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("varchar(255)")
                         .HasColumnName("photo_path");
+
+                    b.Property<Guid>("SyncId")
+                        .HasColumnType("char(36)");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime(6)")
@@ -1842,6 +2106,27 @@ namespace AttendanceShiftingManagement.Data.Migrations
                     b.Navigation("Asset");
                 });
 
+            modelBuilder.Entity("AttendanceShiftingManagement.Models.GovernmentBudgetSnapshot", b =>
+                {
+                    b.HasOne("AttendanceShiftingManagement.Models.AssistanceCaseBudget", "TargetAssistanceCaseBudget")
+                        .WithMany()
+                        .HasForeignKey("TargetAssistanceCaseBudgetId");
+
+                    b.HasOne("AttendanceShiftingManagement.Models.CashForWorkBudget", "TargetCashForWorkBudget")
+                        .WithMany()
+                        .HasForeignKey("TargetCashForWorkBudgetId");
+
+                    b.HasOne("AttendanceShiftingManagement.Models.AyudaProgram", "TargetProgram")
+                        .WithMany()
+                        .HasForeignKey("TargetProgramId");
+
+                    b.Navigation("TargetAssistanceCaseBudget");
+
+                    b.Navigation("TargetCashForWorkBudget");
+
+                    b.Navigation("TargetProgram");
+                });
+
             modelBuilder.Entity("AttendanceShiftingManagement.Models.HouseholdMember", b =>
                 {
                     b.HasOne("AttendanceShiftingManagement.Models.Household", "Household")
@@ -1851,6 +2136,49 @@ namespace AttendanceShiftingManagement.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Household");
+                });
+
+            modelBuilder.Entity("AttendanceShiftingManagement.Models.PrivateDonation", b =>
+                {
+                    b.HasOne("AttendanceShiftingManagement.Models.AssistanceCaseBudget", "TargetAssistanceCaseBudget")
+                        .WithMany()
+                        .HasForeignKey("TargetAssistanceCaseBudgetId");
+
+                    b.HasOne("AttendanceShiftingManagement.Models.CashForWorkBudget", "TargetCashForWorkBudget")
+                        .WithMany()
+                        .HasForeignKey("TargetCashForWorkBudgetId");
+
+                    b.HasOne("AttendanceShiftingManagement.Models.AyudaProgram", "TargetProgram")
+                        .WithMany()
+                        .HasForeignKey("TargetProgramId");
+
+                    b.Navigation("TargetAssistanceCaseBudget");
+
+                    b.Navigation("TargetCashForWorkBudget");
+
+                    b.Navigation("TargetProgram");
+                });
+
+            modelBuilder.Entity("AttendanceShiftingManagement.Models.ProjectBudgetSource", b =>
+                {
+                    b.HasOne("AttendanceShiftingManagement.Models.AyudaProgram", "AyudaProgram")
+                        .WithMany()
+                        .HasForeignKey("AyudaProgramId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AyudaProgram");
+                });
+
+            modelBuilder.Entity("AttendanceShiftingManagement.Models.UserPermission", b =>
+                {
+                    b.HasOne("AttendanceShiftingManagement.Models.User", "User")
+                        .WithOne()
+                        .HasForeignKey("AttendanceShiftingManagement.Models.UserPermission", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("AttendanceShiftingManagement.Models.UserProfile", b =>

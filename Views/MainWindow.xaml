@@ -66,6 +66,7 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="32" />
                 <RowDefinition Height="*" />
+                <RowDefinition Height="28" />
             </Grid.RowDefinitions>
 
             <!-- Branded Slim Title Bar (32px) -->
@@ -124,6 +125,17 @@
             <!-- Main Content Area -->
             <ContentControl Grid.Row="1"
                             Content="{Binding CurrentView}" />
+
+            <!-- Bottom Status Bar -->
+            <Border Grid.Row="2" Background="#1E293B">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0">
+                    <Ellipse Width="10" Height="10" Fill="{Binding ConnectionStatusBrush}" Margin="0,0,8,0" />
+                    <TextBlock Text="{Binding ConnectionStatusText}" Foreground="White" FontSize="11" />
+                    
+                    <!-- Optional GGMS Indicator (Could bind this separately if needed) -->
+                    <TextBlock Text="{Binding GgmsStatusText}" Foreground="#94A3B8" FontSize="11" Margin="20,0,0,0" />
+                </StackPanel>
+            </Border>
         </Grid>
     </Border>
 </Window>

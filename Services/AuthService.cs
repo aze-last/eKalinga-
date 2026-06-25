@@ -1,15 +1,15 @@
-﻿using AttendanceShiftingManagement.Data;
+using AttendanceShiftingManagement.Data;
 using AttendanceShiftingManagement.Models;
 namespace AttendanceShiftingManagement.Services
 {
     public class AuthService
     {
-        private readonly AppDbContext _context;
+        private readonly LocalDbContext _context;
         private readonly AuditService _auditService;
 
         public AuthService()
         {
-            _context = new AppDbContext();
+            _context = new LocalDbContext();
             _auditService = new AuditService(_context);
         }
 

@@ -244,6 +244,30 @@ Constraints:
 Verification:
 Run dotnet build.
 
+## Core Business Logic Locks
+
+### 1. Budget Waterfall & Earmarking
+*   **Funding Streams:** The system receives funds from two main streams: **Government (GGMS)** and **Private Donations**.
+*   **Earmarking/Targeting:** Incoming funds can be earmarked (locked) to specific sub-budgets: Aid Requests (Assistance Cases), Cash-for-Work, or Project Distributions.
+*   **Waterfall Consumption:** When an assistance case or project releases funds, it must follow the waterfall sequence. If the earmarked budget bucket has sufficient remaining capacity, it consumes from there; otherwise, it cascades down to general Private or Government funds based on priority.
+*   **Safety Rule:** Agents must **NEVER** break the connection between the core funding streams (GGMS/Private) and the sub-budgets. Do not implement independent, disconnected budget fields that bypass the waterfall ledger.
+
+### 2. Aid Request (Assistance Case) Workflow
+*   **Lifecycle:** Aid requests follow a strict state pipeline: `Pending` -> `UnderReview` -> `Approved` -> `Released` (or `Rejected`/`Cancelled`).
+*   **Approval & Release:** A request must transition to `Approved` with an explicitly assigned `ApprovedAmount` before funds can be released.
+*   **Budget Coupling:** Upon `Released`, the system MUST record a `BudgetLedgerEntry` pulling from the `AssistanceCaseBudget` (Global or Earmarked). This directly triggers the Budget Waterfall.
+*   **Independence:** Aid Requests are designed for individual or walk-in assistance and are separate from bulk Project Distributions, though they draw from the same overarching funding streams.
+
+### 3. Cash-for-Work Workflow
+*   **Structure:** Organized around specific `CashForWorkEvent` activities where beneficiaries are enrolled as participants.
+*   **Attendance & Payouts:** Wages are distributed based on logged attendance. Payouts must be verified against attendance records.
+*   **Budget Coupling:** Payouts pull directly from the `CashForWorkBudget` bucket (Global or Earmarked), which in turn triggers the overarching Budget Waterfall.
+
+### 4. Project Distribution Workflow
+*   **Structure:** Designed for bulk disbursements. Projects are no longer created independently but are spawned directly from a specific funding source (Private Donation or GGMS Budget) in the Budget Module.
+*   **Enrollment:** Beneficiary selection relies exclusively on manual and bulk selection from the approved masterlist. Auto-enrollment via demographics (e.g., all Senior Citizens) is NOT supported.
+*   **Funding & Claiming:** The project funding is automatically derived from and constrained by its parent donation/GGMS amount (1:1 relationship). The required budget (Unit Amount * Selected Beneficiaries) must never exceed the source fund. When a beneficiary claims their distribution, it logs a `BudgetLedgerEntry` pulling directly from the explicitly linked source fund.
+
 ## Agent Swarm & Modules
 
 Before starting any workflow or UI task:

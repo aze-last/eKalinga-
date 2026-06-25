@@ -23,6 +23,9 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _officeName = "Local Government Unit";
         private string _softwareTitle = "eKalinga+ Ayuda Management System";
         private string _softwareSubtitle = "Centralized barangay assistance operations";
+        private string _connectionStatusText = "Connecting...";
+        private Brush _connectionStatusBrush = Brushes.Gray;
+        private string _ggmsStatusText = "GGMS: Checking...";
 
         public BarangayMainViewModel(User currentUser)
         {
@@ -42,6 +45,14 @@ namespace AttendanceShiftingManagement.ViewModels
             RefreshBranding();
             RefreshConnectionSummary();
             LoadUserSummary();
+
+            // Subscribe to connectivity and sync events
+            ConnectivityService.Instance.ConnectivityChanged += OnConnectivityChanged;
+            SyncService.Instance.SyncStatusChanged += OnSyncStatusChanged;
+            SyncService.Instance.LastSyncUpdated += OnLastSyncUpdated;
+
+            // Trigger initial state
+            UpdateConnectivityStatus(ConnectivityService.Instance.IsOnline, ConnectivityService.Instance.IsGgmsAvailable);
         }
 
         public object CurrentView
@@ -68,6 +79,24 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             get => _connectionSummary;
             private set => SetProperty(ref _connectionSummary, value);
+        }
+
+        public string ConnectionStatusText
+        {
+            get => _connectionStatusText;
+            private set => SetProperty(ref _connectionStatusText, value);
+        }
+
+        public Brush ConnectionStatusBrush
+        {
+            get => _connectionStatusBrush;
+            private set => SetProperty(ref _connectionStatusBrush, value);
+        }
+
+        public string GgmsStatusText
+        {
+            get => _ggmsStatusText;
+            private set => SetProperty(ref _ggmsStatusText, value);
         }
 
         public string OfficeName
@@ -253,7 +282,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private void LoadUserSummary()
         {
-            using var context = new Data.AppDbContext();
+            using var context = new Data.LocalDbContext();
             var profile = context.UserProfiles.FirstOrDefault(item => item.UserId == _currentUser.Id);
 
             UserDisplayName = !string.IsNullOrWhiteSpace(profile?.FullName)
@@ -303,6 +332,57 @@ namespace AttendanceShiftingManagement.ViewModels
 
             var initials = new string(parts.ToArray());
             return string.IsNullOrWhiteSpace(initials) ? "LGU" : initials;
+        }
+
+        private void OnConnectivityChanged(object? sender, ConnectivityStatusChangedEventArgs e)
+        {
+            Application.Current.Dispatcher.InvokeAsync(() => UpdateConnectivityStatus(e.IsOnline, e.IsGgmsAvailable));
+        }
+
+        private void OnSyncStatusChanged(object? sender, string status)
+        {
+            Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                if (ConnectivityService.Instance.IsOnline)
+                {
+                    ConnectionStatusText = $"Online - {status}";
+                }
+            });
+        }
+
+        private void OnLastSyncUpdated(object? sender, DateTime lastSync)
+        {
+            Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                if (ConnectivityService.Instance.IsOnline)
+                {
+                    var mins = (int)(DateTime.UtcNow - lastSync).TotalMinutes;
+                    ConnectionStatusText = $"Online - Synced {mins} mins ago";
+                }
+            });
+        }
+
+        private void UpdateConnectivityStatus(bool isOnline, bool isGgmsAvailable)
+        {
+            if (isOnline)
+            {
+                ConnectionStatusBrush = Brushes.LimeGreen;
+                ConnectionStatusText = "Online - Ready to sync";
+            }
+            else
+            {
+                ConnectionStatusBrush = Brushes.OrangeRed;
+                ConnectionStatusText = "Offline - Changes saved locally";
+            }
+
+            if (isGgmsAvailable)
+            {
+                GgmsStatusText = "GGMS: Online";
+            }
+            else
+            {
+                GgmsStatusText = "GGMS: Offline";
+            }
         }
     }
 }
