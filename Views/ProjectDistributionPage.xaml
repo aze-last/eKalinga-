@@ -658,8 +658,51 @@
                                     <TextBlock Text="{Binding SelectedProgram.ProgramName}" FontSize="14" Foreground="White" FontWeight="SemiBold"/>
                                 </StackPanel>
                                 <StackPanel>
+                                    <StackPanel.Style>
+                                        <Style TargetType="StackPanel">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding SelectedProgram.ReleaseKind}" Value="Cash">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </StackPanel.Style>
                                     <TextBlock Text="AMOUNT" FontSize="10" Foreground="#A0B0C0" FontWeight="Bold"/>
                                     <TextBlock Text="{Binding SelectedProgram.UnitAmount, StringFormat='PHP {0:N2}'}" FontSize="18" Foreground="{DynamicResource BrandYellowBrush}" FontWeight="Bold"/>
+                                </StackPanel>
+                                
+                                <StackPanel Margin="0,0,30,0">
+                                    <StackPanel.Style>
+                                        <Style TargetType="StackPanel">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding SelectedProgram.ReleaseKind}" Value="Goods">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </StackPanel.Style>
+                                    <TextBlock Text="ITEM" FontSize="10" Foreground="#A0B0C0" FontWeight="Bold"/>
+                                    <TextBlock Text="{Binding SelectedProgram.ItemName}" FontSize="18" Foreground="{DynamicResource BrandYellowBrush}" FontWeight="Bold"/>
+                                </StackPanel>
+
+                                <StackPanel>
+                                    <StackPanel.Style>
+                                        <Style TargetType="StackPanel">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding SelectedProgram.ReleaseKind}" Value="Goods">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </StackPanel.Style>
+                                    <TextBlock Text="QUANTITY" FontSize="10" Foreground="#A0B0C0" FontWeight="Bold"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding SelectedProgram.QuantityPerBeneficiary, StringFormat='{}{0:0.##}'}" FontSize="18" Foreground="{DynamicResource BrandYellowBrush}" FontWeight="Bold" Margin="0,0,4,0"/>
+                                        <TextBlock Text="{Binding SelectedProgram.UnitOfMeasure}" FontSize="18" Foreground="{DynamicResource BrandYellowBrush}" FontWeight="Bold"/>
+                                    </StackPanel>
                                 </StackPanel>
                             </StackPanel>
 

@@ -45,6 +45,26 @@ namespace AttendanceShiftingManagement.Services
 
         public async Task<ProjectDistributionOperationResult> AddBeneficiaryAsync(int ayudaProgramId, int beneficiaryStagingId, int actedByUserId)
         {
+            if (RemoteWriteExecutionService.ShouldRouteToRemote(_context))
+            {
+                try
+                {
+                    var remoteResult = await RemoteWriteExecutionService.ExecuteRemoteWriteAsync(
+                        _context,
+                        async remoteContext =>
+                        {
+                            var remoteService = new ProjectDistributionService(remoteContext, null, _ggmsConsolidatedTransactionService);
+                            return await remoteService.AddBeneficiaryAsync(ayudaProgramId, beneficiaryStagingId, actedByUserId);
+                        });
+
+                    if (!remoteResult.IsSuccess) return remoteResult;
+                }
+                catch (Exception ex)
+                {
+                    return new ProjectDistributionOperationResult(false, $"Remote enrollment failed. {ex.Message}");
+                }
+            }
+
             var program = await _context.AyudaPrograms
                 .AsNoTracking()
                 .FirstOrDefaultAsync(item => item.Id == ayudaProgramId && item.IsActive);
@@ -132,6 +152,26 @@ namespace AttendanceShiftingManagement.Services
 
         public async Task<ProjectDistributionOperationResult> BulkAddBeneficiariesAsync(int ayudaProgramId, IEnumerable<int> beneficiaryStagingIds, int actedByUserId)
         {
+            if (RemoteWriteExecutionService.ShouldRouteToRemote(_context))
+            {
+                try
+                {
+                    var remoteResult = await RemoteWriteExecutionService.ExecuteRemoteWriteAsync(
+                        _context,
+                        async remoteContext =>
+                        {
+                            var remoteService = new ProjectDistributionService(remoteContext, null, _ggmsConsolidatedTransactionService);
+                            return await remoteService.BulkAddBeneficiariesAsync(ayudaProgramId, beneficiaryStagingIds, actedByUserId);
+                        });
+
+                    if (!remoteResult.IsSuccess) return remoteResult;
+                }
+                catch (Exception ex)
+                {
+                    return new ProjectDistributionOperationResult(false, $"Remote enrollment failed. {ex.Message}");
+                }
+            }
+
             var program = await _context.AyudaPrograms
                 .AsNoTracking()
                 .FirstOrDefaultAsync(item => item.Id == ayudaProgramId && item.IsActive);
@@ -392,15 +432,21 @@ namespace AttendanceShiftingManagement.Services
 
         public async Task<ProjectDistributionQualificationResult> EvaluateQualificationAsync(int ayudaProgramId, int beneficiaryStagingId)
         {
+            ScanDiagnosticLogger.Log("EvaluateQualificationAsync", _context, $"START | ProgramId={ayudaProgramId} | StagingId={beneficiaryStagingId}");
+
             var membership = await ResolveMembershipAsync(ayudaProgramId, beneficiaryStagingId);
 
             if (membership == null)
             {
+                ScanDiagnosticLogger.Log("EvaluateQualificationAsync", _context, $"RESULT=NOT_INCLUDED | ProgramId={ayudaProgramId} | StagingId={beneficiaryStagingId}");
                 return new ProjectDistributionQualificationResult(false, false, "Beneficiary is not included in the selected project.");
             }
 
+            ScanDiagnosticLogger.Log("EvaluateQualificationAsync", _context, $"MEMBERSHIP_FOUND | MembershipId={membership.Id} | MembershipStagingId={membership.BeneficiaryStagingId} | MembershipBeneficiaryId={membership.BeneficiaryId} | Status={membership.Status}");
+
             if (membership.Status == DistributionBeneficiaryStatus.Rejected)
             {
+                ScanDiagnosticLogger.Log("EvaluateQualificationAsync", _context, "RESULT=REJECTED");
                 return new ProjectDistributionQualificationResult(
                     true,
                     false,
@@ -415,6 +461,7 @@ namespace AttendanceShiftingManagement.Services
 
             if (claim != null)
             {
+                ScanDiagnosticLogger.Log("EvaluateQualificationAsync", _context, $"RESULT=ALREADY_CLAIMED | ClaimId={claim.Id} | ClaimedAt={claim.ClaimedAt}");
                 return new ProjectDistributionQualificationResult(
                     true,
                     true,
@@ -426,6 +473,7 @@ namespace AttendanceShiftingManagement.Services
                     claim.Id);
             }
 
+            ScanDiagnosticLogger.Log("EvaluateQualificationAsync", _context, $"RESULT=QUALIFIED | CanRelease={membership.Status == DistributionBeneficiaryStatus.Pending} | Status={membership.Status}");
             return new ProjectDistributionQualificationResult(
                 true,
                 false,
@@ -445,6 +493,26 @@ namespace AttendanceShiftingManagement.Services
             int actedByUserId,
             string? reason)
         {
+            if (RemoteWriteExecutionService.ShouldRouteToRemote(_context))
+            {
+                try
+                {
+                    var remoteResult = await RemoteWriteExecutionService.ExecuteRemoteWriteAsync(
+                        _context,
+                        async remoteContext =>
+                        {
+                            var remoteService = new ProjectDistributionService(remoteContext, null, _ggmsConsolidatedTransactionService);
+                            return await remoteService.UpdateBeneficiaryStatusAsync(ayudaProgramId, beneficiaryStagingId, targetStatus, actedByUserId, reason);
+                        });
+
+                    if (!remoteResult.IsSuccess) return remoteResult;
+                }
+                catch (Exception ex)
+                {
+                    return new ProjectDistributionOperationResult(false, $"Remote status update failed. {ex.Message}");
+                }
+            }
+
             var membership = await _context.AyudaProjectBeneficiaries
                 .FirstOrDefaultAsync(item =>
                     item.AyudaProgramId == ayudaProgramId &&
@@ -488,24 +556,34 @@ namespace AttendanceShiftingManagement.Services
             string? qrPayload,
             string? remarks)
         {
+            ScanDiagnosticLogger.Log("RecordClaimAsync", _context, $"START | ProgramId={ayudaProgramId} | StagingId={beneficiaryStagingId} | QrPayload={qrPayload}");
+
             if (RemoteWriteExecutionService.ShouldRouteToRemote(_context))
             {
+                ScanDiagnosticLogger.Log("RecordClaimAsync", _context, "ROUTING=REMOTE (ShouldRouteToRemote=true)");
                 try
                 {
                     var remoteResult = await RemoteWriteExecutionService.ExecuteRemoteWriteAsync(
                         _context,
                         async remoteContext =>
                         {
+                            ScanDiagnosticLogger.Log("RecordClaimAsync", remoteContext, $"REMOTE_CONTEXT_ENTERED | ProgramId={ayudaProgramId} | StagingId={beneficiaryStagingId}");
                             var remoteService = new ProjectDistributionService(remoteContext, null, _ggmsConsolidatedTransactionService);
                             return await remoteService.RecordClaimAsync(ayudaProgramId, beneficiaryStagingId, actedByUserId, qrPayload, remarks);
                         });
 
+                    ScanDiagnosticLogger.Log("RecordClaimAsync", _context, $"REMOTE_RESULT | IsSuccess={remoteResult.IsSuccess} | Msg={remoteResult.Message}");
                     if (!remoteResult.IsSuccess) return remoteResult;
                 }
                 catch (Exception ex)
                 {
+                    ScanDiagnosticLogger.Log("RecordClaimAsync", _context, $"REMOTE_ERROR | {ex.Message}");
                     return new ProjectDistributionOperationResult(false, $"Remote release failed. {ex.Message}");
                 }
+            }
+            else
+            {
+                ScanDiagnosticLogger.Log("RecordClaimAsync", _context, "ROUTING=LOCAL (ShouldRouteToRemote=false)");
             }
 
             if (string.IsNullOrWhiteSpace(qrPayload))
@@ -720,6 +798,8 @@ namespace AttendanceShiftingManagement.Services
 
         private async Task<AyudaProjectBeneficiary?> ResolveMembershipAsync(int ayudaProgramId, int beneficiaryStagingId)
         {
+            ScanDiagnosticLogger.Log("ResolveMembershipAsync", _context, $"START | ProgramId={ayudaProgramId} | StagingId={beneficiaryStagingId}");
+
             var exactMembership = await _context.AyudaProjectBeneficiaries
                 .AsNoTracking()
                 .FirstOrDefaultAsync(item =>
@@ -728,8 +808,11 @@ namespace AttendanceShiftingManagement.Services
 
             if (exactMembership != null)
             {
+                ScanDiagnosticLogger.Log("ResolveMembershipAsync", _context, $"EXACT_MATCH | MembershipId={exactMembership.Id} | StagingId={exactMembership.BeneficiaryStagingId} | BeneficiaryId={exactMembership.BeneficiaryId} | Status={exactMembership.Status}");
                 return exactMembership;
             }
+
+            ScanDiagnosticLogger.Log("ResolveMembershipAsync", _context, "EXACT_MATCH=NONE, trying staging fallback...");
 
             var staging = await _context.BeneficiaryStaging
                 .AsNoTracking()
@@ -737,8 +820,11 @@ namespace AttendanceShiftingManagement.Services
 
             if (staging == null)
             {
+                ScanDiagnosticLogger.Log("ResolveMembershipAsync", _context, $"STAGING_NOT_FOUND | StagingId={beneficiaryStagingId}");
                 return null;
             }
+
+            ScanDiagnosticLogger.Log("ResolveMembershipAsync", _context, $"STAGING_FOUND | StagingId={staging.StagingID} | BeneficiaryId={NormalizeNullable(staging.BeneficiaryId)} | CivilRegistryId={NormalizeNullable(staging.CivilRegistryId)}");
 
             var beneficiaryId = NormalizeNullable(staging.BeneficiaryId);
             if (beneficiaryId != null)
@@ -751,6 +837,7 @@ namespace AttendanceShiftingManagement.Services
 
                 if (beneficiaryMatch != null)
                 {
+                    ScanDiagnosticLogger.Log("ResolveMembershipAsync", _context, $"BENEFICIARY_ID_MATCH | MembershipId={beneficiaryMatch.Id} | StagingId={beneficiaryMatch.BeneficiaryStagingId} | BeneficiaryId={beneficiaryMatch.BeneficiaryId} | Status={beneficiaryMatch.Status}");
                     return beneficiaryMatch;
                 }
             }
@@ -758,13 +845,20 @@ namespace AttendanceShiftingManagement.Services
             var civilRegistryId = NormalizeNullable(staging.CivilRegistryId);
             if (civilRegistryId != null)
             {
-                return await _context.AyudaProjectBeneficiaries
+                var civilMatch = await _context.AyudaProjectBeneficiaries
                     .AsNoTracking()
                     .FirstOrDefaultAsync(item =>
                         item.AyudaProgramId == ayudaProgramId &&
                         item.CivilRegistryId == civilRegistryId);
+
+                if (civilMatch != null)
+                {
+                    ScanDiagnosticLogger.Log("ResolveMembershipAsync", _context, $"CIVIL_REGISTRY_MATCH | MembershipId={civilMatch.Id} | StagingId={civilMatch.BeneficiaryStagingId} | CivilRegistryId={civilMatch.CivilRegistryId} | Status={civilMatch.Status}");
+                    return civilMatch;
+                }
             }
 
+            ScanDiagnosticLogger.Log("ResolveMembershipAsync", _context, "RESULT=NO_MEMBERSHIP_FOUND");
             return null;
         }
 

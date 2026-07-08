@@ -59,6 +59,14 @@
                 </StackPanel>
 
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <Button Content="REFRESH" 
+                            Style="{StaticResource MaterialDesignRaisedButton}" 
+                            Background="Transparent" 
+                            BorderBrush="White" 
+                            BorderThickness="1" 
+                            Foreground="White" 
+                            Margin="0,0,10,0"
+                            Command="{Binding RefreshCommand}"/>
                     <Button Content="BROWSE / SELECT" 
                             Style="{StaticResource MaterialDesignRaisedButton}" 
                             Background="White" 
@@ -85,6 +93,7 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
                     <StackPanel Grid.Row="0" Margin="20,20,20,10">
@@ -134,6 +143,14 @@
                             </StackPanel>
                         </Border>
                     </ScrollViewer>
+
+                    <!-- Status Area -->
+                    <Border Grid.Row="2" Padding="20" Background="White" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="0,1,0,0">
+                        <StackPanel>
+                            <TextBlock Text="MODULE STATUS" FontSize="10" FontWeight="Bold" Foreground="#64748B" Margin="0,0,0,4"/>
+                            <TextBlock Text="{Binding StatusMessage}" Foreground="{Binding StatusBrush}" FontSize="12" TextWrapping="Wrap" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Border>
                 </Grid>
             </Border>
 
@@ -253,6 +270,7 @@
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="200"/>
+                                            <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <TextBox materialDesign:HintAssist.Hint="Search budget code or name..." 
                                                  Style="{StaticResource MaterialDesignOutlinedTextBox}"
@@ -262,6 +280,19 @@
                                                   ItemsSource="{Binding TypeFilters}"
                                                   SelectedItem="{Binding SelectedTypeFilter}"
                                                   Height="44"/>
+                                        <Button Grid.Column="2" 
+                                                Style="{StaticResource MaterialDesignRaisedButton}" 
+                                                Background="{StaticResource ActionAccentBrush}" 
+                                                BorderBrush="{StaticResource ActionAccentBrush}" 
+                                                Foreground="White"
+                                                Height="44"
+                                                Margin="16,0,0,0"
+                                                Command="{Binding RefreshCommand}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <materialDesign:PackIcon Kind="Refresh" Width="16" Height="16" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                                <TextBlock Text="REFRESH" VerticalAlignment="Center" FontWeight="Bold"/>
+                                            </StackPanel>
+                                        </Button>
                                     </Grid>
 
                                     <DataGrid ItemsSource="{Binding BudgetsView}"
@@ -354,7 +385,27 @@
                 <!-- Detail Header -->
                 <Border Grid.Row="0" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="0,0,0,1" Padding="30,20" Background="White">
                     <Grid>
-                        <StackPanel>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Back Button -->
+                        <Button Grid.Column="0" 
+                                Style="{StaticResource MaterialDesignFlatButton}" 
+                                Command="{Binding ClearSelectedBudgetCommand}"
+                                Foreground="{StaticResource PrimaryBrandBrush}"
+                                Margin="0,0,15,0"
+                                VerticalAlignment="Center"
+                                ToolTip="Back to Listing">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="ArrowLeft" Width="24" Height="24" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="BACK" VerticalAlignment="Center" FontWeight="Bold"/>
+                            </StackPanel>
+                        </Button>
+
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
                                 <Border Background="{StaticResource PrimaryBrandBrush}" CornerRadius="4" Padding="8,2" Margin="0,0,10,0">
                                     <TextBlock Text="{Binding SelectedBudget.Category}" Foreground="White" FontSize="10" FontWeight="Bold"/>
@@ -364,7 +415,7 @@
                             <TextBlock Text="{Binding SelectedBudget.Name}" FontSize="24" FontWeight="Bold" Foreground="{StaticResource PrimaryBrandBrush}"/>
                         </StackPanel>
 
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                             <!-- Detail View Create Project Button Removed as requested -->
                             <Button Style="{StaticResource MaterialDesignIconButton}" Command="{Binding NavigatePreviousCommand}" Foreground="{StaticResource PrimaryBrandBrush}">
                                 <materialDesign:PackIcon Kind="ChevronLeft"/>
@@ -544,11 +595,40 @@
                                          Text="{Binding DonorName}"
                                          Margin="0,0,0,15"/>
 
+                                <TextBlock Text="Donation Type *" Foreground="#64748B" Margin="0,0,0,5" FontSize="12"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
+                                    <RadioButton Content="Cash" IsChecked="{Binding IsCashDonation}" Style="{StaticResource MaterialDesignRadioButton}" Margin="0,0,20,0" Foreground="{StaticResource PrimaryBrandBrush}" Cursor="Hand"/>
+                                    <RadioButton Content="Goods" IsChecked="{Binding IsGoodsDonation}" Style="{StaticResource MaterialDesignRadioButton}" Foreground="{StaticResource PrimaryBrandBrush}" Cursor="Hand"/>
+                                </StackPanel>
+
+                                <!-- Cash Fields -->
                                 <TextBox materialDesign:HintAssist.Hint="Donation Amount (PHP) *" 
                                          Style="{StaticResource MaterialDesignOutlinedTextBox}"
                                          Text="{Binding DonationAmountText}"
                                          FontSize="20" FontWeight="Bold"
+                                         Visibility="{Binding IsCashDonation, Converter={StaticResource BooleanToVisibilityConverter}}"
                                          Margin="0,0,0,15"/>
+
+                                <!-- Goods Fields -->
+                                <StackPanel Visibility="{Binding IsGoodsDonation, Converter={StaticResource BooleanToVisibilityConverter}}" Margin="0,0,0,15">
+                                    <TextBox materialDesign:HintAssist.Hint="Item Name *" 
+                                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                             Text="{Binding DonationItemName}"
+                                             Margin="0,0,0,10"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="10"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox Grid.Column="0" materialDesign:HintAssist.Hint="Quantity *" 
+                                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                                 Text="{Binding DonationQuantityText}"/>
+                                        <TextBox Grid.Column="2" materialDesign:HintAssist.Hint="Unit of Measure (e.g. Sacks) *" 
+                                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                                 Text="{Binding DonationUnitOfMeasure}"/>
+                                    </Grid>
+                                </StackPanel>
 
                                 <DatePicker materialDesign:HintAssist.Hint="Date Received *" 
                                             Style="{StaticResource MaterialDesignOutlinedDatePicker}"
@@ -582,7 +662,7 @@
                                     <TextBox materialDesign:HintAssist.Hint="Proof File Path" 
                                              Style="{StaticResource MaterialDesignOutlinedTextBox}"
                                              Text="{Binding ProofFilePath}" IsReadOnly="True"/>
-                                    <Button Grid.Column="1" Content="..." Command="{Binding BrowseProofCommand}" Margin="5,0,0,0" Style="{StaticResource MaterialDesignRaisedButton}" Background="{StaticResource PrimaryBrandBrush}" Foreground="White"/>
+                                    <Button Grid.Column="1" Content="..." Command="{Binding BrowseProofCommand}" Margin="5,0,0,0" Style="{StaticResource MaterialDesignRaisedButton}" Background="{StaticResource PrimaryBrandBrush}" Foreground="White" Cursor="Hand"/>
                                 </Grid>
 
                                 <TextBox materialDesign:HintAssist.Hint="Remarks" 
@@ -595,8 +675,8 @@
                     </ScrollViewer>
 
                     <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="20">
-                        <Button Content="CANCEL" Style="{StaticResource MaterialDesignFlatButton}" Command="{Binding CloseDonationPanelCommand}" Margin="0,0,10,0" Foreground="#64748B"/>
-                        <Button Content="SAVE DONATION" Command="{Binding RecordDonationCommand}" Style="{StaticResource MaterialDesignRaisedButton}" Background="{StaticResource ActionAccentBrush}" BorderBrush="{StaticResource ActionAccentBrush}" Foreground="White"/>
+                        <Button Content="CANCEL" Style="{StaticResource MaterialDesignFlatButton}" Command="{Binding CloseDonationPanelCommand}" Margin="0,0,10,0" Foreground="#64748B" Cursor="Hand"/>
+                        <Button Content="SAVE DONATION" Command="{Binding RecordDonationCommand}" Style="{StaticResource MaterialDesignRaisedButton}" Background="{StaticResource ActionAccentBrush}" BorderBrush="{StaticResource ActionAccentBrush}" Foreground="White" Cursor="Hand"/>
                     </StackPanel>
                 </Grid>
             </materialDesign:Card>

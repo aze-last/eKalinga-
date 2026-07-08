@@ -116,6 +116,10 @@ namespace AttendanceShiftingManagement.ViewModels
         private PrivateDonationDonorType _selectedDonorType = PrivateDonationDonorType.Person;
         private DonationProofType _selectedProofType = DonationProofType.Cash;
         private string _donorName = string.Empty;
+        private bool _isCashDonation = true;
+        private string _donationItemName = string.Empty;
+        private string _donationQuantityText = string.Empty;
+        private string _donationUnitOfMeasure = string.Empty;
         private string _donationAmountText = string.Empty;
         private DateTime _donationDateReceived = DateTime.Today;
         private string _donationReferenceNumber = string.Empty;
@@ -1099,6 +1103,58 @@ namespace AttendanceShiftingManagement.ViewModels
             set => SetProperty(ref _donationAmountText, value);
         }
 
+        public bool IsCashDonation
+        {
+            get => _isCashDonation;
+            set
+            {
+                if (SetProperty(ref _isCashDonation, value))
+                {
+                    OnPropertyChanged(nameof(IsGoodsDonation));
+                    if (value)
+                    {
+                        DonationItemName = string.Empty;
+                        DonationQuantityText = string.Empty;
+                        DonationUnitOfMeasure = string.Empty;
+                    }
+                }
+            }
+        }
+
+        public bool IsGoodsDonation
+        {
+            get => !_isCashDonation;
+            set
+            {
+                if (SetProperty(ref _isCashDonation, !value))
+                {
+                    OnPropertyChanged(nameof(IsCashDonation));
+                    if (value)
+                    {
+                        DonationAmountText = string.Empty;
+                    }
+                }
+            }
+        }
+
+        public string DonationItemName
+        {
+            get => _donationItemName;
+            set => SetProperty(ref _donationItemName, value);
+        }
+
+        public string DonationQuantityText
+        {
+            get => _donationQuantityText;
+            set => SetProperty(ref _donationQuantityText, value);
+        }
+
+        public string DonationUnitOfMeasure
+        {
+            get => _donationUnitOfMeasure;
+            set => SetProperty(ref _donationUnitOfMeasure, value);
+        }
+
         public DateTime DonationDateReceived
         {
             get => _donationDateReceived;
@@ -1403,10 +1459,43 @@ namespace AttendanceShiftingManagement.ViewModels
                 return;
             }
 
-            if (!TryParseAmount(DonationAmountText, out var amount))
+            decimal amount = 0m;
+            string? itemName = null;
+            decimal? quantity = null;
+            string? unitOfMeasure = null;
+            DonationType donationType = DonationType.Cash;
+
+            if (IsCashDonation)
             {
-                SetErrorStatus("Enter a valid donation amount greater than zero.");
-                return;
+                if (!TryParseAmount(DonationAmountText, out amount))
+                {
+                    SetErrorStatus("Enter a valid donation amount greater than zero.");
+                    return;
+                }
+            }
+            else
+            {
+                donationType = DonationType.Goods;
+                itemName = NormalizeNullable(DonationItemName);
+                if (string.IsNullOrWhiteSpace(itemName))
+                {
+                    SetErrorStatus("Enter the item name for the goods donation.");
+                    return;
+                }
+
+                if (string.IsNullOrWhiteSpace(DonationQuantityText) || !decimal.TryParse(DonationQuantityText, out var qty) || qty <= 0)
+                {
+                    SetErrorStatus("Enter a valid quantity greater than zero.");
+                    return;
+                }
+                quantity = qty;
+
+                unitOfMeasure = NormalizeNullable(DonationUnitOfMeasure);
+                if (string.IsNullOrWhiteSpace(unitOfMeasure))
+                {
+                    SetErrorStatus("Enter the unit of measure (e.g. Sacks, Boxes).");
+                    return;
+                }
             }
 
             IsBusy = true;
@@ -1424,7 +1513,11 @@ namespace AttendanceShiftingManagement.ViewModels
                     new PrivateDonationRequest(
                         SelectedDonorType,
                         DonorName,
+                        donationType,
                         amount,
+                        itemName,
+                        quantity,
+                        unitOfMeasure,
                         DonationDateReceived,
                         NormalizeNullable(DonationReferenceNumber),
                         NormalizeNullable(DonationRemarks),
@@ -1792,6 +1885,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 return;
             }
 
+            ResetDonationForm();
             _ = LoadTargetOptionsAsync();
             SetActivePanel(BudgetWorkspacePanel.Donation);
         }
@@ -2060,6 +2154,10 @@ namespace AttendanceShiftingManagement.ViewModels
             DonationRemarks = string.Empty;
             ProofReferenceNumber = string.Empty;
             ProofFilePath = string.Empty;
+            IsCashDonation = true;
+            DonationItemName = string.Empty;
+            DonationQuantityText = string.Empty;
+            DonationUnitOfMeasure = string.Empty;
         }
 
         private void SetOtpNeutral(string message)

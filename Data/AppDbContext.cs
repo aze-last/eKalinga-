@@ -138,6 +138,10 @@ namespace AttendanceShiftingManagement.Data
                 .HasConversion<string>();
 
             modelBuilder.Entity<PrivateDonation>()
+                .Property(donation => donation.DonationType)
+                .HasConversion<string>();
+
+            modelBuilder.Entity<PrivateDonation>()
                 .HasCheckConstraint("CK_PrivateDonation_SingleTarget",
                     "(target_program_id IS NOT NULL AND target_assistance_case_budget_id IS NULL AND target_cash_for_work_budget_id IS NULL) OR " +
                     "(target_program_id IS NULL AND target_assistance_case_budget_id IS NOT NULL AND target_cash_for_work_budget_id IS NULL) OR " +

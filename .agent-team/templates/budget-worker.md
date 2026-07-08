@@ -18,6 +18,11 @@ Allowed files: `BudgetPage.xaml`, `BudgetViewModel.cs`, `BudgetManagementService
   - Top: High-level summary cards (Total Funds, Allocated, Remaining).
   - Bottom: The Budget Ledger / Transaction history. **CRITICAL: This list MUST be paginated.**
 - **Consistency:** Use standard dashboard card styles for summaries.
+- **Private Donation Form Fields Visibility:** When recording a private donation:
+  - If **Cash** is selected, the *Donation Amount (PHP)* field must be visible, and all Goods-related fields (*Item Name*, *Quantity*, *Unit of Measure*) must be hidden.
+  - If **Goods** is selected, the *Donation Amount (PHP)* field must be hidden, and all Goods-related fields (*Item Name*, *Quantity*, *Unit of Measure*) must be visible.
+  - Toggling between Cash and Goods must automatically clear the hidden fields to prevent residual/invalid inputs from being saved.
+  - Opening the donation panel must call `ResetDonationForm()` to clear any previous entries.
 
 ## Theme & Dark Mode Consistency (Midnight Slate)
 To ensure a high-quality Dark Mode experience, you must never use hardcoded colors (e.g., "White", "#F8FAFC") or StaticResource for brushes.

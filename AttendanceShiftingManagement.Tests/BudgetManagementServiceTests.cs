@@ -165,8 +165,8 @@ public sealed class BudgetManagementServiceTests
 
         var program = Assert.Single(context.AyudaPrograms);
         Assert.Equal("Rice Assistance", program.AssistanceType);
-        Assert.Equal(2500m, program.UnitAmount);
-        Assert.Equal("1 sack of rice", program.ItemDescription);
+        Assert.Equal(1500m, program.UnitAmount);
+        Assert.Equal("Goods details", program.ItemDescription);
         Assert.Equal(100000m, program.BudgetCap);
         Assert.Equal(AyudaProgramDistributionStatus.Draft, program.DistributionStatus);
         Assert.Null(program.StartDate);

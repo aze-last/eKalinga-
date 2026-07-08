@@ -65,7 +65,11 @@ namespace AttendanceShiftingManagement.Services
     public sealed record PrivateDonationRequest(
         PrivateDonationDonorType DonorType,
         string DonorName,
+        DonationType DonationType,
         decimal Amount,
+        string? ItemName,
+        decimal? Quantity,
+        string? UnitOfMeasure,
         DateTime DateReceived,
         string? ReferenceNumber,
         string? Remarks,
@@ -74,7 +78,41 @@ namespace AttendanceShiftingManagement.Services
         string? ProofFilePath,
         int? TargetProgramId = null,
         int? TargetAssistanceCaseBudgetId = null,
-        int? TargetCashForWorkBudgetId = null);
+        int? TargetCashForWorkBudgetId = null)
+    {
+        public PrivateDonationRequest(
+            PrivateDonationDonorType donorType,
+            string donorName,
+            decimal amount,
+            DateTime dateReceived,
+            string? referenceNumber,
+            string? remarks,
+            DonationProofType proofType,
+            string? proofReferenceNumber,
+            string? proofFilePath,
+            int? targetProgramId = null,
+            int? targetAssistanceCaseBudgetId = null,
+            int? targetCashForWorkBudgetId = null)
+            : this(
+                donorType,
+                donorName,
+                DonationType.Cash,
+                amount,
+                null,
+                null,
+                null,
+                dateReceived,
+                referenceNumber,
+                remarks,
+                proofType,
+                proofReferenceNumber,
+                proofFilePath,
+                targetProgramId,
+                targetAssistanceCaseBudgetId,
+                targetCashForWorkBudgetId)
+        {
+        }
+    }
 
     public sealed record PrivateDonationOperationResult(bool IsSuccess, string Message, int? DonationId = null, int? LedgerEntryId = null);
 
@@ -362,6 +400,20 @@ namespace AttendanceShiftingManagement.Services
                 return new AyudaProgramOperationResult(false, "Goods distribution projects require an item name.");
             }
 
+            if (request.SourceDonationId.HasValue)
+            {
+                var donation = await _context.PrivateDonations.AsNoTracking()
+                    .FirstOrDefaultAsync(d => d.Id == request.SourceDonationId.Value);
+
+                if (donation != null && donation.DonationType == DonationType.Goods)
+                {
+                    if (request.ReleaseKind != AssistanceReleaseKind.Goods)
+                    {
+                        return new AyudaProgramOperationResult(false, "Projects linked to a Goods donation must use the Goods release kind.");
+                    }
+                }
+            }
+
             var ayudaProgram = new AyudaProgram
             {
                 ProgramCode = programCode,
@@ -370,11 +422,11 @@ namespace AttendanceShiftingManagement.Services
                 Description = NormalizeNullable(request.Description),
                 AssistanceType = assistanceType,
                 ReleaseKind = request.ReleaseKind,
-                UnitAmount = request.UnitAmount,
+                UnitAmount = request.ReleaseKind == AssistanceReleaseKind.Goods ? null : request.UnitAmount,
                 ItemDescription = itemDescription,
-                ItemName = NormalizeNullable(request.ItemName),
+                ItemName = request.ReleaseKind == AssistanceReleaseKind.Goods ? NormalizeRequired(request.ItemName) : NormalizeNullable(request.ItemName),
                 QuantityPerBeneficiary = request.QuantityPerBeneficiary,
-                UnitOfMeasure = NormalizeNullable(request.UnitOfMeasure),
+                UnitOfMeasure = request.ReleaseKind == AssistanceReleaseKind.Goods ? NormalizeRequired(request.UnitOfMeasure) : NormalizeNullable(request.UnitOfMeasure),
                 StartDate = request.StartDate?.Date,
                 EndDate = request.EndDate?.Date,
                 BudgetCap = request.BudgetCap,
@@ -452,9 +504,16 @@ namespace AttendanceShiftingManagement.Services
 
         public async Task<PrivateDonationOperationResult> RecordPrivateDonationAsync(PrivateDonationRequest request, int recordedByUserId)
         {
-            if (request.Amount <= 0)
+            if (request.DonationType == DonationType.Cash && request.Amount <= 0)
             {
-                return new PrivateDonationOperationResult(false, "Donation amount must be greater than zero.");
+                return new PrivateDonationOperationResult(false, "Cash donation amount must be greater than zero.");
+            }
+
+            if (request.DonationType == DonationType.Goods)
+            {
+                if (string.IsNullOrWhiteSpace(request.ItemName)) return new PrivateDonationOperationResult(false, "Goods donation requires an item name.");
+                if (request.Quantity is null or <= 0) return new PrivateDonationOperationResult(false, "Goods donation requires a quantity greater than zero.");
+                if (string.IsNullOrWhiteSpace(request.UnitOfMeasure)) return new PrivateDonationOperationResult(false, "Goods donation requires a unit of measure.");
             }
 
             if ((request.TargetProgramId.HasValue ? 1 : 0) +
@@ -469,7 +528,11 @@ namespace AttendanceShiftingManagement.Services
             {
                 DonorType = request.DonorType,
                 DonorName = donorName,
-                Amount = request.Amount,
+                DonationType = request.DonationType,
+                Amount = request.DonationType == DonationType.Cash ? request.Amount : 0,
+                ItemName = request.DonationType == DonationType.Goods ? NormalizeRequired(request.ItemName) : null,
+                Quantity = request.DonationType == DonationType.Goods ? request.Quantity : null,
+                UnitOfMeasure = request.DonationType == DonationType.Goods ? NormalizeRequired(request.UnitOfMeasure) : null,
                 DateReceived = request.DateReceived.Date,
                 ReferenceNumber = NormalizeNullable(request.ReferenceNumber),
                 Remarks = NormalizeNullable(request.Remarks),
@@ -488,17 +551,17 @@ namespace AttendanceShiftingManagement.Services
 
             var ledgerEntry = new BudgetLedgerEntry
             {
-                EntryType = BudgetLedgerEntryType.Donation,
+                EntryType = request.DonationType == DonationType.Goods ? BudgetLedgerEntryType.GoodsDonation : BudgetLedgerEntryType.Donation,
                 FeatureSource = BudgetLedgerFeatureSource.BudgetModule,
                 SourceRecordId = $"donation:{donation.Id}",
                 ProgramId = null,
                 RecipientCount = 0,
                 TotalAmount = donation.Amount,
                 GovernmentPortion = 0m,
-                PrivatePortion = donation.Amount,
+                PrivatePortion = request.DonationType == DonationType.Goods ? 0m : donation.Amount,
                 EntryDate = donation.DateReceived.Date,
                 Remarks = donation.Remarks ?? $"Private donation from {donorName}.",
-                ReleaseKind = null,
+                ReleaseKind = request.DonationType == DonationType.Goods ? AssistanceReleaseKind.Goods : null,
                 RecordedByUserId = recordedByUserId,
                 CreatedAt = DateTime.Now
             };

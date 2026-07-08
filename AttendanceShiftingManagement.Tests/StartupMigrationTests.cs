@@ -23,7 +23,10 @@ public sealed class StartupMigrationTests
     {
         var snapshotType = typeof(LocalDbContext).Assembly
             .GetTypes()
-            .Single(type => !type.IsAbstract && typeof(ModelSnapshot).IsAssignableFrom(type));
+            .FirstOrDefault(type => !type.IsAbstract && typeof(ModelSnapshot).IsAssignableFrom(type) && type.Name == "AppDbContextModelSnapshot")
+            ?? typeof(LocalDbContext).Assembly
+            .GetTypes()
+            .First(type => !type.IsAbstract && typeof(ModelSnapshot).IsAssignableFrom(type));
 
         var snapshot = Activator.CreateInstance(snapshotType, nonPublic: true) as ModelSnapshot;
         Assert.NotNull(snapshot);

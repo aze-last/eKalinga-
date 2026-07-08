@@ -330,7 +330,7 @@ namespace AttendanceShiftingManagement.Services
             var rangeEndExclusive = options.DateTo.AddDays(1);
             var programs = await context.AyudaPrograms
                 .AsNoTracking()
-                .Where(item => item.IsActive && item.BudgetCap.HasValue && item.BudgetCap.Value > 0)
+                .Where(item => item.IsActive && item.BudgetCap.HasValue && item.BudgetCap.Value > 0 && item.ReleaseKind != AssistanceReleaseKind.Goods)
                 .OrderBy(item => item.ProgramName)
                 .ToListAsync(cancellationToken);
             var assistanceBudgets = await context.AssistanceCaseBudgets
@@ -464,14 +464,21 @@ namespace AttendanceShiftingManagement.Services
                     BeneficiaryId = item.BeneficiaryId ?? "--",
                     AssistanceType = item.AssistanceTypeSnapshot ?? "--",
                     ItemDetail = item.ItemDescriptionSnapshot ?? "--",
-                    Amount = item.UnitAmountSnapshot ?? 0m
+                    Amount = item.UnitAmountSnapshot ?? 0m,
+                    ReleaseKind = item.AyudaProgram != null ? item.AyudaProgram.ReleaseKind : AssistanceReleaseKind.Cash,
+                    QuantityPerBeneficiary = item.AyudaProgram != null ? item.AyudaProgram.QuantityPerBeneficiary : null,
+                    UnitOfMeasure = item.AyudaProgram != null ? item.AyudaProgram.UnitOfMeasure : null
                 })
                 .ToListAsync(cancellationToken);
 
             var table = CreateTable(("Claimed At", typeof(string)), ("Program", typeof(string)), ("Full Name", typeof(string)), ("Beneficiary ID", typeof(string)), ("Assistance", typeof(string)), ("Item / Detail", typeof(string)), ("Amount", typeof(string)));
             foreach (var row in rows)
             {
-                table.Rows.Add(row.ClaimedAt.ToString("yyyy-MM-dd hh:mm tt", CultureInfo.InvariantCulture), row.Program, row.FullName, row.BeneficiaryId, row.AssistanceType, row.ItemDetail, row.Amount.ToString("N2", CultureInfo.InvariantCulture));
+                var amountText = row.ReleaseKind == AssistanceReleaseKind.Goods 
+                    ? $"{row.QuantityPerBeneficiary ?? 0m:N0} {row.UnitOfMeasure}".Trim()
+                    : row.Amount.ToString("N2", CultureInfo.InvariantCulture);
+
+                table.Rows.Add(row.ClaimedAt.ToString("yyyy-MM-dd hh:mm tt", CultureInfo.InvariantCulture), row.Program, row.FullName, row.BeneficiaryId, row.AssistanceType, row.ItemDetail, amountText);
             }
 
             var uniqueBeneficiaries = rows.Select(item => $"{item.BeneficiaryId}|{item.FullName}").Distinct(StringComparer.OrdinalIgnoreCase).Count();

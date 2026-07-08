@@ -416,8 +416,22 @@ namespace AttendanceShiftingManagement.Models
         [MaxLength(180)]
         public string DonorName { get; set; } = string.Empty;
 
+        [Column("donation_type")]
+        public DonationType DonationType { get; set; } = DonationType.Cash;
+
         [Column("amount", TypeName = "decimal(18,2)")]
         public decimal Amount { get; set; }
+
+        [Column("item_name")]
+        [MaxLength(100)]
+        public string? ItemName { get; set; }
+
+        [Column("quantity", TypeName = "decimal(18,2)")]
+        public decimal? Quantity { get; set; }
+
+        [Column("unit_of_measure")]
+        [MaxLength(30)]
+        public string? UnitOfMeasure { get; set; }
 
         [Column("date_received")]
         public DateTime DateReceived { get; set; } = DateTime.Today;
@@ -568,6 +582,12 @@ namespace AttendanceShiftingManagement.Models
         Organization
     }
 
+    public enum DonationType
+    {
+        Cash,
+        Goods
+    }
+
     public enum DonationProofType
     {
         Cash,
@@ -581,7 +601,8 @@ namespace AttendanceShiftingManagement.Models
     {
         Donation,
         Release,
-        Reallocation
+        Reallocation,
+        GoodsDonation
     }
 
     public enum BudgetLedgerFeatureSource

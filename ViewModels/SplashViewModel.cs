@@ -185,6 +185,7 @@ namespace AttendanceShiftingManagement.ViewModels
                         using (var localDb = new LocalDbContext())
                         {
                             await localDb.Database.EnsureCreatedAsync();
+                            SQLiteSchemaBootstrapper.EnsureSQLiteSchema(localDb);
                         }
 
                         // 2. We keep the MySQL initialization for the Hostinger connection

@@ -60,6 +60,17 @@ namespace AttendanceShiftingManagement.Data
         {
             base.OnModelCreating(modelBuilder);
 
+            if (Database.ProviderName == "Pomelo.EntityFrameworkCore.MySql")
+            {
+                foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+                {
+                    if (entityType.ClrType != null && entityType.ClrType.GetProperty("SyncId") != null)
+                    {
+                        modelBuilder.Entity(entityType.ClrType).Ignore("SyncId");
+                    }
+                }
+            }
+
             // ── Enums as Strings (SQLite handles this fine) ─────────────────────
             modelBuilder.Entity<User>().Property(u => u.Role).HasConversion<string>();
             modelBuilder.Entity<Household>().Property(h => h.Status).HasConversion<string>();
@@ -81,6 +92,7 @@ namespace AttendanceShiftingManagement.Data
             modelBuilder.Entity<GovernmentBudgetSnapshot>().Property(s => s.SyncStatus).HasConversion<string>();
             modelBuilder.Entity<PrivateDonation>().Property(d => d.DonorType).HasConversion<string>();
             modelBuilder.Entity<PrivateDonation>().Property(d => d.ProofType).HasConversion<string>();
+            modelBuilder.Entity<PrivateDonation>().Property(d => d.DonationType).HasConversion<string>();
             modelBuilder.Entity<BudgetLedgerEntry>().Property(e => e.EntryType).HasConversion<string>();
             modelBuilder.Entity<BudgetLedgerEntry>().Property(e => e.FeatureSource).HasConversion<string>();
             modelBuilder.Entity<BudgetLedgerEntry>().Property(e => e.ReleaseKind).HasConversion<string>();

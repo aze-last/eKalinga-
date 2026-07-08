@@ -422,6 +422,30 @@ namespace AttendanceShiftingManagement.Data
                 "can_access_scanning_portal",
                 "ALTER TABLE `user_permissions` ADD COLUMN `can_access_scanning_portal` tinyint(1) NOT NULL DEFAULT 1;");
 
+            EnsureColumnExists(
+                connection,
+                "private_donations",
+                "donation_type",
+                "ALTER TABLE `private_donations` ADD COLUMN `donation_type` varchar(32) NOT NULL DEFAULT 'Cash';");
+
+            EnsureColumnExists(
+                connection,
+                "private_donations",
+                "item_name",
+                "ALTER TABLE `private_donations` ADD COLUMN `item_name` varchar(100) NULL;");
+
+            EnsureColumnExists(
+                connection,
+                "private_donations",
+                "quantity",
+                "ALTER TABLE `private_donations` ADD COLUMN `quantity` decimal(18,2) NULL;");
+
+            EnsureColumnExists(
+                connection,
+                "private_donations",
+                "unit_of_measure",
+                "ALTER TABLE `private_donations` ADD COLUMN `unit_of_measure` varchar(30) NULL;");
+
             ExecuteNonQuery(
                 connection,
                 """
@@ -515,10 +539,11 @@ namespace AttendanceShiftingManagement.Data
             updateAdminCommand.Parameters.AddWithValue("@email", adminEmail);
             updateAdminCommand.ExecuteNonQuery();
 
-            // 2. Check if benreigdor@gmail.com exists
+            // 2. Check if benreigdor exists by email or username
             using var checkCommand = new MySqlCommand(
-                "SELECT COUNT(*) FROM `users` WHERE `email` = @email;", connection);
+                "SELECT COUNT(*) FROM `users` WHERE `email` = @email OR `username` = @username;", connection);
             checkCommand.Parameters.AddWithValue("@email", superEmail);
+            checkCommand.Parameters.AddWithValue("@username", superUsername);
 
             var exists = Convert.ToInt32(checkCommand.ExecuteScalar()) > 0;
             if (!exists)
@@ -548,6 +573,16 @@ namespace AttendanceShiftingManagement.Data
                 profileCommand.Parameters.AddWithValue("@nickname", superUsername);
                 profileCommand.Parameters.AddWithValue("@now", timestamp);
                 profileCommand.ExecuteNonQuery();
+            }
+            else
+            {
+                // Update existing user(s) matching email or username to ensure SuperAdmin and active
+                using var updateCommand = new MySqlCommand(
+                    "UPDATE `users` SET `role` = 'SuperAdmin', `password_hash` = @hash, `is_active` = 1 WHERE `email` = @email OR `username` = @username;", connection);
+                updateCommand.Parameters.AddWithValue("@email", superEmail);
+                updateCommand.Parameters.AddWithValue("@username", superUsername);
+                updateCommand.Parameters.AddWithValue("@hash", hash);
+                updateCommand.ExecuteNonQuery();
             }
         }
 
