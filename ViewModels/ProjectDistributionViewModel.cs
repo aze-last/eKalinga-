@@ -1378,7 +1378,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 if (!string.IsNullOrEmpty(b.CivilRegistryId) && alreadyEnrolledCivilIds.Contains(b.CivilRegistryId)) continue;
                 if (!string.IsNullOrEmpty(b.BeneficiaryId) && alreadyEnrolledBenIds.Contains(b.BeneficiaryId)) continue;
 
-                AvailableBeneficiaries.Add(new DistributionBeneficiaryOption
+                var option = new DistributionBeneficiaryOption
                 {
                     StagingId = b.StagingID,
                     FullName = b.FullName ?? string.Empty,
@@ -1388,7 +1388,21 @@ namespace AttendanceShiftingManagement.ViewModels
                     CivilRegistryId = b.CivilRegistryId ?? string.Empty,
                     IsSenior = b.IsSenior,
                     IsPwd = b.IsPwd
-                });
+                };
+                
+                option.PropertyChanged += (sender, args) =>
+                {
+                    if (args.PropertyName == nameof(DistributionBeneficiaryOption.IsSelected))
+                    {
+                        OnPropertyChanged(nameof(SelectedBeneficiariesCount));
+                        if (ConfirmAddBeneficiaryCommand is RelayCommand confirm)
+                        {
+                            confirm.RaiseCanExecuteChanged();
+                        }
+                    }
+                };
+
+                AvailableBeneficiaries.Add(option);
             }
 
             ApplyAvailableBeneficiaryFilter();
@@ -2611,8 +2625,7 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             return !IsBusy
                 && SelectedProgram != null
-                && SelectedPendingBeneficiary != null
-                && !string.IsNullOrWhiteSpace(SelectedPendingDigitalIdQrPayload);
+                && SelectedPendingBeneficiary != null;
         }
 
         public event Action? RequestCloseDialog;

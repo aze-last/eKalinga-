@@ -13,7 +13,6 @@
         AllowsTransparency="True">
 
     <Window.Resources>
-        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
 
         <Style x:Key="ActivityIconBorderStyle" TargetType="Border">
             <Setter Property="Width" Value="42" />

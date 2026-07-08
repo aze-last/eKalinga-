@@ -165,6 +165,53 @@ namespace AttendanceShiftingManagement.Services
                 await remoteDb.SaveChangesAsync();
             }
 
+            // Sync Users
+            // Pull Users
+            var newRemoteUsers = await remoteDb.Users
+                .Where(u => u.UpdatedAt > lastSync)
+                .AsNoTracking()
+                .ToListAsync();
+
+            if (newRemoteUsers.Any())
+            {
+                foreach (var remoteUser in newRemoteUsers)
+                {
+                    var localUser = await localDb.Users.FirstOrDefaultAsync(u => u.SyncId == remoteUser.SyncId);
+                    if (localUser == null)
+                    {
+                        localDb.Users.Add(remoteUser);
+                    }
+                    else if (remoteUser.UpdatedAt > localUser.UpdatedAt)
+                    {
+                        localDb.Entry(localUser).CurrentValues.SetValues(remoteUser);
+                    }
+                }
+                await localDb.SaveChangesAsync();
+            }
+
+            // Push Users
+            var newLocalUsers = await localDb.Users
+                .Where(u => u.UpdatedAt > lastSync)
+                .AsNoTracking()
+                .ToListAsync();
+
+            if (newLocalUsers.Any())
+            {
+                foreach (var localUser in newLocalUsers)
+                {
+                    var remoteUser = await remoteDb.Users.FirstOrDefaultAsync(u => u.SyncId == localUser.SyncId);
+                    if (remoteUser == null)
+                    {
+                        remoteDb.Users.Add(localUser);
+                    }
+                    else if (localUser.UpdatedAt > remoteUser.UpdatedAt)
+                    {
+                        remoteDb.Entry(remoteUser).CurrentValues.SetValues(localUser);
+                    }
+                }
+                await remoteDb.SaveChangesAsync();
+            }
+
             // Save the sync timestamp
             var metadata = await localDb.SyncMetadata.FirstOrDefaultAsync(m => m.TableName == "MainDatabaseSync");
             if (metadata == null)

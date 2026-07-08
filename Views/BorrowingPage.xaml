@@ -6,8 +6,6 @@
              xmlns:helpers="clr-namespace:AttendanceShiftingManagement.Helpers"
              Background="{DynamicResource BrandSurfaceBrush}">
     <UserControl.Resources>
-        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
-        <helpers:NullToHiddenConverter x:Key="NullToHiddenConverter" />
     </UserControl.Resources>
 
     <materialDesign:DialogHost IsOpen="{Binding IsDialogOpen}" Identifier="BorrowingDialog">

@@ -58,6 +58,7 @@
             <helpers:InverseBooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter" />
             <helpers:NullToHiddenConverter x:Key="NullToHiddenConverter" />
             <helpers:BooleanToBlurRadiusConverter x:Key="BooleanToBlurRadiusConverter" />
+            <helpers:StringToVisibilityConverter x:Key="StringToVisibilityConverter" />
             <helpers:EqualityToBooleanConverter x:Key="EqualityToBooleanConverter" />
             <helpers:EqualityToBooleanConverter x:Key="EqualityToBooleanInverseConverter" Inverse="True" />
 

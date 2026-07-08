@@ -10,7 +10,6 @@
              d:DesignHeight="700" d:DesignWidth="1100">
     
     <UserControl.Resources>
-        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         <helpers:NumericToVisibilityConverter x:Key="NumericToVisibilityConverter" />
     </UserControl.Resources>
 

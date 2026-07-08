@@ -6,8 +6,6 @@
              Background="Transparent">
 
     <UserControl.Resources>
-        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
-        <helpers:BooleanToBlurRadiusConverter x:Key="BooleanToBlurRadiusConverter"/>
     </UserControl.Resources>
 
     <Grid>

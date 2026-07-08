@@ -82,6 +82,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly RelayCommand _closeProgramPanelCommand;
         private readonly RelayCommand _closePanelCommand;
         private readonly RelayCommand _closeLedgerHistoryCardCommand;
+        private readonly RelayCommand _clearSelectedBudgetCommand;
         private readonly RelayCommand _browseProofCommand;
         private readonly RelayCommand _exportLedgerCommand;
         private readonly RelayCommand _verifyOtpCommand;
@@ -528,6 +529,13 @@ namespace AttendanceShiftingManagement.ViewModels
             _closeProgramPanelCommand = new RelayCommand(_ => CloseProgramPanel(), _ => IsProgramPanelOpen);
             _closePanelCommand = new RelayCommand(_ => ClosePanel(), _ => !IsBusy);
             _closeLedgerHistoryCardCommand = new RelayCommand(_ => CloseLedgerHistoryCard(), _ => SelectedLedgerEntry != null);
+            _clearSelectedBudgetCommand = new RelayCommand(_ =>
+            {
+                SearchText = string.Empty;
+                SelectedBudget = null;
+                ClosePanel();
+                _budgetsView?.Refresh();
+            }, _ => SelectedBudget != null);
             _browseProofCommand = new RelayCommand(_ => BrowseProof());
             _exportLedgerCommand = new RelayCommand(async _ => await ExportLedgerAsync(), _ => !IsBusy && LedgerEntries.Any());
             _verifyOtpCommand = new RelayCommand(_ => VerifyOtp(), _ => !IsBusy && _otpSession != null && !string.IsNullOrWhiteSpace(OtpCode));
@@ -576,6 +584,7 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand CloseProgramPanelCommand => _closeProgramPanelCommand;
         public ICommand ClosePanelCommand => _closePanelCommand;
         public ICommand CloseLedgerHistoryCardCommand => _closeLedgerHistoryCardCommand;
+        public ICommand ClearSelectedBudgetCommand => _clearSelectedBudgetCommand;
         public ICommand CloseHistoryDetailCommand => _closeLedgerHistoryCardCommand;
         public ICommand BrowseProofCommand => _browseProofCommand;
         public ICommand ExportLedgerCommand => _exportLedgerCommand;
@@ -832,6 +841,9 @@ namespace AttendanceShiftingManagement.ViewModels
                 {
                     SyncWithSelectedBudget();
                     UpdateNavigationState();
+                    OnPropertyChanged(nameof(EmptyStateVisibility));
+                    OnPropertyChanged(nameof(DetailVisibility));
+                    OnPropertyChanged(nameof(SearchText));
                 }
             }
         }
@@ -950,6 +962,7 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             _navigatePreviousCommand.RaiseCanExecuteChanged();
             _navigateNextCommand.RaiseCanExecuteChanged();
+            _clearSelectedBudgetCommand.RaiseCanExecuteChanged();
         }
 
         private bool CanNavigatePrevious() => _currentIndex > 0;

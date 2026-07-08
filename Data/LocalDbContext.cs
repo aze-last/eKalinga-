@@ -121,6 +121,9 @@ namespace AttendanceShiftingManagement.Data
             // ── Normal Indexes ──────────────────────────────────────────────────
             modelBuilder.Entity<BeneficiaryStaging>().HasIndex(r => r.CivilRegistryId);
             modelBuilder.Entity<BeneficiaryStaging>().HasIndex(r => r.ResidentsId);
+            modelBuilder.Entity<BeneficiaryStaging>().HasIndex(r => r.BeneficiaryId);
+            modelBuilder.Entity<BeneficiaryStaging>().HasIndex(r => r.LastName);
+            modelBuilder.Entity<BeneficiaryStaging>().HasIndex(r => r.FirstName);
             modelBuilder.Entity<BeneficiaryAssistanceLedgerEntry>().HasIndex(e => e.CivilRegistryId);
             modelBuilder.Entity<BeneficiaryAssistanceLedgerEntry>().HasIndex(e => e.BeneficiaryId);
             modelBuilder.Entity<BudgetLedgerEntry>().HasIndex(e => new { e.FeatureSource, e.SourceRecordId, e.EntryType });

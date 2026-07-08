@@ -18,7 +18,6 @@
     </shell:WindowChrome.WindowChrome>
 
     <Window.Resources>
-        <helpers:NullToHiddenConverter x:Key="NullToHiddenConverter" />
     </Window.Resources>
 
     <Border Background="{DynamicResource ThemeCardBrush}" CornerRadius="20"

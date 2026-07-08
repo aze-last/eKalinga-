@@ -47,9 +47,12 @@ namespace AttendanceShiftingManagement.Services
 
         public List<CashForWorkEvent> GetOpenEvents()
         {
-            return _context.CashForWorkEvents
+            var events = _context.CashForWorkEvents
                 .AsNoTracking()
                 .Where(cashForWorkEvent => !cashForWorkEvent.IsDeleted && cashForWorkEvent.Status == CashForWorkEventStatus.Open)
+                .ToList();
+
+            return events
                 .OrderBy(cashForWorkEvent => cashForWorkEvent.EventDate)
                 .ThenBy(cashForWorkEvent => cashForWorkEvent.StartTime)
                 .ThenBy(cashForWorkEvent => cashForWorkEvent.Title)

@@ -610,6 +610,7 @@ namespace AttendanceShiftingManagement.Models
         BudgetModule,
         AssistanceCase,
         CashForWork,
-        ProjectDistribution
+        ProjectDistribution,
+        ManualAssistance
     }
 }

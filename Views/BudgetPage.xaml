@@ -18,10 +18,6 @@
         <SolidColorBrush x:Key="SidebarBackgroundBrush" Color="#F8FAFC"/>
         <SolidColorBrush x:Key="CardBorderBrush" Color="#E2E8F0"/>
 
-        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
-        <helpers:NullToHiddenConverter x:Key="NullToHiddenConverter"/>
-        <helpers:BooleanToBlurRadiusConverter x:Key="BooleanToBlurRadiusConverter"/>
-        <helpers:StringToVisibilityConverter x:Key="StringToVisibilityConverter"/>
         <helpers:NullToWidthConverter x:Key="NullToWidthConverter"/>
 
         <Style x:Key="SidebarHeaderStyle" TargetType="TextBlock">

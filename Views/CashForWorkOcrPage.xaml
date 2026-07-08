@@ -11,9 +11,6 @@
              d:DesignWidth="1440"
              Background="{DynamicResource BrandSurfaceBrush}">
     <UserControl.Resources>
-        <helpers:NullToHiddenConverter x:Key="NullToHiddenConverter" />
-        <helpers:StringToVisibilityConverter x:Key="StringToVisibilityConverter" />
-        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
 
         <Style x:Key="SidebarHeaderStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="13" />

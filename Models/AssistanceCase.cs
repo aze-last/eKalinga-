@@ -113,13 +113,18 @@ namespace AttendanceShiftingManagement.Models
 
     public enum AssistanceCaseStatus
     {
+        // Legacy workflow statuses (retained for existing DB rows; UI maps these to "Archived")
         Pending,
         UnderReview,
         Approved,
         Released,
         Closed,
         Rejected,
-        Cancelled
+        Cancelled,
+
+        // New Manual Assistance statuses
+        Voided,
+        Corrected
     }
 
     public enum AssistanceCasePriority

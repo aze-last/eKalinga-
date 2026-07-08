@@ -176,6 +176,7 @@ namespace AttendanceShiftingManagement.Services
         {
             return await _context.AyudaPrograms
                 .AsNoTracking()
+                .Where(p => p.IsActive)
                 .Include(p => p.SourceDonation)
                 .Include(p => p.SourceGGMSBudget)
                 .OrderBy(program => program.ProgramName)
@@ -360,6 +361,28 @@ namespace AttendanceShiftingManagement.Services
 
         public async Task<AyudaProgramOperationResult> CreateProgramAsync(AyudaProgramRequest request, int createdByUserId)
         {
+            int? remoteGeneratedId = null;
+            if (RemoteWriteExecutionService.ShouldRouteToRemote(_context))
+            {
+                try
+                {
+                    var remoteResult = await RemoteWriteExecutionService.ExecuteRemoteWriteAsync(
+                        _context,
+                        async remoteContext =>
+                        {
+                            var remoteService = new BudgetManagementService(remoteContext, _auditService);
+                            return await remoteService.CreateProgramAsync(request, createdByUserId);
+                        });
+
+                    if (!remoteResult.IsSuccess) return remoteResult;
+                    remoteGeneratedId = remoteResult.ProgramId;
+                }
+                catch (Exception ex)
+                {
+                    return new AyudaProgramOperationResult(false, $"Remote creation failed. {ex.Message}");
+                }
+            }
+
             var programCode = NormalizeRequired(request.ProgramCode);
             var programName = NormalizeRequired(request.ProgramName);
             var assistanceType = NormalizeNullable(request.AssistanceType);
@@ -438,6 +461,11 @@ namespace AttendanceShiftingManagement.Services
                 CreatedAt = DateTime.Now,
                 UpdatedAt = DateTime.Now
             };
+
+            if (remoteGeneratedId.HasValue)
+            {
+                ayudaProgram.Id = remoteGeneratedId.Value;
+            }
 
             _context.AyudaPrograms.Add(ayudaProgram);
             await _context.SaveChangesAsync();
@@ -655,6 +683,13 @@ namespace AttendanceShiftingManagement.Services
 
                 budgetOwnerLabel = assistanceCaseBudget.BudgetName;
                 budgetCap = assistanceCaseBudget.BudgetCap;
+            }
+            else if (request.FeatureSource == BudgetLedgerFeatureSource.ManualAssistance)
+            {
+                // Manual Assistance pulls directly from the unified waterfall.
+                // No specific budget bucket required — fall through to waterfall logic below.
+                budgetOwnerLabel = "Manual Assistance";
+                budgetCap = null;
             }
             else
             {

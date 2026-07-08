@@ -40,6 +40,35 @@ namespace AttendanceShiftingManagement.Data
 
         private static void ApplyMigrationsAndRepairs(AppDbContext context, string connectionString)
         {
+            var pendingMigrations = context.Database.GetPendingMigrations().ToList();
+            if (pendingMigrations.Contains("20260619043025_AddSyncIdToAllEntities") || 
+                pendingMigrations.Contains("20260620083405_UpdateGoodsDistributionSchema"))
+            {
+                using var connection = new MySqlConnection(connectionString);
+                connection.Open();
+                if (ColumnExists(connection, "users", "SyncId"))
+                {
+                    using var createTableCommand = new MySqlCommand(
+                        """
+                        CREATE TABLE IF NOT EXISTS `__EFMigrationsHistory` (
+                            `MigrationId` varchar(150) NOT NULL,
+                            `ProductVersion` varchar(32) NOT NULL,
+                            PRIMARY KEY (`MigrationId`)
+                        ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+                        """, connection);
+                    createTableCommand.ExecuteNonQuery();
+
+                    using var insertCommand = new MySqlCommand(
+                        """
+                        INSERT IGNORE INTO `__EFMigrationsHistory` (`MigrationId`, `ProductVersion`)
+                        VALUES ('20260619043025_AddSyncIdToAllEntities', '8.0.0');
+                        INSERT IGNORE INTO `__EFMigrationsHistory` (`MigrationId`, `ProductVersion`)
+                        VALUES ('20260620083405_UpdateGoodsDistributionSchema', '8.0.0');
+                        """, connection);
+                    insertCommand.ExecuteNonQuery();
+                }
+            }
+
             context.Database.Migrate();
 
             // Keep startup migration mode aligned with the runtime bootstrap repairs so
@@ -76,6 +105,23 @@ namespace AttendanceShiftingManagement.Data
                 connection);
 
             command.Parameters.AddWithValue("@tableName", tableName);
+            return Convert.ToInt32(command.ExecuteScalar()) > 0;
+        }
+
+        private static bool ColumnExists(MySqlConnection connection, string tableName, string columnName)
+        {
+            using var command = new MySqlCommand(
+                """
+                SELECT COUNT(*)
+                FROM information_schema.COLUMNS
+                WHERE TABLE_SCHEMA = DATABASE()
+                  AND TABLE_NAME = @tableName
+                  AND COLUMN_NAME = @columnName;
+                """,
+                connection);
+
+            command.Parameters.AddWithValue("@tableName", tableName);
+            command.Parameters.AddWithValue("@columnName", columnName);
             return Convert.ToInt32(command.ExecuteScalar()) > 0;
         }
 

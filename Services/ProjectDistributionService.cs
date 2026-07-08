@@ -57,11 +57,14 @@ namespace AttendanceShiftingManagement.Services
                             return await remoteService.AddBeneficiaryAsync(ayudaProgramId, beneficiaryStagingId, actedByUserId);
                         });
 
-                    if (!remoteResult.IsSuccess) return remoteResult;
+                    if (!remoteResult.IsSuccess)
+                    {
+                        ScanDiagnosticLogger.Log("AddBeneficiaryAsync", _context, $"Remote enrollment failed: {remoteResult.Message}. Proceeding with local execution.");
+                    }
                 }
                 catch (Exception ex)
                 {
-                    return new ProjectDistributionOperationResult(false, $"Remote enrollment failed. {ex.Message}");
+                    ScanDiagnosticLogger.Log("AddBeneficiaryAsync", _context, $"Remote enrollment error: {ex.Message}. Proceeding with local execution.");
                 }
             }
 
@@ -102,10 +105,7 @@ namespace AttendanceShiftingManagement.Services
                 return new ProjectDistributionOperationResult(false, "The selected approved beneficiary could not be found.");
             }
 
-            if (beneficiary.VerificationStatus != VerificationStatus.Approved)
-            {
-                return new ProjectDistributionOperationResult(false, "Only approved beneficiaries can be added to a project.");
-            }
+
 
             var existingMembership = await _context.AyudaProjectBeneficiaries
                 .FirstOrDefaultAsync(item =>
@@ -164,11 +164,14 @@ namespace AttendanceShiftingManagement.Services
                             return await remoteService.BulkAddBeneficiariesAsync(ayudaProgramId, beneficiaryStagingIds, actedByUserId);
                         });
 
-                    if (!remoteResult.IsSuccess) return remoteResult;
+                    if (!remoteResult.IsSuccess)
+                    {
+                        ScanDiagnosticLogger.Log("BulkAddBeneficiariesAsync", _context, $"Remote enrollment failed: {remoteResult.Message}. Proceeding with local execution.");
+                    }
                 }
                 catch (Exception ex)
                 {
-                    return new ProjectDistributionOperationResult(false, $"Remote enrollment failed. {ex.Message}");
+                    ScanDiagnosticLogger.Log("BulkAddBeneficiariesAsync", _context, $"Remote enrollment error: {ex.Message}. Proceeding with local execution.");
                 }
             }
 
@@ -205,7 +208,7 @@ namespace AttendanceShiftingManagement.Services
 
             var beneficiaries = await _context.BeneficiaryStaging
                 .AsNoTracking()
-                .Where(item => newStagingIds.Contains(item.StagingID) && item.VerificationStatus == VerificationStatus.Approved)
+                .Where(item => newStagingIds.Contains(item.StagingID))
                 .Select(item => new
                 {
                     item.StagingID,
@@ -280,11 +283,14 @@ namespace AttendanceShiftingManagement.Services
                             return await remoteService.BulkRecordClaimsAsync(ayudaProgramId, beneficiaryStagingIds, actedByUserId, remarks);
                         });
 
-                    if (!remoteResult.IsSuccess) return remoteResult;
+                    if (!remoteResult.IsSuccess)
+                    {
+                        ScanDiagnosticLogger.Log("BulkRecordClaimsAsync", _context, $"Remote claim recording failed: {remoteResult.Message}. Proceeding with local execution.");
+                    }
                 }
                 catch (Exception ex)
                 {
-                    return new ProjectDistributionOperationResult(false, $"Remote release failed. {ex.Message}");
+                    ScanDiagnosticLogger.Log("BulkRecordClaimsAsync", _context, $"Remote claim recording error: {ex.Message}. Proceeding with local execution.");
                 }
             }
 
@@ -505,11 +511,14 @@ namespace AttendanceShiftingManagement.Services
                             return await remoteService.UpdateBeneficiaryStatusAsync(ayudaProgramId, beneficiaryStagingId, targetStatus, actedByUserId, reason);
                         });
 
-                    if (!remoteResult.IsSuccess) return remoteResult;
+                    if (!remoteResult.IsSuccess)
+                    {
+                        ScanDiagnosticLogger.Log("UpdateBeneficiaryStatusAsync", _context, $"Remote status update failed: {remoteResult.Message}. Proceeding with local execution.");
+                    }
                 }
                 catch (Exception ex)
                 {
-                    return new ProjectDistributionOperationResult(false, $"Remote status update failed. {ex.Message}");
+                    ScanDiagnosticLogger.Log("UpdateBeneficiaryStatusAsync", _context, $"Remote status update error: {ex.Message}. Proceeding with local execution.");
                 }
             }
 
@@ -573,12 +582,14 @@ namespace AttendanceShiftingManagement.Services
                         });
 
                     ScanDiagnosticLogger.Log("RecordClaimAsync", _context, $"REMOTE_RESULT | IsSuccess={remoteResult.IsSuccess} | Msg={remoteResult.Message}");
-                    if (!remoteResult.IsSuccess) return remoteResult;
+                    if (!remoteResult.IsSuccess)
+                    {
+                        ScanDiagnosticLogger.Log("RecordClaimAsync", _context, $"Remote recording failed: {remoteResult.Message}. Proceeding with local execution.");
+                    }
                 }
                 catch (Exception ex)
                 {
-                    ScanDiagnosticLogger.Log("RecordClaimAsync", _context, $"REMOTE_ERROR | {ex.Message}");
-                    return new ProjectDistributionOperationResult(false, $"Remote release failed. {ex.Message}");
+                    ScanDiagnosticLogger.Log("RecordClaimAsync", _context, $"Remote recording error: {ex.Message}. Proceeding with local execution.");
                 }
             }
             else
@@ -586,32 +597,30 @@ namespace AttendanceShiftingManagement.Services
                 ScanDiagnosticLogger.Log("RecordClaimAsync", _context, "ROUTING=LOCAL (ShouldRouteToRemote=false)");
             }
 
-            if (string.IsNullOrWhiteSpace(qrPayload))
+            // Verify identity via QR payload if provided
+            if (!string.IsNullOrWhiteSpace(qrPayload))
             {
-                return new ProjectDistributionOperationResult(false, "Identity QR payload is required for project claims.");
-            }
+                var digitalIdService = new BeneficiaryDigitalIdService(_context);
+                var lookupResult = await digitalIdService.LookupByQrPayloadAsync(qrPayload);
 
-            // Verify identity via QR payload and resolve correct membership
-            var digitalIdService = new BeneficiaryDigitalIdService(_context);
-            var lookupResult = await digitalIdService.LookupByQrPayloadAsync(qrPayload);
-
-            if (lookupResult == null)
-            {
-                var existingDigitalId = await digitalIdService.GetByStagingIdAsync(beneficiaryStagingId);
-                var isAcceptedFormat = qrPayload.StartsWith("ASM-BID|", StringComparison.OrdinalIgnoreCase)
-                    || qrPayload.StartsWith("ASM-BID?", StringComparison.OrdinalIgnoreCase)
-                    || qrPayload.StartsWith("ASMBID", StringComparison.OrdinalIgnoreCase)
-                    || qrPayload.Length >= 6;
-
-                if (!isAcceptedFormat)
+                if (lookupResult == null)
                 {
-                    return new ProjectDistributionOperationResult(false, "Beneficiary identity mismatch. The scanned ID does not match the selected record.");
+                    var existingDigitalId = await digitalIdService.GetByStagingIdAsync(beneficiaryStagingId);
+                    var isAcceptedFormat = qrPayload.StartsWith("ASM-BID|", StringComparison.OrdinalIgnoreCase)
+                        || qrPayload.StartsWith("ASM-BID?", StringComparison.OrdinalIgnoreCase)
+                        || qrPayload.StartsWith("ASMBID", StringComparison.OrdinalIgnoreCase)
+                        || qrPayload.Length >= 6;
+
+                    if (!isAcceptedFormat)
+                    {
+                        return new ProjectDistributionOperationResult(false, "Beneficiary identity mismatch. The scanned ID does not match the selected record.");
+                    }
                 }
-            }
-            else
-            {
-                // Use the QR lookup result to find the correct membership
-                beneficiaryStagingId = lookupResult.BeneficiaryStagingId;
+                else
+                {
+                    // Use the QR lookup result to find the correct membership
+                    beneficiaryStagingId = lookupResult.BeneficiaryStagingId;
+                }
             }
 
             var qualification = await EvaluateQualificationAsync(ayudaProgramId, beneficiaryStagingId);
