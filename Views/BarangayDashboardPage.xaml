@@ -215,12 +215,12 @@
                                                  Foreground="White"
                                                  HorizontalAlignment="Left"/>
                         <TextBlock Margin="0,26,0,0"
-                                   Text="AID REQUEST"
+                                   Text="ASSISTANCE RECORDS"
                                    FontSize="18"
                                    FontWeight="Bold"
                                    Foreground="White"/>
                         <TextBlock Margin="0,8,0,0"
-                                   Text="Create requests and manage approved aid releases."
+                                   Text="Search particular beneficiary for claims and records"
                                    FontSize="13"
                                    Foreground="White"
                                    Opacity="0.82"

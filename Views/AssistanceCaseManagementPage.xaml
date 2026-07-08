@@ -157,7 +157,7 @@
                     
                     <Button Grid.Column="1" Command="{Binding OpenRecordAssistanceCommand}" Content="RECORD ASSISTANCE" 
                             Style="{StaticResource MaterialDesignRaisedButton}" Background="{StaticResource ActionAccentBrush}" BorderBrush="{StaticResource ActionAccentBrush}" Foreground="White" Height="45" Padding="20,0"
-                            Visibility="{Binding SelectedBeneficiary, Converter={StaticResource NullToVisibilityConverter}}"/>
+                            Visibility="{Binding SelectedBeneficiary, Converter={StaticResource NullToHiddenConverter}}"/>
                 </Grid>
 
                 <Grid Grid.Row="1" Visibility="{Binding SelectedBeneficiary, Converter={StaticResource NullToHiddenConverter}}">
