@@ -17,8 +17,9 @@ public sealed class ProjectDistributionPageBindingTests
         var xaml = File.ReadAllText(pagePath);
 
         Assert.Contains("Text=\"PROJECT DISTRIBUTION\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("ItemsSource=\"{Binding ProgramSummaries}\"", xaml, StringComparison.Ordinal);
-        
+        // R5: sidebar project list is scoped to the chosen project only (reduces clutter).
+        Assert.Contains("ItemsSource=\"{Binding SidebarProgramSummaries}\"", xaml, StringComparison.Ordinal);
+
         Assert.Contains("Command=\"{Binding OpenCreateProjectPanelCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("ItemsSource=\"{Binding PendingBeneficiaries}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"{Binding PendingPaginationText}\"", xaml, StringComparison.Ordinal);

@@ -26,10 +26,11 @@ namespace AttendanceShiftingManagement.Services
             await using var connection = new MySqlConnection(ConnectionSettingsService.BuildConnectionString(_options.GgmsConnection));
             await connection.OpenAsync();
 
-            var spentColumn = await DetectSpentColumnAsync(connection);
-            var spentExpression = spentColumn == null
-                ? "0"
-                : $"COALESCE(alloc.`{spentColumn}`, 0)";
+            var spentCommandText = BuildSpentAmountQuery(_options.GgmsConsolidatedTransactionTable);
+
+            await using var spentCommand = new MySqlCommand(spentCommandText, connection);
+            spentCommand.Parameters.AddWithValue("@officeCode", _options.AyudaOfficeCode);
+            var spentAmount = Convert.ToDecimal(await spentCommand.ExecuteScalarAsync());
 
             var commandText =
                 $"""
@@ -38,7 +39,7 @@ namespace AttendanceShiftingManagement.Services
                     alloc.`YearlyBudgetId`,
                     alloc.`office_code`,
                     alloc.`AllocatedAmount`,
-                    {spentExpression},
+                    @spentAmount,
                     COALESCE(office.`name`, 'Ayuda')
                 FROM `{_options.GgmsAllocationTable}` AS alloc
                 LEFT JOIN `{_options.GgmsOfficeTable}` AS office
@@ -50,6 +51,7 @@ namespace AttendanceShiftingManagement.Services
 
             await using var command = new MySqlCommand(commandText, connection);
             command.Parameters.AddWithValue("@officeCode", _options.AyudaOfficeCode);
+            command.Parameters.AddWithValue("@spentAmount", spentAmount);
 
             await using var reader = await command.ExecuteReaderAsync();
             if (!await reader.ReadAsync())
@@ -73,31 +75,17 @@ namespace AttendanceShiftingManagement.Services
             return new GgmsBudgetSyncResult(snapshotResult.IsSuccess, snapshotResult.Message, snapshotResult.SnapshotId);
         }
 
-        private async Task<string?> DetectSpentColumnAsync(MySqlConnection connection)
+        public static string BuildSpentAmountQuery(string? configuredTableName)
         {
-            foreach (var columnName in SpentColumnCandidates)
-            {
-                await using var command = new MySqlCommand(
-                    """
-                    SELECT COUNT(*)
-                    FROM information_schema.COLUMNS
-                    WHERE TABLE_SCHEMA = DATABASE()
-                      AND TABLE_NAME = @tableName
-                      AND COLUMN_NAME = @columnName;
-                    """,
-                    connection);
+            var tableName = !string.IsNullOrWhiteSpace(configuredTableName)
+                ? configuredTableName.Trim()
+                : "consolidated_transactions";
 
-                command.Parameters.AddWithValue("@tableName", _options.GgmsAllocationTable);
-                command.Parameters.AddWithValue("@columnName", columnName);
-
-                var exists = Convert.ToInt32(await command.ExecuteScalarAsync()) > 0;
-                if (exists)
-                {
-                    return columnName;
-                }
-            }
-
-            return null;
+            return $"""
+                SELECT COALESCE(SUM(amount), 0)
+                FROM `{tableName}`
+                WHERE office_id = @officeCode AND status = 'Released';
+                """;
         }
 
         private static bool HasConnectionDetails(DatabaseConnectionPreset preset)

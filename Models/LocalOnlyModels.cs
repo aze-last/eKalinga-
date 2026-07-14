@@ -89,4 +89,47 @@ namespace AttendanceShiftingManagement.Models
 
         public DateTime CreatedAt { get; set; } = DateTime.Now;
     }
+
+    /// <summary>
+    /// Local-only cache of digital ID photos, encrypted via DPAPI.
+    /// </summary>
+    [Table("digital_id_photo_cache")]
+    public class DigitalIdPhotoCache
+    {
+        [Key]
+        [MaxLength(100)]
+        public string BeneficiaryIdHash { get; set; } = string.Empty;
+
+        public string EncryptedBeneficiaryId { get; set; } = string.Empty;
+
+        public string EncryptedPhotoBytes { get; set; } = string.Empty;
+
+        [MaxLength(64)]
+        public string PhotoHash { get; set; } = string.Empty;
+
+        public DateTime UpdatedAt { get; set; } = DateTime.Now;
+    }
+
+    /// <summary>
+    /// Local-only cache of digital ID status, encrypted via DPAPI.
+    /// </summary>
+    [Table("digital_id_status_cache")]
+    public class DigitalIdStatusCache
+    {
+        [Key]
+        [MaxLength(100)]
+        public string BeneficiaryIdHash { get; set; } = string.Empty;
+
+        public string EncryptedBeneficiaryId { get; set; } = string.Empty;
+
+        public string EncryptedStatus { get; set; } = string.Empty;
+
+        public string EncryptedExpiryDate { get; set; } = string.Empty;
+        
+        public string EncryptedCardNumber { get; set; } = string.Empty;
+
+        public string EncryptedQrPayload { get; set; } = string.Empty;
+
+        public DateTime UpdatedAt { get; set; } = DateTime.Now;
+    }
 }

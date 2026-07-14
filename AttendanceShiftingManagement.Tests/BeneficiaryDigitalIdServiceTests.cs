@@ -52,6 +52,43 @@ public sealed class BeneficiaryDigitalIdServiceTests
         Assert.Contains(lookup.ReleaseHistory, entry => entry.SourceModule == BeneficiaryAssistanceSourceModule.CashForWork);
     }
 
+    [Fact]
+    public async Task ResolveLookupAsync_QrAndBeneficiaryId_ResolveSameBeneficiary()
+    {
+        using var context = TestDbContextFactory.CreateContext();
+        var admin = SeedAdmin(context);
+        var stagingRow = SeedApprovedStaging(context);
+        var service = new BeneficiaryDigitalIdService(context);
+
+        var digitalId = await service.EnsureIssuedAsync(stagingRow.StagingID, admin.Id);
+
+        var viaQr = await service.ResolveLookupAsync(
+            new BeneficiaryLookupRequest(BeneficiaryLookupSource.QrPayload, digitalId.QrPayload));
+        var viaBeneficiaryId = await service.ResolveLookupAsync(
+            new BeneficiaryLookupRequest(BeneficiaryLookupSource.BeneficiaryId, stagingRow.BeneficiaryId!));
+
+        Assert.NotNull(viaQr);
+        Assert.NotNull(viaBeneficiaryId);
+        // Both sources must resolve to the identical beneficiary (unified pipeline).
+        Assert.Equal(viaQr!.BeneficiaryStagingId, viaBeneficiaryId!.BeneficiaryStagingId);
+        Assert.Equal(viaQr.FullName, viaBeneficiaryId.FullName);
+        Assert.Equal(viaQr.BeneficiaryId, viaBeneficiaryId.BeneficiaryId);
+        Assert.Equal(stagingRow.StagingID, viaBeneficiaryId.BeneficiaryStagingId);
+    }
+
+    [Fact]
+    public async Task ResolveLookupAsync_UnknownBeneficiaryId_ReturnsNull()
+    {
+        using var context = TestDbContextFactory.CreateContext();
+        SeedApprovedStaging(context);
+        var service = new BeneficiaryDigitalIdService(context);
+
+        var result = await service.ResolveLookupAsync(
+            new BeneficiaryLookupRequest(BeneficiaryLookupSource.BeneficiaryId, "DOES-NOT-EXIST"));
+
+        Assert.Null(result);
+    }
+
     private static User SeedAdmin(Data.LocalDbContext context)
     {
         var user = new User

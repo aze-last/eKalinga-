@@ -38,6 +38,8 @@ namespace AttendanceShiftingManagement.Data
         public DbSet<GgmsTransactionCache> GgmsTransactionCache => Set<GgmsTransactionCache>();
         public DbSet<GgmsPendingTransactionCache> GgmsPendingTransactionCache => Set<GgmsPendingTransactionCache>();
         public DbSet<SyncMetadata> SyncMetadata => Set<SyncMetadata>();
+        public DbSet<DigitalIdPhotoCache> DigitalIdPhotoCaches => Set<DigitalIdPhotoCache>();
+        public DbSet<DigitalIdStatusCache> DigitalIdStatusCaches => Set<DigitalIdStatusCache>();
 
         public LocalDbContext()
         {

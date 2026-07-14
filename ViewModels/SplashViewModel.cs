@@ -174,6 +174,9 @@ namespace AttendanceShiftingManagement.ViewModels
 
                     try { AppUpdatePackageService.PerformStartupMaintenance(); }
                     catch { /* non-critical */ }
+
+                    try { BackgroundMaintenanceService.Start(); }
+                    catch { /* non-critical */ }
                 });
 
                 // Step: Connecting Database

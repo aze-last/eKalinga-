@@ -23,6 +23,32 @@ namespace AttendanceShiftingManagement.Data
 
             try
             {
+                // Ensure cache tables exist
+                using (var cmd = connection.CreateCommand())
+                {
+                    cmd.CommandText = @"
+                        CREATE TABLE IF NOT EXISTS digital_id_photo_cache (
+                            BeneficiaryIdHash TEXT PRIMARY KEY,
+                            EncryptedBeneficiaryId TEXT NOT NULL,
+                            EncryptedPhotoBytes TEXT NOT NULL,
+                            PhotoHash TEXT NOT NULL,
+                            UpdatedAt TEXT NOT NULL
+                        );";
+                    cmd.ExecuteNonQuery();
+
+                    cmd.CommandText = @"
+                        CREATE TABLE IF NOT EXISTS digital_id_status_cache (
+                            BeneficiaryIdHash TEXT PRIMARY KEY,
+                            EncryptedBeneficiaryId TEXT NOT NULL,
+                            EncryptedStatus TEXT NOT NULL,
+                            EncryptedExpiryDate TEXT NOT NULL,
+                            EncryptedCardNumber TEXT NOT NULL,
+                            EncryptedQrPayload TEXT NOT NULL,
+                            UpdatedAt TEXT NOT NULL
+                        );";
+                    cmd.ExecuteNonQuery();
+                }
+
                 // Verify column existence for private_donations
                 var existingColumns = GetTableColumns(connection, "private_donations");
 

@@ -1,10 +1,22 @@
 using AttendanceShiftingManagement.Data;
 using AttendanceShiftingManagement.Models;
 using Microsoft.EntityFrameworkCore;
+using System.IO;
 using System.Security.Cryptography;
+using System.Threading;
 
 namespace AttendanceShiftingManagement.Services
 {
+    /// <summary>Source of a beneficiary lookup so QR scans and manual key-in share one pipeline.</summary>
+    public enum BeneficiaryLookupSource
+    {
+        QrPayload,
+        BeneficiaryId
+    }
+
+    /// <summary>A single resolution request; both sources produce the same <see cref="BeneficiaryDigitalIdLookupResult"/>.</summary>
+    public sealed record BeneficiaryLookupRequest(BeneficiaryLookupSource Source, string Value);
+
     public sealed record BeneficiaryDigitalIdLookupResult(
         int BeneficiaryStagingId,
         long? ResidentsId,
@@ -22,15 +34,18 @@ namespace AttendanceShiftingManagement.Services
         private readonly LocalDbContext _context;
         private readonly AuditService _auditService;
         private readonly BeneficiaryAssistanceLedgerService _ledgerService;
+        private readonly IEKardVerificationService _verificationService;
 
         public BeneficiaryDigitalIdService(
             LocalDbContext context,
             AuditService? auditService = null,
-            BeneficiaryAssistanceLedgerService? ledgerService = null)
+            BeneficiaryAssistanceLedgerService? ledgerService = null,
+            IEKardVerificationService? verificationService = null)
         {
             _context = context;
             _auditService = auditService ?? new AuditService(context);
             _ledgerService = ledgerService ?? new BeneficiaryAssistanceLedgerService(context, _auditService);
+            _verificationService = verificationService ?? new EKardVerificationService(context, auditService: _auditService);
         }
 
         public async Task<BeneficiaryDigitalId> EnsureIssuedAsync(int stagingId, int issuedByUserId)
@@ -140,7 +155,7 @@ namespace AttendanceShiftingManagement.Services
             return true;
         }
 
-        public async Task<BeneficiaryDigitalIdLookupResult?> LookupByQrPayloadAsync(string qrPayload)
+        public async Task<BeneficiaryDigitalIdLookupResult?> LookupByQrPayloadAsync(string qrPayload, CancellationToken cancellationToken = default)
         {
             var normalizedPayload = NormalizeNullable(qrPayload);
             if (normalizedPayload == null)
@@ -151,7 +166,7 @@ namespace AttendanceShiftingManagement.Services
             // 1. Try exact match first (works for new format and exact old format)
             var digitalId = await _context.BeneficiaryDigitalIds
                 .AsNoTracking()
-                .FirstOrDefaultAsync(item => item.IsActive && item.QrPayload == normalizedPayload);
+                .FirstOrDefaultAsync(item => item.IsActive && item.QrPayload == normalizedPayload, cancellationToken);
 
             // 2. Try replacing '?' with '|' (in case database has not run bootstrap repairs yet)
             if (digitalId == null && normalizedPayload.Contains('?'))
@@ -159,7 +174,7 @@ namespace AttendanceShiftingManagement.Services
                 var fallbackPayload = normalizedPayload.Replace('?', '|');
                 digitalId = await _context.BeneficiaryDigitalIds
                     .AsNoTracking()
-                    .FirstOrDefaultAsync(item => item.IsActive && item.QrPayload == fallbackPayload);
+                    .FirstOrDefaultAsync(item => item.IsActive && item.QrPayload == fallbackPayload, cancellationToken);
             }
 
             // 3. Fallback: Normalize by stripping delimiters ('|', '?', '-', spaces) to match database payload
@@ -175,7 +190,7 @@ namespace AttendanceShiftingManagement.Services
                     {
                         var potentialId = await _context.BeneficiaryDigitalIds
                             .AsNoTracking()
-                            .FirstOrDefaultAsync(item => item.IsActive && item.BeneficiaryStagingId == stagingId);
+                            .FirstOrDefaultAsync(item => item.IsActive && item.BeneficiaryStagingId == stagingId, cancellationToken);
 
                         if (potentialId != null)
                         {
@@ -191,12 +206,92 @@ namespace AttendanceShiftingManagement.Services
 
             if (digitalId == null)
             {
-                return null;
+                var remoteResult = await _verificationService.VerifyDigitalIdAsync(
+                    new DigitalIdVerificationRequest { QrPayload = normalizedPayload },
+                    cancellationToken);
+
+                if (remoteResult != null && remoteResult.IsValid && remoteResult.BeneficiaryDetails != null)
+                {
+                    var details = remoteResult.BeneficiaryDetails;
+                    
+                    var importedStaging = await _context.BeneficiaryStaging
+                        .FirstOrDefaultAsync(row => row.BeneficiaryId == details.BeneficiaryId, cancellationToken);
+
+                    if (importedStaging == null)
+                    {
+                        importedStaging = new BeneficiaryStaging
+                        {
+                            ResidentsId = details.ResidentsId,
+                            BeneficiaryId = details.BeneficiaryId,
+                            CivilRegistryId = details.CivilRegistryId,
+                            LastName = details.LastName,
+                            FirstName = details.FirstName,
+                            MiddleName = details.MiddleName,
+                            FullName = details.FullName,
+                            Sex = details.Sex,
+                            DateOfBirth = details.DateOfBirth,
+                            Age = details.Age,
+                            MaritalStatus = details.MaritalStatus,
+                            Address = details.Address,
+                            IsPwd = details.IsPwd,
+                            PwdIdNo = details.PwdIdNo,
+                            DisabilityType = details.DisabilityType,
+                            CauseOfDisability = details.CauseOfDisability,
+                            IsSenior = details.IsSenior,
+                            SeniorIdNo = details.SeniorIdNo,
+                            VerificationStatus = VerificationStatus.Approved,
+                            ImportedAt = DateTime.Now
+                        };
+                        _context.BeneficiaryStaging.Add(importedStaging);
+                        await _context.SaveChangesAsync(cancellationToken);
+                    }
+
+                    var importedDigitalId = await _context.BeneficiaryDigitalIds
+                        .FirstOrDefaultAsync(item => item.BeneficiaryStagingId == importedStaging.StagingID, cancellationToken);
+
+                    if (importedDigitalId == null)
+                    {
+                        string? localPhotoPath = null;
+                        if (remoteResult.Photo != null)
+                        {
+                            try
+                            {
+                                var photosDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", "Photos");
+                                Directory.CreateDirectory(photosDir);
+                                localPhotoPath = Path.Combine(photosDir, $"external_beneficiary_{importedStaging.StagingID}.jpg");
+                                await File.WriteAllBytesAsync(localPhotoPath, remoteResult.Photo, cancellationToken);
+                            }
+                            catch
+                            {
+                                // Fail-safe
+                            }
+                        }
+
+                        importedDigitalId = new BeneficiaryDigitalId
+                        {
+                            BeneficiaryStagingId = importedStaging.StagingID,
+                            CardNumber = remoteResult.IdNumber,
+                            QrPayload = normalizedPayload,
+                            PhotoPath = localPhotoPath,
+                            IssuedByUserId = 1,
+                            IssuedAt = DateTime.Now,
+                            IsActive = true
+                        };
+                        _context.BeneficiaryDigitalIds.Add(importedDigitalId);
+                        await _context.SaveChangesAsync(cancellationToken);
+                    }
+
+                    digitalId = importedDigitalId;
+                }
+                else
+                {
+                    return null;
+                }
             }
 
             var stagingRow = await _context.BeneficiaryStaging
                 .AsNoTracking()
-                .FirstOrDefaultAsync(row => row.StagingID == digitalId.BeneficiaryStagingId);
+                .FirstOrDefaultAsync(row => row.StagingID == digitalId.BeneficiaryStagingId, cancellationToken);
 
             if (stagingRow == null)
             {
@@ -214,6 +309,59 @@ namespace AttendanceShiftingManagement.Services
                 NormalizeNullable(stagingRow.CivilRegistryId),
                 digitalId.CardNumber,
                 NormalizeNullable(digitalId.PhotoPath),
+                releaseHistory);
+        }
+
+        /// <summary>
+        /// Single resolution pipeline for both QR scans and manual Beneficiary ID key-in.
+        /// Both sources return the identical <see cref="BeneficiaryDigitalIdLookupResult"/>.
+        /// </summary>
+        public async Task<BeneficiaryDigitalIdLookupResult?> ResolveLookupAsync(BeneficiaryLookupRequest request, CancellationToken cancellationToken = default)
+        {
+            var value = NormalizeNullable(request.Value);
+            if (value == null)
+            {
+                return null;
+            }
+
+            return request.Source switch
+            {
+                BeneficiaryLookupSource.QrPayload => await LookupByQrPayloadAsync(value, cancellationToken),
+                BeneficiaryLookupSource.BeneficiaryId => await LookupByBeneficiaryIdAsync(value, cancellationToken),
+                _ => null
+            };
+        }
+
+        /// <summary>
+        /// Resolves a beneficiary by their human-readable Beneficiary ID (manual key-in fallback).
+        /// Returns the same result shape as the QR path so the ViewModel state is identical.
+        /// </summary>
+        private async Task<BeneficiaryDigitalIdLookupResult?> LookupByBeneficiaryIdAsync(string beneficiaryId, CancellationToken cancellationToken)
+        {
+            var stagingRow = await _context.BeneficiaryStaging
+                .AsNoTracking()
+                .FirstOrDefaultAsync(row => row.BeneficiaryId == beneficiaryId, cancellationToken);
+
+            if (stagingRow == null)
+            {
+                return null;
+            }
+
+            var digitalId = await _context.BeneficiaryDigitalIds
+                .AsNoTracking()
+                .FirstOrDefaultAsync(item => item.IsActive && item.BeneficiaryStagingId == stagingRow.StagingID, cancellationToken);
+
+            var releaseHistory = await _ledgerService.GetEntriesAsync(stagingRow.CivilRegistryId, stagingRow.BeneficiaryId);
+            return new BeneficiaryDigitalIdLookupResult(
+                stagingRow.StagingID,
+                stagingRow.ResidentsId,
+                digitalId?.HouseholdId ?? stagingRow.LinkedHouseholdId,
+                digitalId?.HouseholdMemberId ?? stagingRow.LinkedHouseholdMemberId,
+                BuildDisplayName(stagingRow),
+                NormalizeNullable(stagingRow.BeneficiaryId),
+                NormalizeNullable(stagingRow.CivilRegistryId),
+                digitalId?.CardNumber ?? string.Empty,
+                NormalizeNullable(digitalId?.PhotoPath) ?? NormalizeNullable(stagingRow.PhotoPath),
                 releaseHistory);
         }
 

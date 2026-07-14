@@ -1,5 +1,6 @@
 using AttendanceShiftingManagement.Data;
 using AttendanceShiftingManagement.Models;
+using AttendanceShiftingManagement.Services;
 using Microsoft.EntityFrameworkCore;
 using System.Reflection;
 
@@ -158,6 +159,79 @@ public sealed class ProjectDistributionServiceTests
         var claim = Assert.Single(context.AyudaProjectClaims);
         Assert.Equal(includedBeneficiary.StagingID, claim.BeneficiaryStagingId);
         Assert.Equal("BEN-2026-MANUAL-40405", claim.BeneficiaryId);
+    }
+
+    [Fact]
+    public async Task GetHouseholdVerificationContextAsync_FlagsHouseholdMemberWhoReceivedSameAssistanceType_CrossProject()
+    {
+        using var context = TestDbContextFactory.CreateContext();
+        var admin = SeedAdmin(context);
+
+        var currentProgram = SeedProgram(context, admin.Id);
+        currentProgram.AssistanceType = "Rice Subsidy";
+        var otherProgram = SeedProgram(context, admin.Id);
+        otherProgram.AssistanceType = "Rice Subsidy";
+        context.SaveChanges();
+
+        context.Households.Add(new Household { Id = 1, HouseholdCode = "HH-001", HeadName = "Pedro Cruz", AddressLine = "123 Mabini St" });
+        context.HouseholdMembers.Add(new HouseholdMember { Id = 1, HouseholdId = 1, FullName = "Pedro Cruz", RelationshipToHead = "Head" });
+        context.HouseholdMembers.Add(new HouseholdMember { Id = 2, HouseholdId = 1, FullName = "Maria Cruz", RelationshipToHead = "Spouse" });
+        context.SaveChanges();
+
+        // Scanned beneficiary is Pedro (linked to household 1, member 1 via SeedApprovedBeneficiary).
+        var scanned = SeedApprovedBeneficiary(context, 3001, "Pedro Cruz");
+
+        // Maria (member 2) already received the SAME assistance type from a DIFFERENT project.
+        context.AyudaProjectClaims.Add(new AyudaProjectClaim
+        {
+            AyudaProgramId = otherProgram.Id,
+            BeneficiaryStagingId = 3999,
+            HouseholdId = 1,
+            HouseholdMemberId = 2,
+            FullName = "Maria Cruz",
+            ClaimedByUserId = admin.Id,
+            ClaimedAt = DateTime.Now
+        });
+        context.SaveChanges();
+
+        var service = (ProjectDistributionService)CreateService(context);
+        var householdContext = await service.GetHouseholdVerificationContextAsync(currentProgram.Id, scanned.StagingID);
+
+        Assert.True(householdContext.HasHousehold);
+        Assert.True(householdContext.AnyMemberAlreadyReceived);
+        Assert.False(string.IsNullOrWhiteSpace(householdContext.WarningMessage));
+        Assert.Equal(2, householdContext.Members.Count);
+        Assert.Contains(householdContext.Members, m => m.FullName == "Maria Cruz" && m.AlreadyReceivedSameAssistanceType);
+        Assert.Contains(householdContext.Members, m => m.FullName == "Pedro Cruz" && !m.AlreadyReceivedSameAssistanceType);
+        Assert.Contains(householdContext.Members, m => m.FullName == "Pedro Cruz" && m.IsScannedBeneficiary);
+    }
+
+    [Fact]
+    public async Task GetHouseholdVerificationContextAsync_NoHouseholdLink_ReturnsHasHouseholdFalse()
+    {
+        using var context = TestDbContextFactory.CreateContext();
+        var admin = SeedAdmin(context);
+        var program = SeedProgram(context, admin.Id);
+
+        context.BeneficiaryStaging.Add(new BeneficiaryStaging
+        {
+            StagingID = 4001,
+            BeneficiaryId = "BEN-4001",
+            CivilRegistryId = "CR-4001",
+            FullName = "Unlinked Person",
+            VerificationStatus = VerificationStatus.Approved,
+            LinkedHouseholdId = null,
+            LinkedHouseholdMemberId = null,
+            ReviewedAt = DateTime.Now
+        });
+        context.SaveChanges();
+
+        var service = (ProjectDistributionService)CreateService(context);
+        var householdContext = await service.GetHouseholdVerificationContextAsync(program.Id, 4001);
+
+        Assert.False(householdContext.HasHousehold);
+        Assert.False(householdContext.AnyMemberAlreadyReceived);
+        Assert.Empty(householdContext.Members);
     }
 
     private static object CreateService(LocalDbContext context)

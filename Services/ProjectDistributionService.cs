@@ -20,6 +20,21 @@ namespace AttendanceShiftingManagement.Services
         int? ProjectBeneficiaryId = null,
         int? ProjectClaimId = null);
 
+    /// <summary>UI-only household verification snapshot (no EF entities cross to the ViewModel).</summary>
+    public sealed record HouseholdVerificationContext(
+        bool HasHousehold,
+        string HouseholdCode,
+        string HeadName,
+        IReadOnlyList<HouseholdMemberVerificationItem> Members,
+        bool AnyMemberAlreadyReceived,
+        string? WarningMessage);
+
+    public sealed record HouseholdMemberVerificationItem(
+        string FullName,
+        string RelationshipToHead,
+        bool IsScannedBeneficiary,
+        bool AlreadyReceivedSameAssistanceType);
+
     public sealed class ProjectDistributionService
     {
         private readonly LocalDbContext _context;
@@ -776,6 +791,80 @@ namespace AttendanceShiftingManagement.Services
                 .Where(item => item.AyudaProgramId == ayudaProgramId)
                 .OrderByDescending(item => item.ClaimedAt)
                 .ToListAsync();
+        }
+
+        /// <summary>
+        /// Builds a UI-only household snapshot for the confirm panel: the household roster plus a
+        /// cross-project "already received the same assistance type" flag per member. Entities are
+        /// mapped to DTOs inside the service so the ViewModel never sees EF types.
+        /// </summary>
+        public async Task<HouseholdVerificationContext> GetHouseholdVerificationContextAsync(int ayudaProgramId, int beneficiaryStagingId)
+        {
+            var staging = await _context.BeneficiaryStaging
+                .AsNoTracking()
+                .FirstOrDefaultAsync(row => row.StagingID == beneficiaryStagingId);
+
+            var householdId = staging?.LinkedHouseholdId;
+            if (householdId == null)
+            {
+                return new HouseholdVerificationContext(false, string.Empty, string.Empty, Array.Empty<HouseholdMemberVerificationItem>(), false, null);
+            }
+
+            var program = await _context.AyudaPrograms
+                .AsNoTracking()
+                .FirstOrDefaultAsync(item => item.Id == ayudaProgramId);
+            var assistanceType = NormalizeNullable(program?.AssistanceType);
+
+            var household = await _context.Households
+                .AsNoTracking()
+                .FirstOrDefaultAsync(item => item.Id == householdId.Value);
+
+            var members = await _context.HouseholdMembers
+                .AsNoTracking()
+                .Where(item => item.HouseholdId == householdId.Value)
+                .OrderBy(item => item.FullName)
+                .Select(item => new { item.Id, item.FullName, item.RelationshipToHead })
+                .ToListAsync();
+
+            // Cross-project: any claim by this household for the SAME assistance type (single server-side query).
+            var priorClaims = await (
+                from claim in _context.AyudaProjectClaims.AsNoTracking()
+                join prog in _context.AyudaPrograms.AsNoTracking() on claim.AyudaProgramId equals prog.Id
+                where claim.HouseholdId == householdId.Value
+                      && (assistanceType == null || prog.AssistanceType == assistanceType)
+                select new { claim.HouseholdMemberId, claim.FullName })
+                .ToListAsync();
+
+            var scannedMemberId = staging?.LinkedHouseholdMemberId;
+
+            var memberItems = members
+                .Select(member =>
+                {
+                    var alreadyReceived = priorClaims.Any(claim =>
+                        (claim.HouseholdMemberId != null && claim.HouseholdMemberId == member.Id) ||
+                        string.Equals(claim.FullName, member.FullName, StringComparison.OrdinalIgnoreCase));
+
+                    return new HouseholdMemberVerificationItem(
+                        member.FullName,
+                        member.RelationshipToHead ?? string.Empty,
+                        scannedMemberId != null && scannedMemberId == member.Id,
+                        alreadyReceived);
+                })
+                .ToList();
+
+            var anyReceived = priorClaims.Count > 0;
+            var assistanceLabel = assistanceType ?? program?.ProgramName ?? "this assistance";
+            var warning = anyReceived
+                ? $"A member of this household has already received '{assistanceLabel}' assistance ({priorClaims.Count} claim(s) in this household)."
+                : null;
+
+            return new HouseholdVerificationContext(
+                true,
+                household?.HouseholdCode ?? string.Empty,
+                household?.HeadName ?? string.Empty,
+                memberItems,
+                anyReceived,
+                warning);
         }
 
         private static string BuildDisplayName(string? first, string? middle, string? last)

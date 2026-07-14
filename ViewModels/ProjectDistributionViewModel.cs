@@ -85,6 +85,15 @@ namespace AttendanceShiftingManagement.ViewModels
         private bool _isReleaseSuccessState;
         private string _lastScanSummaryText = string.Empty;
         private Brush _lastScanSummaryBrush = Brushes.DimGray;
+        private string _manualBeneficiaryIdText = string.Empty;
+        private bool _isIdentityVerified;
+        private string _programSearchText = string.Empty;
+        private bool _hasHouseholdContext;
+        private string _householdContextSummary = string.Empty;
+        private string _householdAidReceivedSummary = string.Empty;
+        private string? _householdWarningMessage;
+        private bool _requiresHouseholdOverride;
+        private bool _householdOverrideAcknowledged;
 
         private bool _isSidebarCollapsed;
         private bool _isSummaryCollapsed;
@@ -111,6 +120,14 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly RelayCommand _processPcScanCommand;
         private readonly RelayCommand _confirmScannedClaimCommand;
         private readonly RelayCommand _cancelScannedClaimCommand;
+        private readonly RelayCommand _submitManualKeyInCommand;
+        private readonly RelayCommand _confirmHouseholdReleaseCommand;
+        private readonly RelayCommand _cancelHouseholdConfirmCommand;
+        private bool _isHouseholdConfirmVisible;
+        private string _householdConfirmBeneficiaryName = string.Empty;
+        // True when the household modal was opened from the pending-list Payout Verification panel
+        // (vs the scanner/key-in overlay); decides which release path the modal's Confirm runs.
+        private bool _householdConfirmFromPendingList;
 
         public ProjectDistributionViewModel(User currentUser)
         {
@@ -123,6 +140,7 @@ namespace AttendanceShiftingManagement.ViewModels
             AvailableUnpickedBeneficiaries = new ObservableCollection<DistributionBeneficiaryOption>();
 
             RefreshCommand = new RelayCommand(async _ => await LoadAsync(), _ => !IsBusy);
+            SeedMockDataCommand = new RelayCommand(async _ => await ExecuteSeedMockDataAsync(), _ => !IsBusy);
             AddBeneficiaryCommand = new RelayCommand(async _ => await IncludeBeneficiaryAsync(), _ => CanAddBeneficiary());
             MarkBeneficiaryPendingCommand = new RelayCommand(async _ => await UpdateSelectedBeneficiaryStatusAsync(DistributionBeneficiaryStatus.Pending), _ => CanUpdateSelectedBeneficiaryStatus(DistributionBeneficiaryStatus.Pending));
             RejectBeneficiaryCommand = new RelayCommand(async _ => await UpdateSelectedBeneficiaryStatusAsync(DistributionBeneficiaryStatus.Rejected), _ => CanUpdateSelectedBeneficiaryStatus(DistributionBeneficiaryStatus.Rejected));
@@ -158,8 +176,14 @@ namespace AttendanceShiftingManagement.ViewModels
 
             _openPcScannerCommand = new RelayCommand(_ => IsPcScannerOpen = true, _ => !IsBusy && SelectedProgram != null);
             _processPcScanCommand = new RelayCommand(payload => _ = ExecuteProcessPcScan(payload as string));
-            _confirmScannedClaimCommand = new RelayCommand(async _ => await ExecuteConfirmScannedClaimAsync(), _ => !IsBusy && IsScannedBeneficiaryEligible);
+            // Confirm on the scan overlay: opens the household verification modal when a family member
+            // already received the aid; otherwise records the release directly (fast scanner path).
+            _confirmScannedClaimCommand = new RelayCommand(async _ => await RequestConfirmReleaseAsync(), _ => !IsBusy && IsScannedBeneficiaryEligible && IsIdentityVerified);
             _cancelScannedClaimCommand = new RelayCommand(_ => ResetScannedResult());
+            _submitManualKeyInCommand = new RelayCommand(async _ => await ExecuteManualKeyIn(), _ => !IsBusy && SelectedProgram != null && !string.IsNullOrWhiteSpace(ManualBeneficiaryIdText));
+            // Household verification modal: final Confirm/Decline gate after a duplicate is flagged.
+            _confirmHouseholdReleaseCommand = new RelayCommand(async _ => await ConfirmHouseholdReleaseAsync(), _ => !IsBusy && (!RequiresHouseholdOverride || HouseholdOverrideAcknowledged));
+            _cancelHouseholdConfirmCommand = new RelayCommand(_ => CloseHouseholdConfirm());
 
             ResetCreateProjectForm();
             _ = LoadAsync();
@@ -211,6 +235,21 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand ProcessScanCommand => _processPcScanCommand;
         public ICommand ConfirmScannedClaimCommand => _confirmScannedClaimCommand;
         public ICommand CancelScannedClaimCommand => _cancelScannedClaimCommand;
+        public ICommand ConfirmHouseholdReleaseCommand => _confirmHouseholdReleaseCommand;
+        public ICommand CancelHouseholdConfirmCommand => _cancelHouseholdConfirmCommand;
+
+        /// <summary>True while the household verification modal (final Confirm/Decline gate) is shown.</summary>
+        public bool IsHouseholdConfirmVisible
+        {
+            get => _isHouseholdConfirmVisible;
+            private set
+            {
+                if (SetProperty(ref _isHouseholdConfirmVisible, value))
+                {
+                    OnPropertyChanged(nameof(IsAnyOverlayOpen));
+                }
+            }
+        }
 
         public ProjectDistributionBeneficiaryListItem? ScannedBeneficiary
         {
@@ -245,6 +284,77 @@ namespace AttendanceShiftingManagement.ViewModels
         }
 
         public bool HasScannedHistory => ScannedBeneficiaryHistory.Count > 0;
+
+        /// <summary>Household/family roster shown on the confirm panel for identity + duplicate validation.</summary>
+        public ObservableCollection<HouseholdMemberVerificationItem> ScannedHouseholdMembers { get; } = new();
+        public bool HasHouseholdMembers => ScannedHouseholdMembers.Count > 0;
+
+        public bool HasHouseholdContext
+        {
+            get => _hasHouseholdContext;
+            private set => SetProperty(ref _hasHouseholdContext, value);
+        }
+
+        public string HouseholdContextSummary
+        {
+            get => _householdContextSummary;
+            private set => SetProperty(ref _householdContextSummary, value);
+        }
+
+        /// <summary>Front-and-center decision line: how many household members already received this assistance.</summary>
+        public string HouseholdAidReceivedSummary
+        {
+            get => _householdAidReceivedSummary;
+            private set => SetProperty(ref _householdAidReceivedSummary, value);
+        }
+
+        /// <summary>Name shown in the Household Review modal (works for both scan and pending-list flows).</summary>
+        public string HouseholdConfirmBeneficiaryName
+        {
+            get => _householdConfirmBeneficiaryName;
+            private set => SetProperty(ref _householdConfirmBeneficiaryName, value);
+        }
+
+        public string? HouseholdWarningMessage
+        {
+            get => _householdWarningMessage;
+            private set
+            {
+                if (SetProperty(ref _householdWarningMessage, value))
+                {
+                    OnPropertyChanged(nameof(HasHouseholdWarning));
+                }
+            }
+        }
+
+        public bool HasHouseholdWarning => !string.IsNullOrWhiteSpace(_householdWarningMessage);
+
+        /// <summary>True when a household member already received the same assistance type; Confirm needs an explicit override.</summary>
+        public bool RequiresHouseholdOverride
+        {
+            get => _requiresHouseholdOverride;
+            private set
+            {
+                if (SetProperty(ref _requiresHouseholdOverride, value))
+                {
+                    _confirmScannedClaimCommand.RaiseCanExecuteChanged();
+                    _confirmHouseholdReleaseCommand.RaiseCanExecuteChanged();
+                }
+            }
+        }
+
+        public bool HouseholdOverrideAcknowledged
+        {
+            get => _householdOverrideAcknowledged;
+            set
+            {
+                if (SetProperty(ref _householdOverrideAcknowledged, value))
+                {
+                    _confirmScannedClaimCommand.RaiseCanExecuteChanged();
+                    _confirmHouseholdReleaseCommand.RaiseCanExecuteChanged();
+                }
+            }
+        }
 
         public BitmapSource? ScannedBeneficiaryPhoto
         {
@@ -281,6 +391,34 @@ namespace AttendanceShiftingManagement.ViewModels
                 }
             }
         }
+
+        /// <summary>True only after a resolved beneficiary profile has been shown; gates Confirm so identity is never bypassed.</summary>
+        public bool IsIdentityVerified
+        {
+            get => _isIdentityVerified;
+            private set
+            {
+                if (SetProperty(ref _isIdentityVerified, value))
+                {
+                    _confirmScannedClaimCommand.RaiseCanExecuteChanged();
+                }
+            }
+        }
+
+        /// <summary>Operator-typed Beneficiary ID for the manual key-in fallback (used when the scanner fails).</summary>
+        public string ManualBeneficiaryIdText
+        {
+            get => _manualBeneficiaryIdText;
+            set
+            {
+                if (SetProperty(ref _manualBeneficiaryIdText, value))
+                {
+                    _submitManualKeyInCommand.RaiseCanExecuteChanged();
+                }
+            }
+        }
+
+        public ICommand SubmitManualKeyInCommand => _submitManualKeyInCommand;
 
         public bool IsReleaseSuccessState
         {
@@ -355,7 +493,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private DistributionBeneficiaryOption? _selectedAvailableUnpickedBeneficiary;
 
-        public bool IsAnyOverlayOpen => IsAddBeneficiaryPanelOpen || IsScannerPanelOpen || IsCreateProjectPanelOpen || IsCreateProjectSuccessPanelOpen || IsPcScannerOpen || IsScannedResultVisible || IsReleaseSuccessState;
+        public bool IsAnyOverlayOpen => IsAddBeneficiaryPanelOpen || IsScannerPanelOpen || IsCreateProjectPanelOpen || IsCreateProjectSuccessPanelOpen || IsPcScannerOpen || IsScannedResultVisible || IsReleaseSuccessState || IsHouseholdConfirmVisible;
 
         public DistributionBeneficiaryOption? SelectedAvailableUnpickedBeneficiary
         {
@@ -802,6 +940,14 @@ namespace AttendanceShiftingManagement.ViewModels
 
 
         public ObservableCollection<ProjectDistributionProgramListItem> ProgramSummaries { get; } = new();
+
+        /// <summary>Search-filtered projects for the selection picker (search by name or code).</summary>
+        public ObservableCollection<ProjectDistributionProgramListItem> FilteredProgramSummaries { get; } = new();
+
+        /// <summary>Sidebar list scoped to the chosen project only (empty until one is selected) to reduce clutter.</summary>
+        public ObservableCollection<ProjectDistributionProgramListItem> SidebarProgramSummaries { get; } = new();
+
+        public bool HasSelectedProgram => SelectedProgramSummary != null;
         public ObservableCollection<DistributionBeneficiaryOption> AvailableBeneficiaries { get; } = new();
         public ObservableCollection<ProjectDistributionBeneficiaryListItem> ProgramBeneficiaries { get; } = new();
         public ObservableCollection<ProjectDistributionReleaseListItem> ProgramReleaseHistory { get; } = new();
@@ -810,6 +956,7 @@ namespace AttendanceShiftingManagement.ViewModels
         public ObservableCollection<DistributionBeneficiaryOption> FilteredAvailableBeneficiaries { get; } = new();
 
         public ICommand RefreshCommand { get; }
+        public ICommand SeedMockDataCommand { get; }
         public ICommand AddBeneficiaryCommand { get; }
         public ICommand MarkBeneficiaryPendingCommand { get; }
         public ICommand RejectBeneficiaryCommand { get; }
@@ -845,6 +992,19 @@ namespace AttendanceShiftingManagement.ViewModels
             }
         }
 
+        /// <summary>Free-text filter for the project picker (matches program name or code).</summary>
+        public string ProgramSearchText
+        {
+            get => _programSearchText;
+            set
+            {
+                if (SetProperty(ref _programSearchText, value))
+                {
+                    ApplyProgramFilter();
+                }
+            }
+        }
+
         public ProjectDistributionProgramListItem? SelectedProgramSummary
         {
             get => _selectedProgramSummary;
@@ -853,7 +1013,35 @@ namespace AttendanceShiftingManagement.ViewModels
                 if (SetProperty(ref _selectedProgramSummary, value))
                 {
                     SelectedProgram = value?.Program;
+                    RefreshSidebarProjects();
+                    OnPropertyChanged(nameof(HasSelectedProgram));
                 }
+            }
+        }
+
+        /// <summary>Rebuilds <see cref="FilteredProgramSummaries"/> from the full list using <see cref="ProgramSearchText"/>.</summary>
+        private void ApplyProgramFilter()
+        {
+            var search = _programSearchText?.Trim();
+            FilteredProgramSummaries.Clear();
+            foreach (var item in ProgramSummaries)
+            {
+                if (string.IsNullOrEmpty(search) ||
+                    item.ProgramName.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                    item.ProgramCode.Contains(search, StringComparison.OrdinalIgnoreCase))
+                {
+                    FilteredProgramSummaries.Add(item);
+                }
+            }
+        }
+
+        /// <summary>Keeps the sidebar list scoped to just the chosen project (empty when none).</summary>
+        private void RefreshSidebarProjects()
+        {
+            SidebarProgramSummaries.Clear();
+            if (_selectedProgramSummary != null)
+            {
+                SidebarProgramSummaries.Add(_selectedProgramSummary);
             }
         }
 
@@ -902,6 +1090,8 @@ namespace AttendanceShiftingManagement.ViewModels
                     {
                         openPcScanner.RaiseCanExecuteChanged();
                     }
+
+                    _submitManualKeyInCommand.RaiseCanExecuteChanged();
 
                     if (!IsBusy)
                     {
@@ -1185,6 +1375,9 @@ namespace AttendanceShiftingManagement.ViewModels
                     {
                         openPcScanner.RaiseCanExecuteChanged();
                     }
+
+                    _confirmScannedClaimCommand.RaiseCanExecuteChanged();
+                    _submitManualKeyInCommand.RaiseCanExecuteChanged();
                 }
             }
         }
@@ -1327,11 +1520,15 @@ namespace AttendanceShiftingManagement.ViewModels
                     claimSummary?.LatestClaimedAt));
             }
 
+            // Choose-project-first: never auto-select. Only restore a prior selection after a refresh.
             SelectedProgramSummary = selectedProgramId.HasValue
                 ? ProgramSummaries.FirstOrDefault(item => item.Id == selectedProgramId.Value)
                 : SelectedProgramSummary == null
-                    ? ProgramSummaries.FirstOrDefault()
+                    ? null
                     : ProgramSummaries.FirstOrDefault(item => item.Id == SelectedProgramSummary.Id);
+
+            ApplyProgramFilter();
+            RefreshSidebarProjects();
         }
 
         private async Task LoadAvailableBeneficiariesAsync()
@@ -1676,15 +1873,45 @@ namespace AttendanceShiftingManagement.ViewModels
             }
 
             ScannerInputText = string.Empty;
+
+            // QR scans carry a payload that also serves as the confirm-time identity token.
+            await ResolveAndPresentAsync(
+                new BeneficiaryLookupRequest(BeneficiaryLookupSource.QrPayload, payload),
+                confirmToken: payload);
+        }
+
+        private async Task ExecuteManualKeyIn()
+        {
+            var beneficiaryId = ManualBeneficiaryIdText?.Trim();
+            if (string.IsNullOrWhiteSpace(beneficiaryId) || SelectedProgram == null) return;
+
+            // Queue protection: ignore while a dialog is active
+            if (IsScannedResultVisible || IsReleaseSuccessState) return;
+
+            // Manual key-in has no QR payload; identity is verified visually + by the resolved staging id.
+            await ResolveAndPresentAsync(
+                new BeneficiaryLookupRequest(BeneficiaryLookupSource.BeneficiaryId, beneficiaryId),
+                confirmToken: null);
+        }
+
+        /// <summary>
+        /// Single presentation pipeline shared by QR scan and manual key-in. Resolves the request,
+        /// populates the identical scanned-result state, and marks identity verified on success.
+        /// </summary>
+        private async Task ResolveAndPresentAsync(BeneficiaryLookupRequest request, string? confirmToken)
+        {
+            if (SelectedProgram == null) return;
+
             IsBusy = true;
             IsScannedBeneficiaryEligible = false;
+            IsIdentityVerified = false;
             SetNeutralStatus("Analyzing ID card...");
 
             try
             {
                 await using var context = new LocalDbContext();
                 var digitalIdService = new BeneficiaryDigitalIdService(context);
-                var lookup = await digitalIdService.LookupByQrPayloadAsync(payload);
+                var lookup = await digitalIdService.ResolveLookupAsync(request);
 
                 if (lookup == null)
                 {
@@ -1692,7 +1919,9 @@ namespace AttendanceShiftingManagement.ViewModels
                     _ = Task.Run(() => { try { Console.Beep(400, 600); } catch { } });
                     LastScanSummaryText = "Last Scan: Not Found";
                     LastScanSummaryBrush = (Brush)Application.Current.Resources["BrandDangerBrush"];
-                    SetErrorStatus("Invalid QR code or beneficiary not found.");
+                    SetErrorStatus(request.Source == BeneficiaryLookupSource.BeneficiaryId
+                        ? "Beneficiary ID not found."
+                        : "Invalid QR code or beneficiary not found.");
                     return;
                 }
 
@@ -1710,7 +1939,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
                 ScannedBeneficiaryStatus = qualification.Message;
                 ScannedBeneficiaryPhoto = string.IsNullOrWhiteSpace(lookup.PhotoPath) ? null : LocalImageLoader.Load(lookup.PhotoPath) as BitmapSource;
-                
+
                 if (qualification.BeneficiaryStatus == DistributionBeneficiaryStatus.Released)
                 {
                     ScannedBeneficiaryStatus = "ALREADY CLAIMED";
@@ -1748,16 +1977,21 @@ namespace AttendanceShiftingManagement.ViewModels
                     .ToListAsync();
 
                 ScannedBeneficiaryHistory.Clear();
-                foreach(var item in history)
+                foreach (var item in history)
                 {
                     ScannedBeneficiaryHistory.Add(item);
                 }
                 OnPropertyChanged(nameof(HasScannedHistory));
 
-                // Save cooldown ONLY after successful lookup
-                _lastScannedPayload = payload;
+                // Household verification (members + cross-project "already received" soft warning).
+                await LoadHouseholdContextAsync(distributionService, lookup.BeneficiaryStagingId);
+
+                // Confirm-time identity token: the QR payload for scans, null for key-in.
+                _lastScannedPayload = confirmToken;
                 _lastScannedTime = DateTime.Now;
+                IsIdentityVerified = true;
                 IsScannedResultVisible = true;
+                ManualBeneficiaryIdText = string.Empty;
                 SetNeutralStatus($"ID analyzed: {lookup.FullName}. Please review and confirm release.");
             }
             catch (Exception ex)
@@ -1770,14 +2004,105 @@ namespace AttendanceShiftingManagement.ViewModels
             }
         }
 
+        /// <summary>
+        /// Loads the household verification context (members + cross-project "already received" soft
+        /// warning) for a staged beneficiary and populates all modal/overlay-bound properties.
+        /// Shared by the scanner/key-in overlay and the pending-list Payout Verification flow.
+        /// </summary>
+        private async Task LoadHouseholdContextAsync(ProjectDistributionService distributionService, int beneficiaryStagingId)
+        {
+            if (SelectedProgram == null)
+            {
+                return;
+            }
+
+            var householdContext = await distributionService.GetHouseholdVerificationContextAsync(SelectedProgram.Id, beneficiaryStagingId);
+            ScannedHouseholdMembers.Clear();
+            foreach (var member in householdContext.Members)
+            {
+                ScannedHouseholdMembers.Add(member);
+            }
+            OnPropertyChanged(nameof(HasHouseholdMembers));
+            HasHouseholdContext = householdContext.HasHousehold;
+            HouseholdContextSummary = householdContext.HasHousehold
+                ? $"Household {householdContext.HouseholdCode} · Head: {householdContext.HeadName}"
+                : "No household linked to this beneficiary.";
+            HouseholdWarningMessage = householdContext.WarningMessage;
+            RequiresHouseholdOverride = householdContext.AnyMemberAlreadyReceived;
+            HouseholdOverrideAcknowledged = false;
+
+            // Front-and-center decision line: how many in the family have already received this assistance.
+            if (!householdContext.HasHousehold)
+            {
+                HouseholdAidReceivedSummary = "No household on file for this beneficiary.";
+            }
+            else
+            {
+                var receivedCount = householdContext.Members.Count(m => m.AlreadyReceivedSameAssistanceType);
+                var totalCount = householdContext.Members.Count;
+                HouseholdAidReceivedSummary = receivedCount > 0
+                    ? $"{receivedCount} of {totalCount} household member(s) already received this assistance."
+                    : $"No one in this household ({totalCount} member(s)) has received this assistance yet.";
+            }
+        }
+
+        /// <summary>
+        /// Confirm on the scan overlay. Always opens the Household Review modal so the operator sees
+        /// the family before releasing; a duplicate additionally requires the override acknowledgment.
+        /// </summary>
+        private Task RequestConfirmReleaseAsync()
+        {
+            if (SelectedProgram == null || ScannedBeneficiary == null || !IsIdentityVerified)
+            {
+                return Task.CompletedTask;
+            }
+
+            // Advisor requirement: the household must be reviewed on every confirm, not only on
+            // duplicates. The modal always opens; the acknowledgment checkbox is only *required*
+            // when a member already received the same assistance (RequiresHouseholdOverride).
+            _householdConfirmFromPendingList = false;
+            HouseholdConfirmBeneficiaryName = ScannedBeneficiary.FullName;
+            HouseholdOverrideAcknowledged = false;
+            IsHouseholdConfirmVisible = true;
+            return Task.CompletedTask;
+        }
+
+        /// <summary>Final Confirm from inside the household modal; routes to whichever flow opened it.</summary>
+        private async Task ConfirmHouseholdReleaseAsync()
+        {
+            IsHouseholdConfirmVisible = false;
+            if (_householdConfirmFromPendingList)
+            {
+                await ExecutePendingReleaseAsync();
+            }
+            else
+            {
+                await ExecuteConfirmScannedClaimAsync();
+            }
+        }
+
+        /// <summary>Decline from inside the household modal: back to the caller without releasing.</summary>
+        private void CloseHouseholdConfirm()
+        {
+            IsHouseholdConfirmVisible = false;
+            HouseholdOverrideAcknowledged = false;
+        }
+
         private async Task ExecuteConfirmScannedClaimAsync()
         {
-            if (SelectedProgram == null || ScannedBeneficiary == null || string.IsNullOrWhiteSpace(_lastScannedPayload))
+            // Identity must be verified (profile shown) before a claim can be confirmed — never bypass.
+            if (SelectedProgram == null || ScannedBeneficiary == null || !IsIdentityVerified)
             {
                 return;
             }
 
             var beneficiaryName = ScannedBeneficiary.FullName;
+            var isManualKeyIn = string.IsNullOrWhiteSpace(_lastScannedPayload);
+            var sourceRemark = isManualKeyIn ? "Marked via Manual Beneficiary ID Key-in (Confirmed)" : "Marked via Desktop Camera (Confirmed)";
+            // Record when the operator overrode a household duplicate warning, for the audit trail.
+            var claimRemark = RequiresHouseholdOverride
+                ? $"{sourceRemark} [Household duplicate warning overridden]"
+                : sourceRemark;
             IsBusy = true;
             SetNeutralStatus($"Recording claim for {beneficiaryName}...");
 
@@ -1790,7 +2115,7 @@ namespace AttendanceShiftingManagement.ViewModels
                     ScannedBeneficiary.BeneficiaryStagingId,
                     _currentUser.Id,
                     _lastScannedPayload,
-                    "Marked via Desktop Camera (Confirmed)");
+                    claimRemark);
 
                 if (result.IsSuccess)
                 {
@@ -1833,9 +2158,47 @@ namespace AttendanceShiftingManagement.ViewModels
             ScannedBeneficiaryPhoto = null;
             ScannedBeneficiaryHistory.Clear();
             OnPropertyChanged(nameof(HasScannedHistory));
+            ScannedHouseholdMembers.Clear();
+            OnPropertyChanged(nameof(HasHouseholdMembers));
+            IsHouseholdConfirmVisible = false;
+            HasHouseholdContext = false;
+            HouseholdContextSummary = string.Empty;
+            HouseholdAidReceivedSummary = string.Empty;
+            HouseholdWarningMessage = null;
+            RequiresHouseholdOverride = false;
+            HouseholdOverrideAcknowledged = false;
             IsScannedBeneficiaryEligible = false;
+            IsIdentityVerified = false;
+            _lastScannedPayload = null;
             IsScannedResultVisible = false;
             RequestScannerFocus?.Invoke();
+        }
+
+        /// <summary>DEV: seeds the fixed mock households/beneficiaries for testing the household-verification flow.</summary>
+        private async Task ExecuteSeedMockDataAsync()
+        {
+            IsBusy = true;
+            SetNeutralStatus("Seeding mock households and beneficiaries...");
+            try
+            {
+                var result = await new DevSeedService().SeedMockHouseholdsAsync(_currentUser.Id);
+                if (result.AlreadySeeded)
+                {
+                    SetNeutralStatus(result.Message);
+                }
+                else
+                {
+                    SetSuccessStatus(result.Message);
+                }
+            }
+            catch (Exception ex)
+            {
+                SetErrorStatus($"Failed to seed mock data: {ex.Message}");
+            }
+            finally
+            {
+                IsBusy = false;
+            }
         }
 
         private bool CanOpenLivePreview()
@@ -2637,12 +3000,36 @@ namespace AttendanceShiftingManagement.ViewModels
                 return;
             }
 
-            var confirmMsg = $"Release assistance for {SelectedPendingBeneficiary.FullName}?\n\n" +
-                             $"Beneficiary ID: {SelectedPendingBeneficiary.BeneficiaryId}\n" +
-                             $"Project: {SelectedProgram.ProgramName}\n\n" +
-                             "This action will record the claim and update the budget ledger. Proceed?";
+            // Advisor requirement: every confirm opens the Household Review modal (replaces the old
+            // MessageBox) so the operator sees the family and any prior claims before releasing.
+            IsBusy = true;
+            SetNeutralStatus("Loading household context...");
+            try
+            {
+                await using var context = new LocalDbContext();
+                var distributionService = new ProjectDistributionService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
+                await LoadHouseholdContextAsync(distributionService, SelectedPendingBeneficiary.BeneficiaryStagingId);
+            }
+            catch (Exception ex)
+            {
+                SetErrorStatus($"Unable to load household context: {ex.Message}");
+                return;
+            }
+            finally
+            {
+                IsBusy = false;
+            }
 
-            if (MessageBox.Show(confirmMsg, "Confirm Release", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+            _householdConfirmFromPendingList = true;
+            HouseholdConfirmBeneficiaryName = SelectedPendingBeneficiary.FullName;
+            HouseholdOverrideAcknowledged = false;
+            IsHouseholdConfirmVisible = true;
+        }
+
+        /// <summary>Records the pending-list release after the Household Review modal is confirmed.</summary>
+        private async Task ExecutePendingReleaseAsync()
+        {
+            if (SelectedProgram == null || SelectedPendingBeneficiary == null)
             {
                 return;
             }
@@ -2654,12 +3041,16 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 await using var context = new LocalDbContext();
                 var service = new ProjectDistributionService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
+                // Record when the operator overrode a household duplicate warning, for the audit trail.
+                var claimRemark = RequiresHouseholdOverride
+                    ? "Released from pending list [Household duplicate warning overridden]"
+                    : null;
                 var result = await service.RecordClaimAsync(
                     SelectedProgram.Id,
                     SelectedPendingBeneficiary.BeneficiaryStagingId,
                     _currentUser.Id,
                     SelectedPendingDigitalIdQrPayload,
-                    null);
+                    claimRemark);
 
                 if (!result.IsSuccess)
                 {

@@ -100,6 +100,12 @@ namespace AttendanceShiftingManagement.Views
 
         private void ShowProjectSelection()
         {
+            // Reset the picker search so the full project list is shown on open.
+            if (DataContext is ProjectDistributionViewModel vm)
+            {
+                vm.ProgramSearchText = string.Empty;
+            }
+
             var dialog = new ProjectSelectionDialog
             {
                 DataContext = this.DataContext,

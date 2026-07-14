@@ -43,15 +43,24 @@
                 <TextBlock Text="Select Distribution Project"
                            FontSize="24" FontWeight="SemiBold"
                            Foreground="{DynamicResource BrandMidnightBrush}"/>
-                <TextBlock Text="Select a project to load the manual release workspace."
+                <TextBlock Text="Search and select a project to load the manual release workspace."
                            FontSize="14" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,4,0,0"/>
             </StackPanel>
 
+            <!-- Search -->
+            <TextBox Grid.Row="1" Margin="0,20,0,0"
+                     Text="{Binding ProgramSearchText, UpdateSourceTrigger=PropertyChanged}"
+                     materialDesign:HintAssist.Hint="Search by project name or code"
+                     materialDesign:TextFieldAssist.HasClearButton="True"
+                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                     FontSize="14"
+                     Foreground="{DynamicResource BrandMidnightBrush}"/>
+
             <!-- DataGrid -->
             <materialDesign:Card Grid.Row="2" Margin="0,20,0,0" Padding="0" Background="Transparent" BorderThickness="1" BorderBrush="{DynamicResource BrandBorderBrush}" UniformCornerRadius="12">
-                <DataGrid x:Name="ProjectDataGrid" 
-                          ItemsSource="{Binding ProgramSummaries}" 
-                          SelectedItem="{Binding SelectedProgramSummary}" 
+                <DataGrid x:Name="ProjectDataGrid"
+                          ItemsSource="{Binding FilteredProgramSummaries}"
+                          SelectedItem="{Binding SelectedProgramSummary}"
                           AutoGenerateColumns="False" 
                           CanUserAddRows="False" 
                           CanUserDeleteRows="False" 
