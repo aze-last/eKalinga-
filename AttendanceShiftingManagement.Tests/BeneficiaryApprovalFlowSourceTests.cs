@@ -76,6 +76,10 @@ public sealed class BeneficiaryApprovalFlowSourceTests
         Assert.DoesNotContain("link to", viewModelSource, StringComparison.Ordinal);
         Assert.DoesNotContain("_context.Households", serviceSource, StringComparison.Ordinal);
         Assert.DoesNotContain("_context.HouseholdMembers", serviceSource, StringComparison.Ordinal);
+
+        // Household links set by other modules must survive verification status changes.
+        Assert.DoesNotContain("stagingRow.LinkedHouseholdId = null", serviceSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("stagingRow.LinkedHouseholdMemberId = null", serviceSource, StringComparison.Ordinal);
     }
 
     [Fact]

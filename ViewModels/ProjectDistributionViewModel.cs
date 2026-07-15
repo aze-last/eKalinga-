@@ -125,6 +125,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly RelayCommand _cancelHouseholdConfirmCommand;
         private bool _isHouseholdConfirmVisible;
         private string _householdConfirmBeneficiaryName = string.Empty;
+        private BitmapSource? _householdConfirmBeneficiaryPhoto;
         // True when the household modal was opened from the pending-list Payout Verification panel
         // (vs the scanner/key-in overlay); decides which release path the modal's Confirm runs.
         private bool _householdConfirmFromPendingList;
@@ -313,6 +314,13 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             get => _householdConfirmBeneficiaryName;
             private set => SetProperty(ref _householdConfirmBeneficiaryName, value);
+        }
+
+        /// <summary>Beneficiary photo shown in the Household Review modal; null falls back to the default profile icon.</summary>
+        public BitmapSource? HouseholdConfirmBeneficiaryPhoto
+        {
+            get => _householdConfirmBeneficiaryPhoto;
+            private set => SetProperty(ref _householdConfirmBeneficiaryPhoto, value);
         }
 
         public string? HouseholdWarningMessage
@@ -2062,6 +2070,7 @@ namespace AttendanceShiftingManagement.ViewModels
             // when a member already received the same assistance (RequiresHouseholdOverride).
             _householdConfirmFromPendingList = false;
             HouseholdConfirmBeneficiaryName = ScannedBeneficiary.FullName;
+            HouseholdConfirmBeneficiaryPhoto = ScannedBeneficiaryPhoto;
             HouseholdOverrideAcknowledged = false;
             IsHouseholdConfirmVisible = true;
             return Task.CompletedTask;
@@ -2086,6 +2095,7 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             IsHouseholdConfirmVisible = false;
             HouseholdOverrideAcknowledged = false;
+            HouseholdConfirmBeneficiaryPhoto = null;
         }
 
         private async Task ExecuteConfirmScannedClaimAsync()
@@ -2156,6 +2166,7 @@ namespace AttendanceShiftingManagement.ViewModels
             ScannedBeneficiary = null;
             ScannedBeneficiaryStatus = null;
             ScannedBeneficiaryPhoto = null;
+            HouseholdConfirmBeneficiaryPhoto = null;
             ScannedBeneficiaryHistory.Clear();
             OnPropertyChanged(nameof(HasScannedHistory));
             ScannedHouseholdMembers.Clear();
@@ -3009,6 +3020,13 @@ namespace AttendanceShiftingManagement.ViewModels
                 await using var context = new LocalDbContext();
                 var distributionService = new ProjectDistributionService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
                 await LoadHouseholdContextAsync(distributionService, SelectedPendingBeneficiary.BeneficiaryStagingId);
+
+                var photoPath = await context.BeneficiaryStaging
+                    .AsNoTracking()
+                    .Where(s => s.StagingID == SelectedPendingBeneficiary.BeneficiaryStagingId)
+                    .Select(s => s.PhotoPath)
+                    .FirstOrDefaultAsync();
+                HouseholdConfirmBeneficiaryPhoto = string.IsNullOrWhiteSpace(photoPath) ? null : LocalImageLoader.Load(photoPath) as BitmapSource;
             }
             catch (Exception ex)
             {

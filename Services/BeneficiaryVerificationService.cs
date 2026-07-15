@@ -79,8 +79,7 @@ namespace AttendanceShiftingManagement.Services
 
             var fullName = BuildDisplayName(stagingRow);
             stagingRow.VerificationStatus = VerificationStatus.Approved;
-            stagingRow.LinkedHouseholdId = null;
-            stagingRow.LinkedHouseholdMemberId = null;
+            // Household links are preserved across status changes; they are managed by the household module.
             stagingRow.ReviewNotes = NormalizeNullable(request.ReviewNotes);
             stagingRow.ReviewedAt = DateTime.Now;
             stagingRow.ReviewedByUserId = actedByUserId;
@@ -175,8 +174,7 @@ namespace AttendanceShiftingManagement.Services
             stagingRow.ReviewNotes = NormalizeNullable(reviewNotes);
             stagingRow.ReviewedAt = DateTime.Now;
             stagingRow.ReviewedByUserId = actedByUserId;
-            stagingRow.LinkedHouseholdId = null;
-            stagingRow.LinkedHouseholdMemberId = null;
+            // Household links are preserved across status changes; they are managed by the household module.
 
             var activeDigitalId = await _context.BeneficiaryDigitalIds
                 .FirstOrDefaultAsync(item => item.BeneficiaryStagingId == stagingId && item.IsActive);
@@ -371,8 +369,7 @@ namespace AttendanceShiftingManagement.Services
             stagingRow.ReviewNotes = NormalizeNullable(reviewNotes);
             stagingRow.ReviewedAt = DateTime.Now;
             stagingRow.ReviewedByUserId = actedByUserId;
-            stagingRow.LinkedHouseholdId = null;
-            stagingRow.LinkedHouseholdMemberId = null;
+            // Household links are preserved across status changes; they are managed by the household module.
             await _context.SaveChangesAsync();
 
             var fullName = BuildDisplayName(stagingRow);
@@ -423,8 +420,7 @@ namespace AttendanceShiftingManagement.Services
             stagingRow.ReviewNotes = NormalizeNullable(reviewNotes);
             stagingRow.ReviewedAt = DateTime.Now;
             stagingRow.ReviewedByUserId = actedByUserId;
-            stagingRow.LinkedHouseholdId = null;
-            stagingRow.LinkedHouseholdMemberId = null;
+            // Household links are preserved across status changes; they are managed by the household module.
             await _context.SaveChangesAsync();
 
             var fullName = BuildDisplayName(stagingRow);

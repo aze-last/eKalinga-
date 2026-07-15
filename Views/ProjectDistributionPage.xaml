@@ -864,8 +864,30 @@
 
                     <!-- Summary + who this is -->
                     <StackPanel Grid.Row="1" Margin="0,0,0,12">
-                        <TextBlock Text="{Binding HouseholdConfirmBeneficiaryName}" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource BrandMidnightBrush}" TextWrapping="Wrap"/>
-                        <TextBlock Text="{Binding HouseholdContextSummary}" FontSize="12" Foreground="{DynamicResource BrandTextSecondaryBrush}" TextWrapping="Wrap" Margin="0,2,0,8"/>
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <!-- Beneficiary photo; falls back to a default profile icon when no photo is on file -->
+                            <Grid Grid.Column="0" Width="64" Height="64" Margin="0,0,14,0">
+                                <Ellipse Width="64" Height="64" Fill="{DynamicResource ThemeCardSubtleBrush}" Stroke="{DynamicResource BrandBorderBrush}" StrokeThickness="1"/>
+                                <Ellipse Width="64" Height="64"
+                                         Visibility="{Binding HouseholdConfirmBeneficiaryPhoto, Converter={StaticResource NullToHiddenConverter}}">
+                                    <Ellipse.Fill>
+                                        <ImageBrush ImageSource="{Binding HouseholdConfirmBeneficiaryPhoto}" Stretch="UniformToFill"/>
+                                    </Ellipse.Fill>
+                                </Ellipse>
+                                <materialDesign:PackIcon Kind="AccountCircle" Width="48" Height="48"
+                                                         HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                         Foreground="{DynamicResource BrandTextSecondaryBrush}"
+                                                         Visibility="{Binding HouseholdConfirmBeneficiaryPhoto, Converter={StaticResource NullToHiddenConverter}, ConverterParameter=Inverse}"/>
+                            </Grid>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding HouseholdConfirmBeneficiaryName}" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource BrandMidnightBrush}" TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding HouseholdContextSummary}" FontSize="12" Foreground="{DynamicResource BrandTextSecondaryBrush}" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </Grid>
                         <!-- Neutral summary card (no duplicate) -->
                         <Border Background="{DynamicResource ThemeCardSubtleBrush}" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12,10"
                                 Visibility="{Binding RequiresHouseholdOverride, Converter={StaticResource InverseBooleanToVisibilityConverter}}">

@@ -36,6 +36,29 @@ public sealed class MasterListPageBindingTests
     }
 
     [Fact]
+    public void MasterListPage_BindsReadOnlyHouseholdTabInDetailsPanel()
+    {
+        var pagePath = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..",
+            "..",
+            "..",
+            "..",
+            "Views",
+            "MasterListPage.xaml"));
+
+        var xaml = File.ReadAllText(pagePath);
+
+        Assert.Contains("Header=\"HOUSEHOLD\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("ItemsSource=\"{Binding SelectedHouseholdMembers}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding HouseholdCode}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding HouseholdHeadName}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding HouseholdAddressSummary}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"No household linked to this beneficiary.\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Visibility=\"{Binding IsSelectedBeneficiary, Converter={StaticResource BooleanToVisibilityConverter}}\"", xaml, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void NavigationLabels_UseValidatedBeneficiariesTerminology()
     {
         var dashboardPath = Path.GetFullPath(Path.Combine(

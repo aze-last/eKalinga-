@@ -29,12 +29,33 @@ public sealed class ProjectDistributionPageBindingTests
         Assert.Contains("Text=\"{Binding SelectedPendingBeneficiary.FullName}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"{Binding SelectedPendingDigitalIdCardNumber}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding ConfirmReleaseCommand}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"ATTENDANCE PIN\"", xaml, StringComparison.Ordinal);
 
-        Assert.Contains("Text=\"RELEASED\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Header=\"RELEASED HISTORY\"", xaml, StringComparison.Ordinal);
         Assert.Contains("ItemsSource=\"{Binding ReleasedClaims}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"{Binding ReleasedPaginationText}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding PrevReleasedPageCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding NextReleasedPageCommand}\"", xaml, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ProjectDistributionPage_HouseholdReviewModalShowsBeneficiaryPhotoWithDefaultIconFallback()
+    {
+        var pagePath = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..",
+            "..",
+            "..",
+            "..",
+            "Views",
+            "ProjectDistributionPage.xaml"));
+
+        var xaml = File.ReadAllText(pagePath);
+
+        // The Household Review modal identifies the beneficiary with their photo when one is on
+        // file, and a default profile icon otherwise.
+        Assert.Contains("ImageSource=\"{Binding HouseholdConfirmBeneficiaryPhoto}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Visibility=\"{Binding HouseholdConfirmBeneficiaryPhoto, Converter={StaticResource NullToHiddenConverter}}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Visibility=\"{Binding HouseholdConfirmBeneficiaryPhoto, Converter={StaticResource NullToHiddenConverter}, ConverterParameter=Inverse}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding HouseholdConfirmBeneficiaryName}\"", xaml, StringComparison.Ordinal);
     }
 }

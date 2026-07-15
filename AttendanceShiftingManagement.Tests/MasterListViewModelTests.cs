@@ -74,6 +74,19 @@ public sealed class MasterListViewModelTests
     }
 
     [Fact]
+    public void HouseholdContext_StartsEmptyUntilABeneficiaryIsSelected()
+    {
+        var queryService = new FakeMasterListQueryService();
+        var viewModel = new MasterListViewModel(null, queryService, autoLoad: false, autoRefresh: false);
+
+        Assert.False(viewModel.HasHouseholdContext);
+        Assert.Empty(viewModel.SelectedHouseholdMembers);
+        Assert.Equal(string.Empty, viewModel.HouseholdCode);
+        Assert.Equal(string.Empty, viewModel.HouseholdHeadName);
+        Assert.Equal(string.Empty, viewModel.HouseholdAddressSummary);
+    }
+
+    [Fact]
     public async Task GoToNextPendingPageAsync_RequestsNextPageUsingCurrentFilters()
     {
         var queryService = new FakeMasterListQueryService();

@@ -275,3 +275,12 @@ Before starting any workflow or UI task:
 2. Identify and state the name of the assigned agent.
 3. Review the agent's template in `.agent-team/templates/` to understand the established logic, workflow, and UI constraints (like pagination and sidebar rules) before making changes.
 4. Delegate the task to the agent's context or strictly follow its template rules to ensure design consistency and code recycling.
+
+## Obsidian Daily Reporting Rules
+At the end of every active coding session or day, the agent must document all changes after a prompt/query was done immediately in the Obsidian wiki:
+1. **Location:** `C:\Users\ASUS\OneDrive\Desktop\Projects-wiki\Daily Logs\<YYYY-MM-DD>.md`
+2. **Content Required:**
+   - A list of modified files.
+   - The purpose of each change.
+   - A comprehensive summary of what was done.
+3. **Trigger:** The developer can ask for this explicitly, or the agent should auto-generate it if requested to do a summary at the end of work.

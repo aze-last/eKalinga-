@@ -8,47 +8,69 @@ namespace AttendanceShiftingManagement.Helpers
     {
         public static ImageSource? Load(string? path)
         {
+            const string DefaultAvatarPath = @"C:\Users\ASUS\Downloads\images\default-male-avatar-profile-icon-social-media-user-free-vector.jpg";
+
             if (string.IsNullOrWhiteSpace(path))
             {
-                return null;
+                path = DefaultAvatarPath;
             }
 
-            if (File.Exists(path))
+            if (!string.IsNullOrWhiteSpace(path) && !path.StartsWith("pack://") && !path.StartsWith("http://") && !path.StartsWith("https://"))
             {
-                try
+                if (!File.Exists(path))
                 {
-                    using var stream = File.OpenRead(path);
-                    var fileImage = new BitmapImage();
-                    fileImage.BeginInit();
-                    fileImage.CacheOption = BitmapCacheOption.OnLoad;
-                    fileImage.StreamSource = stream;
-                    fileImage.EndInit();
-                    fileImage.Freeze();
-                    return fileImage;
-                }
-                catch
-                {
-                    return null;
+                    path = DefaultAvatarPath;
                 }
             }
 
-            if (!Uri.TryCreate(path, UriKind.Absolute, out var uri))
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
             {
+                if (!string.IsNullOrWhiteSpace(path) && Uri.TryCreate(path, UriKind.Absolute, out var uri))
+                {
+                    try
+                    {
+                        var uriImage = new BitmapImage();
+                        uriImage.BeginInit();
+                        uriImage.CacheOption = BitmapCacheOption.OnLoad;
+                        uriImage.UriSource = uri;
+                        uriImage.EndInit();
+                        uriImage.Freeze();
+                        return uriImage;
+                    }
+                    catch
+                    {
+                        if (path != DefaultAvatarPath && File.Exists(DefaultAvatarPath))
+                        {
+                            return Load(DefaultAvatarPath);
+                        }
+                        return null;
+                    }
+                }
+
+                if (path != DefaultAvatarPath && File.Exists(DefaultAvatarPath))
+                {
+                    return Load(DefaultAvatarPath);
+                }
                 return null;
             }
 
             try
             {
-                var uriImage = new BitmapImage();
-                uriImage.BeginInit();
-                uriImage.CacheOption = BitmapCacheOption.OnLoad;
-                uriImage.UriSource = uri;
-                uriImage.EndInit();
-                uriImage.Freeze();
-                return uriImage;
+                using var stream = File.OpenRead(path);
+                var fileImage = new BitmapImage();
+                fileImage.BeginInit();
+                fileImage.CacheOption = BitmapCacheOption.OnLoad;
+                fileImage.StreamSource = stream;
+                fileImage.EndInit();
+                fileImage.Freeze();
+                return fileImage;
             }
             catch
             {
+                if (path != DefaultAvatarPath && File.Exists(DefaultAvatarPath))
+                {
+                    return Load(DefaultAvatarPath);
+                }
                 return null;
             }
         }

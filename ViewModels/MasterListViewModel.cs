@@ -122,6 +122,13 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _editableCauseOfDisability = string.Empty;
         private string _editableReviewNotes = string.Empty;
 
+        // Household context (read-only display)
+        private readonly ObservableCollection<BeneficiaryHouseholdMemberItem> _selectedHouseholdMembers = new();
+        private bool _hasHouseholdContext;
+        private string _householdCode = string.Empty;
+        private string _householdHeadName = string.Empty;
+        private string _householdAddressSummary = string.Empty;
+
         // Digital ID Preview
         private string _digitalIdCardNumber = "No digital ID issued yet.";
         private string _digitalIdIssuedAtText = "Approve a beneficiary to generate a digital ID.";
@@ -530,6 +537,33 @@ namespace AttendanceShiftingManagement.ViewModels
             }
         }
 
+        // Household context properties (read-only display)
+        public ObservableCollection<BeneficiaryHouseholdMemberItem> SelectedHouseholdMembers => _selectedHouseholdMembers;
+
+        public bool HasHouseholdContext
+        {
+            get => _hasHouseholdContext;
+            private set => SetProperty(ref _hasHouseholdContext, value);
+        }
+
+        public string HouseholdCode
+        {
+            get => _householdCode;
+            private set => SetProperty(ref _householdCode, value);
+        }
+
+        public string HouseholdHeadName
+        {
+            get => _householdHeadName;
+            private set => SetProperty(ref _householdHeadName, value);
+        }
+
+        public string HouseholdAddressSummary
+        {
+            get => _householdAddressSummary;
+            private set => SetProperty(ref _householdAddressSummary, value);
+        }
+
         // Digital ID Preview properties
         public string DigitalIdCardNumber
         {
@@ -793,12 +827,36 @@ namespace AttendanceShiftingManagement.ViewModels
                 EditableReviewNotes = staging?.ReviewNotes ?? string.Empty;
 
                 SyncDigitalIdPreview(digitalId, staging?.PhotoPath);
+
+                var householdService = new BeneficiaryHouseholdContextService(context);
+                var householdContext = await householdService.GetHouseholdContextAsync(
+                    staging?.LinkedHouseholdId,
+                    staging?.LinkedHouseholdMemberId);
+                ApplyHouseholdContext(householdContext);
             }
             catch (Exception ex)
             {
                 SetErrorStatus($"Failed to sync staging data: {ex.Message}");
             }
         }
+
+        private void ApplyHouseholdContext(BeneficiaryHouseholdContext householdContext)
+        {
+            _selectedHouseholdMembers.Clear();
+            foreach (var member in householdContext.Members)
+            {
+                _selectedHouseholdMembers.Add(member);
+            }
+
+            HasHouseholdContext = householdContext.HasHousehold;
+            HouseholdCode = householdContext.HouseholdCode;
+            HouseholdHeadName = householdContext.HeadName;
+            HouseholdAddressSummary = string.Join(" | ",
+                new[] { householdContext.AddressLine, householdContext.Purok }
+                    .Where(value => !string.IsNullOrWhiteSpace(value)));
+        }
+
+        private void ClearHouseholdContext() => ApplyHouseholdContext(BeneficiaryHouseholdContextService.Empty);
 
         private void SyncDigitalIdPreview(BeneficiaryDigitalId? digitalId, string? stagingPhotoPath = null)
         {
@@ -857,6 +915,7 @@ namespace AttendanceShiftingManagement.ViewModels
             EditableCauseOfDisability = string.Empty;
             EditableReviewNotes = string.Empty;
             ResetDigitalIdPreview();
+            ClearHouseholdContext();
         }
 
         private void RaiseActionCanExecuteChanged()
@@ -1294,7 +1353,19 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private BitmapSource? BuildImage(string? path)
         {
-            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return null;
+            const string DefaultAvatarPath = @"C:\Users\ASUS\Downloads\images\default-male-avatar-profile-icon-social-media-user-free-vector.jpg";
+
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+            {
+                if (File.Exists(DefaultAvatarPath))
+                {
+                    path = DefaultAvatarPath;
+                }
+                else
+                {
+                    return null;
+                }
+            }
 
             try
             {
@@ -1308,6 +1379,10 @@ namespace AttendanceShiftingManagement.ViewModels
             }
             catch
             {
+                if (path != DefaultAvatarPath && File.Exists(DefaultAvatarPath))
+                {
+                    return BuildImage(DefaultAvatarPath);
+                }
                 return null;
             }
         }

@@ -51,13 +51,16 @@ public sealed class BeneficiaryVerificationServiceTests
     }
 
     [Fact]
-    public async Task ApproveAsync_WithLegacyHouseholdArguments_DoesNotCarryHouseholdLinksForward()
+    public async Task ApproveAsync_PreservesExistingHouseholdLinks()
     {
         using var context = TestDbContextFactory.CreateContext();
         var admin = SeedAdmin(context);
         var household = SeedHousehold(context);
         var existingMember = SeedMember(context, household.Id);
         var stagingRow = SeedStaging(context);
+        stagingRow.LinkedHouseholdId = household.Id;
+        stagingRow.LinkedHouseholdMemberId = existingMember.Id;
+        context.SaveChanges();
         var service = new BeneficiaryVerificationService(context);
 
         var result = await service.ApproveAsync(
@@ -73,10 +76,76 @@ public sealed class BeneficiaryVerificationServiceTests
 
         var staged = context.BeneficiaryStaging.Single();
         Assert.Equal(VerificationStatus.Approved, staged.VerificationStatus);
-        Assert.Null(staged.LinkedHouseholdId);
-        Assert.Null(staged.LinkedHouseholdMemberId);
+        Assert.Equal(household.Id, staged.LinkedHouseholdId);
+        Assert.Equal(existingMember.Id, staged.LinkedHouseholdMemberId);
         Assert.Equal(admin.Id, staged.ReviewedByUserId);
         Assert.Equal("Matched to an existing household member.", staged.ReviewNotes);
+    }
+
+    [Fact]
+    public async Task ReturnToPendingAsync_PreservesExistingHouseholdLinks()
+    {
+        using var context = TestDbContextFactory.CreateContext();
+        var admin = SeedAdmin(context);
+        var household = SeedHousehold(context);
+        var existingMember = SeedMember(context, household.Id);
+        var stagingRow = SeedStaging(context, VerificationStatus.Approved);
+        stagingRow.LinkedHouseholdId = household.Id;
+        stagingRow.LinkedHouseholdMemberId = existingMember.Id;
+        context.SaveChanges();
+        var service = new BeneficiaryVerificationService(context);
+
+        var result = await service.ReturnToPendingAsync(stagingRow.StagingID, admin.Id, "Needs profile re-check.");
+
+        Assert.True(result.IsSuccess);
+        var staged = context.BeneficiaryStaging.Single();
+        Assert.Equal(VerificationStatus.Pending, staged.VerificationStatus);
+        Assert.Equal(household.Id, staged.LinkedHouseholdId);
+        Assert.Equal(existingMember.Id, staged.LinkedHouseholdMemberId);
+    }
+
+    [Fact]
+    public async Task RejectAsync_PreservesExistingHouseholdLinks()
+    {
+        using var context = TestDbContextFactory.CreateContext();
+        var admin = SeedAdmin(context);
+        var household = SeedHousehold(context);
+        var existingMember = SeedMember(context, household.Id);
+        var stagingRow = SeedStaging(context);
+        stagingRow.LinkedHouseholdId = household.Id;
+        stagingRow.LinkedHouseholdMemberId = existingMember.Id;
+        context.SaveChanges();
+        var service = new BeneficiaryVerificationService(context);
+
+        var result = await service.RejectAsync(stagingRow.StagingID, admin.Id, "Rejected after manual review.");
+
+        Assert.True(result.IsSuccess);
+        var staged = context.BeneficiaryStaging.Single();
+        Assert.Equal(VerificationStatus.Rejected, staged.VerificationStatus);
+        Assert.Equal(household.Id, staged.LinkedHouseholdId);
+        Assert.Equal(existingMember.Id, staged.LinkedHouseholdMemberId);
+    }
+
+    [Fact]
+    public async Task VerifyAsync_PreservesExistingHouseholdLinks()
+    {
+        using var context = TestDbContextFactory.CreateContext();
+        var admin = SeedAdmin(context);
+        var household = SeedHousehold(context);
+        var existingMember = SeedMember(context, household.Id);
+        var stagingRow = SeedStaging(context);
+        stagingRow.LinkedHouseholdId = household.Id;
+        stagingRow.LinkedHouseholdMemberId = existingMember.Id;
+        context.SaveChanges();
+        var service = new BeneficiaryVerificationService(context);
+
+        var result = await service.VerifyAsync(stagingRow.StagingID, admin.Id, "Identity verified.");
+
+        Assert.True(result.IsSuccess);
+        var staged = context.BeneficiaryStaging.Single();
+        Assert.Equal(VerificationStatus.Verified, staged.VerificationStatus);
+        Assert.Equal(household.Id, staged.LinkedHouseholdId);
+        Assert.Equal(existingMember.Id, staged.LinkedHouseholdMemberId);
     }
 
     [Fact]
