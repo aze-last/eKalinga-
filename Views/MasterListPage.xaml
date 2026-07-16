@@ -50,6 +50,82 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <!-- Left rail: uniform icon-leading action buttons -->
+        <Style x:Key="RailPrimaryButton" TargetType="Button" BasedOn="{StaticResource GoldActionButton}">
+            <Setter Property="Height" Value="46" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Padding" Value="16,0" />
+            <Setter Property="Margin" Value="0,0,0,10" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="Bold" />
+        </Style>
+
+        <Style x:Key="RailBrandButton" TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}">
+            <Setter Property="Background" Value="{DynamicResource ThemePrimaryActionBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemePrimaryActionBrush}" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="Height" Value="46" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Padding" Value="16,0" />
+            <Setter Property="Margin" Value="0,0,0,8" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="Bold" />
+        </Style>
+
+        <Style x:Key="RailButton" TargetType="Button" BasedOn="{StaticResource MaterialDesignOutlinedButton}">
+            <Setter Property="Height" Value="44" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Padding" Value="16,0" />
+            <Setter Property="Margin" Value="0,0,0,8" />
+            <Setter Property="FontSize" Value="13" />
+        </Style>
+
+        <Style x:Key="RailDivider" TargetType="Border">
+            <Setter Property="Height" Value="1" />
+            <Setter Property="Background" Value="{DynamicResource BrandBorderBrush}" />
+            <Setter Property="Margin" Value="0,4,0,18" />
+        </Style>
+
+        <!-- Right panel: segmented section switcher (INFO / ID / HOUSEHOLD) -->
+        <Style x:Key="SectionToggleButton" TargetType="RadioButton">
+            <Setter Property="Foreground" Value="{DynamicResource BrandTextSecondaryBrush}" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="Chip" CornerRadius="8" Padding="0,9"
+                                Background="Transparent">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <materialDesign:PackIcon x:Name="Ico" Kind="{TemplateBinding Tag}" Width="16" Height="16"
+                                                         VerticalAlignment="Center" Margin="0,0,6,0"
+                                                         Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
+                                <ContentPresenter VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Chip" Property="Background" Value="{DynamicResource ThemePrimaryActionBrush}"/>
+                                <Setter Property="Foreground" Value="White"/>
+                                <Setter TargetName="Ico" Property="Foreground" Value="White"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Chip" Property="Background" Value="{DynamicResource ThemeCardSubtleBrush}"/>
+                            </Trigger>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsChecked" Value="True"/>
+                                    <Condition Property="IsMouseOver" Value="True"/>
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="Chip" Property="Background" Value="{DynamicResource ThemePrimaryActionBrush}"/>
+                            </MultiTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </UserControl.Resources>
 
     <Grid>
@@ -148,31 +224,45 @@
                             <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
 
-                        <Grid Grid.Row="0" Margin="20,20,20,10">
-                            <Button Content="DASHBOARD" 
+                        <Grid Grid.Row="0" Margin="20,20,20,16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="8"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Button Grid.Column="0" Content="DASHBOARD"
                                     Command="{Binding DataContext.ShowDashboardCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                     Style="{StaticResource MaterialDesignOutlinedButton}"
-                                    Height="45"/>
+                                    Height="46"/>
+                            <Button Grid.Column="2" Command="{Binding RefreshCommand}"
+                                    Style="{StaticResource MaterialDesignOutlinedButton}"
+                                    Width="46" Height="46" Padding="0" ToolTip="Refresh lists">
+                                <materialDesign:PackIcon Kind="Refresh" Width="22" Height="22"/>
+                            </Button>
                         </Grid>
 
                         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                             <Border Padding="20,0,20,20">
                                 <StackPanel>
-                                    <TextBlock Text="REGISTRY OPERATIONS" Style="{StaticResource SidebarHeaderStyle}"/>
-                                    <Button Content="REFRESH LISTS" Command="{Binding RefreshCommand}" Style="{StaticResource GoldActionButton}" HorizontalContentAlignment="Left" Height="45" Margin="0,0,0,8" FontSize="14"/>
-                                    <Button Content="FILTER / SEARCH" Click="Filter_Click" Style="{StaticResource MaterialDesignOutlinedButton}" HorizontalContentAlignment="Left" Height="45" Margin="0,0,0,20" FontSize="14"/>
-
-                                    <TextBlock Text="VALIDATION ACTIONS" Style="{StaticResource SidebarHeaderStyle}"/>
-                                    <Button Content="APPROVE SELECTED" Command="{Binding ApproveCommand}" Margin="0,0,0,8" Height="44" Style="{StaticResource GoldActionButton}"/>
-                                    <Button Content="REJECT SELECTED" Command="{Binding RejectCommand}" Margin="0,0,0,8" Height="40" Style="{StaticResource MaterialDesignOutlinedButton}" Foreground="{DynamicResource BrandRedBrush}"/>
-                                    <Button Content="RETURN TO PENDING" Command="{Binding ReturnToPendingCommand}" Margin="0,0,0,8" Height="40" Style="{StaticResource MaterialDesignOutlinedButton}"/>
-
-                                    <Button Content="ENROLL IN PROJECT..." Command="{Binding OpenEnrollmentPanelCommand}" Margin="0,12,0,20" Height="44" Style="{StaticResource GoldActionButton}"/>
-
                                     <TextBlock Text="DIGITAL ID &amp; TOOLS" Style="{StaticResource SidebarHeaderStyle}"/>
-                                    <Button Content="PRINT DIGITAL ID" Command="{Binding PrintDigitalIdCommand}" Margin="0,0,0,8" Height="40" Style="{StaticResource MaterialDesignOutlinedButton}"/>
-                                    <Button Content="UPLOAD PHOTO" Command="{Binding UploadDigitalIdPhotoCommand}" Margin="0,0,0,8" Height="40" Style="{StaticResource MaterialDesignOutlinedButton}"/>
-                                    <Button Content="SCAN VIA PC CAMERA" Command="{Binding OpenPcScannerCommand}" Margin="0,0,0,20" Height="45" Style="{StaticResource GoldActionButton}"/>
+                                    <Button Command="{Binding OpenPcScannerCommand}" Style="{StaticResource RailBrandButton}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <materialDesign:PackIcon Kind="Cctv" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                            <TextBlock Text="SCAN VIA PC CAMERA" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Command="{Binding PrintDigitalIdCommand}" Style="{StaticResource RailButton}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <materialDesign:PackIcon Kind="PrinterOutline" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                            <TextBlock Text="PRINT DIGITAL ID" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Command="{Binding UploadDigitalIdPhotoCommand}" Style="{StaticResource RailButton}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <materialDesign:PackIcon Kind="ImagePlusOutline" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                            <TextBlock Text="UPLOAD PHOTO" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
                                 </StackPanel>
                             </Border>
                         </ScrollViewer>
@@ -191,7 +281,9 @@
                                             <Image Source="{Binding LookupScannerQrImage}" Height="60" Width="60" Stretch="Uniform"/>
                                         </Border>
                                         <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
-                                            <TextBlock Text="PIN: {Binding LookupScannerSessionPin}" Foreground="White" FontWeight="Bold" FontSize="14"/>
+                                            <TextBlock Foreground="White" FontWeight="Bold" FontSize="14">
+                                                <Run Text="PIN:"/><Run Text="{Binding LookupScannerSessionPin}"/>
+                                            </TextBlock>
                                             <TextBlock Text="{Binding LookupScannerSessionExpiresAtText}" Foreground="#94A3B8" FontSize="10"/>
                                         </StackPanel>
                                     </Grid>
@@ -211,124 +303,46 @@
 
                     <ScrollViewer Grid.RowSpan="2" VerticalScrollBarVisibility="Auto">
                         <StackPanel>
-                            <!-- Collapsible Summary Section -->
-                            <StackPanel Visibility="{Binding IsSummaryCollapsed, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
-                                <!-- Metric Cards Row -->
-                                <Grid Margin="0,0,0,24">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="12"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="12"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="12"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
+                            <!-- Permanent Metric Cards Row -->
+                            <Grid Margin="0,0,0,24">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
 
-                                    <materialDesign:Card Grid.Column="0" Padding="15">
-                                        <StackPanel>
-                                            <TextBlock Text="PENDING STAGING" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,4"/>
-                                            <TextBlock Text="{Binding TotalPendingBeneficiaries, StringFormat=N0}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}"/>
-                                        </StackPanel>
-                                    </materialDesign:Card>
+                                <materialDesign:Card Grid.Column="0" Padding="15">
+                                    <StackPanel>
+                                        <TextBlock Text="PENDING STAGING" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,4"/>
+                                        <TextBlock Text="{Binding TotalPendingBeneficiaries, StringFormat=N0}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}"/>
+                                    </StackPanel>
+                                </materialDesign:Card>
 
-                                    <materialDesign:Card Grid.Column="2" Padding="15">
-                                        <StackPanel>
-                                            <TextBlock Text="APPROVED REGISTRY" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,4"/>
-                                            <TextBlock Text="{Binding TotalApprovedBeneficiaries, StringFormat=N0}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource BrandSuccessBrush}"/>
-                                        </StackPanel>
-                                    </materialDesign:Card>
+                                <materialDesign:Card Grid.Column="2" Padding="15">
+                                    <StackPanel>
+                                        <TextBlock Text="APPROVED REGISTRY" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,4"/>
+                                        <TextBlock Text="{Binding TotalApprovedBeneficiaries, StringFormat=N0}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource BrandSuccessBrush}"/>
+                                    </StackPanel>
+                                </materialDesign:Card>
 
-                                    <materialDesign:Card Grid.Column="4" Padding="15">
-                                        <StackPanel>
-                                            <TextBlock Text="PWD COUNT" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,4"/>
-                                            <TextBlock Text="{Binding PwdCount, StringFormat=N0}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}"/>
-                                        </StackPanel>
-                                    </materialDesign:Card>
+                                <materialDesign:Card Grid.Column="4" Padding="15">
+                                    <StackPanel>
+                                        <TextBlock Text="PWD COUNT" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,4"/>
+                                        <TextBlock Text="{Binding PwdCount, StringFormat=N0}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}"/>
+                                    </StackPanel>
+                                </materialDesign:Card>
 
-                                    <materialDesign:Card Grid.Column="6" Padding="15">
-                                        <StackPanel>
-                                            <TextBlock Text="SENIOR COUNT" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,4"/>
-                                            <TextBlock Text="{Binding SeniorCount, StringFormat=N0}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}"/>
-                                        </StackPanel>
-                                    </materialDesign:Card>
-                                </Grid>
-
-                                <!-- Selected Preview Detail -->
-                                <Border Style="{StaticResource DetailCardStyle}" Visibility="{Binding SelectedBeneficiary, Converter={StaticResource NullToHiddenConverter}}">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-
-                                        <Border Width="80" Height="80" CornerRadius="40" Background="{DynamicResource ThemeCardSubtleBrush}" Margin="0,0,20,0">
-                                            <Ellipse Width="80" Height="80">
-                                                <Ellipse.Fill>
-                                                    <ImageBrush ImageSource="{Binding DigitalIdPhotoImage}" Stretch="UniformToFill"/>
-                                                </Ellipse.Fill>
-                                            </Ellipse>
-                                        </Border>
-
-                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding SelectedBeneficiary.BeneficiaryId}" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
-                                            <TextBlock Text="{Binding SelectedBeneficiary.FullName}" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}"/>
-                                            <StackPanel Orientation="Horizontal">
-                                                <TextBlock Text="{Binding SelectedBeneficiary.VerificationStatus}" FontWeight="Bold" FontSize="12">
-                                                    <TextBlock.Style>
-                                                        <Style TargetType="TextBlock">
-                                                            <Setter Property="Foreground" Value="{DynamicResource BrandTextSecondaryBrush}"/>
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding SelectedBeneficiary.IsApproved}" Value="True">
-                                                                    <Setter Property="Foreground" Value="{DynamicResource BrandSuccessBrush}"/>
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </TextBlock.Style>
-                                                </TextBlock>
-                                                <TextBlock Text=" • " Foreground="{DynamicResource BrandBorderBrush}"/>
-                                                <TextBlock Text="{Binding SelectedBeneficiary.Address}" FontSize="12" Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
-                                            </StackPanel>
-                                        </StackPanel>
-                                        
-                                        <Button Grid.Column="2" Content="MANAGE" Command="{Binding ViewHistoryCommand}" Style="{StaticResource MaterialDesignOutlinedButton}" Height="40" Padding="20,0"/>
-                                    </Grid>
-                                </Border>
-                            </StackPanel>
-
-                            <!-- Vertical Toggle Bar -->
-                            <Button Command="{Binding ToggleSummaryCommand}"
-                                    Style="{StaticResource MaterialDesignFlatButton}"
-                                    HorizontalAlignment="Stretch" Height="40" Margin="0,0,0,20"
-                                    Background="{DynamicResource ThemeCardSubtleBrush}">
-                                <StackPanel Orientation="Horizontal">
-                                    <materialDesign:PackIcon Width="24" Height="24" Foreground="{DynamicResource BrandMidnightBrush}" VerticalAlignment="Center">
-                                        <materialDesign:PackIcon.Style>
-                                            <Style TargetType="materialDesign:PackIcon">
-                                                <Setter Property="Kind" Value="ChevronUp"/>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsSummaryCollapsed}" Value="True">
-                                                        <Setter Property="Kind" Value="ChevronDown"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </materialDesign:PackIcon.Style>
-                                    </materialDesign:PackIcon>
-                                    <TextBlock VerticalAlignment="Center" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}" Margin="8,0,0,0">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="Text" Value="COLLAPSE SUMMARY"/>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsSummaryCollapsed}" Value="True">
-                                                        <Setter Property="Text" Value="EXPAND SUMMARY (METRICS &amp; PREVIEW)"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
-                                </StackPanel>
-                            </Button>
+                                <materialDesign:Card Grid.Column="6" Padding="15">
+                                    <StackPanel>
+                                        <TextBlock Text="SENIOR COUNT" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,4"/>
+                                        <TextBlock Text="{Binding SeniorCount, StringFormat=N0}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}"/>
+                                    </StackPanel>
+                                </materialDesign:Card>
+                            </Grid>
 
                             <!-- Clean Registry Browser -->
                             <materialDesign:Card Padding="24" Margin="0,0,0,30">
@@ -427,7 +441,7 @@
                     </ScrollViewer>
                 </Grid>
 
-                <!-- Right Column: Detail / Editor Panel -->
+                <!-- Right Column: Profile Card + Quick Actions -->
                 <Border Grid.Column="2" Background="{DynamicResource ThemeCardBrush}" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="1,0,0,0">
                     <Grid>
                         <Grid.RowDefinitions>
@@ -436,103 +450,102 @@
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
-                        <!-- Editor Header -->
-                        <Border Grid.Row="0" Padding="24" Background="{DynamicResource ThemeCardSubtleBrush}" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="0,0,0,1">
+                        <!-- Panel Header -->
+                        <Border Grid.Row="0" Padding="24,18" Background="{DynamicResource ThemePrimaryActionBrush}">
                             <StackPanel>
-                                <TextBlock Text="BENEFICIARY DETAILS" Style="{StaticResource SidebarHeaderStyle}"/>
-                                <TextBlock Text="{Binding SelectedBeneficiary.DisplayName, FallbackValue='Select a record'}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}" TextWrapping="Wrap"/>
+                                <TextBlock Text="BENEFICIARY PROFILE" FontSize="12" FontWeight="Bold" Foreground="#CCFFFFFF" Typography.Capitals="AllSmallCaps" Margin="0,0,0,2"/>
+                                <TextBlock Text="{Binding SelectedBeneficiary.DisplayName, FallbackValue='Select a record'}" FontSize="20" FontWeight="Bold" Foreground="White" TextWrapping="Wrap"/>
                             </StackPanel>
                         </Border>
 
-                        <!-- Scrollable Form (Simplified for brevity, maintaining existing logic) -->
-                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="24">
+                        <!-- Empty state: no selection -->
+                        <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="24"
+                                    Visibility="{Binding SelectedBeneficiary, Converter={StaticResource NullToHiddenConverter}, ConverterParameter=Inverse}">
+                            <materialDesign:PackIcon Kind="AccountSearchOutline" Width="56" Height="56" HorizontalAlignment="Center" Foreground="{DynamicResource BrandBorderBrush}"/>
+                            <TextBlock Text="Select a beneficiary from the registry to view their profile." FontSize="13" TextWrapping="Wrap" TextAlignment="Center" Margin="0,14,0,0" Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
+                        </StackPanel>
+
+                        <!-- Profile Card + Quick Actions -->
+                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="24"
+                                      Visibility="{Binding SelectedBeneficiary, Converter={StaticResource NullToHiddenConverter}}">
                             <StackPanel>
-                                <materialDesign:Card Padding="16" Margin="0,0,0,20">
-                                    <StackPanel>
-                                        <TextBlock Text="Correction Workflow" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,12"/>
-                                        <TextBox Text="{Binding EditableReviewNotes, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource MaterialDesignOutlinedTextBox}" materialDesign:HintAssist.Hint="Admin review notes..." AcceptsReturn="True" MinHeight="80" VerticalContentAlignment="Top"/>
+                                <!-- Profile Card -->
+                                <Border Style="{StaticResource DetailCardStyle}" Margin="0,0,0,20">
+                                    <StackPanel HorizontalAlignment="Center">
+                                        <Border Width="110" Height="110" CornerRadius="55" Background="{DynamicResource ThemeCardSubtleBrush}" Margin="0,0,0,14">
+                                            <Ellipse Width="110" Height="110">
+                                                <Ellipse.Fill>
+                                                    <ImageBrush ImageSource="{Binding DigitalIdPhotoImage}" Stretch="UniformToFill"/>
+                                                </Ellipse.Fill>
+                                            </Ellipse>
+                                        </Border>
+
+                                        <TextBlock Text="{Binding SelectedBeneficiary.DisplayName}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}" TextAlignment="Center" TextWrapping="Wrap"/>
+                                        <TextBlock Text="{Binding SelectedBeneficiary.SexAgeSummary}" FontSize="13" Foreground="{DynamicResource BrandTextSecondaryBrush}" TextAlignment="Center" Margin="0,4,0,0"/>
+                                        <TextBlock Text="{Binding SelectedBeneficiary.Address}" FontSize="12" Foreground="{DynamicResource BrandTextSecondaryBrush}" TextAlignment="Center" TextWrapping="Wrap" Margin="0,4,0,0"/>
+                                        <TextBlock Text="{Binding SelectedBeneficiary.FlagsSummary}" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource ThemePrimaryActionBrush}" TextAlignment="Center" Margin="0,6,0,0"/>
+
+                                        <Border CornerRadius="12" Padding="14,5" Margin="0,12,0,0" HorizontalAlignment="Center" Background="{DynamicResource ThemeCardSubtleBrush}">
+                                            <TextBlock Text="{Binding SelectedBeneficiary.VerificationStatusLabel}" FontWeight="Bold" FontSize="12">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Foreground" Value="{DynamicResource BrandTextSecondaryBrush}"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding SelectedBeneficiary.IsApproved}" Value="True">
+                                                                <Setter Property="Foreground" Value="{DynamicResource BrandSuccessBrush}"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </Border>
                                     </StackPanel>
-                                </materialDesign:Card>
+                                </Border>
 
-                                <TabControl materialDesign:ColorZoneAssist.Mode="Standard" BorderThickness="0" Background="Transparent">
-                                    <TabItem Header="INFO" FontSize="11">
-                                        <StackPanel Margin="0,15,0,0">
-                                            <TextBlock Text="First Name" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="4,0,0,8"/>
-                                            <TextBox Text="{Binding EditableFirstName}" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="0,0,0,15"/>
-                                            
-                                            <TextBlock Text="Last Name" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="4,0,0,8"/>
-                                            <TextBox Text="{Binding EditableLastName}" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="0,0,0,15"/>
-
-                                            <TextBlock Text="Residential Address" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="4,0,0,8"/>
-                                            <TextBox Text="{Binding EditableAddress}" Style="{StaticResource MaterialDesignOutlinedTextBox}" AcceptsReturn="True" MinHeight="60"/>
-                                        </StackPanel>
-                                    </TabItem>
-                                    <TabItem Header="ID" FontSize="11">
-                                        <StackPanel Margin="0,15,0,0">
-                                            <Border Width="150" Height="150" Background="{DynamicResource ThemeCardSubtleBrush}" CornerRadius="10" Margin="0,0,0,20">
-                                                <Image Source="{Binding DigitalIdPhotoImage}" Stretch="UniformToFill"/>
-                                            </Border>
-                                            <Button Content="CROP PHOTO" Command="{Binding CropDigitalIdPhotoCommand}" Style="{StaticResource MaterialDesignOutlinedButton}" Height="36" Margin="0,0,0,8"/>
-                                            <materialDesign:Card Background="White" Padding="8" Margin="0,10,0,0" Visibility="{Binding DigitalIdQrImage, Converter={StaticResource NullToHiddenConverter}}">
-                                                <Image Source="{Binding DigitalIdQrImage}" Height="120" Width="120" Stretch="Uniform"/>
-                                            </materialDesign:Card>
-                                        </StackPanel>
-                                    </TabItem>
-                                    <TabItem Header="HOUSEHOLD" FontSize="11">
-                                        <StackPanel Margin="0,15,0,0">
-                                            <!-- Empty state: no household on file for the selected beneficiary -->
-                                            <StackPanel HorizontalAlignment="Center" Margin="0,30,0,0"
-                                                        Visibility="{Binding HasHouseholdContext, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
-                                                <materialDesign:PackIcon Kind="HomeOffOutline" Width="40" Height="40" HorizontalAlignment="Center" Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
-                                                <TextBlock Text="No household linked to this beneficiary." FontSize="12" TextWrapping="Wrap" TextAlignment="Center" Margin="0,10,0,0" Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
-                                            </StackPanel>
-
-                                            <!-- Household summary + member roster -->
-                                            <StackPanel Visibility="{Binding HasHouseholdContext, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                                <TextBlock Text="Household Code" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="4,0,0,4"/>
-                                                <TextBlock Text="{Binding HouseholdCode}" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}" Margin="4,0,0,15"/>
-
-                                                <TextBlock Text="Head of Household" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="4,0,0,4"/>
-                                                <TextBlock Text="{Binding HouseholdHeadName}" FontSize="13" Foreground="{DynamicResource BrandMidnightBrush}" Margin="4,0,0,15" TextWrapping="Wrap"/>
-
-                                                <TextBlock Text="Address / Purok" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="4,0,0,4"/>
-                                                <TextBlock Text="{Binding HouseholdAddressSummary}" FontSize="13" Foreground="{DynamicResource BrandMidnightBrush}" Margin="4,0,0,15" TextWrapping="Wrap"/>
-
-                                                <TextBlock Text="HOUSEHOLD MEMBERS" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,5,0,8"/>
-                                                <ItemsControl ItemsSource="{Binding SelectedHouseholdMembers}">
-                                                    <ItemsControl.ItemTemplate>
-                                                        <DataTemplate>
-                                                            <Border CornerRadius="6" Padding="10,6" Margin="0,0,0,4" Background="{DynamicResource ThemeSurfaceBrush}" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="1">
-                                                                <StackPanel>
-                                                                    <StackPanel Orientation="Horizontal">
-                                                                        <TextBlock Text="{Binding FullName}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource BrandMidnightBrush}" TextWrapping="Wrap"/>
-                                                                        <materialDesign:PackIcon Kind="AccountCheck" Width="14" Height="14" Margin="6,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource BrandSuccessBrush}" ToolTip="Selected beneficiary"
-                                                                                                 Visibility="{Binding IsSelectedBeneficiary, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                                                                    </StackPanel>
-                                                                    <TextBlock Text="{Binding RelationshipToHead}" FontSize="10" Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
-                                                                </StackPanel>
-                                                            </Border>
-                                                        </DataTemplate>
-                                                    </ItemsControl.ItemTemplate>
-                                                </ItemsControl>
-                                            </StackPanel>
-                                        </StackPanel>
-                                    </TabItem>
-                                    <TabControl.Style>
-                                        <Style TargetType="TabControl" BasedOn="{StaticResource {x:Type TabControl}}">
-                                            <Setter Property="materialDesign:NavigationRailAssist.ShowSelectionBackground" Value="True"/>
-                                        </Style>
-                                    </TabControl.Style>
-                                </TabControl>
+                                <!-- Quick Actions -->
+                                <TextBlock Text="QUICK ACTIONS" Style="{StaticResource SidebarHeaderStyle}"/>
+                                <Button Command="{Binding OpenFullProfileCommand}" Style="{StaticResource RailBrandButton}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="AccountDetails" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                        <TextBlock Text="VIEW FULL PROFILE" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Command="{Binding ApproveCommand}" Style="{StaticResource RailPrimaryButton}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="CheckDecagram" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                        <TextBlock Text="APPROVE &amp; ISSUE ID" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Command="{Binding RejectCommand}" Style="{StaticResource RailButton}" Foreground="{DynamicResource BrandRedBrush}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="CloseCircleOutline" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                        <TextBlock Text="REJECT RECORD" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Command="{Binding ReturnToPendingCommand}" Style="{StaticResource RailButton}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="Undo" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                        <TextBlock Text="RETURN TO PENDING" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Command="{Binding OpenEnrollmentPanelCommand}" Style="{StaticResource RailButton}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="AccountArrowRight" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                        <TextBlock Text="ENROLL IN PROJECT" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Command="{Binding PrintDigitalIdCommand}" Style="{StaticResource RailButton}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="PrinterOutline" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                        <TextBlock Text="PRINT DIGITAL ID" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
                             </StackPanel>
                         </ScrollViewer>
 
-                        <!-- Footer Actions -->
+                        <!-- Footer Status -->
                         <Border Grid.Row="2" Padding="20" Background="{DynamicResource ThemeCardSubtleBrush}" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="0,1,0,0">
-                            <StackPanel>
-                                <Button Content="SAVE CORRECTIONS" Command="{Binding SaveCorrectionsCommand}" Style="{StaticResource GoldActionButton}" Height="45" Margin="0,0,0,8"/>
-                                <TextBlock Text="{Binding StatusMessage}" Foreground="{Binding StatusBrush}" FontSize="11" TextAlignment="Center" TextWrapping="Wrap" FontWeight="SemiBold"/>
-                            </StackPanel>
+                            <TextBlock Text="{Binding StatusMessage}" Foreground="{Binding StatusBrush}" FontSize="11" TextAlignment="Center" TextWrapping="Wrap" FontWeight="SemiBold"/>
                         </Border>
                     </Grid>
                 </Border>
@@ -585,6 +598,200 @@
                     </StackPanel>
                 </Grid>
             </materialDesign:Card>
+        </Border>
+
+        <!-- Full-Screen In-Page Profile Overlay (Gmail-style) -->
+        <Border Grid.RowSpan="2" Panel.ZIndex="140" Background="{DynamicResource BrandSurfaceBrush}"
+                Visibility="{Binding IsFullProfileOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Overlay Header with Back -->
+                <Border Grid.Row="0" Background="{DynamicResource ThemePrimaryActionBrush}" Padding="20,14">
+                    <Grid>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button Command="{Binding CloseFullProfileCommand}"
+                                    Style="{StaticResource MaterialDesignFlatButton}"
+                                    Foreground="White" Height="40" Padding="10,0">
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon Kind="ArrowLeft" Width="22" Height="22" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <TextBlock Text="BACK" VerticalAlignment="Center" FontWeight="Bold"/>
+                                </StackPanel>
+                            </Button>
+                            <Border Width="1" Background="#33FFFFFF" Margin="12,4"/>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="{Binding SelectedBeneficiary.DisplayName, FallbackValue='Beneficiary'}" FontSize="20" FontWeight="Bold" Foreground="White"/>
+                                <TextBlock Text="Full profile, household, documents, and aid history." FontSize="12" Foreground="#CCFFFFFF"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- Overlay Body -->
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="30">
+                    <Grid MaxWidth="1100" HorizontalAlignment="Center">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="24"/>
+                            <ColumnDefinition Width="380"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Left: General Information + Household -->
+                        <StackPanel Grid.Column="0">
+                            <!-- General Information -->
+                            <Border Style="{StaticResource DetailCardStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="GENERAL INFORMATION" Style="{StaticResource SidebarHeaderStyle}"/>
+                                    <UniformGrid Columns="3" Margin="0,4,0,16">
+                                        <TextBox Text="{Binding EditableFirstName, UpdateSourceTrigger=PropertyChanged}"
+                                                 materialDesign:HintAssist.Hint="First Name"
+                                                 Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="0,0,6,0"/>
+                                        <TextBox Text="{Binding EditableMiddleName, UpdateSourceTrigger=PropertyChanged}"
+                                                 materialDesign:HintAssist.Hint="Middle Name"
+                                                 Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="6,0,6,0"/>
+                                        <TextBox Text="{Binding EditableLastName, UpdateSourceTrigger=PropertyChanged}"
+                                                 materialDesign:HintAssist.Hint="Last Name"
+                                                 Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="6,0,0,0"/>
+                                    </UniformGrid>
+                                    <TextBox Text="{Binding EditableAddress, UpdateSourceTrigger=PropertyChanged}"
+                                             materialDesign:HintAssist.Hint="Permanent Address"
+                                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                             TextWrapping="Wrap" AcceptsReturn="True" MinHeight="80" Margin="0,0,0,16"/>
+                                    <TextBlock Text="INTERNAL REVIEW NOTES" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,10"/>
+                                    <TextBox Text="{Binding EditableReviewNotes, UpdateSourceTrigger=PropertyChanged}"
+                                             materialDesign:HintAssist.Hint="Explain rejection or update reason..."
+                                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                             TextWrapping="Wrap" AcceptsReturn="True" MinHeight="90" Margin="0,0,0,18"/>
+                                    <Button Content="SAVE CORRECTIONS" Command="{Binding SaveCorrectionsCommand}" Style="{StaticResource GoldActionButton}" Height="46"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Household (read-only) -->
+                            <Border Style="{StaticResource DetailCardStyle}">
+                                <StackPanel>
+                                    <Label Content="HOUSEHOLD" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource ThemePrimaryActionBrush}" Padding="0" Margin="0,0,0,12"/>
+
+                                    <!-- Empty state -->
+                                    <StackPanel HorizontalAlignment="Center" Margin="0,20,0,10"
+                                                Visibility="{Binding HasHouseholdContext, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                                        <materialDesign:PackIcon Kind="HomeOffOutline" Width="40" Height="40" HorizontalAlignment="Center" Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
+                                        <TextBlock Text="No household linked to this beneficiary." FontSize="12" TextWrapping="Wrap" TextAlignment="Center" Margin="0,10,0,0" Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
+                                    </StackPanel>
+
+                                    <!-- Household summary + roster -->
+                                    <StackPanel Visibility="{Binding HasHouseholdContext, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <Grid Margin="0,4,0,16">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0">
+                                                <TextBlock Text="Household Code" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,4"/>
+                                                <TextBlock Text="{Binding HouseholdCode}" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}"/>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1">
+                                                <TextBlock Text="Head of Household" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,4"/>
+                                                <TextBlock Text="{Binding HouseholdHeadName}" FontSize="13" Foreground="{DynamicResource BrandMidnightBrush}" TextWrapping="Wrap"/>
+                                            </StackPanel>
+                                        </Grid>
+                                        <TextBlock Text="Address / Purok" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,4"/>
+                                        <TextBlock Text="{Binding HouseholdAddressSummary}" FontSize="13" Foreground="{DynamicResource BrandMidnightBrush}" TextWrapping="Wrap" Margin="0,0,0,16"/>
+
+                                        <TextBlock Text="HOUSEHOLD MEMBERS" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,10"/>
+                                        <ItemsControl ItemsSource="{Binding SelectedHouseholdMembers}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border CornerRadius="6" Padding="12,8" Margin="0,0,0,6" Background="{DynamicResource ThemeCardSubtleBrush}" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="1">
+                                                        <StackPanel>
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <TextBlock Text="{Binding FullName}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource BrandMidnightBrush}" TextWrapping="Wrap"/>
+                                                                <materialDesign:PackIcon Kind="AccountCheck" Width="14" Height="14" Margin="6,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource BrandSuccessBrush}" ToolTip="Selected beneficiary"
+                                                                                         Visibility="{Binding IsSelectedBeneficiary, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                                            </StackPanel>
+                                                            <TextBlock Text="{Binding RelationshipToHead}" FontSize="10" Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
+                                                        </StackPanel>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+
+                        <!-- Right: Documents / Digital ID + History -->
+                        <StackPanel Grid.Column="2">
+                            <!-- Digital ID -->
+                            <Border Style="{StaticResource DetailCardStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="DOCUMENTS &amp; DIGITAL ID" Style="{StaticResource SidebarHeaderStyle}"/>
+                                    <Border Width="150" Height="150" HorizontalAlignment="Center" CornerRadius="12" Background="{DynamicResource ThemeCardSubtleBrush}" ClipToBounds="True" Margin="0,4,0,14">
+                                        <Grid>
+                                            <materialDesign:PackIcon Kind="Account" Width="56" Height="56" Foreground="#94A3B8" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            <Image Source="{Binding DigitalIdPhotoImage}" Stretch="UniformToFill"/>
+                                        </Grid>
+                                    </Border>
+                                    <TextBlock Text="{Binding DigitalIdCardNumber}" FontSize="16" FontWeight="ExtraBold" Foreground="{DynamicResource BrandMidnightBrush}" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="{Binding DigitalIdIssuedAtText}" FontSize="11" Foreground="{DynamicResource BrandTextSecondaryBrush}" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+
+                                    <materialDesign:Card Background="White" Padding="10" Margin="0,14,0,14" HorizontalAlignment="Center"
+                                                         Visibility="{Binding DigitalIdQrImage, Converter={StaticResource NullToHiddenConverter}}">
+                                        <Image Source="{Binding DigitalIdQrImage}" Height="140" Width="140" Stretch="Uniform"/>
+                                    </materialDesign:Card>
+
+                                    <Button Content="UPLOAD PHOTO" Command="{Binding UploadDigitalIdPhotoCommand}" Style="{StaticResource MaterialDesignOutlinedButton}" Height="38" Margin="0,0,0,8"/>
+                                    <Button Content="CROP / REPOSITION" Command="{Binding CropDigitalIdPhotoCommand}" Style="{StaticResource MaterialDesignOutlinedButton}" Height="38" Margin="0,0,0,8"/>
+                                    <Button Content="PRINT DIGITAL ID" Command="{Binding PrintDigitalIdCommand}" Style="{StaticResource GoldActionButton}" Height="42"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- History -->
+                            <Border Style="{StaticResource DetailCardStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="AID HISTORY" Style="{StaticResource SidebarHeaderStyle}"/>
+                                    <Grid MinHeight="120">
+                                        <ListBox ItemsSource="{Binding SelectedBeneficiaryHistory}"
+                                                 Background="Transparent" BorderThickness="0"
+                                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Padding="14" Margin="0,0,0,10" Background="{DynamicResource ThemeCardSubtleBrush}" CornerRadius="12">
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                            </Grid.ColumnDefinitions>
+                                                            <StackPanel>
+                                                                <TextBlock Text="{Binding ReleaseDate, StringFormat='{}{0:MMMM dd, yyyy}'}" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}"/>
+                                                                <TextBlock Text="{Binding Remarks}" FontSize="12" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                                                                <TextBlock Text="{Binding SourceModule}" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource BrandGoldTextBrush}" Margin="0,6,0,0"/>
+                                                            </StackPanel>
+                                                            <TextBlock Grid.Column="1" Text="{Binding Amount, StringFormat='PHP {0:N2}'}" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource BrandSuccessBrush}" VerticalAlignment="Center"/>
+                                                        </Grid>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+
+                                        <ProgressBar IsIndeterminate="True" Width="40" Height="40"
+                                                     Visibility="{Binding IsHistoryLoading, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                     Style="{StaticResource MaterialDesignCircularProgressBar}"/>
+
+                                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
+                                                    Visibility="{Binding HistoryEmptyStateVisibility}">
+                                            <materialDesign:PackIcon Kind="History" Width="48" Height="48" Foreground="{DynamicResource BrandBorderBrush}" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="No aid history found" Foreground="{DynamicResource BrandTextSecondaryBrush}" FontSize="12" Margin="0,10,0,0"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Grid>
+                </ScrollViewer>
+            </Grid>
         </Border>
     </Grid>
 </UserControl>

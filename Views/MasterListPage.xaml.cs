@@ -50,19 +50,7 @@ namespace AttendanceShiftingManagement.Views
             var grid = sender as DataGrid;
             if (grid?.SelectedItem == null) return;
 
-            _viewModel.IsDetailPanelOpen = true;
-            try
-            {
-                var dialog = new Dialog.MasterListDetailDialog(_viewModel)
-                {
-                    Owner = Window.GetWindow(this)
-                };
-                dialog.ShowDialog();
-            }
-            finally
-            {
-                _viewModel.IsDetailPanelOpen = false;
-            }
+            _viewModel.OpenFullProfileCommand.Execute(null);
         }
 
         private void Scanner_QrCodeScanned(string payload)

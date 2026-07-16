@@ -121,8 +121,32 @@
                                 <TextBlock Text="SYNC STATUS" Style="{StaticResource SidebarHeaderStyle}"/>
                                 <TextBlock Text="{Binding StatusMessage}" FontSize="12" Foreground="{DynamicResource BrandTextSecondaryBrush}" TextWrapping="Wrap"/>
                                 <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                                    <StackPanel.Style>
+                                        <Style TargetType="StackPanel">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsGgmsAvailable}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </StackPanel.Style>
                                     <materialDesign:PackIcon Kind="CloudCheck" Foreground="{DynamicResource BrandSuccessBrush}" VerticalAlignment="Center"/>
                                     <TextBlock Text="Connected to GGMS" FontSize="11" Margin="8,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource BrandSuccessBrush}"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                                    <StackPanel.Style>
+                                        <Style TargetType="StackPanel">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsGgmsAvailable}" Value="False">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </StackPanel.Style>
+                                    <materialDesign:PackIcon Kind="CloudAlert" Foreground="{DynamicResource BrandAlertBrush}" VerticalAlignment="Center"/>
+                                    <TextBlock Text="GGMS Offline - Pending Sync" FontSize="11" Margin="8,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource BrandAlertBrush}"/>
                                 </StackPanel>
                             </StackPanel>
                         </Border>

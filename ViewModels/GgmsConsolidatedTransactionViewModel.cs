@@ -1,6 +1,7 @@
 using AttendanceShiftingManagement.Helpers;
 using AttendanceShiftingManagement.Models;
 using AttendanceShiftingManagement.Services;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -26,13 +27,25 @@ namespace AttendanceShiftingManagement.ViewModels
         private bool _isFilterPanelOpen;
         private bool _isDetailPanelOpen;
         private string _statusMessage = "Ready";
+        private bool _isGgmsAvailable;
+        private readonly System.Threading.SynchronizationContext? _syncContext;
+        
+        public bool IsGgmsAvailable
+        {
+            get => _isGgmsAvailable;
+            private set => SetProperty(ref _isGgmsAvailable, value);
+        }
 
         public GgmsConsolidatedTransactionViewModel(User currentUser)
         {
             _currentUser = currentUser;
             _ggmsService = new GgmsConsolidatedTransactionService();
+            _syncContext = System.Threading.SynchronizationContext.Current;
+            _isGgmsAvailable = ConnectivityService.Instance.IsGgmsAvailable;
             
-            LoadCommand = new RelayCommand(async _ => await LoadDataAsync());
+            ConnectivityService.Instance.ConnectivityChanged += OnConnectivityChanged;
+            
+            LoadCommand = new RelayCommand(async _ => await SyncAndLoadDataAsync());
             SearchCommand = new RelayCommand(_ => ApplyFilters());
             FilterCommand = new RelayCommand(p => 
             {
@@ -61,7 +74,84 @@ namespace AttendanceShiftingManagement.ViewModels
                 }
             });
 
-            Task.Run(LoadDataAsync);
+            Task.Run(SyncAndLoadDataAsync);
+        }
+
+        private void OnConnectivityChanged(object? sender, ConnectivityStatusChangedEventArgs e)
+        {
+            if (_syncContext != null)
+            {
+                _syncContext.Post(_ => IsGgmsAvailable = e.IsGgmsAvailable, null);
+            }
+            else
+            {
+                System.Windows.Application.Current?.Dispatcher?.Invoke(() => IsGgmsAvailable = e.IsGgmsAvailable);
+            }
+        }
+
+        public void Dispose()
+        {
+            ConnectivityService.Instance.ConnectivityChanged -= OnConnectivityChanged;
+        }
+
+        private async Task SyncAndLoadDataAsync()
+        {
+            if (IsBusy) return;
+
+            IsBusy = true;
+            StatusMessage = "Checking connectivity and flushing pending transactions...";
+
+            try
+            {
+                // 1. Run live check on demand
+                await ConnectivityService.Instance.CheckConnectivityAsync();
+
+                // 2. If available, trigger the queue flush
+                if (ConnectivityService.Instance.IsGgmsAvailable)
+                {
+                    using (var localDb = new Data.LocalDbContext())
+                    {
+                        var pendingCount = await localDb.GgmsPendingTransactionCache.CountAsync();
+                        if (pendingCount > 0)
+                        {
+                            StatusMessage = $"Syncing {pendingCount} offline transactions to GGMS...";
+                            await _ggmsService.FlushPendingTransactionsAsync(localDb);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"GGMS Pre-Sync Error: {ex.Message}");
+            }
+
+            StatusMessage = "Loading transactions from GGMS...";
+            
+            try
+            {
+                var allTransactions = await _ggmsService.LoadTransactionsAsync();
+                
+                System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                {
+                    Transactions.Clear();
+                    foreach (var tx in allTransactions)
+                    {
+                        Transactions.Add(tx);
+                    }
+
+                    ApplyFilters();
+                });
+
+                StatusMessage = $"Loaded {Transactions.Count} transactions.";
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Error: {ex.Message}";
+            }
+            finally
+            {
+                IsBusy = false;
+            }
         }
 
         public ObservableCollection<GgmsConsolidatedTransaction> Transactions
@@ -150,39 +240,7 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand PreviousPageCommand { get; }
         public ICommand NextPageCommand { get; }
 
-        private async Task LoadDataAsync()
-        {
-            if (IsBusy) return;
 
-            IsBusy = true;
-            StatusMessage = "Loading transactions from GGMS...";
-            
-            try
-            {
-                var allTransactions = await _ggmsService.LoadTransactionsAsync();
-                
-                System.Windows.Application.Current.Dispatcher.Invoke(() =>
-                {
-                    Transactions.Clear();
-                    foreach (var tx in allTransactions)
-                    {
-                        Transactions.Add(tx);
-                    }
-
-                    ApplyFilters();
-                });
-
-                StatusMessage = $"Loaded {Transactions.Count} transactions.";
-            }
-            catch (Exception ex)
-            {
-                StatusMessage = $"Error: {ex.Message}";
-            }
-            finally
-            {
-                IsBusy = false;
-            }
-        }
 
         private void ApplyFilters()
         {

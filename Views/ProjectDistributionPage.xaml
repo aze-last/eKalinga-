@@ -57,56 +57,94 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- Global Header (Midnight Blue) -->
-        <Border Grid.Row="0" Background="{DynamicResource ThemePrimaryActionBrush}" Padding="20,15" Panel.ZIndex="10">
-            <Grid>
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <materialDesign:PackIcon Kind="HandCoinOutline" Width="32" Height="32" Foreground="White" VerticalAlignment="Center"/>
-                    <StackPanel Margin="15,0,0,0">
-                        <TextBlock Text="PROJECT DISTRIBUTION" FontSize="24" FontWeight="Bold" Foreground="White"/>
-                        <TextBlock Text="Manage active aid projects, enroll beneficiaries, and execute physical payouts." FontSize="12" Foreground="#CCFFFFFF"/>
+        <!-- ======================== HEADER (Row 0) — Midnight Blue ======================== -->
+        <Border Grid.Row="0" Background="{DynamicResource ThemePrimaryActionBrush}" Padding="30,24" Panel.ZIndex="10"
+                BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="0,0,0,1">
+            <StackPanel>
+                <!-- Top Row: Icon + Title & Subtitle -->
+                <Grid>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <materialDesign:PackIcon Kind="PackageVariant" Width="36" Height="36" Foreground="White" VerticalAlignment="Center"/>
+                        <StackPanel Margin="15,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="PROJECT DISTRIBUTION" FontSize="26" FontWeight="Bold" Foreground="White"/>
+                            <TextBlock Text="Manage active aid projects, verify beneficiaries, and release assistance." FontSize="13" Foreground="#E0FFFFFF" Margin="0,2,0,0"/>
+                        </StackPanel>
                     </StackPanel>
-                </StackPanel>
+                </Grid>
 
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                    <!-- Noticeable Sidebar Toggle -->
-                    <Button Command="{Binding ToggleSidebarCommand}"
+                <!-- Middle Row: Current Project & Status -->
+                <Border Margin="0,20,0,20" Padding="0,12" BorderBrush="#33FFFFFF" BorderThickness="0,1,0,1">
+                    <Grid>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="Current Project: " FontSize="14" Foreground="#CCFFFFFF" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding SelectedProgram.ProgramName, TargetNullValue='No Active Project Selected', FallbackValue='No Active Project Selected'}"
+                                       FontSize="15" FontWeight="Bold" Foreground="White" VerticalAlignment="Center"/>
+                        </StackPanel>
+
+                        <!-- Status Indicator (visible only when project is selected) -->
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                    Visibility="{Binding SelectedProgram, Converter={StaticResource NullToHiddenConverter}}">
+                            <Ellipse Width="10" Height="10" VerticalAlignment="Center" Margin="0,0,8,0">
+                                <Ellipse.Style>
+                                    <Style TargetType="Ellipse">
+                                        <Setter Property="Fill" Value="LightGray"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding SelectedProgram.DistributionStatus}" Value="Draft">
+                                                <Setter Property="Fill" Value="#F59E0B"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding SelectedProgram.DistributionStatus}" Value="Open">
+                                                <Setter Property="Fill" Value="#10B981"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding SelectedProgram.DistributionStatus}" Value="Closed">
+                                                <Setter Property="Fill" Value="#EF4444"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Ellipse.Style>
+                            </Ellipse>
+                            <TextBlock Text="{Binding SelectedProgram.DistributionStatus}" FontSize="13" FontWeight="Bold" Foreground="White" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- Bottom Row: Navigation / Action buttons -->
+                <Grid>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <!-- Browse Projects Button -->
+                        <Button Click="ChangeProject_Click"
+                                Style="{StaticResource MaterialDesignFlatButton}"
+                                Foreground="White" Height="36" Padding="12,0" Margin="0,0,16,0" FontWeight="Bold">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="FolderOpenOutline" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="Browse Projects" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        
+                        <!-- Refresh Button -->
+                        <Button Command="{Binding RefreshCommand}"
+                                Style="{StaticResource MaterialDesignFlatButton}"
+                                Foreground="White" Height="36" Padding="12,0" FontWeight="Bold">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="Refresh" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="Refresh" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+
+                    <!-- Dashboard Button on the far right -->
+                    <Button Command="{Binding DataContext.ShowDashboardCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                             Style="{StaticResource MaterialDesignFlatButton}"
-                            Foreground="White"
-                            Width="150" Height="40" Padding="10,0"
-                            ToolTip="Toggle Sidebar View">
+                            Foreground="White" Height="36" Padding="12,0" HorizontalAlignment="Right" FontWeight="Bold">
                         <StackPanel Orientation="Horizontal">
-                            <materialDesign:PackIcon Width="20" Height="20" VerticalAlignment="Center" Margin="0,0,8,0">
-                                <materialDesign:PackIcon.Style>
-                                    <Style TargetType="materialDesign:PackIcon">
-                                        <Setter Property="Kind" Value="MenuOpen"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding IsSidebarCollapsed}" Value="True">
-                                                <Setter Property="Kind" Value="Menu"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </materialDesign:PackIcon.Style>
-                            </materialDesign:PackIcon>
-                            <TextBlock VerticalAlignment="Center" FontWeight="Bold">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="Text" Value="HIDE SIDEBAR"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding IsSidebarCollapsed}" Value="True">
-                                                <Setter Property="Text" Value="SHOW SIDEBAR"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
+                            <materialDesign:PackIcon Kind="ChartBar" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <TextBlock Text="Dashboard" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
-                </StackPanel>
-            </Grid>
+                </Grid>
+            </StackPanel>
         </Border>
 
-        <!-- Main Workspace -->
+        <!-- ======================== MAIN WORKSPACE (Row 1) — Blurrable ======================== -->
         <Grid Grid.Row="1">
             <Grid.Effect>
                 <BlurEffect Radius="0" x:Name="BackgroundBlur"/>
@@ -136,483 +174,400 @@
 
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="{Binding SidebarWidth, FallbackValue=320}" />
-                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="320"/>
+                    <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- Collapsible Sidebar (Light Slate) -->
-                <Border Grid.Column="0" Background="{DynamicResource ThemeCardSubtleBrush}" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="0,0,1,0" x:Name="SidebarContainer">
+                <!-- ==================== PROFILE BAR / PAYOUT CONSOLE (Col 0) ==================== -->
+                <Border Grid.Column="0" Background="{DynamicResource ThemeCardSubtleBrush}"
+                        BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="0,0,1,0">
                     <Grid>
                         <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="*" />
-                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
-                        <!-- Dashboard Navigation -->
-                        <Grid Grid.Row="0" Margin="20,20,20,10">
-                            <Button Content="DASHBOARD" 
-                                    Command="{Binding DataContext.ShowDashboardCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                    Style="{StaticResource MaterialDesignOutlinedButton}"
-                                    Height="45" Margin="0,0,0,0"/>
-                        </Grid>
+                        <!-- Hidden POS scanner textbox (keyboard capture) -->
+                        <TextBox x:Name="HiddenScannerTextBox" Text="{Binding ScannerInputText, UpdateSourceTrigger=PropertyChanged}" 
+                                 Opacity="0" Width="1" Height="1" Focusable="True"
+                                 HorizontalAlignment="Left" VerticalAlignment="Top"
+                                 KeyDown="HiddenScannerTextBox_KeyDown"/>
 
-                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                            <Border Padding="20,0,20,20">
-                                <StackPanel>
-                                    <TextBlock Text="PROJECT MANAGEMENT" Style="{StaticResource SidebarHeaderStyle}"/>
-                                    <Button Content="BROWSE PROJECTS" Click="ChangeProject_Click" Style="{StaticResource OperationalActionButton}" HorizontalContentAlignment="Left" Height="45" Margin="0,0,0,8" FontSize="14"/>
-                                    <Button Content="CREATE PROJECT" Command="{Binding OpenCreateProjectPanelCommand}" Style="{StaticResource OperationalActionButton}" HorizontalContentAlignment="Left" Height="45" Margin="0,0,0,8" FontSize="14" Visibility="Collapsed"/>
-                                    <Button Content="REFRESH PROJECTS" Command="{Binding RefreshCommand}" Style="{StaticResource MaterialDesignOutlinedButton}" HorizontalContentAlignment="Left" Height="45" Margin="0,0,0,8" FontSize="14"/>
-                                    <!-- DEV: one-time idempotent seed of 4 mock households (24 beneficiaries) for household-verification testing -->
-                                    <Button Content="SEED MOCK DATA (DEV)" Command="{Binding SeedMockDataCommand}" Style="{StaticResource MaterialDesignFlatButton}" HorizontalContentAlignment="Left" Height="36" Margin="0,0,0,20" FontSize="11" Foreground="{DynamicResource BrandTextSecondaryBrush}" ToolTip="Inserts mock households + beneficiaries for testing. Safe to click once; re-running does nothing."/>
+                        <!-- Row 0: Profile + Household Members (scrollable, occupies whole height) -->
+                        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
+                            <StackPanel Margin="20,20,20,20">
 
-                                    <!-- Current Project (scoped to the chosen project only) -->
-                                    <StackPanel Margin="0,0,0,20">
-                                        <TextBlock Text="CURRENT PROJECT" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,8"/>
-
-                                        <!-- Empty state: no project chosen yet -->
-                                        <Border CornerRadius="6" Padding="12" Background="{DynamicResource ThemeCardSubtleBrush}"
-                                                BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="1"
-                                                Visibility="{Binding HasSelectedProgram, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
-                                            <StackPanel>
-                                                <TextBlock Text="No project selected." FontSize="12" FontWeight="SemiBold"
-                                                           Foreground="{DynamicResource BrandMidnightBrush}"/>
-                                                <TextBlock Text="Click BROWSE PROJECTS and choose one to begin releasing."
-                                                           FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0"
-                                                           Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
-                                            </StackPanel>
-                                        </Border>
-
-                                        <ItemsControl ItemsSource="{Binding SidebarProgramSummaries}">
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate>
-                                                            <Button Command="{Binding DataContext.OpenProjectActionMenuCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
-                                                                    CommandParameter="{Binding}" 
-                                                                    HorizontalContentAlignment="Stretch" Height="Auto" Padding="10,8" Margin="0,0,0,4">
-                                                                <Button.Style>
-                                                                    <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignFlatButton}">
-                                                                        <Setter Property="Background" Value="Transparent"/>
-                                                                        <Style.Triggers>
-                                                                            <DataTrigger Binding="{Binding IsActionMenuOpen}" Value="True">
-                                                                                <Setter Property="Background" Value="{DynamicResource ThemeCardBrush}"/>
-                                                                            </DataTrigger>
-                                                                        </Style.Triggers>
-                                                                    </Style>
-                                                                </Button.Style>
-                                                        <Grid>
-                                                            <Grid.RowDefinitions>
-                                                                <RowDefinition Height="Auto"/>
-                                                                <RowDefinition Height="Auto"/>
-                                                                <RowDefinition Height="Auto"/>
-                                                                <RowDefinition Height="Auto"/>
-                                                            </Grid.RowDefinitions>
-                                                            
-                                                            <TextBlock Text="{Binding ProgramName}" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}" TextWrapping="Wrap"/>
-                                                            <TextBlock Grid.Row="1" Text="{Binding DistributionStatus}" FontSize="11" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,4,0,0"/>
-                                                            <Border Grid.Row="2" Background="#EBF4FB" CornerRadius="3" Padding="5,2" Margin="0,4,0,0"
-                                                                    Visibility="{Binding SourceFundLabel, Converter={StaticResource StringToVisibilityConverter}}">
-                                                                <TextBlock Text="{Binding SourceFundLabel}" FontSize="10" Foreground="#1E4E89" FontWeight="SemiBold"/>
-                                                            </Border>
-
-                                                            <!-- Inline Action Menu for the selected project -->
-                                                            <StackPanel Grid.Row="3" Margin="0,12,0,4">
-                                                                <Button Content="ADD BENEFICIARIES"
-                                                                        Command="{Binding DataContext.OpenProgramAddBeneficiaryPanelCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                                        CommandParameter="{Binding}"
-                                                                        Style="{StaticResource OperationalActionButton}" Height="36" FontSize="12" Margin="0,0,0,8"/>
-                                                                <!-- Removed Mobile Scanner Config -->
-                                                            </StackPanel>
-                                                        </Grid>
-                                                    </Button>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-                                    </StackPanel>
-
-                                    <TextBlock Text="LIVE OPERATIONS" Style="{StaticResource SidebarHeaderStyle}"/>
-                                    <Button Content="OPEN LIVE PREVIEW" Command="{Binding OpenLivePreviewCommand}" Style="{StaticResource OperationalActionButton}" HorizontalContentAlignment="Left" Height="45" Margin="0,0,0,8" FontSize="14"/>
-                                    <TextBox x:Name="HiddenScannerTextBox" Text="{Binding ScannerInputText, UpdateSourceTrigger=PropertyChanged}" 
-                                             Opacity="0" Width="1" Height="1" Focusable="True"
-                                             HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,0,0,16"
-                                             KeyDown="HiddenScannerTextBox_KeyDown">
-                                    </TextBox>
-                                    <Border CornerRadius="6" Padding="12" Margin="0,0,0,8">
-                                        <Border.Style>
-                                            <Style TargetType="Border">
-                                                <Setter Property="Background" Value="{DynamicResource ThemeCardSubtleBrush}"/>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsScannerActive}" Value="True">
-                                                        <Setter Property="Background" Value="#E8F5E9"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Border.Style>
-                                        <StackPanel Orientation="Horizontal">
-                                            <materialDesign:PackIcon Kind="BarcodeScan" Width="20" Height="20" VerticalAlignment="Center">
-                                                <materialDesign:PackIcon.Style>
-                                                    <Style TargetType="materialDesign:PackIcon">
-                                                        <Setter Property="Foreground" Value="{DynamicResource BrandTextSecondaryBrush}"/>
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding IsScannerActive}" Value="True">
-                                                                <Setter Property="Foreground" Value="{DynamicResource BrandSuccessBrush}"/>
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </materialDesign:PackIcon.Style>
-                                            </materialDesign:PackIcon>
-                                            <TextBlock FontWeight="Bold" FontSize="11" VerticalAlignment="Center" Margin="8,0,0,0">
-                                                <TextBlock.Style>
-                                                    <Style TargetType="TextBlock">
-                                                        <Setter Property="Text" Value="SCANNER INACTIVE"/>
-                                                        <Setter Property="Foreground" Value="{DynamicResource BrandTextSecondaryBrush}"/>
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding IsScannerActive}" Value="True">
-                                                                <Setter Property="Text" Value="POS SCANNER READY"/>
-                                                                <Setter Property="Foreground" Value="{DynamicResource BrandSuccessBrush}"/>
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </TextBlock.Style>
-                                            </TextBlock>
-                                        </StackPanel>
-                                    </Border>
-
-                                    <!-- Manual Beneficiary ID Key-in (fallback when the scanner fails) -->
-                                    <Border CornerRadius="6" Padding="12" Margin="0,0,0,8"
-                                            Background="{DynamicResource ThemeCardSubtleBrush}"
-                                            BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="1">
-                                        <StackPanel>
-                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                                <materialDesign:PackIcon Kind="KeyboardOutline" Width="16" Height="16" VerticalAlignment="Center"
-                                                                         Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
-                                                <TextBlock Text="MANUAL KEY-IN FALLBACK" FontSize="10" FontWeight="Bold" VerticalAlignment="Center" Margin="8,0,0,0"
-                                                           Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
-                                            </StackPanel>
-                                            <TextBox x:Name="ManualBeneficiaryIdTextBox"
-                                                     Text="{Binding ManualBeneficiaryIdText, UpdateSourceTrigger=PropertyChanged}"
-                                                     materialDesign:HintAssist.Hint="Enter Beneficiary ID"
-                                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                                     FontSize="13" Margin="0,0,0,8"
-                                                     Foreground="{DynamicResource BrandMidnightBrush}">
-                                                <TextBox.InputBindings>
-                                                    <KeyBinding Key="Enter" Command="{Binding SubmitManualKeyInCommand}"/>
-                                                </TextBox.InputBindings>
-                                            </TextBox>
-                                            <Button Content="LOOK UP &amp; VERIFY" Command="{Binding SubmitManualKeyInCommand}"
-                                                    Style="{StaticResource OperationalActionButton}" Height="36" FontSize="12"/>
-                                        </StackPanel>
-                                    </Border>
-
-                                    <!-- Last Scan Summary -->
-                                    <TextBlock Text="{Binding LastScanSummaryText}" Foreground="{Binding LastScanSummaryBrush}" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,16" TextWrapping="Wrap"
-                                               Visibility="{Binding LastScanSummaryText, Converter={StaticResource NullToHiddenConverter}}"/>
+                                <!-- Profile: Pending beneficiary selected -->
+                                <StackPanel Visibility="{Binding SelectedPendingBeneficiary, Converter={StaticResource NullToHiddenConverter}}">
+                                    <!-- Photo -->
+                                    <Grid Width="80" Height="80" HorizontalAlignment="Center" Margin="0,0,0,12">
+                                        <Ellipse Width="80" Height="80" Fill="{DynamicResource ThemeCardSubtleBrush}"
+                                                 Stroke="{DynamicResource BrandBorderBrush}" StrokeThickness="1"/>
+                                        <Ellipse Width="80" Height="80"
+                                                 Visibility="{Binding HouseholdConfirmBeneficiaryPhoto, Converter={StaticResource NullToHiddenConverter}}">
+                                            <Ellipse.Fill>
+                                                <ImageBrush ImageSource="{Binding HouseholdConfirmBeneficiaryPhoto}" Stretch="UniformToFill"/>
+                                            </Ellipse.Fill>
+                                        </Ellipse>
+                                        <materialDesign:PackIcon Kind="AccountCircle" Width="56" Height="56"
+                                                                 HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                 Foreground="{DynamicResource BrandTextSecondaryBrush}"
+                                                                 Visibility="{Binding HouseholdConfirmBeneficiaryPhoto, Converter={StaticResource NullToHiddenConverter}, ConverterParameter=Inverse}"/>
+                                    </Grid>
+                                    <!-- Name -->
+                                    <TextBlock Text="{Binding SelectedPendingBeneficiary.FullName}" FontSize="16" FontWeight="Bold"
+                                               Foreground="{DynamicResource BrandMidnightBrush}" TextAlignment="Center" TextWrapping="Wrap"/>
+                                    <!-- Beneficiary ID -->
+                                    <TextBlock Text="{Binding SelectedPendingBeneficiary.BeneficiaryId}" FontSize="12"
+                                               Foreground="{DynamicResource BrandTextSecondaryBrush}" TextAlignment="Center" Margin="0,4,0,0"/>
+                                    <!-- Digital ID Card Number -->
+                                    <TextBlock Text="{Binding SelectedPendingDigitalIdCardNumber}" FontSize="11"
+                                               Foreground="{DynamicResource BrandTextSecondaryBrush}" TextAlignment="Center" Margin="0,2,0,0"/>
                                 </StackPanel>
-                            </Border>
+
+                                <!-- Profile: Released claim selected (read-only) -->
+                                <StackPanel Visibility="{Binding SelectedReleasedClaim, Converter={StaticResource NullToHiddenConverter}}">
+                                    <Grid Width="80" Height="80" HorizontalAlignment="Center" Margin="0,0,0,12">
+                                        <Ellipse Width="80" Height="80" Fill="{DynamicResource ThemeCardSubtleBrush}"
+                                                 Stroke="{DynamicResource BrandBorderBrush}" StrokeThickness="1"/>
+                                        <materialDesign:PackIcon Kind="AccountCircle" Width="56" Height="56"
+                                                                 HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                 Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
+                                    </Grid>
+                                    <TextBlock Text="{Binding SelectedReleasedClaim.FullName}" FontSize="16" FontWeight="Bold"
+                                               Foreground="{DynamicResource BrandMidnightBrush}" TextAlignment="Center" TextWrapping="Wrap"/>
+                                    <Border Background="{DynamicResource BrandSuccessBrush}" Padding="10,4" CornerRadius="4"
+                                            HorizontalAlignment="Center" Margin="0,8,0,0">
+                                        <TextBlock Text="{Binding SelectedReleasedClaim.AmountText}" FontSize="13" FontWeight="Bold"
+                                                   Foreground="White"/>
+                                    </Border>
+                                    <TextBlock Text="{Binding SelectedReleasedClaim.ReleasedAt, StringFormat='Released: MMM dd, yyyy hh:mm tt'}"
+                                               FontSize="11" Foreground="{DynamicResource BrandTextSecondaryBrush}"
+                                               TextAlignment="Center" Margin="0,6,0,0"/>
+                                </StackPanel>
+
+                                <!-- Household aid-received summary -->
+                                <Border Margin="0,16,0,0" Padding="14,10" CornerRadius="8"
+                                        Background="{DynamicResource ThemeCardSubtleBrush}"
+                                        BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="1"
+                                        Visibility="{Binding HasHouseholdContext, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                        <materialDesign:PackIcon Kind="HomeGroup" Width="20" Height="20" VerticalAlignment="Center"
+                                                                 Foreground="{DynamicResource ThemePrimaryActionBrush}"/>
+                                        <TextBlock Text="{Binding HouseholdAidReceivedSummary}" FontSize="12" FontWeight="SemiBold"
+                                                   TextWrapping="Wrap" Margin="8,0,0,0" VerticalAlignment="Center" MaxWidth="220"
+                                                   Foreground="{DynamicResource BrandMidnightBrush}"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Household Members -->
+                                <StackPanel Margin="0,16,0,0"
+                                            Visibility="{Binding HasHouseholdMembers, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <TextBlock Text="HOUSEHOLD MEMBERS" FontSize="11" FontWeight="Bold"
+                                               Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,6"/>
+                                    <TextBlock Text="{Binding HouseholdContextSummary}" FontSize="11" TextWrapping="Wrap"
+                                               Foreground="{DynamicResource BrandMidnightBrush}" Margin="0,0,0,8"/>
+
+                                    <ItemsControl ItemsSource="{Binding ScannedHouseholdMembers}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border CornerRadius="6" Padding="10,6" Margin="0,0,0,4">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="Background" Value="{DynamicResource ThemeSurfaceBrush}"/>
+                                                            <Setter Property="BorderBrush" Value="{DynamicResource BrandBorderBrush}"/>
+                                                            <Setter Property="BorderThickness" Value="1"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding AlreadyReceivedSameAssistanceType}" Value="True">
+                                                                    <Setter Property="BorderBrush" Value="{DynamicResource BrandRedBrush}"/>
+                                                                    <Setter Property="BorderThickness" Value="2"/>
+                                                                    <Setter Property="Background" Value="#FFF1F2"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <StackPanel Grid.Column="0">
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <TextBlock Text="{Binding FullName}" FontSize="12" FontWeight="SemiBold"
+                                                                           Foreground="{DynamicResource BrandMidnightBrush}" TextWrapping="Wrap"/>
+                                                                <materialDesign:PackIcon Kind="AccountCheck" Width="14" Height="14" Margin="6,0,0,0"
+                                                                                         VerticalAlignment="Center"
+                                                                                         Foreground="{DynamicResource BrandSuccessBrush}"
+                                                                                         Visibility="{Binding IsScannedBeneficiary, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                                            </StackPanel>
+                                                            <TextBlock Text="{Binding RelationshipToHead}" FontSize="10"
+                                                                       Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
+                                                        </StackPanel>
+                                                        <Border Grid.Column="1" VerticalAlignment="Center"
+                                                                Background="{DynamicResource BrandRedBrush}" CornerRadius="3" Padding="5,2"
+                                                                Visibility="{Binding AlreadyReceivedSameAssistanceType, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                            <TextBlock Text="RECEIVED" FontSize="9" FontWeight="Bold" Foreground="White"/>
+                                                        </Border>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </StackPanel>
                         </ScrollViewer>
 
-                        <!-- Status Area -->
-                        <Border Grid.Row="2" Padding="20" Background="{DynamicResource ThemeCardBrush}" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="0,1,0,0">
+                        <!-- Row 1: DISTRIBUTE AID button (visible only when a pending beneficiary is selected) -->
+                        <Border Grid.Row="1" Padding="20,12"
+                                BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="0,1,0,0"
+                                Visibility="{Binding SelectedPendingBeneficiary, Converter={StaticResource NullToHiddenConverter}}">
+                            <Button Content="DISTRIBUTE AID" Command="{Binding ConfirmReleaseCommand}"
+                                    Style="{StaticResource OperationalActionButton}" Height="50" FontSize="16" FontWeight="Bold"/>
+                        </Border>
+
+                        <!-- Row 2: MODULE STATUS footer -->
+                        <Border Grid.Row="2" Padding="20" Background="{DynamicResource ThemeCardBrush}"
+                                BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="0,1,0,0">
                             <StackPanel>
-                                <TextBlock Text="MODULE STATUS" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,4"/>
-                                <TextBlock Text="{Binding StatusMessage}" Foreground="{Binding StatusBrush}" FontSize="12" TextWrapping="Wrap" FontWeight="SemiBold"/>
+                                <TextBlock Text="MODULE STATUS" FontSize="10" FontWeight="Bold"
+                                           Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,4"/>
+                                <TextBlock Text="{Binding StatusMessage}" Foreground="{Binding StatusBrush}"
+                                           FontSize="12" TextWrapping="Wrap" FontWeight="SemiBold"/>
+                                <!-- DEV: one-time idempotent seed of 4 mock households (24 beneficiaries) -->
+                                <TextBlock FontSize="10" Margin="0,8,0,0">
+                                    <Hyperlink Command="{Binding SeedMockDataCommand}" Foreground="{DynamicResource BrandTextSecondaryBrush}" TextDecorations="Underline">
+                                        <Run Text="SEED MOCK DATA (DEV)"/>
+                                    </Hyperlink>
+                                </TextBlock>
                             </StackPanel>
                         </Border>
                     </Grid>
                 </Border>
 
-                <!-- Center Content: Registry (Budget Style) -->
-                <Grid Grid.Column="1" Background="Transparent" Margin="30">
+                <!-- ==================== CENTER CONTENT (Col 1) ==================== -->
+                <Grid Grid.Column="1" Margin="30">
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <!-- Empty State -->
-                    <StackPanel Grid.RowSpan="2" VerticalAlignment="Center" HorizontalAlignment="Center" 
+                    <!-- Empty State (no project selected) -->
+                    <StackPanel Grid.RowSpan="2" VerticalAlignment="Center" HorizontalAlignment="Center"
                                 Visibility="{Binding SelectedProgram, Converter={StaticResource NullToHiddenConverter}, ConverterParameter=Inverse}">
-                        <materialDesign:PackIcon Kind="HandCoinOutline" Width="80" Height="80" Foreground="{DynamicResource BrandBorderBrush}" HorizontalAlignment="Center"/>
-                        <TextBlock Text="No Project Selected" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,16,0,8" HorizontalAlignment="Center"/>
-                        <TextBlock Text="Select a distribution project from the sidebar to manage beneficiaries and execute payouts." FontSize="14" Foreground="{DynamicResource BrandTextSecondaryBrush}" HorizontalAlignment="Center" TextWrapping="Wrap"/>
+                        <materialDesign:PackIcon Kind="HandCoinOutline" Width="80" Height="80"
+                                                 Foreground="{DynamicResource BrandBorderBrush}" HorizontalAlignment="Center"/>
+                        <TextBlock Text="No Project Selected" FontSize="22" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,16,0,8" HorizontalAlignment="Center"/>
+                        <TextBlock Text="Select a distribution project to manage beneficiaries and execute payouts."
+                                   FontSize="14" Foreground="{DynamicResource BrandTextSecondaryBrush}"
+                                   HorizontalAlignment="Center" TextWrapping="Wrap"/>
                     </StackPanel>
 
-                    <!-- Page Content (When Project Selected) -->
-                    <ScrollViewer Grid.RowSpan="2" Visibility="{Binding SelectedProgram, Converter={StaticResource NullToHiddenConverter}}" 
-                                  VerticalScrollBarVisibility="Auto">
-                        <StackPanel>
-                            <!-- Collapsible Summary Section -->
-                            <StackPanel Visibility="{Binding IsSummaryCollapsed, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
-                                <!-- Hybrid Metrics Row -->
-                                <Grid Margin="0,0,0,24">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="12"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="12"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="12"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
+                    <!-- Metrics Row (Row 0) — always visible when project selected -->
+                    <Grid Grid.Row="0" Margin="0,0,0,20"
+                          Visibility="{Binding SelectedProgram, Converter={StaticResource NullToHiddenConverter}}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="12"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="12"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="12"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
 
-                                    <!-- Remaining Budget -->
-                                    <materialDesign:Card Grid.Column="0" Padding="15">
-                                        <StackPanel>
-                                            <TextBlock Text="REMAINING BUDGET" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,4"/>
-                                            <TextBlock Text="{Binding SelectedProgramRemainingBudgetText}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}"/>
-                                        </StackPanel>
-                                    </materialDesign:Card>
+                        <materialDesign:Card Grid.Column="0" Padding="15">
+                            <StackPanel>
+                                <TextBlock Text="REMAINING BUDGET" FontSize="10" FontWeight="Bold"
+                                           Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,4"/>
+                                <TextBlock Text="{Binding SelectedProgramRemainingBudgetText}" FontSize="20" FontWeight="Bold"
+                                           Foreground="{DynamicResource BrandMidnightBrush}"/>
+                            </StackPanel>
+                        </materialDesign:Card>
 
-                                    <!-- Total Recipients -->
-                                    <materialDesign:Card Grid.Column="2" Padding="15">
-                                        <StackPanel>
-                                            <TextBlock Text="TOTAL RECIPIENTS" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,4"/>
-                                            <TextBlock Text="{Binding SelectedProgramBeneficiaryCountText}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}"/>
-                                        </StackPanel>
-                                    </materialDesign:Card>
+                        <materialDesign:Card Grid.Column="2" Padding="15">
+                            <StackPanel>
+                                <TextBlock Text="TOTAL RECIPIENTS" FontSize="10" FontWeight="Bold"
+                                           Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,4"/>
+                                <TextBlock Text="{Binding SelectedProgramBeneficiaryCountText}" FontSize="20" FontWeight="Bold"
+                                           Foreground="{DynamicResource BrandMidnightBrush}"/>
+                            </StackPanel>
+                        </materialDesign:Card>
 
-                                    <!-- Pending Distribution -->
-                                    <materialDesign:Card Grid.Column="4" Padding="15">
-                                        <StackPanel>
-                                            <TextBlock Text="PENDING DISTRIBUTION" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,4"/>
-                                            <TextBlock Text="{Binding PendingTotalCount, StringFormat=N0}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}"/>
-                                        </StackPanel>
-                                    </materialDesign:Card>
+                        <materialDesign:Card Grid.Column="4" Padding="15">
+                            <StackPanel>
+                                <TextBlock Text="PENDING DISTRIBUTION" FontSize="10" FontWeight="Bold"
+                                           Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,4"/>
+                                <TextBlock Text="{Binding PendingTotalCount, StringFormat=N0}" FontSize="20" FontWeight="Bold"
+                                           Foreground="{DynamicResource BrandMidnightBrush}"/>
+                            </StackPanel>
+                        </materialDesign:Card>
 
-                                    <!-- Released -->
-                                    <materialDesign:Card Grid.Column="6" Padding="15">
-                                        <StackPanel>
-                                            <TextBlock Text="SUCCESSFULLY RELEASED" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,4"/>
-                                            <TextBlock Text="{Binding ReleasedTotalCount, StringFormat=N0}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource BrandSuccessBrush}"/>
-                                        </StackPanel>
-                                    </materialDesign:Card>
-                                </Grid>
+                        <materialDesign:Card Grid.Column="6" Padding="15">
+                            <StackPanel>
+                                <TextBlock Text="SUCCESSFULLY RELEASED" FontSize="10" FontWeight="Bold"
+                                           Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,4"/>
+                                <TextBlock Text="{Binding ReleasedTotalCount, StringFormat=N0}" FontSize="20" FontWeight="Bold"
+                                           Foreground="{DynamicResource BrandSuccessBrush}"/>
+                            </StackPanel>
+                        </materialDesign:Card>
+                    </Grid>
 
-                                <!-- Event Detail Header Card -->
-                                <Border Style="{StaticResource DetailCardStyle}" Padding="40,30">
+                    <!-- Lists area (Row 1) — side-by-side PENDING / RELEASED -->
+                    <Grid Grid.Row="1"
+                          Visibility="{Binding SelectedProgram, Converter={StaticResource NullToHiddenConverter}}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="16"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- ===== PENDING LIST (Col 0) ===== -->
+                        <materialDesign:Card Grid.Column="0" Padding="20">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <!-- Header -->
+                                <TextBlock Grid.Row="0" Text="PENDING DISTRIBUTION" FontSize="13" FontWeight="Bold"
+                                           Foreground="{DynamicResource ThemePrimaryActionBrush}" Margin="0,0,0,12"
+                                           Typography.Capitals="AllSmallCaps"/>
+
+                                <!-- Search -->
+                                <Border Grid.Row="1" Background="{DynamicResource ThemeCardSubtleBrush}" CornerRadius="8"
+                                        Padding="12,4" Margin="0,0,0,12">
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="Magnify" Foreground="{DynamicResource BrandTextSecondaryBrush}"
+                                                                 VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                        <TextBox Text="{Binding PendingSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                                 materialDesign:HintAssist.Hint="Search pending..."
+                                                 Width="200" BorderThickness="0" Background="Transparent"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- DataGrid -->
+                                <DataGrid Grid.Row="2"
+                                          ItemsSource="{Binding PendingBeneficiaries}"
+                                          SelectedItem="{Binding SelectedPendingBeneficiary}"
+                                          AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True"
+                                          Background="Transparent" BorderThickness="0" HeadersVisibility="Column"
+                                          materialDesign:DataGridAssist.CellPadding="12,8"
+                                          MouseDoubleClick="PendingGrid_MouseDoubleClick">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="FULL NAME" Binding="{Binding FullName}" Width="*" FontWeight="SemiBold"/>
+                                        <DataGridTextColumn Header="BENEFICIARY ID" Binding="{Binding BeneficiaryId}" Width="130"/>
+                                        <DataGridTextColumn Header="ADDED" Binding="{Binding AddedAt, StringFormat='MMM dd'}" Width="80"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+
+                                <!-- Pagination -->
+                                <Border Grid.Row="3" Margin="0,12,0,0" Padding="0,12,0,0"
+                                        BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="0,1,0,0">
                                     <Grid>
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="20"/>
-                                            <RowDefinition Height="Auto"/>
-                                        </Grid.RowDefinitions>
-
-                                        <!-- Header Info -->
-                                        <Grid Grid.Row="0" Margin="0,0,0,30">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                            </Grid.ColumnDefinitions>
-
-                                            <StackPanel Grid.Column="0">
-                                                <TextBlock Text="{Binding SelectedProgram.ProgramCode}" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,4"/>
-                                                <TextBlock Text="{Binding SelectedProgram.ProgramName}" FontSize="28" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}" TextWrapping="Wrap"/>
-                                            </StackPanel>
-
-                                            <Border Grid.Column="1" VerticalAlignment="Top" Padding="12,6" CornerRadius="20" Background="{DynamicResource ThemeCardSubtleBrush}">
-                                                <TextBlock Text="{Binding SelectedProgram.DistributionStatus, Converter={StaticResource StringToVisibilityConverter}, ConverterParameter=UPPER}" 
-                                                           Foreground="{DynamicResource BrandMidnightBrush}" FontSize="12" FontWeight="Bold" Typography.Capitals="AllSmallCaps"/>
-                                            </Border>
-                                        </Grid>
-
-                                        <!-- Primary Details UniformGrid -->
-                                        <UniformGrid Grid.Row="1" Columns="3">
-                                            <StackPanel>
-                                                <TextBlock Text="ASSISTANCE SUMMARY" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,8"/>
-                                                <TextBlock Text="{Binding SelectedProgramAssistanceSummary}" FontSize="14" Foreground="{DynamicResource BrandMidnightBrush}" TextWrapping="Wrap" Margin="0,0,20,0"/>
-                                            </StackPanel>
-
-                                            <StackPanel>
-                                                <TextBlock Text="WORKFLOW SUMMARY" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,8"/>
-                                                <TextBlock Text="{Binding SelectedProgramWorkflowSummary}" FontSize="14" Foreground="{DynamicResource BrandMidnightBrush}" TextWrapping="Wrap" Margin="0,0,20,0"/>
-                                            </StackPanel>
-
-                                            <StackPanel>
-                                                <TextBlock Text="DESCRIPTION" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,8"/>
-                                                <TextBlock Text="{Binding SelectedProgramDescriptionText}" FontSize="14" Foreground="{DynamicResource BrandMidnightBrush}" TextWrapping="Wrap"/>
-                                            </StackPanel>
-                                        </UniformGrid>
+                                        <TextBlock Text="{Binding PendingPaginationText}" VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource BrandTextSecondaryBrush}" FontSize="12"/>
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                            <Button Command="{Binding PrevPendingPageCommand}"
+                                                    Style="{StaticResource MaterialDesignFlatButton}" Width="36" Height="36" Padding="0">
+                                                <materialDesign:PackIcon Kind="ChevronLeft" Width="20" Height="20"/>
+                                            </Button>
+                                            <Button Command="{Binding NextPendingPageCommand}"
+                                                    Style="{StaticResource MaterialDesignFlatButton}" Width="36" Height="36" Padding="0" Margin="4,0,0,0">
+                                                <materialDesign:PackIcon Kind="ChevronRight" Width="20" Height="20"/>
+                                            </Button>
+                                        </StackPanel>
                                     </Grid>
                                 </Border>
-                            </StackPanel>
+                            </Grid>
+                        </materialDesign:Card>
 
-                            <!-- Vertical Toggle Bar (Noticeable UI) -->
-                            <Button Command="{Binding ToggleSummaryCommand}"
-                                    Style="{StaticResource MaterialDesignFlatButton}"
-                                    HorizontalAlignment="Stretch" Height="40" Margin="0,0,0,20"
-                                    Background="{DynamicResource ThemeCardSubtleBrush}"
-                                    ToolTip="Toggle Project Summary">
-                                <StackPanel Orientation="Horizontal">
-                                    <materialDesign:PackIcon Width="24" Height="24" Foreground="{DynamicResource BrandMidnightBrush}" VerticalAlignment="Center">
-                                        <materialDesign:PackIcon.Style>
-                                            <Style TargetType="materialDesign:PackIcon">
-                                                <Setter Property="Kind" Value="ChevronUp"/>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsSummaryCollapsed}" Value="True">
-                                                        <Setter Property="Kind" Value="ChevronDown"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </materialDesign:PackIcon.Style>
-                                    </materialDesign:PackIcon>
-                                    <TextBlock VerticalAlignment="Center" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}" Margin="8,0,0,0">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="Text" Value="COLLAPSE SUMMARY"/>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsSummaryCollapsed}" Value="True">
-                                                        <Setter Property="Text" Value="EXPAND SUMMARY (SHOW METRICS &amp; DETAILS)"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
-                                </StackPanel>
-                            </Button>
+                        <!-- ===== RELEASED LIST (Col 2) ===== -->
+                        <materialDesign:Card Grid.Column="2" Padding="20">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
 
-                            <!-- Clean Distribution Registry (Budget Style) -->
-                            <materialDesign:Card Padding="24" Margin="0,0,0,30">
-                                <StackPanel>
-                                    <!-- Tabs for Pending/Released -->
-                                    <TabControl materialDesign:ColorZoneAssist.Mode="Standard" BorderThickness="0" Background="Transparent">
-                                        <TabItem Header="PENDING DISTRIBUTION" FontSize="12" FontWeight="Bold">
-                                            <Grid Margin="0,20,0,0">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="350"/>
-                                                </Grid.ColumnDefinitions>
+                                <!-- Header -->
+                                <TextBlock Grid.Row="0" Text="RELEASED HISTORY" FontSize="13" FontWeight="Bold"
+                                           Foreground="{DynamicResource ThemePrimaryActionBrush}" Margin="0,0,0,12"
+                                           Typography.Capitals="AllSmallCaps"/>
 
-                                                <!-- Pending List -->
-                                                <StackPanel Grid.Column="0" Margin="0,0,20,0">
-                                                    <Border Background="{DynamicResource ThemeCardSubtleBrush}" CornerRadius="8" Padding="12,4" Margin="0,0,0,20" HorizontalAlignment="Left">
-                                                        <StackPanel Orientation="Horizontal">
-                                                            <materialDesign:PackIcon Kind="Magnify" Foreground="{DynamicResource BrandTextSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                                            <TextBox Text="{Binding PendingSearchText, UpdateSourceTrigger=PropertyChanged}" materialDesign:HintAssist.Hint="Search pending beneficiaries..." Width="250" BorderThickness="0" Background="Transparent"/>
-                                                        </StackPanel>
-                                                    </Border>
+                                <!-- DataGrid -->
+                                <DataGrid Grid.Row="1"
+                                          ItemsSource="{Binding ReleasedClaims}"
+                                          SelectedItem="{Binding SelectedReleasedClaim}"
+                                          AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True"
+                                          Background="Transparent" BorderThickness="0" HeadersVisibility="Column"
+                                          materialDesign:DataGridAssist.CellPadding="12,8"
+                                          MouseDoubleClick="ReleasedGrid_MouseDoubleClick">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="FULL NAME" Binding="{Binding FullName}" Width="*" FontWeight="SemiBold"/>
+                                        <DataGridTextColumn Header="AMOUNT" Binding="{Binding AmountText}" Width="90" FontWeight="Bold">
+                                            <DataGridTextColumn.ElementStyle>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="HorizontalAlignment" Value="Right"/>
+                                                </Style>
+                                            </DataGridTextColumn.ElementStyle>
+                                        </DataGridTextColumn>
+                                        <DataGridTextColumn Header="RELEASED AT" Binding="{Binding ReleasedAt, StringFormat='MMM dd, hh:mm tt'}" Width="130"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
 
-                                                    <DataGrid ItemsSource="{Binding PendingBeneficiaries}"
-                                                              SelectedItem="{Binding SelectedPendingBeneficiary}"
-                                                              AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" MinHeight="350"
-                                                              Background="Transparent" BorderThickness="0" HeadersVisibility="Column"
-                                                              materialDesign:DataGridAssist.CellPadding="12,8">
-                                                        <DataGrid.Columns>
-                                                            <DataGridTextColumn Header="FULL NAME" Binding="{Binding FullName}" Width="*" FontWeight="SemiBold"/>
-                                                            <DataGridTextColumn Header="BENEFICIARY ID" Binding="{Binding BeneficiaryId}" Width="150"/>
-                                                            <DataGridTextColumn Header="ADDED" Binding="{Binding AddedAt, StringFormat='MMM dd, yyyy'}" Width="120"/>
-                                                        </DataGrid.Columns>
-                                                    </DataGrid>
-
-                                                    <!-- Pagination -->
-                                                    <Border Margin="0,20,0,0" Padding="0,15,0,0" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="0,1,0,0">
-                                                        <Grid>
-                                                            <TextBlock Text="{Binding PendingPaginationText}" VerticalAlignment="Center" Foreground="{DynamicResource BrandTextSecondaryBrush}" FontSize="12"/>
-                                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                                                <Button Command="{Binding PrevPendingPageCommand}" Style="{StaticResource MaterialDesignFlatButton}" Width="40" Height="40" Padding="0">
-                                                                    <materialDesign:PackIcon Kind="ChevronLeft" Width="24" Height="24"/>
-                                                                </Button>
-                                                                <Button Command="{Binding NextPendingPageCommand}" Style="{StaticResource MaterialDesignFlatButton}" Width="40" Height="40" Padding="0" Margin="8,0,0,0">
-                                                                    <materialDesign:PackIcon Kind="ChevronRight" Width="24" Height="24"/>
-                                                                </Button>
-                                                            </StackPanel>
-                                                        </Grid>
-                                                    </Border>
-                                                </StackPanel>
-
-                                                <!-- Verification & Release Panel -->
-                                                <Border Grid.Column="1" Style="{StaticResource DetailCardStyle}" Margin="0">
-                                                    <Grid>
-                                                        <Grid.RowDefinitions>
-                                                            <RowDefinition Height="Auto"/>
-                                                            <RowDefinition Height="*"/>
-                                                            <RowDefinition Height="Auto"/>
-                                                        </Grid.RowDefinitions>
-
-                                                        <StackPanel Grid.Row="0" Margin="0,0,0,20">
-                                                            <TextBlock Text="PAYOUT VERIFICATION" Style="{StaticResource SidebarHeaderStyle}"/>
-                                                            <TextBlock Text="Select a beneficiary from the list to review their Digital ID and confirm release." Foreground="{DynamicResource BrandTextSecondaryBrush}" FontSize="12" TextWrapping="Wrap"/>
-                                                        </StackPanel>
-
-                                                        <StackPanel Grid.Row="1" Visibility="{Binding SelectedPendingBeneficiary, Converter={StaticResource NullToHiddenConverter}}">
-                                                            <TextBlock Text="{Binding SelectedPendingBeneficiary.FullName}" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}" TextWrapping="Wrap" Margin="0,0,0,4"/>
-                                                            <TextBlock Text="{Binding SelectedPendingDigitalIdCardNumber}" FontSize="12" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,20"/>
-
-                                                            <Border Background="White" Padding="10" CornerRadius="8" HorizontalAlignment="Center" Margin="0,0,0,20" Visibility="{Binding SelectedPendingDigitalIdQrImage, Converter={StaticResource NullToHiddenConverter}}">
-                                                                <Image Source="{Binding SelectedPendingDigitalIdQrImage}" Height="150" Width="150" Stretch="Uniform"/>
-                                                            </Border>
-
-                                                            <TextBlock Text="{Binding SelectedPendingDigitalIdStatusText}" Foreground="{DynamicResource BrandTextSecondaryBrush}" FontSize="12" TextWrapping="Wrap" TextAlignment="Center"/>
-                                                        </StackPanel>
-
-                                                        <Button Grid.Row="2" Content="CONFIRM RELEASE" Command="{Binding ConfirmReleaseCommand}" Style="{StaticResource GoldActionButton}" Height="45" Margin="0,20,0,0"/>
-                                                    </Grid>
-                                                </Border>
-                                            </Grid>
-                                        </TabItem>
-
-                                        <TabItem Header="RELEASED HISTORY" FontSize="12" FontWeight="Bold">
-                                            <StackPanel Margin="0,20,0,0">
-                                                <DataGrid ItemsSource="{Binding ReleasedClaims}"
-                                                          SelectedItem="{Binding SelectedReleasedClaim}"
-                                                          AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" MinHeight="350"
-                                                          Background="Transparent" BorderThickness="0" HeadersVisibility="Column"
-                                                          materialDesign:DataGridAssist.CellPadding="12,8">
-                                                    <DataGrid.Columns>
-                                                        <DataGridTextColumn Header="FULL NAME" Binding="{Binding FullName}" Width="*" FontWeight="SemiBold"/>
-                                                        <DataGridTextColumn Header="ASSISTANCE" Binding="{Binding AssistanceLabel}" Width="150"/>
-                                                        <DataGridTextColumn Header="AMOUNT" Binding="{Binding AmountText}" Width="120" FontWeight="Bold">
-                                                            <DataGridTextColumn.ElementStyle>
-                                                                <Style TargetType="TextBlock">
-                                                                    <Setter Property="HorizontalAlignment" Value="Right"/>
-                                                                </Style>
-                                                            </DataGridTextColumn.ElementStyle>
-                                                        </DataGridTextColumn>
-                                                        <DataGridTextColumn Header="RELEASED AT" Binding="{Binding ReleasedAt, StringFormat='MMM dd, yyyy hh:mm tt'}" Width="180"/>
-                                                    </DataGrid.Columns>
-                                                </DataGrid>
-
-                                                <!-- Pagination -->
-                                                <Border Margin="0,20,0,0" Padding="0,15,0,0" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="0,1,0,0">
-                                                    <Grid>
-                                                        <TextBlock Text="{Binding ReleasedPaginationText}" VerticalAlignment="Center" Foreground="{DynamicResource BrandTextSecondaryBrush}" FontSize="12"/>
-                                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                                            <Button Command="{Binding PrevReleasedPageCommand}" Style="{StaticResource MaterialDesignFlatButton}" Width="40" Height="40" Padding="0">
-                                                                <materialDesign:PackIcon Kind="ChevronLeft" Width="24" Height="24"/>
-                                                            </Button>
-                                                            <Button Command="{Binding NextReleasedPageCommand}" Style="{StaticResource MaterialDesignFlatButton}" Width="40" Height="40" Padding="0" Margin="8,0,0,0">
-                                                                <materialDesign:PackIcon Kind="ChevronRight" Width="24" Height="24"/>
-                                                            </Button>
-                                                        </StackPanel>
-                                                    </Grid>
-                                                </Border>
-                                            </StackPanel>
-                                        </TabItem>
-                                    </TabControl>
-                                </StackPanel>
-                            </materialDesign:Card>
-                        </StackPanel>
-                    </ScrollViewer>
+                                <!-- Pagination -->
+                                <Border Grid.Row="2" Margin="0,12,0,0" Padding="0,12,0,0"
+                                        BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="0,1,0,0">
+                                    <Grid>
+                                        <TextBlock Text="{Binding ReleasedPaginationText}" VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource BrandTextSecondaryBrush}" FontSize="12"/>
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                            <Button Command="{Binding PrevReleasedPageCommand}"
+                                                    Style="{StaticResource MaterialDesignFlatButton}" Width="36" Height="36" Padding="0">
+                                                <materialDesign:PackIcon Kind="ChevronLeft" Width="20" Height="20"/>
+                                            </Button>
+                                            <Button Command="{Binding NextReleasedPageCommand}"
+                                                    Style="{StaticResource MaterialDesignFlatButton}" Width="36" Height="36" Padding="0" Margin="4,0,0,0">
+                                                <materialDesign:PackIcon Kind="ChevronRight" Width="20" Height="20"/>
+                                            </Button>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </Grid>
+                        </materialDesign:Card>
+                    </Grid>
                 </Grid>
             </Grid>
         </Grid>
 
-        <!-- Backdrop for Overlays -->
-        <Border Grid.RowSpan="2" Background="#CC0F172A" Visibility="{Binding IsAnyOverlayOpen, Converter={StaticResource BooleanToVisibilityConverter}}" Panel.ZIndex="100"/>
+        <!-- ======================== OVERLAYS ======================== -->
+
+        <!-- Backdrop -->
+        <Border Grid.RowSpan="2" Background="#CC0F172A"
+                Visibility="{Binding IsAnyOverlayOpen, Converter={StaticResource BooleanToVisibilityConverter}}"
+                Panel.ZIndex="100"/>
 
         <!-- Create Project Panel -->
-        <Grid Grid.RowSpan="2" Panel.ZIndex="110" Visibility="{Binding IsCreateProjectPanelOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+        <Grid Grid.RowSpan="2" Panel.ZIndex="110"
+              Visibility="{Binding IsCreateProjectPanelOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
             <local:ProjectDistributionCreateProjectPanel/>
         </Grid>
 
-        <!-- Add Beneficiary Panel -->
-        <Grid Grid.RowSpan="2" Panel.ZIndex="110" Visibility="{Binding IsAddBeneficiaryPanelOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+        <!-- Add Beneficiary Panel (dormant — enrollment is the Budget module's job) -->
+        <Grid Grid.RowSpan="2" Panel.ZIndex="110"
+              Visibility="{Binding IsAddBeneficiaryPanelOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
             <local:ProjectDistributionAddBeneficiaryPanel/>
         </Grid>
 
-        <!-- Removed Scanner Panels -->
-
         <!-- Scanned Claim Result Dialog -->
-        <Grid Grid.RowSpan="2" Panel.ZIndex="130" Visibility="{Binding IsScannedResultVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+        <Grid Grid.RowSpan="2" Panel.ZIndex="130"
+              Visibility="{Binding IsScannedResultVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
             <Border Style="{StaticResource PanelCardStyle}" HorizontalAlignment="Center" VerticalAlignment="Center" Width="900" Height="540">
                 <Grid>
                     <Grid.RowDefinitions>
@@ -659,7 +614,7 @@
                                 <TextBlock Text="{Binding ScannedBeneficiaryStatus}" FontSize="14" FontWeight="Bold" Foreground="White" TextAlignment="Center" TextWrapping="Wrap"/>
                             </Border>
 
-                            <!-- Household aid-received summary: front-and-center decision context before Confirm/Decline -->
+                            <!-- Household aid-received summary -->
                             <Border Margin="0,16,0,0" Padding="14,10" CornerRadius="8"
                                     Background="{DynamicResource ThemeCardSubtleBrush}"
                                     BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="1"
@@ -677,7 +632,6 @@
                         <!-- Right Side: Household Members + Distribution History -->
                         <ScrollViewer Grid.Column="4" Margin="20,40" VerticalScrollBarVisibility="Auto">
                             <StackPanel>
-                                <!-- Household roster -->
                                 <TextBlock Text="HOUSEHOLD MEMBERS" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,4"/>
                                 <TextBlock Text="{Binding HouseholdContextSummary}" FontSize="11" TextWrapping="Wrap" Foreground="{DynamicResource BrandMidnightBrush}" Margin="0,0,0,8"/>
 
@@ -700,7 +654,8 @@
                                                         </StackPanel>
                                                         <TextBlock Text="{Binding RelationshipToHead}" FontSize="10" Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
                                                     </StackPanel>
-                                                    <Border Grid.Column="1" VerticalAlignment="Center" Background="{DynamicResource BrandDangerBrush}" CornerRadius="3" Padding="5,2"
+                                                    <!-- BUG FIX: BrandDangerBrush → BrandRedBrush -->
+                                                    <Border Grid.Column="1" VerticalAlignment="Center" Background="{DynamicResource BrandRedBrush}" CornerRadius="3" Padding="5,2"
                                                             Visibility="{Binding AlreadyReceivedSameAssistanceType, Converter={StaticResource BooleanToVisibilityConverter}}">
                                                         <TextBlock Text="RECEIVED" FontSize="9" FontWeight="Bold" Foreground="White"/>
                                                     </Border>
@@ -737,7 +692,7 @@
                         </ScrollViewer>
                     </Grid>
 
-                    <!-- Household Duplicate Warning (heads-up; the CONFIRM button opens the verification modal) -->
+                    <!-- Household Duplicate Warning -->
                     <Border Grid.Row="1" Padding="16,12" Background="{DynamicResource ThemeCardSubtleBrush}"
                             BorderBrush="{DynamicResource BrandWarningBrush}" BorderThickness="1,1,1,0"
                             Visibility="{Binding HasHouseholdWarning, Converter={StaticResource BooleanToVisibilityConverter}}">
@@ -832,9 +787,7 @@
         </Grid>
 
         <!-- ============================ HOUSEHOLD REVIEW MODAL ============================ -->
-        <!-- Pops on every CONFIRM so the operator reviews the household before releasing.              -->
-        <!-- Neutral "review" framing by default; escalates to a warning that requires an explicit       -->
-        <!-- acknowledgment only when a household member already received this assistance.               -->
+        <!-- Pops on every CONFIRM so the operator reviews the household before releasing (scanner path). -->
         <Grid Grid.RowSpan="2" Panel.ZIndex="140"
               Visibility="{Binding IsHouseholdConfirmVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
             <Border Background="#CC0F172A"/>
@@ -848,7 +801,7 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <!-- Header: neutral review by default, warning when a duplicate is present -->
+                    <!-- Header -->
                     <Grid Grid.Row="0" Margin="0,0,0,12">
                         <StackPanel Orientation="Horizontal"
                                     Visibility="{Binding RequiresHouseholdOverride, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
@@ -869,7 +822,7 @@
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <!-- Beneficiary photo; falls back to a default profile icon when no photo is on file -->
+                            <!-- Beneficiary photo -->
                             <Grid Grid.Column="0" Width="64" Height="64" Margin="0,0,14,0">
                                 <Ellipse Width="64" Height="64" Fill="{DynamicResource ThemeCardSubtleBrush}" Stroke="{DynamicResource BrandBorderBrush}" StrokeThickness="1"/>
                                 <Ellipse Width="64" Height="64"
@@ -888,12 +841,12 @@
                                 <TextBlock Text="{Binding HouseholdContextSummary}" FontSize="12" Foreground="{DynamicResource BrandTextSecondaryBrush}" TextWrapping="Wrap" Margin="0,2,0,0"/>
                             </StackPanel>
                         </Grid>
-                        <!-- Neutral summary card (no duplicate) -->
+                        <!-- Neutral summary card -->
                         <Border Background="{DynamicResource ThemeCardSubtleBrush}" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12,10"
                                 Visibility="{Binding RequiresHouseholdOverride, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
                             <TextBlock Text="{Binding HouseholdAidReceivedSummary}" FontSize="13" FontWeight="Bold" TextWrapping="Wrap" Foreground="{DynamicResource BrandMidnightBrush}"/>
                         </Border>
-                        <!-- Warning summary card (duplicate present) -->
+                        <!-- Warning summary card -->
                         <Border Background="{DynamicResource ThemeCardSubtleBrush}" BorderBrush="{DynamicResource BrandWarningBrush}" BorderThickness="1" CornerRadius="8" Padding="12,10"
                                 Visibility="{Binding RequiresHouseholdOverride, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <TextBlock Text="{Binding HouseholdAidReceivedSummary}" FontSize="13" FontWeight="Bold" TextWrapping="Wrap" Foreground="{DynamicResource BrandMidnightBrush}"/>
@@ -923,7 +876,8 @@
                                                     </StackPanel>
                                                     <TextBlock Text="{Binding RelationshipToHead}" FontSize="10" Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
                                                 </StackPanel>
-                                                <Border Grid.Column="1" VerticalAlignment="Center" Background="{DynamicResource BrandDangerBrush}" CornerRadius="3" Padding="6,2"
+                                                <!-- BUG FIX: BrandDangerBrush → BrandRedBrush -->
+                                                <Border Grid.Column="1" VerticalAlignment="Center" Background="{DynamicResource BrandRedBrush}" CornerRadius="3" Padding="6,2"
                                                         Visibility="{Binding AlreadyReceivedSameAssistanceType, Converter={StaticResource BooleanToVisibilityConverter}}">
                                                     <TextBlock Text="RECEIVED" FontSize="9" FontWeight="Bold" Foreground="White"/>
                                                 </Border>
@@ -935,7 +889,7 @@
                         </StackPanel>
                     </ScrollViewer>
 
-                    <!-- Override acknowledgment: only required (and shown) when a member already received this aid -->
+                    <!-- Override acknowledgment -->
                     <CheckBox Grid.Row="3" Margin="0,14,0,0"
                               Content="I have verified this beneficiary and authorize the release despite the household warning."
                               IsChecked="{Binding HouseholdOverrideAcknowledged}"

@@ -129,6 +129,7 @@ namespace AttendanceShiftingManagement.Services
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"GGMS Read Error: {ex.Message}");
+                throw;
             }
 
             return results;

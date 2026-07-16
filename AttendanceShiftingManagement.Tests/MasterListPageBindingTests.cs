@@ -49,7 +49,7 @@ public sealed class MasterListPageBindingTests
 
         var xaml = File.ReadAllText(pagePath);
 
-        Assert.Contains("Header=\"HOUSEHOLD\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Content=\"HOUSEHOLD\"", xaml, StringComparison.Ordinal);
         Assert.Contains("ItemsSource=\"{Binding SelectedHouseholdMembers}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"{Binding HouseholdCode}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"{Binding HouseholdHeadName}\"", xaml, StringComparison.Ordinal);

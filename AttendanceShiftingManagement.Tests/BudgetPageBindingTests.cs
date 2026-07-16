@@ -20,54 +20,92 @@ public sealed class BudgetPageBindingTests
     }
 
     [Fact]
-    public void BudgetPage_UsesSidebarPanelWorkflowBindings()
+    public void BudgetPage_GlobalCapsUiIsRemoved()
     {
         var pagePath = GetProjectFilePath("Views", "BudgetPage.xaml");
 
         var xaml = File.ReadAllText(pagePath);
 
+        Assert.DoesNotContain("GLOBAL AID CAPS", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("CASH-FOR-WORK CAPS", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("ALLOCATIONS (BUCKETS)", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("SYSTEM LIMIT CONFIGURATION", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("DISTRIBUTION &amp; CAP SETUP", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("OTP VERIFICATION", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("OpenAssistanceCaseBudgetsPanelCommand", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("OpenCashForWorkBudgetsPanelCommand", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("VerifyOtpCommand", xaml, StringComparison.Ordinal);
+    }
 
+    [Fact]
+    public void BudgetPage_UsesCombinedCreateProjectModalBindings()
+    {
+        var pagePath = GetProjectFilePath("Views", "BudgetPage.xaml");
 
-        Assert.Contains("Content=\"Budget Ledger\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Command=\"{Binding OpenLedgerPanelCommand}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Content=\"Private Donations\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Command=\"{Binding OpenDonationPanelCommand}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Header=\"Programs\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Command=\"{Binding OpenProgramPanelCommand}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Content=\"Ayuda Projects\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Content=\"Aid Request Budgets\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Content=\"Cash-for-Work Budgets\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Content=\"Seminars\"", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("Content=\"Refresh Workspace\"", xaml, StringComparison.Ordinal);
+        var xaml = File.ReadAllText(pagePath);
 
-        Assert.Contains("Text=\"{Binding CurrentPanelTitle}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"{Binding CurrentPanelSubtitle}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Visibility=\"{Binding DonationPanelVisibility}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Visibility=\"{Binding ProgramPanelVisibility}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Visibility=\"{Binding SeminarPanelVisibility}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Visibility=\"{Binding HistoryDetailVisibility}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Command=\"{Binding ClosePanelCommand}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Command=\"{Binding CloseHistoryDetailCommand}\"", xaml, StringComparison.Ordinal);
+        // Sidebar: RECORD DONATION replaced by CREATE PROJECT (gold), opens combined modal
+        Assert.DoesNotContain("Content=\"RECORD DONATION\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Content=\"CREATE PROJECT\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding OpenNewDonationProjectCommand}\"", xaml, StringComparison.Ordinal);
 
-        Assert.Contains("ItemsSource=\"{Binding LedgerEntriesView}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("SelectedItem=\"{Binding SelectedLedgerEntry, Mode=TwoWay}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"{Binding LedgerSearchText, UpdateSourceTrigger=PropertyChanged}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("ItemsSource=\"{Binding LedgerSourceFilters}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Command=\"{Binding ExportLedgerCommand}\"", xaml, StringComparison.Ordinal);
+        // Grid-row flow is retained
+        Assert.Contains("OpenProjectCreationPanelCommand", xaml, StringComparison.Ordinal);
+        Assert.Contains("Visibility=\"{Binding ProjectCreationPanelVisibility}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding ConfirmCreateProjectCommand}\"", xaml, StringComparison.Ordinal);
 
-        Assert.Contains("Command=\"{Binding RecordDonationCommand}\"", xaml, StringComparison.Ordinal);
+        // Dual-mode funding source column driven by IsNewDonationMode
+        Assert.Contains("Binding IsNewDonationMode, Converter={StaticResource BooleanToVisibilityConverter}", xaml, StringComparison.Ordinal);
+        Assert.Contains("Binding IsNewDonationMode, Converter={StaticResource InverseBooleanToVisibilityConverter}", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding NewProjectSourceDescription}\"", xaml, StringComparison.Ordinal);
+
+        // Donation entry fields live inside the combined modal
+        Assert.Contains("Text=\"{Binding DonorName, UpdateSourceTrigger=PropertyChanged}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("SelectedDate=\"{Binding DonationDateReceived}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding BrowseProofCommand}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("ItemsSource=\"{Binding Donations}\"", xaml, StringComparison.Ordinal);
 
-        Assert.Contains("Command=\"{Binding CreateProgramCommand}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("ItemsSource=\"{Binding Programs}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"{Binding ProgramCode, UpdateSourceTrigger=PropertyChanged}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"{Binding ProgramName, UpdateSourceTrigger=PropertyChanged}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Command=\"{Binding CreateAssistanceCaseBudgetCommand}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("ItemsSource=\"{Binding AssistanceCaseBudgets}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Command=\"{Binding CreateCashForWorkBudgetCommand}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("ItemsSource=\"{Binding CashForWorkBudgets}\"", xaml, StringComparison.Ordinal);
+        // Widened modal
+        Assert.Contains("Width=\"1100\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Width=\"750\"", xaml, StringComparison.Ordinal);
+    }
 
+    [Fact]
+    public void BudgetPage_HasBeneficiaryEnrollmentColumnBindings()
+    {
+        var pagePath = GetProjectFilePath("Views", "BudgetPage.xaml");
+
+        var xaml = File.ReadAllText(pagePath);
+
+        Assert.Contains("ENROLL BENEFICIARIES (OPTIONAL)", xaml, StringComparison.Ordinal);
+        Assert.Contains("ItemsSource=\"{Binding FilteredEnrollmentBeneficiaries}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding EnrollmentSearchText, UpdateSourceTrigger=PropertyChanged}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding SelectAllFilteredEnrollmentCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding DeselectAllEnrollmentCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding SelectedEnrollmentCount}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("IsChecked=\"{Binding IsSelected, Mode=TwoWay}\"", xaml, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BudgetViewModel_EnrollmentUsesDistributionServiceAndApprovedFilter()
+    {
+        var vmPath = GetProjectFilePath("ViewModels", "BudgetViewModel.cs");
+
+        var source = File.ReadAllText(vmPath);
+
+        // Enrollment reuses the exact Distribution module service call
+        Assert.Contains("BulkAddBeneficiariesAsync(", source, StringComparison.Ordinal);
+        Assert.Contains("new ProjectDistributionService(", source, StringComparison.Ordinal);
+
+        // Only Approved masterlist beneficiaries are offered
+        Assert.Contains("VerificationStatus.Approved", source, StringComparison.Ordinal);
+
+        // Donation + project stay linked 1:1
+        Assert.Contains("NewProjectSourceDonationId", source, StringComparison.Ordinal);
+
+        // Global caps / OTP plumbing is gone
+        Assert.DoesNotContain("OtpChallengeSession", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("CreateAssistanceCaseBudgetCommand", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("CreateCashForWorkBudgetCommand", source, StringComparison.Ordinal);
     }
 
     [Fact]

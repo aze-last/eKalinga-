@@ -41,6 +41,7 @@ namespace AttendanceShiftingManagement.Views
 
                 // Start background update check now that DB is ready
                 Services.AppUpdateCoordinator.StartBackgroundCheck();
+                Services.ConnectivityService.Instance.StartPeriodicCheck();
             };
 
             BeginAnimation(OpacityProperty, fadeOut);

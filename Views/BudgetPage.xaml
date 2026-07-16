@@ -104,31 +104,17 @@
                             <StackPanel>
                                 <TextBlock Text="SOURCES" Style="{StaticResource SidebarHeaderStyle}"/>
 
-                                <Button Content="SYNC GGMS" 
+                                <Button Content="SYNC GGMS"
                                         Command="{Binding SyncGovernmentBudgetCommand}"
-                                        Style="{StaticResource MaterialDesignRaisedButton}" 
+                                        Style="{StaticResource MaterialDesignRaisedButton}"
                                         Background="{StaticResource ActionAccentBrush}"
                                         Foreground="White" HorizontalContentAlignment="Left" Height="45" Margin="0,0,0,8" FontSize="14"/>
 
-                                <Button Content="RECORD DONATION" 
-                                        Command="{Binding OpenDonationPanelCommand}"
-                                        Style="{StaticResource MaterialDesignRaisedButton}" 
+                                <Button Content="CREATE PROJECT"
+                                        Command="{Binding OpenNewDonationProjectCommand}"
+                                        Style="{StaticResource MaterialDesignRaisedButton}"
                                         Background="{StaticResource ActionAccentBrush}"
                                         Foreground="White" HorizontalContentAlignment="Left" Height="45" Margin="0,0,0,20" FontSize="14"/>
-
-                                <TextBlock Text="ALLOCATIONS (BUCKETS)" Style="{StaticResource SidebarHeaderStyle}"/>
-
-                                <Button Content="GLOBAL AID CAPS" 
-                                        Command="{Binding OpenAssistanceCaseBudgetsPanelCommand}"
-                                        Style="{StaticResource MaterialDesignOutlinedButton}" 
-                                        Foreground="{StaticResource PrimaryBrandBrush}" BorderBrush="{StaticResource PrimaryBrandBrush}" HorizontalContentAlignment="Left" Height="45" Margin="0,0,0,8" FontSize="14"/>
-
-                                <Button Content="CASH-FOR-WORK CAPS" 
-                                        Command="{Binding OpenCashForWorkBudgetsPanelCommand}"
-                                        Style="{StaticResource MaterialDesignOutlinedButton}" 
-                                        Foreground="{StaticResource PrimaryBrandBrush}" BorderBrush="{StaticResource PrimaryBrandBrush}" HorizontalContentAlignment="Left" Height="45" Margin="0,0,0,20" FontSize="14"/>
-
-                                <!-- Removed PLANNING/CREATE PROJECT from sidebar as requested -->
 
                                 <TextBlock Text="AUDIT (CLAIM)" Style="{StaticResource SidebarHeaderStyle}"/>
 
@@ -516,231 +502,11 @@
                                     </DataTemplate>
                                 </ContentControl.Resources>
                             </ContentControl>
-
-                            <!-- Special Template for Global Caps -->
-                            <materialDesign:Card Margin="0,20,0,0" Background="White" BorderBrush="{StaticResource ActionAccentBrush}" BorderThickness="1" 
-                                                Visibility="{Binding Path=IsGlobalCapSelected, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                <Border Padding="20">
-                                    <StackPanel>
-                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                                            <materialDesign:PackIcon Kind="AlertDecagram" Foreground="{StaticResource ActionAccentBrush}" VerticalAlignment="Center"/>
-                                            <TextBlock Text="SYSTEM LIMIT CONFIGURATION" FontWeight="Bold" Foreground="{StaticResource ActionAccentBrush}" Margin="10,0,0,0" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                        <TextBlock Text="These are global system caps. Changing these affects the entire barangay's distribution capacity." 
-                                                   TextWrapping="Wrap" Foreground="#64748B" Margin="0,0,0,15"/>
-
-                                        <Grid Margin="0,10,0,15" Visibility="{Binding Path=SelectedBudget.Category, Converter={StaticResource StringToVisibilityConverter}, ConverterParameter='Global Aid Cap'}">
-                                            <TextBox materialDesign:HintAssist.Hint="Global Aid Budget Cap (PHP)" 
-                                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                                     Text="{Binding AssistanceCaseBudgetCapText, UpdateSourceTrigger=PropertyChanged}"
-                                                     Width="300" HorizontalAlignment="Left"/>
-                                            <Button Content="UPDATE AID CAP" 
-                                                    Command="{Binding CreateAssistanceCaseBudgetCommand}"
-                                                    HorizontalAlignment="Right"
-                                                    Style="{StaticResource MaterialDesignRaisedButton}"
-                                                    Background="{StaticResource ActionAccentBrush}" BorderBrush="{StaticResource ActionAccentBrush}" Foreground="White"/>
-                                        </Grid>
-
-                                        <Grid Margin="0,10,0,15" Visibility="{Binding Path=SelectedBudget.Category, Converter={StaticResource StringToVisibilityConverter}, ConverterParameter='Global CFW Cap'}">
-                                            <TextBox materialDesign:HintAssist.Hint="Global CFW Budget Cap (PHP)" 
-                                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                                     Text="{Binding CashForWorkBudgetCapText, UpdateSourceTrigger=PropertyChanged}"
-                                                     Width="300" HorizontalAlignment="Left"/>
-                                            <Button Content="UPDATE CFW CAP" 
-                                                    Command="{Binding CreateCashForWorkBudgetCommand}"
-                                                    HorizontalAlignment="Right"
-                                                    Style="{StaticResource MaterialDesignRaisedButton}"
-                                                    Background="{StaticResource ActionAccentBrush}" BorderBrush="{StaticResource ActionAccentBrush}" Foreground="White"/>
-                                        </Grid>
-                                    </StackPanel>
-                                </Border>
-                            </materialDesign:Card>
                         </StackPanel>
                     </Border>
                 </ScrollViewer>
             </Grid>
         </Grid>
-
-        <!-- Private Donation Panel Overlay -->
-        <Border Grid.RowSpan="3" Panel.ZIndex="99" Background="#CC0F172A" Visibility="{Binding IsDonationPanelOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <materialDesign:Card Width="500" VerticalAlignment="Center" HorizontalAlignment="Center">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-
-                    <Border Grid.Row="0" Background="{StaticResource PrimaryBrandBrush}" Padding="20,15">
-                        <TextBlock Text="RECORD PRIVATE DONATION" Foreground="White" FontSize="18" FontWeight="Bold"/>
-                    </Border>
-
-                    <ScrollViewer Grid.Row="1" MaxHeight="600" VerticalScrollBarVisibility="Auto">
-                        <Border Padding="25">
-                            <StackPanel>
-                                <TextBlock Text="Enter donation details below. All fields marked with * are required." Foreground="#64748B" Margin="0,0,0,20"/>
-
-                                <ComboBox materialDesign:HintAssist.Hint="Donor Type *" 
-                                          Style="{StaticResource MaterialDesignOutlinedComboBox}"
-                                          ItemsSource="{Binding DonorTypes}"
-                                          SelectedItem="{Binding SelectedDonorType}"
-                                          Margin="0,0,0,15"/>
-
-                                <TextBox materialDesign:HintAssist.Hint="Donor Name *" 
-                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                         Text="{Binding DonorName}"
-                                         Margin="0,0,0,15"/>
-
-                                <TextBlock Text="Donation Type *" Foreground="#64748B" Margin="0,0,0,5" FontSize="12"/>
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
-                                    <RadioButton Content="Cash" IsChecked="{Binding IsCashDonation}" Style="{StaticResource MaterialDesignRadioButton}" Margin="0,0,20,0" Foreground="{StaticResource PrimaryBrandBrush}" Cursor="Hand"/>
-                                    <RadioButton Content="Goods" IsChecked="{Binding IsGoodsDonation}" Style="{StaticResource MaterialDesignRadioButton}" Foreground="{StaticResource PrimaryBrandBrush}" Cursor="Hand"/>
-                                </StackPanel>
-
-                                <!-- Cash Fields -->
-                                <TextBox materialDesign:HintAssist.Hint="Donation Amount (PHP) *" 
-                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                         Text="{Binding DonationAmountText}"
-                                         FontSize="20" FontWeight="Bold"
-                                         Visibility="{Binding IsCashDonation, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                         Margin="0,0,0,15"/>
-
-                                <!-- Goods Fields -->
-                                <StackPanel Visibility="{Binding IsGoodsDonation, Converter={StaticResource BooleanToVisibilityConverter}}" Margin="0,0,0,15">
-                                    <TextBox materialDesign:HintAssist.Hint="Item Name *" 
-                                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                             Text="{Binding DonationItemName}"
-                                             Margin="0,0,0,10"/>
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="10"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-                                        <TextBox Grid.Column="0" materialDesign:HintAssist.Hint="Quantity *" 
-                                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                                 Text="{Binding DonationQuantityText}"/>
-                                        <TextBox Grid.Column="2" materialDesign:HintAssist.Hint="Unit of Measure (e.g. Sacks) *" 
-                                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                                 Text="{Binding DonationUnitOfMeasure}"/>
-                                    </Grid>
-                                </StackPanel>
-
-                                <DatePicker materialDesign:HintAssist.Hint="Date Received *" 
-                                            Style="{StaticResource MaterialDesignOutlinedDatePicker}"
-                                            SelectedDate="{Binding DonationDateReceived}"
-                                            Margin="0,0,0,15"/>
-
-                                <TextBox materialDesign:HintAssist.Hint="Reference Number / Receipt #" 
-                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                         Text="{Binding DonationReferenceNumber}"
-                                         Margin="0,0,0,15"/>
-
-                                <ComboBox materialDesign:HintAssist.Hint="Earmark / Target Project or Budget" 
-                                          Style="{StaticResource MaterialDesignOutlinedComboBox}"
-                                          ItemsSource="{Binding TargetOptions}"
-                                          SelectedItem="{Binding SelectedTargetOption}"
-                                          DisplayMemberPath="DisplayName"
-                                          Margin="0,0,0,15"/>
-
-                                <TextBlock Text="PROOF OF DONATION" FontSize="11" FontWeight="Bold" Foreground="{StaticResource PrimaryBrandBrush}" Margin="0,10,0,10"/>
-                                <ComboBox materialDesign:HintAssist.Hint="Proof Type" 
-                                          Style="{StaticResource MaterialDesignOutlinedComboBox}"
-                                          ItemsSource="{Binding ProofTypes}"
-                                          SelectedItem="{Binding SelectedProofType}"
-                                          Margin="0,0,0,15"/>
-
-                                <Grid Margin="0,10,0,25">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBox materialDesign:HintAssist.Hint="Proof File Path" 
-                                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                             Text="{Binding ProofFilePath}" IsReadOnly="True"/>
-                                    <Button Grid.Column="1" Content="..." Command="{Binding BrowseProofCommand}" Margin="5,0,0,0" Style="{StaticResource MaterialDesignRaisedButton}" Background="{StaticResource PrimaryBrandBrush}" Foreground="White" Cursor="Hand"/>
-                                </Grid>
-
-                                <TextBox materialDesign:HintAssist.Hint="Remarks" 
-                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                         Text="{Binding DonationRemarks}"
-                                         AcceptsReturn="True" Height="80"
-                                         Margin="0,0,0,15"/>
-                            </StackPanel>
-                        </Border>
-                    </ScrollViewer>
-
-                    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="20">
-                        <Button Content="CANCEL" Style="{StaticResource MaterialDesignFlatButton}" Command="{Binding CloseDonationPanelCommand}" Margin="0,0,10,0" Foreground="#64748B" Cursor="Hand"/>
-                        <Button Content="SAVE DONATION" Command="{Binding RecordDonationCommand}" Style="{StaticResource MaterialDesignRaisedButton}" Background="{StaticResource ActionAccentBrush}" BorderBrush="{StaticResource ActionAccentBrush}" Foreground="White" Cursor="Hand"/>
-                    </StackPanel>
-                </Grid>
-            </materialDesign:Card>
-        </Border>
-
-        <!-- Ayuda Program / Cap Panel Overlay -->
-        <Border Grid.RowSpan="3" Panel.ZIndex="101" Background="#CC0F172A" Visibility="{Binding IsProgramPanelOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <materialDesign:Card Width="550" VerticalAlignment="Center" HorizontalAlignment="Center">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-
-                    <Border Grid.Row="0" Background="{StaticResource PrimaryBrandBrush}" Padding="20,15">
-                        <TextBlock Text="DISTRIBUTION &amp; CAP SETUP" Foreground="White" FontSize="18" FontWeight="Bold"/>
-                    </Border>
-
-                    <Border Grid.Row="1" Background="#F8FAFC" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="0,0,0,1" Padding="20,10">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="Select Section:" VerticalAlignment="Center" Margin="0,0,15,0" Foreground="{StaticResource PrimaryBrandBrush}" FontWeight="Bold"/>
-                            <ComboBox ItemsSource="{Binding SetupSections}" 
-                                      SelectedItem="{Binding SelectedSetupSection}" 
-                                      Width="250"
-                                      Style="{StaticResource MaterialDesignOutlinedComboBox}"/>
-                        </StackPanel>
-                    </Border>
-
-                    <ScrollViewer Grid.Row="2" MaxHeight="600" VerticalScrollBarVisibility="Auto">
-                        <Border Padding="25">
-                            <Grid>
-                                <!-- Global Aid Caps Section -->
-                                <StackPanel Visibility="{Binding AssistanceCaseBudgetsSectionVisibility}">
-                                    <TextBlock Text="GLOBAL AID REQUEST LIMIT" FontSize="14" FontWeight="Bold" Margin="0,0,0,15" Foreground="{StaticResource PrimaryBrandBrush}"/>
-                                    <TextBlock Text="This cap defines the total available fund for all 'Aid Request' releases." TextWrapping="Wrap" Margin="0,0,0,20" Foreground="#64748B"/>
-
-                                    <TextBox materialDesign:HintAssist.Hint="Global Aid Budget Cap (PHP) *" 
-                                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                             Text="{Binding AssistanceCaseBudgetCapText}"
-                                             FontSize="20" FontWeight="Bold" Margin="0,0,0,20"/>
-
-                                    <Button Content="UPDATE GLOBAL AID CAP" Command="{Binding CreateAssistanceCaseBudgetCommand}" Style="{StaticResource MaterialDesignRaisedButton}" Background="{StaticResource ActionAccentBrush}" BorderBrush="{StaticResource ActionAccentBrush}" Foreground="White"/>
-                                </StackPanel>
-
-                                <!-- Global CFW Caps Section -->
-                                <StackPanel Visibility="{Binding CashForWorkBudgetsSectionVisibility}">
-                                    <TextBlock Text="GLOBAL CASH-FOR-WORK LIMIT" FontSize="14" FontWeight="Bold" Margin="0,0,0,15" Foreground="{StaticResource PrimaryBrandBrush}"/>
-                                    <TextBlock Text="This cap defines the total available fund for all 'Cash-for-Work' releases." TextWrapping="Wrap" Margin="0,0,0,20" Foreground="#64748B"/>
-
-                                    <TextBox materialDesign:HintAssist.Hint="Global CFW Budget Cap (PHP) *" 
-                                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                             Text="{Binding CashForWorkBudgetCapText}"
-                                             FontSize="20" FontWeight="Bold" Margin="0,0,0,20"/>
-
-                                    <Button Content="UPDATE GLOBAL CFW CAP" Command="{Binding CreateCashForWorkBudgetCommand}" Style="{StaticResource MaterialDesignRaisedButton}" Background="{StaticResource ActionAccentBrush}" BorderBrush="{StaticResource ActionAccentBrush}" Foreground="White"/>
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-                    </ScrollViewer>
-
-                    <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="20">
-                        <Button Content="CLOSE" Style="{StaticResource MaterialDesignFlatButton}" Command="{Binding CloseProgramPanelCommand}" Foreground="#64748B"/>
-                    </StackPanel>
-                </Grid>
-            </materialDesign:Card>
-        </Border>
 
         <!-- Ledger History Panel Overlay -->
         <Border Grid.RowSpan="3" Panel.ZIndex="100" Background="#CC0F172A" Visibility="{Binding LedgerVisibility}">
@@ -894,37 +660,9 @@
             </materialDesign:Card>
         </Border>
 
-        <!-- OTP Challenge Overlay -->
-        <Border Grid.RowSpan="3" Panel.ZIndex="102" Background="#EE0F172A" Visibility="{Binding ShowOtpPanel, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <materialDesign:Card Width="400">
-                <Border Padding="30">
-                    <StackPanel>
-                        <materialDesign:PackIcon Kind="ShieldLock" Width="48" Height="48" Foreground="{StaticResource PrimaryBrandBrush}" HorizontalAlignment="Center" Margin="0,0,0,20"/>
-                        <TextBlock Text="OTP VERIFICATION" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,10" Foreground="{StaticResource PrimaryBrandBrush}"/>
-                        <TextBlock Text="{Binding OtpStatusMessage}" 
-                                   TextWrapping="Wrap" TextAlignment="Center" 
-                                   Foreground="{Binding OtpStatusBrush}" Margin="0,0,0,25"/>
-
-                        <TextBox materialDesign:HintAssist.Hint="6-Digit Code" 
-                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                 Text="{Binding OtpCode, UpdateSourceTrigger=PropertyChanged}"
-                                 FontSize="24" FontWeight="Bold" HorizontalContentAlignment="Center"
-                                 MaxLength="6" Margin="0,0,0,20"/>
-
-                        <Button Content="VERIFY CODE" Command="{Binding VerifyOtpCommand}" Height="45" Margin="0,0,0,10" Background="{StaticResource PrimaryBrandBrush}" Foreground="White"/>
-
-                        <Grid>
-                            <Button Content="{Binding ResendOtpButtonText}" Command="{Binding ResendOtpCommand}" Style="{StaticResource MaterialDesignFlatButton}" HorizontalAlignment="Left" Foreground="{StaticResource PrimaryBrandBrush}"/>
-                            <Button Content="CANCEL" Command="{Binding CloseOtpPanelCommand}" Style="{StaticResource MaterialDesignFlatButton}" HorizontalAlignment="Right" Foreground="#64748B"/>
-                        </Grid>
-                    </StackPanel>
-                </Border>
-            </materialDesign:Card>
-        </Border>
-
-        <!-- Project Creation Panel Overlay -->
+        <!-- Project Creation Panel Overlay (Combined: Donation Entry + Project + Enrollment) -->
         <Border Grid.RowSpan="3" Panel.ZIndex="103" Background="#CC0F172A" Visibility="{Binding ProjectCreationPanelVisibility}">
-            <materialDesign:Card Width="750" VerticalAlignment="Center" HorizontalAlignment="Center">
+            <materialDesign:Card Width="1100" VerticalAlignment="Center" HorizontalAlignment="Center">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -941,7 +679,9 @@
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="30"/>
+                                    <ColumnDefinition Width="25"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="25"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
 
@@ -949,23 +689,23 @@
                                 <StackPanel Grid.Column="0">
                                     <TextBlock Text="BASIC INFORMATION" FontSize="11" FontWeight="Bold" Foreground="{StaticResource PrimaryBrandBrush}" Margin="0,0,0,15"/>
 
-                                    <TextBox materialDesign:HintAssist.Hint="Project Name *" 
+                                    <TextBox materialDesign:HintAssist.Hint="Project Name *"
                                              Style="{StaticResource MaterialDesignOutlinedTextBox}"
                                              Text="{Binding NewProjectName, UpdateSourceTrigger=PropertyChanged}"
                                              Margin="0,0,0,15"/>
 
-                                    <TextBox materialDesign:HintAssist.Hint="Project Code *" 
+                                    <TextBox materialDesign:HintAssist.Hint="Project Code *"
                                              Style="{StaticResource MaterialDesignOutlinedTextBox}"
                                              Text="{Binding NewProjectCode, UpdateSourceTrigger=PropertyChanged}"
                                              Margin="0,0,0,15"/>
 
-                                    <ComboBox materialDesign:HintAssist.Hint="Program Type" 
+                                    <ComboBox materialDesign:HintAssist.Hint="Program Type"
                                               Style="{StaticResource MaterialDesignOutlinedComboBox}"
                                               ItemsSource="{Binding ProgramTypes}"
                                               SelectedItem="{Binding SelectedProgramType}"
                                               Margin="0,0,0,15"/>
 
-                                    <TextBox materialDesign:HintAssist.Hint="Description" 
+                                    <TextBox materialDesign:HintAssist.Hint="Description"
                                              Style="{StaticResource MaterialDesignOutlinedTextBox}"
                                              Text="{Binding NewProjectDescription}"
                                              AcceptsReturn="True" Height="60"
@@ -973,7 +713,7 @@
 
                                     <TextBlock Text="RELEASE SETTINGS" FontSize="11" FontWeight="Bold" Foreground="{StaticResource PrimaryBrandBrush}" Margin="0,10,0,15"/>
 
-                                    <ComboBox materialDesign:HintAssist.Hint="Release Method" 
+                                    <ComboBox materialDesign:HintAssist.Hint="Release Method"
                                               Style="{StaticResource MaterialDesignOutlinedComboBox}"
                                               ItemsSource="{Binding ReleaseKinds}"
                                               SelectedItem="{Binding SelectedReleaseKind}"
@@ -981,7 +721,7 @@
 
                                     <!-- Cash Fields -->
                                     <StackPanel Visibility="{Binding IsCashReleaseKind, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                        <TextBox materialDesign:HintAssist.Hint="Max Payout Amount (PHP) *" 
+                                        <TextBox materialDesign:HintAssist.Hint="Max Payout Amount (PHP) *"
                                                  Style="{StaticResource MaterialDesignOutlinedTextBox}"
                                                  Text="{Binding NewProjectUnitAmountText, UpdateSourceTrigger=PropertyChanged}"
                                                  FontSize="18" FontWeight="Bold"
@@ -990,7 +730,7 @@
 
                                     <!-- Goods Fields -->
                                     <StackPanel Visibility="{Binding IsGoodsReleaseKind, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                        <TextBox materialDesign:HintAssist.Hint="Item Name (e.g. Rice) *" 
+                                        <TextBox materialDesign:HintAssist.Hint="Item Name (e.g. Rice) *"
                                                  Style="{StaticResource MaterialDesignOutlinedTextBox}"
                                                  Text="{Binding NewProjectItemName, UpdateSourceTrigger=PropertyChanged}"
                                                  Margin="0,0,0,15"/>
@@ -1000,30 +740,20 @@
                                                 <ColumnDefinition Width="10" />
                                                 <ColumnDefinition Width="*" />
                                             </Grid.ColumnDefinitions>
-                                            <TextBox Grid.Column="0" materialDesign:HintAssist.Hint="Quantity Per Beneficiary *" 
+                                            <TextBox Grid.Column="0" materialDesign:HintAssist.Hint="Quantity Per Beneficiary *"
                                                      Style="{StaticResource MaterialDesignOutlinedTextBox}"
                                                      Text="{Binding NewProjectQuantityText, UpdateSourceTrigger=PropertyChanged}"/>
-                                            <TextBox Grid.Column="2" materialDesign:HintAssist.Hint="Unit of Measure (e.g. kg, pack) *" 
+                                            <TextBox Grid.Column="2" materialDesign:HintAssist.Hint="Unit of Measure (e.g. kg, pack) *"
                                                      Style="{StaticResource MaterialDesignOutlinedTextBox}"
                                                      Text="{Binding NewProjectUnitOfMeasure, UpdateSourceTrigger=PropertyChanged}"/>
                                         </Grid>
-                                        <TextBox materialDesign:HintAssist.Hint="Item Description (Optional)" 
+                                        <TextBox materialDesign:HintAssist.Hint="Item Description (Optional)"
                                                  Style="{StaticResource MaterialDesignOutlinedTextBox}"
                                                  Text="{Binding NewProjectItemDescription, UpdateSourceTrigger=PropertyChanged}"
                                                  Margin="0,0,0,15"/>
                                     </StackPanel>
-                                </StackPanel>
 
-                                <!-- Source Funding -->
-                                <StackPanel Grid.Column="2">
-                                    <TextBlock Text="FUNDING SOURCE" FontSize="11" FontWeight="Bold" Foreground="{StaticResource PrimaryBrandBrush}" Margin="0,0,0,5"/>
-                                    <TextBlock Text="This project will draw funds exclusively from the selected source below." FontSize="10" Foreground="#64748B" Margin="0,0,0,15"/>
-
-                                    <Border BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="4" Height="60" Background="#F8FAFC" Padding="15">
-                                        <TextBlock Text="{Binding NewProjectSourceDescription}" VerticalAlignment="Center" FontWeight="Bold" Foreground="{StaticResource PrimaryBrandBrush}"/>
-                                    </Border>
-
-                                    <TextBlock Text="DURATION &amp; CAP" FontSize="11" FontWeight="Bold" Foreground="{StaticResource PrimaryBrandBrush}" Margin="0,20,0,15"/>
+                                    <TextBlock Text="DURATION &amp; CAP" FontSize="11" FontWeight="Bold" Foreground="{StaticResource PrimaryBrandBrush}" Margin="0,10,0,15"/>
 
                                     <Grid>
                                         <Grid.ColumnDefinitions>
@@ -1031,19 +761,156 @@
                                             <ColumnDefinition Width="10"/>
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
-                                        <DatePicker Grid.Column="0" materialDesign:HintAssist.Hint="Start Date" 
+                                        <DatePicker Grid.Column="0" materialDesign:HintAssist.Hint="Start Date"
                                                     Style="{StaticResource MaterialDesignOutlinedDatePicker}"
                                                     SelectedDate="{Binding NewProjectStartDate}"/>
-                                        <DatePicker Grid.Column="2" materialDesign:HintAssist.Hint="End Date" 
+                                        <DatePicker Grid.Column="2" materialDesign:HintAssist.Hint="End Date"
                                                     Style="{StaticResource MaterialDesignOutlinedDatePicker}"
                                                     SelectedDate="{Binding NewProjectEndDate}"/>
                                     </Grid>
 
-                                    <TextBox materialDesign:HintAssist.Hint="Hard Budget Cap (Optional)" 
+                                    <TextBox materialDesign:HintAssist.Hint="Hard Budget Cap (Optional)"
                                              Style="{StaticResource MaterialDesignOutlinedTextBox}"
                                              Text="{Binding NewProjectBudgetCapText}"
                                              Margin="0,15,0,0"/>
                                 </StackPanel>
+
+                                <!-- Funding Source (dual-mode) -->
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="FUNDING SOURCE" FontSize="11" FontWeight="Bold" Foreground="{StaticResource PrimaryBrandBrush}" Margin="0,0,0,5"/>
+                                    <TextBlock Text="This project will draw funds exclusively from the source below." FontSize="10" Foreground="#64748B" Margin="0,0,0,15"/>
+
+                                    <!-- Existing source (from grid row) -->
+                                    <Border BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="4" MinHeight="60" Background="#F8FAFC" Padding="15"
+                                            Visibility="{Binding IsNewDonationMode, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                                        <TextBlock Text="{Binding NewProjectSourceDescription}" VerticalAlignment="Center" FontWeight="Bold" TextWrapping="Wrap" Foreground="{StaticResource PrimaryBrandBrush}"/>
+                                    </Border>
+
+                                    <!-- New donation entry (from sidebar) -->
+                                    <StackPanel Visibility="{Binding IsNewDonationMode, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <ComboBox materialDesign:HintAssist.Hint="Donor Type *"
+                                                  Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                                  ItemsSource="{Binding DonorTypes}"
+                                                  SelectedItem="{Binding SelectedDonorType}"
+                                                  Margin="0,0,0,15"/>
+
+                                        <TextBox materialDesign:HintAssist.Hint="Donor Name *"
+                                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                                 Text="{Binding DonorName, UpdateSourceTrigger=PropertyChanged}"
+                                                 Margin="0,0,0,15"/>
+
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
+                                            <RadioButton Content="Cash" IsChecked="{Binding IsCashDonation}" Style="{StaticResource MaterialDesignRadioButton}" Margin="0,0,20,0" Foreground="{StaticResource PrimaryBrandBrush}" Cursor="Hand"/>
+                                            <RadioButton Content="Goods" IsChecked="{Binding IsGoodsDonation}" Style="{StaticResource MaterialDesignRadioButton}" Foreground="{StaticResource PrimaryBrandBrush}" Cursor="Hand"/>
+                                        </StackPanel>
+
+                                        <TextBox materialDesign:HintAssist.Hint="Donation Amount (PHP) *"
+                                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                                 Text="{Binding DonationAmountText, UpdateSourceTrigger=PropertyChanged}"
+                                                 FontSize="18" FontWeight="Bold"
+                                                 Visibility="{Binding IsCashDonation, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                 Margin="0,0,0,15"/>
+
+                                        <StackPanel Visibility="{Binding IsGoodsDonation, Converter={StaticResource BooleanToVisibilityConverter}}" Margin="0,0,0,15">
+                                            <TextBox materialDesign:HintAssist.Hint="Item Name *"
+                                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                                     Text="{Binding DonationItemName, UpdateSourceTrigger=PropertyChanged}"
+                                                     Margin="0,0,0,10"/>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="10"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBox Grid.Column="0" materialDesign:HintAssist.Hint="Quantity *"
+                                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                                         Text="{Binding DonationQuantityText, UpdateSourceTrigger=PropertyChanged}"/>
+                                                <TextBox Grid.Column="2" materialDesign:HintAssist.Hint="Unit (e.g. Sacks) *"
+                                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                                         Text="{Binding DonationUnitOfMeasure, UpdateSourceTrigger=PropertyChanged}"/>
+                                            </Grid>
+                                        </StackPanel>
+
+                                        <DatePicker materialDesign:HintAssist.Hint="Date Received *"
+                                                    Style="{StaticResource MaterialDesignOutlinedDatePicker}"
+                                                    SelectedDate="{Binding DonationDateReceived}"
+                                                    Margin="0,0,0,15"/>
+
+                                        <TextBox materialDesign:HintAssist.Hint="Reference Number / Receipt #"
+                                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                                 Text="{Binding DonationReferenceNumber}"
+                                                 Margin="0,0,0,15"/>
+
+                                        <ComboBox materialDesign:HintAssist.Hint="Proof Type"
+                                                  Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                                  ItemsSource="{Binding ProofTypes}"
+                                                  SelectedItem="{Binding SelectedProofType}"
+                                                  Margin="0,0,0,15"/>
+
+                                        <Grid Margin="0,0,0,15">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox materialDesign:HintAssist.Hint="Proof File Path"
+                                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                                     Text="{Binding ProofFilePath}" IsReadOnly="True"/>
+                                            <Button Grid.Column="1" Content="..." Command="{Binding BrowseProofCommand}" Margin="5,0,0,0" Style="{StaticResource MaterialDesignRaisedButton}" Background="{StaticResource PrimaryBrandBrush}" Foreground="White" Cursor="Hand"/>
+                                        </Grid>
+
+                                        <TextBox materialDesign:HintAssist.Hint="Remarks"
+                                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                                 Text="{Binding DonationRemarks}"
+                                                 AcceptsReturn="True" Height="60"/>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <!-- Enroll Beneficiaries (optional) -->
+                                <Grid Grid.Column="4">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+
+                                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,5">
+                                        <TextBlock Text="ENROLL BENEFICIARIES (OPTIONAL)" FontSize="11" FontWeight="Bold" Foreground="{StaticResource PrimaryBrandBrush}" VerticalAlignment="Center"/>
+                                        <Border Background="{StaticResource ActionAccentBrush}" CornerRadius="10" Padding="8,2" Margin="10,0,0,0">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding SelectedEnrollmentCount}" Foreground="White" FontSize="11" FontWeight="Bold"/>
+                                                <TextBlock Text=" SELECTED" Foreground="White" FontSize="11" FontWeight="Bold"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </StackPanel>
+
+                                    <TextBox Grid.Row="1" materialDesign:HintAssist.Hint="Search approved beneficiaries..."
+                                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                             Text="{Binding EnrollmentSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                             Margin="0,10,0,10"/>
+
+                                    <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,10">
+                                        <Button Content="SELECT ALL FILTERED" Command="{Binding SelectAllFilteredEnrollmentCommand}" Style="{StaticResource MaterialDesignOutlinedButton}" Height="30" FontSize="10" BorderBrush="{StaticResource PrimaryBrandBrush}" Foreground="{StaticResource PrimaryBrandBrush}" Margin="0,0,8,0"/>
+                                        <Button Content="DESELECT ALL" Command="{Binding DeselectAllEnrollmentCommand}" Style="{StaticResource MaterialDesignOutlinedButton}" Height="30" FontSize="10" BorderBrush="#64748B" Foreground="#64748B"/>
+                                    </StackPanel>
+
+                                    <ListBox Grid.Row="3" ItemsSource="{Binding FilteredEnrollmentBeneficiaries}"
+                                             MinHeight="200" MaxHeight="420"
+                                             BorderThickness="1" BorderBrush="{StaticResource CardBorderBrush}"
+                                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                             VirtualizingPanel.IsVirtualizing="True">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}" Style="{StaticResource MaterialDesignCheckBox}">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="{Binding FullName}" FontSize="12" VerticalAlignment="Center"/>
+                                                        <TextBlock Text="{Binding BeneficiaryId, StringFormat=' ({0})'}" FontSize="11" Foreground="#64748B" VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </CheckBox>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                </Grid>
                             </Grid>
                         </Border>
                     </ScrollViewer>

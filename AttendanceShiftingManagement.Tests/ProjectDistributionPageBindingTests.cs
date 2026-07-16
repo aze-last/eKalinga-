@@ -17,10 +17,6 @@ public sealed class ProjectDistributionPageBindingTests
         var xaml = File.ReadAllText(pagePath);
 
         Assert.Contains("Text=\"PROJECT DISTRIBUTION\"", xaml, StringComparison.Ordinal);
-        // R5: sidebar project list is scoped to the chosen project only (reduces clutter).
-        Assert.Contains("ItemsSource=\"{Binding SidebarProgramSummaries}\"", xaml, StringComparison.Ordinal);
-
-        Assert.Contains("Command=\"{Binding OpenCreateProjectPanelCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("ItemsSource=\"{Binding PendingBeneficiaries}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"{Binding PendingPaginationText}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding PrevPendingPageCommand}\"", xaml, StringComparison.Ordinal);
@@ -30,7 +26,7 @@ public sealed class ProjectDistributionPageBindingTests
         Assert.Contains("Text=\"{Binding SelectedPendingDigitalIdCardNumber}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding ConfirmReleaseCommand}\"", xaml, StringComparison.Ordinal);
 
-        Assert.Contains("Header=\"RELEASED HISTORY\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"RELEASED HISTORY\"", xaml, StringComparison.Ordinal);
         Assert.Contains("ItemsSource=\"{Binding ReleasedClaims}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"{Binding ReleasedPaginationText}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding PrevReleasedPageCommand}\"", xaml, StringComparison.Ordinal);

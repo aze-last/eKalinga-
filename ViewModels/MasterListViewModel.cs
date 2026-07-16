@@ -53,6 +53,8 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly RelayCommand _openEnrollmentPanelCommand;
         private readonly RelayCommand _closeEnrollmentPanelCommand;
         private readonly RelayCommand _confirmEnrollmentCommand;
+        private readonly RelayCommand _openFullProfileCommand;
+        private readonly RelayCommand _closeFullProfileCommand;
 
         private readonly IMasterListQueryService _queryService;
         private readonly bool _autoRefresh;
@@ -68,6 +70,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private bool _isFilterPanelOpen;
         private bool _isDetailPanelOpen;
         private bool _isPcScannerOpen;
+        private bool _isFullProfileOpen;
         private MasterListBeneficiary? _scannedBeneficiary;
         private string? _scannedBeneficiaryStatus;
         private BitmapSource? _scannedBeneficiaryPhoto;
@@ -76,7 +79,6 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _scannerActionLabel = "CONFIRM SEARCH";
 
         private bool _isSidebarCollapsed;
-        private bool _isSummaryCollapsed;
         private bool _isEnrollmentPanelOpen;
         private AyudaProgram? _selectedProjectToEnroll;
         private readonly ObservableCollection<AyudaProgram> _activeProjects = new();
@@ -183,6 +185,8 @@ namespace AttendanceShiftingManagement.ViewModels
             _openEnrollmentPanelCommand = new RelayCommand(async _ => await OpenEnrollmentPanelAsync(), _ => !IsBusy);
             _closeEnrollmentPanelCommand = new RelayCommand(_ => IsEnrollmentPanelOpen = false);
             _confirmEnrollmentCommand = new RelayCommand(async param => await ConfirmEnrollmentAsync(param), _ => !IsBusy && SelectedProjectToEnroll != null);
+            _openFullProfileCommand = new RelayCommand(_ => IsFullProfileOpen = true, _ => SelectedBeneficiary != null);
+            _closeFullProfileCommand = new RelayCommand(_ => IsFullProfileOpen = false);
 
             if (autoLoad)
             {
@@ -213,6 +217,8 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand OpenEnrollmentPanelCommand => _openEnrollmentPanelCommand;
         public ICommand CloseEnrollmentPanelCommand => _closeEnrollmentPanelCommand;
         public ICommand ConfirmEnrollmentCommand => _confirmEnrollmentCommand;
+        public ICommand OpenFullProfileCommand => _openFullProfileCommand;
+        public ICommand CloseFullProfileCommand => _closeFullProfileCommand;
 
         private async Task OpenEnrollmentPanelAsync()
         {
@@ -363,7 +369,19 @@ namespace AttendanceShiftingManagement.ViewModels
             private set => SetProperty(ref _isHistoryLoading, value);
         }
 
-        public bool IsAnyOverlayOpen => _isFilterPanelOpen || _isDetailPanelOpen || _isPcScannerOpen;
+        public bool IsAnyOverlayOpen => _isFilterPanelOpen || _isDetailPanelOpen || _isPcScannerOpen || _isFullProfileOpen;
+
+        public bool IsFullProfileOpen
+        {
+            get => _isFullProfileOpen;
+            set
+            {
+                if (SetProperty(ref _isFullProfileOpen, value))
+                {
+                    OnPropertyChanged(nameof(IsAnyOverlayOpen));
+                }
+            }
+        }
 
         public bool IsFilterPanelOpen
         {
@@ -758,11 +776,6 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 if (SetProperty(ref _selectedBeneficiary, value))
                 {
-                    if (value != null)
-                    {
-                        IsSummaryCollapsed = false;
-                    }
-
                     _selectedBeneficiaryHistory.Clear();
                     OnPropertyChanged(nameof(HistoryEmptyStateVisibility));
                     _viewHistoryCommand.RaiseCanExecuteChanged();
@@ -932,6 +945,7 @@ namespace AttendanceShiftingManagement.ViewModels
             _openPcScannerCommand.RaiseCanExecuteChanged();
             _processPcScanCommand.RaiseCanExecuteChanged();
             _createLookupScannerSessionCommand.RaiseCanExecuteChanged();
+            _openFullProfileCommand.RaiseCanExecuteChanged();
         }
 
         private bool CanUseDigitalId() => SelectedBeneficiary != null && SelectedBeneficiary.IsApproved;
@@ -1744,12 +1758,6 @@ namespace AttendanceShiftingManagement.ViewModels
             }
         }
 
-        public bool IsSummaryCollapsed
-        {
-            get => _isSummaryCollapsed;
-            set => SetProperty(ref _isSummaryCollapsed, value);
-        }
-
         public GridLength SidebarWidth
         {
             get => _sidebarWidth;
@@ -1757,7 +1765,6 @@ namespace AttendanceShiftingManagement.ViewModels
         }
 
         public ICommand ToggleSidebarCommand => new RelayCommand(_ => IsSidebarCollapsed = !IsSidebarCollapsed);
-        public ICommand ToggleSummaryCommand => new RelayCommand(_ => IsSummaryCollapsed = !IsSummaryCollapsed);
 
         public ICommand RefreshCommand => _refreshCommand;
         

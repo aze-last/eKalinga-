@@ -1279,6 +1279,13 @@ namespace AttendanceShiftingManagement.ViewModels
                     if (value != null)
                     {
                         SelectedReleasedClaim = null;
+                        _ = LoadHouseholdContextOnSelectionAsync(value.BeneficiaryStagingId);
+                        _ = LoadSelectedPendingPhotoAsync(value.BeneficiaryStagingId);
+                    }
+                    else if (SelectedReleasedClaim == null)
+                    {
+                        ClearHouseholdContext();
+                        HouseholdConfirmBeneficiaryPhoto = null;
                     }
                     SelectedProgramBeneficiary = value;
                     RefreshSelectedPendingDigitalId(value);
@@ -1300,8 +1307,59 @@ namespace AttendanceShiftingManagement.ViewModels
                     if (value != null)
                     {
                         SelectedPendingBeneficiary = null;
+                        _ = LoadHouseholdContextOnSelectionAsync(value.BeneficiaryStagingId);
+                        _ = LoadSelectedPendingPhotoAsync(value.BeneficiaryStagingId);
+                    }
+                    else if (SelectedPendingBeneficiary == null)
+                    {
+                        ClearHouseholdContext();
+                        HouseholdConfirmBeneficiaryPhoto = null;
                     }
                 }
+            }
+        }
+
+        private void ClearHouseholdContext()
+        {
+            ScannedHouseholdMembers.Clear();
+            OnPropertyChanged(nameof(HasHouseholdMembers));
+            HasHouseholdContext = false;
+            HouseholdContextSummary = string.Empty;
+            HouseholdWarningMessage = null;
+            RequiresHouseholdOverride = false;
+            HouseholdOverrideAcknowledged = false;
+            HouseholdAidReceivedSummary = string.Empty;
+        }
+
+        private async Task LoadHouseholdContextOnSelectionAsync(int beneficiaryStagingId)
+        {
+            try
+            {
+                await using var context = new LocalDbContext();
+                var distributionService = new ProjectDistributionService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
+                await LoadHouseholdContextAsync(distributionService, beneficiaryStagingId);
+            }
+            catch (Exception ex)
+            {
+                SetErrorStatus($"Unable to load household context: {ex.Message}");
+            }
+        }
+
+        private async Task LoadSelectedPendingPhotoAsync(int beneficiaryStagingId)
+        {
+            try
+            {
+                await using var context = new LocalDbContext();
+                var photoPath = await context.BeneficiaryStaging
+                    .AsNoTracking()
+                    .Where(s => s.StagingID == beneficiaryStagingId)
+                    .Select(s => s.PhotoPath)
+                    .FirstOrDefaultAsync();
+                HouseholdConfirmBeneficiaryPhoto = string.IsNullOrWhiteSpace(photoPath) ? null : LocalImageLoader.Load(photoPath) as BitmapSource;
+            }
+            catch
+            {
+                HouseholdConfirmBeneficiaryPhoto = null;
             }
         }
 
@@ -3177,6 +3235,7 @@ namespace AttendanceShiftingManagement.ViewModels
         public DateTime ReleasedAt { get; init; }
         public string Remarks { get; init; } = string.Empty;
         public string IdentityKey { get; init; } = string.Empty;
+        public int BeneficiaryStagingId { get; init; }
 
         public static ProjectDistributionReleaseListItem FromLegacyProjectClaim(AyudaProjectClaim claim)
         {
@@ -3190,7 +3249,8 @@ namespace AttendanceShiftingManagement.ViewModels
                 AmountText = FormatCurrency(claim.UnitAmountSnapshot ?? 0m),
                 ReleasedAt = claim.ClaimedAt,
                 Remarks = NormalizeLabel(claim.Remarks, "--"),
-                IdentityKey = NormalizeIdentity(claim.CivilRegistryId, claim.BeneficiaryId, claim.FullName)
+                IdentityKey = NormalizeIdentity(claim.CivilRegistryId, claim.BeneficiaryId, claim.FullName),
+                BeneficiaryStagingId = claim.BeneficiaryStagingId
             };
         }
 
