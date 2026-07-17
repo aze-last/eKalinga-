@@ -203,6 +203,11 @@ namespace AttendanceShiftingManagement.Services
 
         public static string BuildConnectionString(DatabaseConnectionPreset preset)
         {
+            return BuildConnectionString(preset, guidFormatNone: false);
+        }
+
+        public static string BuildConnectionString(DatabaseConnectionPreset preset, bool guidFormatNone)
+        {
             var builder = new MySqlConnectionStringBuilder
             {
                 Server = preset.Server,
@@ -220,6 +225,13 @@ namespace AttendanceShiftingManagement.Services
                 AllowPublicKeyRetrieval = true,
                 SslMode = MySqlSslMode.Preferred
             };
+
+            if (guidFormatNone)
+            {
+                // CRS contract requirement: SyncId columns are CHAR(36); without
+                // GuidFormat=None MySqlConnector tries to auto-map them to System.Guid.
+                builder.GuidFormat = MySqlGuidFormat.None;
+            }
 
             return builder.ConnectionString;
         }

@@ -84,6 +84,14 @@ namespace AttendanceShiftingManagement.Models
         [Column("source_ggms_budget_id")]
         public int? SourceGGMSBudgetId { get; set; }
 
+        /// <summary>
+        /// GGMS project_details.project_details_id (e.g. OPP-2026-0006) this program draws from.
+        /// Set when the program is created from a mirrored GGMS project in the Budget module.
+        /// </summary>
+        [Column("source_project_details_id")]
+        [MaxLength(45)]
+        public string? SourceProjectDetailsId { get; set; }
+
         [ForeignKey(nameof(SourceDonationId))]
         public PrivateDonation? SourceDonation { get; set; }
 

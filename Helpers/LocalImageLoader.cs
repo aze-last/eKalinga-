@@ -6,6 +6,30 @@ namespace AttendanceShiftingManagement.Helpers
 {
     public static class LocalImageLoader
     {
+        public static ImageSource? LoadFromBytes(byte[]? bytes)
+        {
+            if (bytes == null || bytes.Length == 0)
+            {
+                return null;
+            }
+
+            try
+            {
+                using var stream = new MemoryStream(bytes);
+                var image = new BitmapImage();
+                image.BeginInit();
+                image.CacheOption = BitmapCacheOption.OnLoad;
+                image.StreamSource = stream;
+                image.EndInit();
+                image.Freeze();
+                return image;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
         public static ImageSource? Load(string? path)
         {
             const string DefaultAvatarPath = @"C:\Users\ASUS\Downloads\images\default-male-avatar-profile-icon-social-media-user-free-vector.jpg";

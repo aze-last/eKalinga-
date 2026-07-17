@@ -14,8 +14,10 @@ namespace AttendanceShiftingManagement.Services
 
         public string AyudaOfficeCode { get; set; } = string.Empty;
         public string GgmsOfficeTable { get; set; } = "tbl_offices";
+        public string GgmsBudgetAllocationTable { get; set; } = "budget_allocations";
         public string GgmsAllocationTable { get; set; } = "officeallocations";
         public string GgmsConsolidatedTransactionTable { get; set; } = "consolidated_transactions";
+        public string GgmsProjectDetailsTable { get; set; } = "project_details";
         public DatabaseConnectionPreset GgmsConnection { get; set; } = new()
         {
             DisplayName = "GGMS Budget Source",
@@ -72,8 +74,10 @@ namespace AttendanceShiftingManagement.Services
             {
                 AyudaOfficeCode = normalized.AyudaOfficeCode,
                 GgmsOfficeTable = normalized.GgmsOfficeTable,
+                GgmsBudgetAllocationTable = normalized.GgmsBudgetAllocationTable,
                 GgmsAllocationTable = normalized.GgmsAllocationTable,
                 GgmsConsolidatedTransactionTable = normalized.GgmsConsolidatedTransactionTable,
+                GgmsProjectDetailsTable = normalized.GgmsProjectDetailsTable,
                 GgmsConnection = new DatabaseConnectionPreset
                 {
                     DisplayName = normalized.GgmsConnection.DisplayName,
@@ -108,12 +112,18 @@ namespace AttendanceShiftingManagement.Services
             settings.GgmsOfficeTable = string.IsNullOrWhiteSpace(settings.GgmsOfficeTable)
                 ? "tbl_offices"
                 : settings.GgmsOfficeTable.Trim();
+            settings.GgmsBudgetAllocationTable = string.IsNullOrWhiteSpace(settings.GgmsBudgetAllocationTable)
+                ? "budget_allocations"
+                : settings.GgmsBudgetAllocationTable.Trim();
             settings.GgmsAllocationTable = string.IsNullOrWhiteSpace(settings.GgmsAllocationTable)
                 ? "officeallocations"
                 : settings.GgmsAllocationTable.Trim();
             settings.GgmsConsolidatedTransactionTable = string.IsNullOrWhiteSpace(settings.GgmsConsolidatedTransactionTable)
                 ? "consolidated_transactions"
                 : settings.GgmsConsolidatedTransactionTable.Trim();
+            settings.GgmsProjectDetailsTable = string.IsNullOrWhiteSpace(settings.GgmsProjectDetailsTable)
+                ? "project_details"
+                : settings.GgmsProjectDetailsTable.Trim();
 
             settings.GgmsConnection ??= new DatabaseConnectionPreset();
             settings.GgmsConnection.DisplayName = string.IsNullOrWhiteSpace(settings.GgmsConnection.DisplayName)

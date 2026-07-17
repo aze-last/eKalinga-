@@ -1940,10 +1940,74 @@ namespace AttendanceShiftingManagement.ViewModels
 
             ScannerInputText = string.Empty;
 
+            // Municipal e-Kard cards carry a BEN-... beneficiary id — verify against
+            // the CRS contract first, then continue into the normal release pipeline
+            // via the local beneficiary-id lookup (no auto-import).
+            if (EKardPayloadRouter.IsEKardPayload(payload))
+            {
+                await ExecuteProcessEKardScanAsync(payload);
+                return;
+            }
+
             // QR scans carry a payload that also serves as the confirm-time identity token.
             await ResolveAndPresentAsync(
                 new BeneficiaryLookupRequest(BeneficiaryLookupSource.QrPayload, payload),
                 confirmToken: payload);
+        }
+
+        private async Task ExecuteProcessEKardScanAsync(string payload)
+        {
+            IsBusy = true;
+            SetNeutralStatus("Verifying e-Kard against CRS...");
+
+            EKardVerificationResult result;
+            try
+            {
+                await using var context = new LocalDbContext();
+                var verificationService = new CrsDigitalIdVerificationService(context);
+                result = await verificationService.VerifyAsync(new EKardVerificationRequest
+                {
+                    BeneficiaryId = payload,
+                    UserId = _currentUser?.Id,
+                    UserName = _currentUser?.Username ?? string.Empty
+                }, CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                SetErrorStatus($"e-Kard verification error: {ex.Message}");
+                return;
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+
+            switch (result.Validity)
+            {
+                case EKardValidity.Valid:
+                    SetSuccessStatus($"e-Kard VALID: {result.BeneficiaryId}. Checking project enrollment...");
+                    break;
+                case EKardValidity.Expired:
+                    SetErrorStatus($"e-Kard EXPIRED on {result.ExpiryDate:MMM dd, yyyy}: {result.BeneficiaryId}. Verify identity manually before releasing.");
+                    return;
+                case EKardValidity.Revoked:
+                    SetErrorStatus($"e-Kard REVOKED: {result.BeneficiaryId}. Do not release against this card.");
+                    _ = Task.Run(() => { try { Console.Beep(400, 600); } catch { } });
+                    return;
+                case EKardValidity.NotFound:
+                    SetErrorStatus($"No e-Kard ID ever issued for {result.BeneficiaryId}.");
+                    _ = Task.Run(() => { try { Console.Beep(400, 600); } catch { } });
+                    return;
+                default:
+                    SetErrorStatus($"e-Kard status UNKNOWN (CRS offline, never cached): {result.BeneficiaryId}.");
+                    return;
+            }
+
+            // Valid card — continue into the standard release pipeline by local
+            // beneficiary-id (identity already verified by the e-Kard check).
+            await ResolveAndPresentAsync(
+                new BeneficiaryLookupRequest(BeneficiaryLookupSource.BeneficiaryId, result.BeneficiaryId),
+                confirmToken: null);
         }
 
         private async Task ExecuteManualKeyIn()

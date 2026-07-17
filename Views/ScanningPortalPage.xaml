@@ -132,6 +132,14 @@
                             <TextBlock Text="BENEFICIARY PROFILE" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource BrandBrush}"/>
                             <TextBlock Text="{Binding ScannedBeneficiary.FullName}" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}" TextWrapping="Wrap"/>
                             <TextBlock Text="{Binding ScannedBeneficiary.BeneficiaryId}" FontSize="14" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,4,0,0"/>
+                            <Border Background="{Binding ValidityBadgeBrush}"
+                                    CornerRadius="6"
+                                    Padding="10,4"
+                                    Margin="0,8,0,0"
+                                    HorizontalAlignment="Left"
+                                    Visibility="{Binding IsEKardResult, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <TextBlock Text="{Binding ValidityBadgeText}" FontSize="12" FontWeight="Bold" Foreground="White"/>
+                            </Border>
                         </StackPanel>
                     </StackPanel>
 
@@ -142,11 +150,17 @@
                                 <TextBlock Text="VALIDATED" HorizontalAlignment="Right" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource BrandSuccessBrush}"/>
                             </Grid>
                             <Separator Background="{DynamicResource BrandBorderBrush}" Margin="0,0,0,12"/>
-                            
+
                             <Grid Margin="0,0,0,8">
                                 <TextBlock Text="Civil Registry ID" FontSize="12" Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
                                 <TextBlock Text="{Binding ScannedBeneficiary.CivilRegistryId}" HorizontalAlignment="Right" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource BrandMidnightBrush}"/>
                             </Grid>
+                            <TextBlock Text="{Binding EKardDetailLine}"
+                                       FontSize="12"
+                                       Foreground="{DynamicResource BrandTextSecondaryBrush}"
+                                       TextWrapping="Wrap"
+                                       Margin="0,4,0,0"
+                                       Visibility="{Binding IsEKardResult, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                         </StackPanel>
                     </Border>
 

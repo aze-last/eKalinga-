@@ -37,9 +37,13 @@ namespace AttendanceShiftingManagement.Data
         public DbSet<GgmsAllocationCache> GgmsAllocationCache => Set<GgmsAllocationCache>();
         public DbSet<GgmsTransactionCache> GgmsTransactionCache => Set<GgmsTransactionCache>();
         public DbSet<GgmsPendingTransactionCache> GgmsPendingTransactionCache => Set<GgmsPendingTransactionCache>();
+        public DbSet<GgmsProjectCache> GgmsProjectCache => Set<GgmsProjectCache>();
         public DbSet<SyncMetadata> SyncMetadata => Set<SyncMetadata>();
         public DbSet<DigitalIdPhotoCache> DigitalIdPhotoCaches => Set<DigitalIdPhotoCache>();
         public DbSet<DigitalIdStatusCache> DigitalIdStatusCaches => Set<DigitalIdStatusCache>();
+        public DbSet<CrsStatusCache> CrsStatusCaches => Set<CrsStatusCache>();
+        public DbSet<CrsPhotoCache> CrsPhotoCaches => Set<CrsPhotoCache>();
+        public DbSet<CrsPendingAccessLog> CrsPendingAccessLogs => Set<CrsPendingAccessLog>();
 
         public LocalDbContext()
         {
@@ -119,6 +123,7 @@ namespace AttendanceShiftingManagement.Data
             modelBuilder.Entity<BeneficiaryDigitalId>().HasIndex(i => i.QrPayload).IsUnique();
             modelBuilder.Entity<CashForWorkParticipant>().HasIndex(p => new { p.EventId, p.BeneficiaryStagingId }).IsUnique();
             modelBuilder.Entity<ScannerSession>().HasIndex(s => s.SessionToken).IsUnique();
+            modelBuilder.Entity<GgmsProjectCache>().HasIndex(p => p.ProjectDetailsId).IsUnique();
 
             // ── Normal Indexes ──────────────────────────────────────────────────
             modelBuilder.Entity<BeneficiaryStaging>().HasIndex(r => r.CivilRegistryId);

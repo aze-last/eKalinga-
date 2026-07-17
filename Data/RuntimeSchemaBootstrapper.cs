@@ -266,6 +266,12 @@ namespace AttendanceShiftingManagement.Data
 
             EnsureColumnExists(
                 connection,
+                "ayuda_programs",
+                "source_project_details_id",
+                "ALTER TABLE `ayuda_programs` ADD COLUMN `source_project_details_id` varchar(45) NULL;");
+
+            EnsureColumnExists(
+                connection,
                 "cash_for_work_events",
                 "event_kind",
                 "ALTER TABLE `cash_for_work_events` ADD COLUMN `event_kind` varchar(32) NOT NULL DEFAULT 'CashForWork';");
@@ -445,6 +451,57 @@ namespace AttendanceShiftingManagement.Data
                 "private_donations",
                 "unit_of_measure",
                 "ALTER TABLE `private_donations` ADD COLUMN `unit_of_measure` varchar(30) NULL;");
+
+            // Goods-distribution + funding-source columns from the retired
+            // UpdateGoodsDistributionSchema migration — self-healed here so fresh installs
+            // match live databases (the migration chain no longer carries them).
+            EnsureColumnExists(
+                connection,
+                "ayuda_programs",
+                "item_name",
+                "ALTER TABLE `ayuda_programs` ADD COLUMN `item_name` varchar(100) NULL;");
+
+            EnsureColumnExists(
+                connection,
+                "ayuda_programs",
+                "quantity_per_beneficiary",
+                "ALTER TABLE `ayuda_programs` ADD COLUMN `quantity_per_beneficiary` decimal(18,2) NULL;");
+
+            EnsureColumnExists(
+                connection,
+                "ayuda_programs",
+                "unit_of_measure",
+                "ALTER TABLE `ayuda_programs` ADD COLUMN `unit_of_measure` varchar(30) NULL;");
+
+            EnsureColumnExists(
+                connection,
+                "ayuda_programs",
+                "source_donation_id",
+                "ALTER TABLE `ayuda_programs` ADD COLUMN `source_donation_id` int NULL;");
+
+            EnsureColumnExists(
+                connection,
+                "ayuda_programs",
+                "source_ggms_budget_id",
+                "ALTER TABLE `ayuda_programs` ADD COLUMN `source_ggms_budget_id` int NULL;");
+
+            EnsureColumnExists(
+                connection,
+                "ayuda_project_claims",
+                "item_name_snapshot",
+                "ALTER TABLE `ayuda_project_claims` ADD COLUMN `item_name_snapshot` varchar(100) NULL;");
+
+            EnsureColumnExists(
+                connection,
+                "ayuda_project_claims",
+                "quantity_snapshot",
+                "ALTER TABLE `ayuda_project_claims` ADD COLUMN `quantity_snapshot` decimal(18,2) NULL;");
+
+            EnsureColumnExists(
+                connection,
+                "ayuda_project_claims",
+                "unit_of_measure_snapshot",
+                "ALTER TABLE `ayuda_project_claims` ADD COLUMN `unit_of_measure_snapshot` varchar(30) NULL;");
 
             ExecuteNonQuery(
                 connection,

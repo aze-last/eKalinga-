@@ -330,6 +330,11 @@ namespace AttendanceShiftingManagement.Data.Migrations
                         .HasColumnType("varchar(250)")
                         .HasColumnName("item_description");
 
+                    b.Property<string>("ItemName")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("item_name");
+
                     b.Property<string>("ProgramCode")
                         .IsRequired()
                         .HasMaxLength(40)
@@ -347,10 +352,27 @@ namespace AttendanceShiftingManagement.Data.Migrations
                         .HasColumnType("longtext")
                         .HasColumnName("program_type");
 
+                    b.Property<decimal?>("QuantityPerBeneficiary")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("quantity_per_beneficiary");
+
                     b.Property<string>("ReleaseKind")
                         .IsRequired()
                         .HasColumnType("varchar(32)")
                         .HasColumnName("release_kind");
+
+                    b.Property<int?>("SourceDonationId")
+                        .HasColumnType("int")
+                        .HasColumnName("source_donation_id");
+
+                    b.Property<int?>("SourceGGMSBudgetId")
+                        .HasColumnType("int")
+                        .HasColumnName("source_ggms_budget_id");
+
+                    b.Property<string>("SourceProjectDetailsId")
+                        .HasMaxLength(45)
+                        .HasColumnType("varchar(45)")
+                        .HasColumnName("source_project_details_id");
 
                     b.Property<DateTime?>("StartDate")
                         .HasColumnType("datetime(6)")
@@ -363,6 +385,11 @@ namespace AttendanceShiftingManagement.Data.Migrations
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("unit_amount");
 
+                    b.Property<string>("UnitOfMeasure")
+                        .HasMaxLength(30)
+                        .HasColumnType("varchar(30)")
+                        .HasColumnName("unit_of_measure");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("updated_at");
@@ -371,6 +398,10 @@ namespace AttendanceShiftingManagement.Data.Migrations
 
                     b.HasIndex("ProgramCode")
                         .IsUnique();
+
+                    b.HasIndex("SourceDonationId");
+
+                    b.HasIndex("SourceGGMSBudgetId");
 
                     b.ToTable("ayuda_programs");
                 });
@@ -512,6 +543,11 @@ namespace AttendanceShiftingManagement.Data.Migrations
                         .HasColumnType("varchar(250)")
                         .HasColumnName("item_description_snapshot");
 
+                    b.Property<string>("ItemNameSnapshot")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("item_name_snapshot");
+
                     b.Property<int?>("ProjectBeneficiaryId")
                         .HasColumnType("int")
                         .HasColumnName("project_beneficiary_id");
@@ -520,6 +556,10 @@ namespace AttendanceShiftingManagement.Data.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("varchar(200)")
                         .HasColumnName("qr_payload");
+
+                    b.Property<decimal?>("QuantitySnapshot")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("quantity_snapshot");
 
                     b.Property<string>("Remarks")
                         .HasMaxLength(1000)
@@ -532,6 +572,11 @@ namespace AttendanceShiftingManagement.Data.Migrations
                     b.Property<decimal?>("UnitAmountSnapshot")
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("unit_amount_snapshot");
+
+                    b.Property<string>("UnitOfMeasureSnapshot")
+                        .HasMaxLength(30)
+                        .HasColumnType("varchar(30)")
+                        .HasColumnName("unit_of_measure_snapshot");
 
                     b.HasKey("Id");
 
@@ -1494,6 +1539,11 @@ namespace AttendanceShiftingManagement.Data.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_received");
 
+                    b.Property<string>("DonationType")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("donation_type");
+
                     b.Property<string>("DonorName")
                         .IsRequired()
                         .HasMaxLength(180)
@@ -1504,6 +1554,11 @@ namespace AttendanceShiftingManagement.Data.Migrations
                         .IsRequired()
                         .HasColumnType("longtext")
                         .HasColumnName("donor_type");
+
+                    b.Property<string>("ItemName")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("item_name");
 
                     b.Property<string>("ProofFilePath")
                         .HasMaxLength(255)
@@ -1519,6 +1574,10 @@ namespace AttendanceShiftingManagement.Data.Migrations
                         .IsRequired()
                         .HasColumnType("longtext")
                         .HasColumnName("proof_type");
+
+                    b.Property<decimal?>("Quantity")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("quantity");
 
                     b.Property<int>("ReceivedByUserId")
                         .HasColumnType("int")
@@ -1548,6 +1607,11 @@ namespace AttendanceShiftingManagement.Data.Migrations
                     b.Property<int?>("TargetProgramId")
                         .HasColumnType("int")
                         .HasColumnName("target_program_id");
+
+                    b.Property<string>("UnitOfMeasure")
+                        .HasMaxLength(30)
+                        .HasColumnType("varchar(30)")
+                        .HasColumnName("unit_of_measure");
 
                     b.HasKey("Id");
 
@@ -1970,6 +2034,21 @@ namespace AttendanceShiftingManagement.Data.Migrations
                     b.Navigation("Household");
 
                     b.Navigation("HouseholdMember");
+                });
+
+            modelBuilder.Entity("AttendanceShiftingManagement.Models.AyudaProgram", b =>
+                {
+                    b.HasOne("AttendanceShiftingManagement.Models.PrivateDonation", "SourceDonation")
+                        .WithMany()
+                        .HasForeignKey("SourceDonationId");
+
+                    b.HasOne("AttendanceShiftingManagement.Models.GovernmentBudgetSnapshot", "SourceGGMSBudget")
+                        .WithMany()
+                        .HasForeignKey("SourceGGMSBudgetId");
+
+                    b.Navigation("SourceDonation");
+
+                    b.Navigation("SourceGGMSBudget");
                 });
 
             modelBuilder.Entity("AttendanceShiftingManagement.Models.AyudaProjectBeneficiary", b =>

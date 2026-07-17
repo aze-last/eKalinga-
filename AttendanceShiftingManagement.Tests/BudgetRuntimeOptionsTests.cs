@@ -17,7 +17,9 @@ public sealed class BudgetRuntimeOptionsTests
             {
                 AyudaOfficeCode = "OFF-2026-0006",
                 GgmsOfficeTable = "tbl_offices",
+                GgmsBudgetAllocationTable = "budget_allocations",
                 GgmsAllocationTable = "officeallocations",
+                GgmsProjectDetailsTable = "project_details",
                 GgmsConnection = new DatabaseConnectionPreset
                 {
                     DisplayName = "GGMS Budget Source",
@@ -37,7 +39,9 @@ public sealed class BudgetRuntimeOptionsTests
             var loaded = BudgetRuntimeOptions.Load(runtimePath);
             Assert.Equal(expected.AyudaOfficeCode, loaded.AyudaOfficeCode);
             Assert.Equal(expected.GgmsOfficeTable, loaded.GgmsOfficeTable);
+            Assert.Equal(expected.GgmsBudgetAllocationTable, loaded.GgmsBudgetAllocationTable);
             Assert.Equal(expected.GgmsAllocationTable, loaded.GgmsAllocationTable);
+            Assert.Equal(expected.GgmsProjectDetailsTable, loaded.GgmsProjectDetailsTable);
             Assert.Equal(expected.GgmsConnection.Server, loaded.GgmsConnection.Server);
             Assert.Equal(expected.GgmsConnection.Port, loaded.GgmsConnection.Port);
             Assert.Equal(expected.GgmsConnection.Database, loaded.GgmsConnection.Database);

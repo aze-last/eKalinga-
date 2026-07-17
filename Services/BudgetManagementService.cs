@@ -26,7 +26,8 @@ namespace AttendanceShiftingManagement.Services
         decimal? BudgetCap,
         AyudaProgramDistributionStatus DistributionStatus,
         int? SourceDonationId = null,
-        int? SourceGGMSBudgetId = null);
+        int? SourceGGMSBudgetId = null,
+        string? SourceProjectDetailsId = null);
 
     public sealed record AyudaProgramOperationResult(bool IsSuccess, string Message, int? ProgramId = null);
 
@@ -148,7 +149,8 @@ namespace AttendanceShiftingManagement.Services
         decimal MonthlySpent,
         DateTime? LastGovernmentSyncAt,
         string? OfficeCode,
-        string? OfficeName);
+        string? OfficeName,
+        decimal GovernmentProjectEarmarkTotal = 0m);
 
     public sealed record EarmarkedBudgetStatus(
         int TargetId,
@@ -437,6 +439,37 @@ namespace AttendanceShiftingManagement.Services
                 }
             }
 
+            var sourceProjectDetailsId = NormalizeNullable(request.SourceProjectDetailsId);
+            GgmsProjectCache? linkedGgmsProject = null;
+            var budgetCap = request.BudgetCap;
+
+            // ggms_project_cache is a local-only SQLite mirror, so this validation is skipped on
+            // the remote (MySQL) pass — the caller resolves the cap before building the request.
+            if (sourceProjectDetailsId != null && _context.Database.ProviderName != "Pomelo.EntityFrameworkCore.MySql")
+            {
+                linkedGgmsProject = await _context.GgmsProjectCache
+                    .FirstOrDefaultAsync(cache => cache.ProjectDetailsId == sourceProjectDetailsId);
+
+                if (linkedGgmsProject == null)
+                {
+                    return new AyudaProgramOperationResult(false, $"GGMS project '{sourceProjectDetailsId}' was not found in the local mirror. Run Sync GGMS first.");
+                }
+
+                var alreadyLinked = await _context.AyudaPrograms.AsNoTracking()
+                    .AnyAsync(p => p.SourceProjectDetailsId == sourceProjectDetailsId && p.IsActive);
+                if (alreadyLinked)
+                {
+                    return new AyudaProgramOperationResult(false, $"GGMS project '{sourceProjectDetailsId}' is already linked to an active project.");
+                }
+
+                // The GGMS sub-allocation is the spending envelope: cap defaults to it and can never exceed it.
+                if (budgetCap.HasValue && budgetCap.Value > linkedGgmsProject.TotalBudget)
+                {
+                    return new AyudaProgramOperationResult(false, $"Budget cap cannot exceed the GGMS project budget of {linkedGgmsProject.TotalBudget:N2}.");
+                }
+                budgetCap ??= linkedGgmsProject.TotalBudget;
+            }
+
             var ayudaProgram = new AyudaProgram
             {
                 ProgramCode = programCode,
@@ -452,10 +485,11 @@ namespace AttendanceShiftingManagement.Services
                 UnitOfMeasure = request.ReleaseKind == AssistanceReleaseKind.Goods ? NormalizeRequired(request.UnitOfMeasure) : NormalizeNullable(request.UnitOfMeasure),
                 StartDate = request.StartDate?.Date,
                 EndDate = request.EndDate?.Date,
-                BudgetCap = request.BudgetCap,
+                BudgetCap = budgetCap,
                 DistributionStatus = request.DistributionStatus,
                 SourceDonationId = request.SourceDonationId,
                 SourceGGMSBudgetId = request.SourceGGMSBudgetId,
+                SourceProjectDetailsId = sourceProjectDetailsId,
                 CreatedByUserId = createdByUserId,
                 IsActive = true,
                 CreatedAt = DateTime.Now,
@@ -468,6 +502,12 @@ namespace AttendanceShiftingManagement.Services
             }
 
             _context.AyudaPrograms.Add(ayudaProgram);
+
+            if (linkedGgmsProject != null)
+            {
+                linkedGgmsProject.IsLinked = true;
+            }
+
             await _context.SaveChangesAsync();
 
             await _auditService.LogActivityAsync(
@@ -875,17 +915,39 @@ namespace AttendanceShiftingManagement.Services
             var governmentBaseAvailable = Math.Max(0m, governmentAllocated - governmentSpentReference);
             var governmentReleasedSinceLastSync = 0m;
 
+            // GGMS project sub-allocations are carved out of the office allocation on the GGMS
+            // side, so active mirrored envelopes are earmarks against the unearmarked pool.
+            // ggms_project_cache is a local-only SQLite mirror — skipped on a remote MySQL pass.
+            var governmentProjectEarmarkTotal = 0m;
+            var projectLinkedProgramIds = new List<int>();
+            if (_context.Database.ProviderName != "Pomelo.EntityFrameworkCore.MySql")
+            {
+                governmentProjectEarmarkTotal = await _context.GgmsProjectCache
+                    .AsNoTracking()
+                    .Where(cache => cache.Status.ToLower() != "archived")
+                    .SumAsync(cache => (decimal?)cache.TotalBudget) ?? 0m;
+
+                // Releases under a program linked to a GGMS project consume that project's envelope
+                // (already counted via the earmark), so only unattributed releases drain the pool.
+                projectLinkedProgramIds = await _context.AyudaPrograms
+                    .AsNoTracking()
+                    .Where(program => program.SourceProjectDetailsId != null)
+                    .Select(program => program.Id)
+                    .ToListAsync();
+            }
+
             if (latestSnapshot != null)
             {
                 governmentReleasedSinceLastSync = await _context.BudgetLedgerEntries
                     .AsNoTracking()
                     .Where(entry =>
                         entry.EntryType == BudgetLedgerEntryType.Release &&
-                        entry.CreatedAt >= latestSnapshot.SyncedAt)
+                        entry.CreatedAt >= latestSnapshot.SyncedAt &&
+                        (entry.ProgramId == null || !projectLinkedProgramIds.Contains(entry.ProgramId.Value)))
                     .SumAsync(entry => (decimal?)entry.GovernmentPortion) ?? 0m;
             }
 
-            var governmentAvailable = Math.Max(0m, governmentBaseAvailable - governmentReleasedSinceLastSync);
+            var governmentAvailable = Math.Max(0m, governmentBaseAvailable - governmentProjectEarmarkTotal - governmentReleasedSinceLastSync);
             var privateAvailable = Math.Max(0m, donationTotal - privateReleasedTotal);
 
             var privateLockedAllocated = await _context.PrivateDonations
@@ -939,7 +1001,8 @@ namespace AttendanceShiftingManagement.Services
                 monthlySpent,
                 latestSnapshot?.SyncedAt,
                 latestSnapshot?.OfficeCode,
-                latestSnapshot?.OfficeName);
+                latestSnapshot?.OfficeName,
+                governmentProjectEarmarkTotal);
         }
 
         public async Task<ReallocationOperationResult> ReallocateEarmarkAsync(int targetId, string targetType, string remarks, int recordedByUserId)

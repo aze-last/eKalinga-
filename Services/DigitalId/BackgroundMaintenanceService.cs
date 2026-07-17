@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
@@ -18,6 +19,15 @@ namespace AttendanceShiftingManagement.Services
                 try
                 {
                     await PerformMaintenanceAsync();
+                }
+                catch
+                {
+                    // Fail-safe for background threads
+                }
+
+                try
+                {
+                    await FlushPendingCrsAccessLogsAsync();
                 }
                 catch
                 {
@@ -47,6 +57,76 @@ namespace AttendanceShiftingManagement.Services
             {
                 MaintenanceGate.Release();
             }
+        }
+
+        /// <summary>
+        /// Retries queued e-Kard record_access_logs audit rows that failed to write
+        /// because the CRS database was offline (contract: never block a verification
+        /// on the audit write — queue and retry). Remove-on-success, keep-on-failure.
+        /// </summary>
+        public static async Task<int> FlushPendingCrsAccessLogsAsync(
+            LocalDbContext? dbContext = null,
+            ICrsGateway? gateway = null,
+            CancellationToken cancellationToken = default)
+        {
+            if (dbContext != null)
+            {
+                return await FlushPendingCrsAccessLogsWithContextAsync(dbContext, gateway ?? new CrsGateway(), cancellationToken);
+            }
+
+            using var localDb = new LocalDbContext();
+            return await FlushPendingCrsAccessLogsWithContextAsync(localDb, gateway ?? new CrsGateway(), cancellationToken);
+        }
+
+        private static async Task<int> FlushPendingCrsAccessLogsWithContextAsync(LocalDbContext localDb, ICrsGateway gateway, CancellationToken cancellationToken)
+        {
+            var pending = await localDb.CrsPendingAccessLogs
+                .OrderBy(p => p.Id)
+                .ToListAsync(cancellationToken);
+
+            var flushed = 0;
+            foreach (var item in pending)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                CrsAccessLogEntry? entry;
+                try
+                {
+                    entry = JsonSerializer.Deserialize<CrsAccessLogEntry>(item.PayloadJson);
+                }
+                catch
+                {
+                    entry = null;
+                }
+
+                if (entry == null)
+                {
+                    // Unreadable payload — drop it so the queue can't wedge forever.
+                    localDb.CrsPendingAccessLogs.Remove(item);
+                    await localDb.SaveChangesAsync(cancellationToken);
+                    continue;
+                }
+
+                try
+                {
+                    await gateway.InsertAccessLogAsync(entry, cancellationToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch
+                {
+                    // Still offline/unreachable — keep the rest for the next pass.
+                    break;
+                }
+
+                localDb.CrsPendingAccessLogs.Remove(item);
+                await localDb.SaveChangesAsync(cancellationToken);
+                flushed++;
+            }
+
+            return flushed;
         }
 
         private static async Task PerformMaintenanceWithContextAsync(LocalDbContext localDb, DigitalIdCacheOptions options, CancellationToken cancellationToken)

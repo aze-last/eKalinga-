@@ -34,7 +34,7 @@ namespace AttendanceShiftingManagement.ViewModels
         public object OriginalItem { get; init; } = default!;
         public bool HasLinkedProject { get; init; }
         public string LinkedProjectName { get; init; } = string.Empty;
-        public bool IsFundSource => Category == "Private Donation" || Category == "Government Fund";
+        public bool IsFundSource => Category == "Private Donation" || Category == "Government Fund" || Category == "GGMS Project";
     }
 
     public class EnrollmentBeneficiaryOption : ObservableObject
@@ -124,6 +124,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private AssistanceReleaseKind _selectedReleaseKind = AssistanceReleaseKind.Cash;
         private bool _isProjectCreationPanelOpen;
         private bool _isBusy;
+        private bool _hasAutoSyncedGgmsProjects;
         private ICollectionView _ledgerEntriesView;
         private BudgetLedgerEntryListItem? _selectedLedgerEntry;
         private string _ledgerSearchText = string.Empty;
@@ -182,6 +183,10 @@ namespace AttendanceShiftingManagement.ViewModels
 
         public int? NewProjectSourceDonationId { get; set; }
         public int? NewProjectSourceGGMSBudgetId { get; set; }
+        /// <summary>GGMS project_details_id (e.g. OPP-2026-0006) when creating from a mirrored GGMS project.</summary>
+        public string? NewProjectSourceProjectDetailsId { get; set; }
+        /// <summary>Spending envelope of the selected GGMS project; caps the new project's budget.</summary>
+        public decimal? NewProjectSourceProjectBudget { get; set; }
 
         private string _newProjectSourceDescription = string.Empty;
         public string NewProjectSourceDescription
@@ -325,23 +330,49 @@ namespace AttendanceShiftingManagement.ViewModels
                 {
                     NewProjectSourceDonationId = donation.Id;
                     NewProjectSourceGGMSBudgetId = null;
+                    NewProjectSourceProjectDetailsId = null;
+                    NewProjectSourceProjectBudget = null;
                     NewProjectSourceDescription = $"Source: Private Donation - {donation.DonorName} (PHP {donation.Amount:N2})";
                 }
                 else if (item.OriginalItem is GovernmentBudgetSnapshot ggms)
                 {
                     NewProjectSourceGGMSBudgetId = ggms.Id;
                     NewProjectSourceDonationId = null;
+                    NewProjectSourceProjectDetailsId = null;
+                    NewProjectSourceProjectBudget = null;
                     NewProjectSourceDescription = $"Source: GGMS Allocation - {ggms.OfficeName} (PHP {ggms.AllocatedAmount:N2})";
+                }
+                else if (item.OriginalItem is GgmsProjectCache ggmsProject)
+                {
+                    if (ggmsProject.IsLinked)
+                    {
+                        SetErrorStatus($"GGMS project '{ggmsProject.ProjectDetailsId}' is already linked to a local project.");
+                        return;
+                    }
+
+                    if (string.Equals(ggmsProject.Status, "archived", StringComparison.OrdinalIgnoreCase))
+                    {
+                        SetErrorStatus($"GGMS project '{ggmsProject.ProjectDetailsId}' is archived on GGMS and can no longer be linked.");
+                        return;
+                    }
+
+                    NewProjectSourceProjectDetailsId = ggmsProject.ProjectDetailsId;
+                    NewProjectSourceProjectBudget = ggmsProject.TotalBudget;
+                    NewProjectSourceDonationId = null;
+                    NewProjectSourceGGMSBudgetId = null;
+                    NewProjectName = ggmsProject.ProjectName;
+                    NewProjectDescription = ggmsProject.Description ?? string.Empty;
+                    NewProjectSourceDescription = $"Source: GGMS Project {ggmsProject.ProjectDetailsId} - {ggmsProject.ProjectName} (PHP {ggmsProject.TotalBudget:N2})";
                 }
                 else
                 {
-                    SetErrorStatus("Select a Private Donation or GGMS Fund row to create a project.");
+                    SetErrorStatus("Select a Private Donation, GGMS Fund, or GGMS Project row to create a project.");
                     return;
                 }
             }
             else
             {
-                SetErrorStatus("Select a Private Donation or GGMS Fund row to create a project.");
+                SetErrorStatus("Select a Private Donation, GGMS Fund, or GGMS Project row to create a project.");
                 return;
             }
 
@@ -359,6 +390,8 @@ namespace AttendanceShiftingManagement.ViewModels
             IsNewDonationMode = true;
             NewProjectSourceDonationId = null;
             NewProjectSourceGGMSBudgetId = null;
+            NewProjectSourceProjectDetailsId = null;
+            NewProjectSourceProjectBudget = null;
             NewProjectSourceDescription = "Source: New Private Donation (recorded on confirm)";
 
             SetActivePanel(BudgetWorkspacePanel.ProjectCreation);
@@ -437,10 +470,25 @@ namespace AttendanceShiftingManagement.ViewModels
 
             TryParseOptionalAmount(NewProjectBudgetCapText, out var budgetCap);
 
-            if (!IsNewDonationMode && !NewProjectSourceDonationId.HasValue && !NewProjectSourceGGMSBudgetId.HasValue)
+            if (!IsNewDonationMode
+                && !NewProjectSourceDonationId.HasValue
+                && !NewProjectSourceGGMSBudgetId.HasValue
+                && string.IsNullOrWhiteSpace(NewProjectSourceProjectDetailsId))
             {
                 SetErrorStatus("A source fund must be selected to create a project.");
                 return;
+            }
+
+            // A GGMS project is its own spending envelope: resolve the cap here so the remote
+            // (Hostinger) and local writes both persist the same value.
+            if (!string.IsNullOrWhiteSpace(NewProjectSourceProjectDetailsId) && NewProjectSourceProjectBudget.HasValue)
+            {
+                if (budgetCap.HasValue && budgetCap.Value > NewProjectSourceProjectBudget.Value)
+                {
+                    SetErrorStatus($"Budget cap cannot exceed the GGMS project budget of PHP {NewProjectSourceProjectBudget.Value:N2}.");
+                    return;
+                }
+                budgetCap ??= NewProjectSourceProjectBudget.Value;
             }
 
             IsBusy = true;
@@ -492,7 +540,8 @@ namespace AttendanceShiftingManagement.ViewModels
                         budgetCap,
                         AyudaProgramDistributionStatus.Draft,
                         NewProjectSourceDonationId,
-                        NewProjectSourceGGMSBudgetId),
+                        NewProjectSourceGGMSBudgetId,
+                        NormalizeNullable(NewProjectSourceProjectDetailsId)),
                     _currentUser.Id);
 
                 if (!result.IsSuccess)
@@ -633,7 +682,7 @@ namespace AttendanceShiftingManagement.ViewModels
             _ledgerEntriesView = CollectionViewSource.GetDefaultView(LedgerEntries);
 
             AllBudgets = new ObservableCollection<BudgetRecordListItem>();
-            TypeFilters = new ObservableCollection<string> { AllTypeFilter, "Global Aid Cap", "Global CFW Cap", "Private Donation", "Government Fund" };
+            TypeFilters = new ObservableCollection<string> { AllTypeFilter, "Global Aid Cap", "Global CFW Cap", "Private Donation", "Government Fund", "GGMS Project" };
             _budgetsView = CollectionViewSource.GetDefaultView(AllBudgets);
             _budgetsView.Filter = FilterBudgetRecord;
 
@@ -994,13 +1043,36 @@ namespace AttendanceShiftingManagement.ViewModels
             try
             {
                 await using var context = new LocalDbContext();
-                var spend = await context.BudgetLedgerEntries
-                    .AsNoTracking()
-                    .Where(entry => entry.EntryType == BudgetLedgerEntryType.Release &&
-                                   (entry.AssistanceCaseBudgetId == SelectedBudget.Id && SelectedBudget.Category == "Global Aid Cap" ||
-                                    entry.CashForWorkBudgetId == SelectedBudget.Id && SelectedBudget.Category == "Global CFW Cap"))
-                    .SumAsync(entry => (decimal?)entry.TotalAmount) ?? 0m;
-                
+                decimal spend;
+
+                if (SelectedBudget.Category == "GGMS Project" && SelectedBudget.OriginalItem is GgmsProjectCache ggmsProject)
+                {
+                    // Releases attributed to this GGMS envelope via the linked local program.
+                    var linkedProgramIds = await context.AyudaPrograms
+                        .AsNoTracking()
+                        .Where(p => p.SourceProjectDetailsId == ggmsProject.ProjectDetailsId)
+                        .Select(p => p.Id)
+                        .ToListAsync();
+
+                    spend = linkedProgramIds.Count == 0
+                        ? 0m
+                        : await context.BudgetLedgerEntries
+                            .AsNoTracking()
+                            .Where(entry => entry.EntryType == BudgetLedgerEntryType.Release &&
+                                            entry.ProgramId != null &&
+                                            linkedProgramIds.Contains(entry.ProgramId.Value))
+                            .SumAsync(entry => (decimal?)entry.TotalAmount) ?? 0m;
+                }
+                else
+                {
+                    spend = await context.BudgetLedgerEntries
+                        .AsNoTracking()
+                        .Where(entry => entry.EntryType == BudgetLedgerEntryType.Release &&
+                                       (entry.AssistanceCaseBudgetId == SelectedBudget.Id && SelectedBudget.Category == "Global Aid Cap" ||
+                                        entry.CashForWorkBudgetId == SelectedBudget.Id && SelectedBudget.Category == "Global CFW Cap"))
+                        .SumAsync(entry => (decimal?)entry.TotalAmount) ?? 0m;
+                }
+
                 SelectedBudgetRemaining = (SelectedBudget.BudgetCap ?? 0m) - spend;
             }
             catch
@@ -1138,6 +1210,28 @@ namespace AttendanceShiftingManagement.ViewModels
                     Status = "Active",
                     OriginalItem = b,
                     HasLinkedProject = linkedProject != null,
+                    LinkedProjectName = linkedProject?.ProgramName ?? string.Empty
+                });
+            }
+
+            // Mirrored GGMS project sub-allocations (refreshed by Sync GGMS / module open).
+            var ggmsProjects = await ggmsContext.GgmsProjectCache
+                .AsNoTracking()
+                .OrderByDescending(p => p.SourceCreatedAt)
+                .ToListAsync();
+            foreach (var b in ggmsProjects)
+            {
+                var linkedProject = allProjects.FirstOrDefault(p => p.SourceProjectDetailsId == b.ProjectDetailsId);
+                AllBudgets.Add(new BudgetRecordListItem
+                {
+                    Id = b.GgmsProjectCacheId,
+                    Code = b.ProjectDetailsId,
+                    Name = b.ProjectName,
+                    Category = "GGMS Project",
+                    BudgetCap = b.TotalBudget,
+                    Status = string.Equals(b.Status, "archived", StringComparison.OrdinalIgnoreCase) ? "Archived" : "Active",
+                    OriginalItem = b,
+                    HasLinkedProject = linkedProject != null || b.IsLinked,
                     LinkedProjectName = linkedProject?.ProgramName ?? string.Empty
                 });
             }
@@ -1396,6 +1490,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
             try
             {
+                await AutoSyncGgmsProjectsAsync();
                 await LoadAssistanceCaseBudgetsAsync();
                 await LoadCashForWorkBudgetsAsync();
                 await LoadOverviewAsync();
@@ -1411,6 +1506,30 @@ namespace AttendanceShiftingManagement.ViewModels
             finally
             {
                 IsBusy = false;
+            }
+        }
+
+        /// <summary>
+        /// Pulls new GGMS project sub-allocations once when the module opens; offline or GGMS
+        /// failures are swallowed so the Budget module still loads from the local cache.
+        /// </summary>
+        private async Task AutoSyncGgmsProjectsAsync()
+        {
+            if (_hasAutoSyncedGgmsProjects)
+            {
+                return;
+            }
+
+            _hasAutoSyncedGgmsProjects = true;
+
+            try
+            {
+                await using var context = new LocalDbContext();
+                await new GgmsProjectSyncService().RefreshProjectCacheAsync(context);
+            }
+            catch
+            {
+                // Offline / unreachable GGMS — the cached mirror is still served.
             }
         }
 
@@ -1539,6 +1658,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
             try
             {
+                // STEP 1 — office-level allocation snapshot.
                 await using var context = new LocalDbContext();
                 var result = await new GgmsBudgetSyncService().SyncAyudaBudgetAsync(context, _currentUser.Id);
                 if (!result.IsSuccess)
@@ -1547,8 +1667,22 @@ namespace AttendanceShiftingManagement.ViewModels
                     return;
                 }
 
+                // STEP 2 — mirror project_details sub-allocations for our office code.
+                // The allocation snapshot above is already committed; a project read failure
+                // must not undo it, so it degrades to a partial-success warning.
+                SetNeutralStatus("Checking GGMS projects for new sub-allocations...");
+                var projectResult = await new GgmsProjectSyncService().RefreshProjectCacheAsync(context);
+
                 await LoadOverviewAsync();
-                SetSuccessStatus("Government budget sync completed.");
+                await LoadBudgetsViewAsync();
+
+                if (!projectResult.IsSuccess)
+                {
+                    SetErrorStatus($"Government budget synced, but the GGMS project check failed: {projectResult.Message}");
+                    return;
+                }
+
+                SetSuccessStatus($"Government budget sync completed. {projectResult.Message}");
             }
             catch (Exception ex)
             {
@@ -1570,6 +1704,12 @@ namespace AttendanceShiftingManagement.ViewModels
             if (SelectedBudgetRemaining <= 0)
             {
                 SetErrorStatus("There are no remaining funds to unlock for this budget.");
+                return;
+            }
+
+            if (SelectedBudget.Category == "GGMS Project")
+            {
+                SetErrorStatus("GGMS project budgets are controlled by GGMS and cannot be unlocked locally.");
                 return;
             }
 

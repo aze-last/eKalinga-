@@ -301,6 +301,14 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             if (string.IsNullOrWhiteSpace(payload)) return;
 
+            // Municipal e-Kard cards carry a BEN-... beneficiary id — verify those
+            // against the CRS contract flow instead of the own-card QR lookup.
+            if (EKardPayloadRouter.IsEKardPayload(payload))
+            {
+                await ExecuteProcessEKardScanAsync(payload);
+                return;
+            }
+
             IsBusy = true;
             SetNeutralStatus("Analyzing ID card...");
 
@@ -334,6 +342,83 @@ namespace AttendanceShiftingManagement.ViewModels
             catch (Exception ex)
             {
                 SetErrorStatus($"Scan analysis error: {ex.Message}");
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
+        private async Task ExecuteProcessEKardScanAsync(string payload)
+        {
+            IsBusy = true;
+            SetNeutralStatus("Verifying e-Kard against CRS...");
+
+            try
+            {
+                await using var context = new LocalDbContext();
+                var verificationService = new CrsDigitalIdVerificationService(context);
+                var result = await verificationService.VerifyAsync(new EKardVerificationRequest
+                {
+                    BeneficiaryId = payload,
+                    UserId = _currentUser?.Id,
+                    UserName = _currentUser?.Username ?? string.Empty
+                }, CancellationToken.None);
+
+                // Match the local masterlist (no auto-import).
+                var localMatch = await context.BeneficiaryStaging
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(b => b.BeneficiaryId == result.BeneficiaryId);
+
+                ScannedBeneficiary = new MasterListBeneficiary
+                {
+                    FullName = localMatch?.FullName ?? result.BeneficiaryId,
+                    BeneficiaryId = result.BeneficiaryId,
+                    CivilRegistryId = localMatch?.CivilRegistryId ?? string.Empty,
+                    ResidentsId = localMatch?.ResidentsId ?? 0
+                };
+
+                var syncedNote = result.Source == EKardSource.LocalCache && result.LastSyncedAt.HasValue
+                    ? $" (offline — last synced {result.LastSyncedAt:MMM dd, yyyy hh:mm tt})"
+                    : string.Empty;
+                var matchNote = localMatch != null
+                    ? " Found in local registry — click confirm to locate."
+                    : " Not in local registry.";
+
+                ScannedBeneficiaryStatus = result.Validity switch
+                {
+                    EKardValidity.Valid => $"e-Kard VALID ({result.IdNumber}).{matchNote}{syncedNote}",
+                    EKardValidity.Expired => $"e-Kard EXPIRED on {result.ExpiryDate:MMM dd, yyyy}.{matchNote}{syncedNote}",
+                    EKardValidity.Revoked => $"e-Kard REVOKED.{matchNote}{syncedNote}",
+                    EKardValidity.NotFound => $"No e-Kard ID ever issued for this beneficiary.{matchNote}",
+                    _ => $"e-Kard status UNKNOWN — CRS unreachable and never cached.{matchNote}"
+                };
+
+                ScannedBeneficiaryPhoto = LocalImageLoader.LoadFromBytes(result.Photo) as BitmapSource
+                    ?? (localMatch != null && !string.IsNullOrWhiteSpace(localMatch.PhotoPath)
+                        ? LocalImageLoader.Load(localMatch.PhotoPath) as BitmapSource
+                        : null);
+
+                _lastScannedPayload = localMatch != null ? result.BeneficiaryId : null;
+                IsScannedResultVisible = true;
+
+                switch (result.Validity)
+                {
+                    case EKardValidity.Valid:
+                        SetSuccessStatus($"e-Kard VALID: {result.BeneficiaryId}");
+                        break;
+                    case EKardValidity.NotFound:
+                    case EKardValidity.Revoked:
+                        SetErrorStatus($"e-Kard {result.Validity}: {result.BeneficiaryId}");
+                        break;
+                    default:
+                        SetNeutralStatus($"e-Kard {result.Validity}: {result.BeneficiaryId}");
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                SetErrorStatus($"e-Kard verification error: {ex.Message}");
             }
             finally
             {
