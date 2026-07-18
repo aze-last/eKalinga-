@@ -100,6 +100,25 @@ namespace AttendanceShiftingManagement.Models
 
         [NotMapped]
         public decimal? LinkedFundingAmount => SourceDonation?.Amount ?? SourceGGMSBudget?.AllocatedAmount;
+
+        /// <summary>
+        /// Funding-source display code for the payout console footer:
+        /// GGMS project id when linked, else the donation/GGMS stream label.
+        /// </summary>
+        [NotMapped]
+        public string FundSourceCode
+        {
+            get
+            {
+                if (!string.IsNullOrEmpty(SourceProjectDetailsId))
+                    return SourceProjectDetailsId;
+                if (SourceDonationId.HasValue)
+                    return "Private Donation";
+                if (SourceGGMSBudgetId.HasValue)
+                    return "GGMS Budget";
+                return "General Fund";
+            }
+        }
     }
 
     [Table("assistance_case_budgets")]

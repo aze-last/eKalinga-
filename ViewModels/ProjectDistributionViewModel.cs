@@ -72,6 +72,24 @@ namespace AttendanceShiftingManagement.ViewModels
         private BitmapSource? _selectedPendingDigitalIdQrImage;
         private int _selectedScannerSessionDurationMinutes = 15;
         private const int DistributionPageSize = 10;
+        /// <summary>Caps beneficiary pickers so the full municipal registry never lands in the UI at once.</summary>
+        private const int BeneficiaryPickerDisplayLimit = 200;
+        private int _addPanelCurrentPage = 1;
+        private int _addPanelTotalPages = 1;
+        private int _unpickedCurrentPage = 1;
+        private int _unpickedTotalPages = 1;
+
+        private sealed record PickerBeneficiaryRow(
+            int StagingID, string? BeneficiaryId, string? CivilRegistryId, string? LastName,
+            string? FirstName, string? MiddleName, string? FullName,
+            int? LinkedHouseholdId, int? LinkedHouseholdMemberId, bool IsSenior, bool IsPwd);
+
+        private sealed record EnrolledBeneficiaryKey(
+            int BeneficiaryStagingId, string? CivilRegistryId, string? BeneficiaryId);
+        /// <summary>Add-panel selections survive search re-queries; enrollment reads this set, not the visible page.</summary>
+        private readonly HashSet<int> _addPanelSelectedStagingIds = new();
+        private int _availableBeneficiarySearchVersion;
+        private int _unpickedBeneficiarySearchVersion;
 
         private ProjectDistributionBeneficiaryListItem? _scannedBeneficiary;
         private string? _scannedBeneficiaryStatus;
@@ -154,6 +172,18 @@ namespace AttendanceShiftingManagement.ViewModels
             ConfirmAddBeneficiaryCommand = new RelayCommand(async _ => await ConfirmAddBeneficiaryAsync(), _ => CanConfirmAddBeneficiary());
             SelectAllFilteredCommand = new RelayCommand(_ => SelectAllFiltered());
             DeselectAllCommand = new RelayCommand(_ => DeselectAll());
+            PrevAddPanelPageCommand = new RelayCommand(
+                _ => { AddPanelCurrentPage--; _ = LoadAvailableBeneficiariesAsync(); },
+                _ => AddPanelCurrentPage > 1);
+            NextAddPanelPageCommand = new RelayCommand(
+                _ => { AddPanelCurrentPage++; _ = LoadAvailableBeneficiariesAsync(); },
+                _ => AddPanelCurrentPage < AddPanelTotalPages);
+            PrevUnpickedPageCommand = new RelayCommand(
+                _ => { UnpickedCurrentPage--; _ = LoadAvailableUnpickedBeneficiariesAsync(); },
+                _ => UnpickedCurrentPage > 1);
+            NextUnpickedPageCommand = new RelayCommand(
+                _ => { UnpickedCurrentPage++; _ = LoadAvailableUnpickedBeneficiariesAsync(); },
+                _ => UnpickedCurrentPage < UnpickedTotalPages);
             CloseScannerPanelCommand = new RelayCommand(_ => CloseScannerPanel());
             OpenProjectActionMenuCommand = new RelayCommand(parameter => OpenProjectActionMenu(parameter as ProjectDistributionProgramListItem));
             OpenProgramAddBeneficiaryPanelCommand = new RelayCommand(parameter => OpenProgramAddBeneficiaryPanel(parameter as ProjectDistributionProgramListItem), parameter => CanOpenProgramPanel(parameter as ProjectDistributionProgramListItem));
@@ -651,6 +681,8 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 if (SetProperty(ref _newProjectSearchText, value))
                 {
+                    _unpickedCurrentPage = 1;
+                    OnPropertyChanged(nameof(UnpickedCurrentPage));
                     _ = LoadAvailableUnpickedBeneficiariesAsync();
                 }
             }
@@ -725,6 +757,8 @@ namespace AttendanceShiftingManagement.ViewModels
             NewProjectBudgetCapText = string.Empty;
             NewProjectSelectedDistributionStatus = AyudaProgramDistributionStatus.Open;
             NewProjectSearchText = string.Empty;
+            UnpickedCurrentPage = 1;
+            UnpickedTotalPages = 1;
             AvailableUnpickedBeneficiaries.Clear();
             SelectedProjectBeneficiaries.Clear();
             NewProjectSelectedCount = 0;
@@ -733,42 +767,72 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private async Task LoadAvailableUnpickedBeneficiariesAsync()
         {
-            await using var context = new LocalDbContext();
-            
-            // Filter: Approved (cross-event listing is allowed; only exclude if already in the current picker session)
+            var version = ++_unpickedBeneficiarySearchVersion;
             var search = NewProjectSearchText?.Trim();
-            
-            // Also exclude what's already in SelectedProjectBeneficiaries in the UI
-            var currentSelectedIds = SelectedProjectBeneficiaries.Select(b => b.StagingId).ToList();
-            var currentSelectedCivilIds = SelectedProjectBeneficiaries.Where(b => !string.IsNullOrEmpty(b.CivilRegistryId)).Select(b => b.CivilRegistryId).ToList();
-            var currentSelectedBenIds = SelectedProjectBeneficiaries.Where(b => !string.IsNullOrEmpty(b.BeneficiaryId)).Select(b => b.BeneficiaryId).ToList();
 
-            var beneficiaries = await context.BeneficiaryStaging
-                .AsNoTracking()
-                .Where(item => item.VerificationStatus == VerificationStatus.Approved)
-                .Select(item => new
+            // Exclude what's already in SelectedProjectBeneficiaries in the UI
+            var currentSelectedIds = SelectedProjectBeneficiaries.Select(b => b.StagingId).ToHashSet();
+            var currentSelectedCivilIds = SelectedProjectBeneficiaries.Where(b => !string.IsNullOrEmpty(b.CivilRegistryId)).Select(b => b.CivilRegistryId).ToHashSet();
+            var currentSelectedBenIds = SelectedProjectBeneficiaries.Where(b => !string.IsNullOrEmpty(b.BeneficiaryId)).Select(b => b.BeneficiaryId).ToHashSet();
+
+            // Filter and page DB-side: only one BeneficiaryPickerDisplayLimit page of matches is
+            // materialized so the panel opens instantly even with the full municipal registry local.
+            // SQLite executes "async" queries synchronously, so run them on the thread pool.
+            var requestedPage = Math.Max(1, _unpickedCurrentPage);
+            var (totalCount, beneficiaries) = await Task.Run(async () =>
+            {
+                await using var context = new LocalDbContext();
+
+                var query = context.BeneficiaryStaging
+                    .AsNoTracking()
+                    .Where(item => item.VerificationStatus == VerificationStatus.Approved);
+
+                if (!string.IsNullOrWhiteSpace(search))
                 {
-                    item.StagingID,
-                    item.BeneficiaryId,
-                    item.CivilRegistryId,
-                    item.LastName,
-                    item.FirstName,
-                    item.MiddleName,
-                    item.FullName,
-                    item.LinkedHouseholdId,
-                    item.LinkedHouseholdMemberId
-                })
-                .ToListAsync();
+                    query = query.Where(item =>
+                        (item.FullName != null && item.FullName.Contains(search)) ||
+                        (item.LastName != null && item.LastName.Contains(search)) ||
+                        (item.FirstName != null && item.FirstName.Contains(search)) ||
+                        (item.BeneficiaryId != null && item.BeneficiaryId.Contains(search)));
+                }
 
-            // Perform filtering in memory to handle complex duplicate checks correctly
+                var count = await query.CountAsync();
+                var lastPage = Math.Max(1, (int)Math.Ceiling(count / (double)BeneficiaryPickerDisplayLimit));
+                var boundedPage = Math.Min(requestedPage, lastPage);
+                var rows = await query
+                    .OrderBy(item => item.FullName ?? item.LastName)
+                    .Skip((boundedPage - 1) * BeneficiaryPickerDisplayLimit)
+                    .Take(BeneficiaryPickerDisplayLimit + currentSelectedIds.Count)
+                    .Select(item => new PickerBeneficiaryRow(
+                        item.StagingID,
+                        item.BeneficiaryId,
+                        item.CivilRegistryId,
+                        item.LastName,
+                        item.FirstName,
+                        item.MiddleName,
+                        item.FullName,
+                        item.LinkedHouseholdId,
+                        item.LinkedHouseholdMemberId,
+                        item.IsSenior,
+                        item.IsPwd))
+                    .ToListAsync();
+                return (count, rows);
+            });
+
+            if (version != _unpickedBeneficiarySearchVersion)
+            {
+                return; // a newer search superseded this one
+            }
+
+            UnpickedTotalPages = Math.Max(1, (int)Math.Ceiling(totalCount / (double)BeneficiaryPickerDisplayLimit));
+            UnpickedCurrentPage = Math.Min(requestedPage, UnpickedTotalPages);
+
+            // Duplicate checks against the picker's Selected column stay in memory
             var filteredBeneficiaries = beneficiaries
                 .Where(item => !currentSelectedIds.Contains(item.StagingID))
                 .Where(item => string.IsNullOrEmpty(item.CivilRegistryId) || !currentSelectedCivilIds.Contains(item.CivilRegistryId))
                 .Where(item => string.IsNullOrEmpty(item.BeneficiaryId) || !currentSelectedBenIds.Contains(item.BeneficiaryId))
-                .Where(item => string.IsNullOrWhiteSpace(search) || 
-                               (item.FullName != null && item.FullName.Contains(search, StringComparison.OrdinalIgnoreCase)) ||
-                               (item.BeneficiaryId != null && item.BeneficiaryId.Contains(search, StringComparison.OrdinalIgnoreCase)))
-                .OrderBy(item => item.FullName ?? item.LastName)
+                .Take(BeneficiaryPickerDisplayLimit)
                 .ToList();
 
             AvailableUnpickedBeneficiaries.Clear();
@@ -787,7 +851,7 @@ namespace AttendanceShiftingManagement.ViewModels
                     LinkedHouseholdMemberId = b.LinkedHouseholdMemberId
                 });
             }
-            
+
             UpdateNewProjectSelectedCount();
         }
 
@@ -977,6 +1041,10 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand ConfirmAddBeneficiaryCommand { get; }
         public ICommand SelectAllFilteredCommand { get; }
         public ICommand DeselectAllCommand { get; }
+        public ICommand PrevAddPanelPageCommand { get; }
+        public ICommand NextAddPanelPageCommand { get; }
+        public ICommand PrevUnpickedPageCommand { get; }
+        public ICommand NextUnpickedPageCommand { get; }
         public ICommand CloseScannerPanelCommand { get; }
         public ICommand OpenProjectActionMenuCommand { get; }
         public ICommand OpenProgramAddBeneficiaryPanelCommand { get; }
@@ -1235,7 +1303,63 @@ namespace AttendanceShiftingManagement.ViewModels
             }
         }
 
-        public int SelectedBeneficiariesCount => AvailableBeneficiaries.Count(b => b.IsSelected);
+        public int SelectedBeneficiariesCount => _addPanelSelectedStagingIds.Count;
+
+        public int AddPanelCurrentPage
+        {
+            get => _addPanelCurrentPage;
+            private set
+            {
+                if (SetProperty(ref _addPanelCurrentPage, value))
+                {
+                    RaisePickerPagerCanExecuteChanged();
+                }
+            }
+        }
+
+        public int AddPanelTotalPages
+        {
+            get => _addPanelTotalPages;
+            private set
+            {
+                if (SetProperty(ref _addPanelTotalPages, value))
+                {
+                    RaisePickerPagerCanExecuteChanged();
+                }
+            }
+        }
+
+        public int UnpickedCurrentPage
+        {
+            get => _unpickedCurrentPage;
+            private set
+            {
+                if (SetProperty(ref _unpickedCurrentPage, value))
+                {
+                    RaisePickerPagerCanExecuteChanged();
+                }
+            }
+        }
+
+        public int UnpickedTotalPages
+        {
+            get => _unpickedTotalPages;
+            private set
+            {
+                if (SetProperty(ref _unpickedTotalPages, value))
+                {
+                    RaisePickerPagerCanExecuteChanged();
+                }
+            }
+        }
+
+        private void RaisePickerPagerCanExecuteChanged()
+        {
+            (PrevAddPanelPageCommand as RelayCommand)?.RaiseCanExecuteChanged();
+            (NextAddPanelPageCommand as RelayCommand)?.RaiseCanExecuteChanged();
+            (PrevUnpickedPageCommand as RelayCommand)?.RaiseCanExecuteChanged();
+            (NextUnpickedPageCommand as RelayCommand)?.RaiseCanExecuteChanged();
+        }
 
         public string AddBeneficiarySearchText
         {
@@ -1244,7 +1368,10 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 if (SetProperty(ref _addBeneficiarySearchText, value))
                 {
-                    ApplyAvailableBeneficiaryFilter();
+                    // Search runs DB-side so matches beyond the capped page are found.
+                    _addPanelCurrentPage = 1;
+                    OnPropertyChanged(nameof(AddPanelCurrentPage));
+                    _ = LoadAvailableBeneficiariesAsync();
                 }
             }
         }
@@ -1599,39 +1726,77 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private async Task LoadAvailableBeneficiariesAsync()
         {
-            await using var context = new LocalDbContext();
+            var version = ++_availableBeneficiarySearchVersion;
+            var search = AddBeneficiarySearchText?.Trim();
 
-            // Filter: Approved AND not already in the SELECTED project (if any)
+            // Filter: Approved AND not already in the SELECTED project (if any).
+            // SQLite executes "async" queries synchronously, so run them on the thread pool.
             var selectedProgramId = SelectedProgram?.Id;
-            var enrolledInSelectedProject = selectedProgramId.HasValue
-                ? await context.AyudaProjectBeneficiaries
+            var requestedPage = Math.Max(1, _addPanelCurrentPage);
+            var (enrolledInSelectedProject, totalCount, beneficiaries) = await Task.Run(async () =>
+            {
+                await using var context = new LocalDbContext();
+
+                var enrolled = selectedProgramId.HasValue
+                    ? await context.AyudaProjectBeneficiaries
+                        .AsNoTracking()
+                        .Where(b => b.AyudaProgramId == selectedProgramId.Value)
+                        .Select(b => new EnrolledBeneficiaryKey(b.BeneficiaryStagingId, b.CivilRegistryId, b.BeneficiaryId))
+                        .ToListAsync()
+                    : new List<EnrolledBeneficiaryKey>();
+
+                // Filter and page DB-side: only one BeneficiaryPickerDisplayLimit page of matches
+                // is materialized so the panel stays responsive with the full municipal registry local.
+                var query = context.BeneficiaryStaging
                     .AsNoTracking()
-                    .Where(b => b.AyudaProgramId == selectedProgramId.Value)
-                    .Select(b => new { b.BeneficiaryStagingId, b.CivilRegistryId, b.BeneficiaryId })
-                    .ToListAsync()
-                : new();
+                    .Where(item => item.VerificationStatus == VerificationStatus.Approved);
 
-            var alreadyEnrolledStagingIds = enrolledInSelectedProject.Select(b => b.BeneficiaryStagingId).ToList();
-            var alreadyEnrolledCivilIds = enrolledInSelectedProject.Where(b => b.CivilRegistryId != null).Select(b => b.CivilRegistryId!).ToList();
-            var alreadyEnrolledBenIds = enrolledInSelectedProject.Where(b => b.BeneficiaryId != null).Select(b => b.BeneficiaryId!).ToList();
-
-            var beneficiaries = await context.BeneficiaryStaging
-                .AsNoTracking()
-                .Where(item => item.VerificationStatus == VerificationStatus.Approved)
-                .Select(item => new
+                if (!string.IsNullOrWhiteSpace(search))
                 {
-                    item.StagingID,
-                    item.FullName,
-                    item.FirstName,
-                    item.LastName,
-                    item.BeneficiaryId,
-                    item.CivilRegistryId,
-                    item.IsSenior,
-                    item.IsPwd
-                })
-                .OrderBy(item => item.FullName ?? item.LastName)
-                .ThenBy(item => item.FirstName)
-                .ToListAsync();
+                    query = query.Where(item =>
+                        (item.FullName != null && item.FullName.Contains(search)) ||
+                        (item.LastName != null && item.LastName.Contains(search)) ||
+                        (item.FirstName != null && item.FirstName.Contains(search)) ||
+                        (item.BeneficiaryId != null && item.BeneficiaryId.Contains(search)) ||
+                        (item.CivilRegistryId != null && item.CivilRegistryId.Contains(search)));
+                }
+
+                var count = await query.CountAsync();
+                var lastPage = Math.Max(1, (int)Math.Ceiling(count / (double)BeneficiaryPickerDisplayLimit));
+                var boundedPage = Math.Min(requestedPage, lastPage);
+                var page = await query
+                    .OrderBy(item => item.FullName ?? item.LastName)
+                    .ThenBy(item => item.FirstName)
+                    .Skip((boundedPage - 1) * BeneficiaryPickerDisplayLimit)
+                    .Take(BeneficiaryPickerDisplayLimit + enrolled.Count)
+                    .Select(item => new PickerBeneficiaryRow(
+                        item.StagingID,
+                        item.BeneficiaryId,
+                        item.CivilRegistryId,
+                        item.LastName,
+                        item.FirstName,
+                        item.MiddleName,
+                        item.FullName,
+                        null,
+                        null,
+                        item.IsSenior,
+                        item.IsPwd))
+                    .ToListAsync();
+
+                return (enrolled, count, page);
+            });
+
+            var alreadyEnrolledStagingIds = enrolledInSelectedProject.Select(b => b.BeneficiaryStagingId).ToHashSet();
+            var alreadyEnrolledCivilIds = enrolledInSelectedProject.Where(b => b.CivilRegistryId != null).Select(b => b.CivilRegistryId!).ToHashSet();
+            var alreadyEnrolledBenIds = enrolledInSelectedProject.Where(b => b.BeneficiaryId != null).Select(b => b.BeneficiaryId!).ToHashSet();
+
+            if (version != _availableBeneficiarySearchVersion)
+            {
+                return; // a newer search superseded this one
+            }
+
+            AddPanelTotalPages = Math.Max(1, (int)Math.Ceiling(totalCount / (double)BeneficiaryPickerDisplayLimit));
+            AddPanelCurrentPage = Math.Min(requestedPage, AddPanelTotalPages);
 
             AvailableBeneficiaries.Clear();
             foreach (var b in beneficiaries)
@@ -1640,6 +1805,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 if (alreadyEnrolledStagingIds.Contains(b.StagingID)) continue;
                 if (!string.IsNullOrEmpty(b.CivilRegistryId) && alreadyEnrolledCivilIds.Contains(b.CivilRegistryId)) continue;
                 if (!string.IsNullOrEmpty(b.BeneficiaryId) && alreadyEnrolledBenIds.Contains(b.BeneficiaryId)) continue;
+                if (AvailableBeneficiaries.Count >= BeneficiaryPickerDisplayLimit) break;
 
                 var option = new DistributionBeneficiaryOption
                 {
@@ -1650,13 +1816,25 @@ namespace AttendanceShiftingManagement.ViewModels
                     BeneficiaryId = b.BeneficiaryId ?? string.Empty,
                     CivilRegistryId = b.CivilRegistryId ?? string.Empty,
                     IsSenior = b.IsSenior,
-                    IsPwd = b.IsPwd
+                    IsPwd = b.IsPwd,
+                    // Re-queries (search) must not lose picks made on earlier pages.
+                    IsSelected = _addPanelSelectedStagingIds.Contains(b.StagingID)
                 };
-                
+
                 option.PropertyChanged += (sender, args) =>
                 {
-                    if (args.PropertyName == nameof(DistributionBeneficiaryOption.IsSelected))
+                    if (args.PropertyName == nameof(DistributionBeneficiaryOption.IsSelected) &&
+                        sender is DistributionBeneficiaryOption changed)
                     {
+                        if (changed.IsSelected)
+                        {
+                            _addPanelSelectedStagingIds.Add(changed.StagingId);
+                        }
+                        else
+                        {
+                            _addPanelSelectedStagingIds.Remove(changed.StagingId);
+                        }
+
                         OnPropertyChanged(nameof(SelectedBeneficiariesCount));
                         if (ConfirmAddBeneficiaryCommand is RelayCommand confirm)
                         {
@@ -2759,8 +2937,15 @@ namespace AttendanceShiftingManagement.ViewModels
 
             CloseProjectActionMenus();
             AddBeneficiaryStatusMessage = string.Empty;
+            _addPanelSelectedStagingIds.Clear();
+            OnPropertyChanged(nameof(SelectedBeneficiariesCount));
+            AddPanelCurrentPage = 1;
+            AddPanelTotalPages = 1;
             AddBeneficiarySearchText = string.Empty;
             SelectedAvailableBeneficiary = null;
+            // The search-text setter only reloads on change — always reload so a
+            // stale page from the previous panel session never lingers.
+            _ = LoadAvailableBeneficiariesAsync();
             IsAddBeneficiaryPanelOpen = true;
         }
 
@@ -2768,6 +2953,8 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             IsAddBeneficiaryPanelOpen = false;
             AddBeneficiaryStatusMessage = string.Empty;
+            _addPanelSelectedStagingIds.Clear();
+            OnPropertyChanged(nameof(SelectedBeneficiariesCount));
             SelectedAvailableBeneficiary = null;
         }
 
@@ -2803,7 +2990,8 @@ namespace AttendanceShiftingManagement.ViewModels
         private async Task ConfirmAddBeneficiaryAsync()
         {
             var selectedProgram = SelectedProgram;
-            var selectedIds = AvailableBeneficiaries.Where(b => b.IsSelected).Select(b => b.StagingId).ToList();
+            // The id set covers picks made across searches, not just the visible page.
+            var selectedIds = _addPanelSelectedStagingIds.ToList();
 
             if (selectedProgram == null || selectedIds.Count == 0)
             {
@@ -2863,6 +3051,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private void DeselectAll()
         {
+            _addPanelSelectedStagingIds.Clear();
             foreach (var item in AvailableBeneficiaries)
             {
                 item.IsSelected = false;

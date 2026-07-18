@@ -144,6 +144,15 @@ namespace AttendanceShiftingManagement.ViewModels
         private bool _isNewDonationMode;
         private string _enrollmentSearchText = string.Empty;
         private int _selectedEnrollmentCount;
+        private string _enrollmentResultSummary = string.Empty;
+        /// <summary>Selection survives searches; the display list is capped so the 40k-row registry never lands in the UI.</summary>
+        private readonly HashSet<int> _selectedEnrollmentStagingIds = new();
+        private int _enrollmentSearchVersion;
+        private const int EnrollmentDisplayLimit = 200;
+        private int _currentEnrollmentPage = 1;
+        private int _totalEnrollmentPages = 1;
+        private readonly RelayCommand _previousEnrollmentPageCommand;
+        private readonly RelayCommand _nextEnrollmentPageCommand;
 
         private int _currentLedgerPage = 1;
         private int _totalLedgerPages = 1;
@@ -555,10 +564,9 @@ namespace AttendanceShiftingManagement.ViewModels
                 var createdName = NewProjectName;
                 var enrollmentMessage = string.Empty;
 
-                var selectedIds = EnrollmentBeneficiaries
-                    .Where(option => option.IsSelected)
-                    .Select(option => option.StagingId)
-                    .ToList();
+                // Selection lives in the id set (not the visible page) so search-narrowed
+                // and SELECT ALL FILTERED picks are all enrolled.
+                var selectedIds = _selectedEnrollmentStagingIds.ToList();
 
                 if (selectedIds.Count > 0 && result.ProgramId.HasValue)
                 {
@@ -713,8 +721,14 @@ namespace AttendanceShiftingManagement.ViewModels
             _closeProjectCreationPanelCommand = new RelayCommand(_ => CloseProjectCreationPanel());
             _confirmCreateProjectCommand = new RelayCommand(async _ => await ConfirmCreateProjectAsync(), _ => !IsBusy && CanConfirmCreateProject());
 
-            _selectAllFilteredEnrollmentCommand = new RelayCommand(_ => SelectAllFilteredEnrollment());
+            _selectAllFilteredEnrollmentCommand = new RelayCommand(async _ => await SelectAllFilteredEnrollmentAsync());
             _deselectAllEnrollmentCommand = new RelayCommand(_ => DeselectAllEnrollment());
+            _previousEnrollmentPageCommand = new RelayCommand(
+                _ => { CurrentEnrollmentPage--; _ = QueryEnrollmentBeneficiariesAsync(); },
+                _ => CurrentEnrollmentPage > 1);
+            _nextEnrollmentPageCommand = new RelayCommand(
+                _ => { CurrentEnrollmentPage++; _ = QueryEnrollmentBeneficiariesAsync(); },
+                _ => CurrentEnrollmentPage < TotalEnrollmentPages);
 
             _nextLedgerPageCommand = new RelayCommand(async _ => await NextLedgerPageAsync(), _ => !IsBusy && CurrentLedgerPage < TotalLedgerPages);
             _previousLedgerPageCommand = new RelayCommand(async _ => await PreviousLedgerPageAsync(), _ => !IsBusy && CurrentLedgerPage > 1);
@@ -746,6 +760,8 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand UnlockFundsCommand => _unlockFundsCommand;
         public ICommand SelectAllFilteredEnrollmentCommand => _selectAllFilteredEnrollmentCommand;
         public ICommand DeselectAllEnrollmentCommand => _deselectAllEnrollmentCommand;
+        public ICommand PreviousEnrollmentPageCommand => _previousEnrollmentPageCommand;
+        public ICommand NextEnrollmentPageCommand => _nextEnrollmentPageCommand;
 
         public ICommand NavigatePreviousCommand => _navigatePreviousCommand;
         public ICommand NavigateNextCommand => _navigateNextCommand;
@@ -1361,13 +1377,48 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 if (SetProperty(ref _enrollmentSearchText, value))
                 {
-                    FilterEnrollmentBeneficiaries();
+                    _currentEnrollmentPage = 1;
+                    OnPropertyChanged(nameof(CurrentEnrollmentPage));
+                    _ = QueryEnrollmentBeneficiariesAsync();
+                }
+            }
+        }
+
+        public int CurrentEnrollmentPage
+        {
+            get => _currentEnrollmentPage;
+            private set
+            {
+                if (SetProperty(ref _currentEnrollmentPage, value))
+                {
+                    _previousEnrollmentPageCommand.RaiseCanExecuteChanged();
+                    _nextEnrollmentPageCommand.RaiseCanExecuteChanged();
+                }
+            }
+        }
+
+        public int TotalEnrollmentPages
+        {
+            get => _totalEnrollmentPages;
+            private set
+            {
+                if (SetProperty(ref _totalEnrollmentPages, value))
+                {
+                    _previousEnrollmentPageCommand.RaiseCanExecuteChanged();
+                    _nextEnrollmentPageCommand.RaiseCanExecuteChanged();
                 }
             }
         }
 
         public ObservableCollection<EnrollmentBeneficiaryOption> EnrollmentBeneficiaries { get; } = new();
         public ObservableCollection<EnrollmentBeneficiaryOption> FilteredEnrollmentBeneficiaries { get; } = new();
+
+        /// <summary>e.g. "Showing first 200 of 40,152 — refine the search" so the capped list is never mistaken for the whole registry.</summary>
+        public string EnrollmentResultSummary
+        {
+            get => _enrollmentResultSummary;
+            private set => SetProperty(ref _enrollmentResultSummary, value);
+        }
 
         public int SelectedEnrollmentCount
         {
@@ -1379,27 +1430,101 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             try
             {
-                EnrollmentSearchText = string.Empty;
+                _enrollmentSearchText = string.Empty;
+                OnPropertyChanged(nameof(EnrollmentSearchText));
+                _selectedEnrollmentStagingIds.Clear();
+                SelectedEnrollmentCount = 0;
+                CurrentEnrollmentPage = 1;
+
+                // Show the first page from the local masterlist immediately...
+                await QueryEnrollmentBeneficiariesAsync();
+
+                // ...then pull any beneficiaries missing locally in the background
+                // (fail-soft offline) and refresh the visible page if new rows landed.
+                // The masterlist mirrors the municipal registry. Task.Run keeps the
+                // CRS fetch + dedup scan off the UI thread.
+                var mirror = await Task.Run(() => new CrsMasterlistMirrorService().MirrorValidatedBeneficiariesAsync());
+                if (mirror.IsSuccess && mirror.AddedCount > 0)
+                {
+                    await QueryEnrollmentBeneficiariesAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                SetErrorStatus($"Unable to load approved beneficiaries: {ex.Message}");
+            }
+        }
+
+        private sealed record EnrollmentBeneficiaryRow(
+            int StagingID, string? BeneficiaryId, string? FullName, string? LastName, string? FirstName);
+
+        private static IQueryable<BeneficiaryStaging> BuildEnrollmentQuery(LocalDbContext context, string? search)
+        {
+            var query = context.BeneficiaryStaging
+                .AsNoTracking()
+                .Where(item => item.VerificationStatus == VerificationStatus.Approved);
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                query = query.Where(item =>
+                    (item.FullName != null && item.FullName.Contains(search)) ||
+                    (item.LastName != null && item.LastName.Contains(search)) ||
+                    (item.FirstName != null && item.FirstName.Contains(search)) ||
+                    (item.BeneficiaryId != null && item.BeneficiaryId.Contains(search)));
+            }
+
+            return query;
+        }
+
+        /// <summary>
+        /// Filters and pages DB-side: only the first <see cref="EnrollmentDisplayLimit"/> matches are
+        /// materialized so opening the panel stays instant even with the full municipal registry local.
+        /// </summary>
+        private async Task QueryEnrollmentBeneficiariesAsync()
+        {
+            var version = ++_enrollmentSearchVersion;
+            var search = EnrollmentSearchText?.Trim();
+            var page = Math.Max(1, _currentEnrollmentPage);
+
+            try
+            {
+                // SQLite executes "async" queries synchronously — run them on the
+                // thread pool so the UI never blocks while the registry is scanned.
+                var (totalCount, rows) = await Task.Run(async () =>
+                {
+                    await using var context = new LocalDbContext();
+                    var query = BuildEnrollmentQuery(context, search);
+
+                    var count = await query.CountAsync();
+                    var lastPage = Math.Max(1, (int)Math.Ceiling(count / (double)EnrollmentDisplayLimit));
+                    var boundedPage = Math.Min(page, lastPage);
+                    var pageRows = await query
+                        .OrderBy(item => item.FullName ?? item.LastName)
+                        .Skip((boundedPage - 1) * EnrollmentDisplayLimit)
+                        .Take(EnrollmentDisplayLimit)
+                        .Select(item => new EnrollmentBeneficiaryRow(
+                            item.StagingID,
+                            item.BeneficiaryId,
+                            item.FullName,
+                            item.LastName,
+                            item.FirstName))
+                        .ToListAsync();
+                    return (count, pageRows);
+                });
+
+                if (version != _enrollmentSearchVersion)
+                {
+                    return; // a newer search superseded this one
+                }
+
+                foreach (var stale in EnrollmentBeneficiaries)
+                {
+                    stale.PropertyChanged -= OnEnrollmentOptionPropertyChanged;
+                }
                 EnrollmentBeneficiaries.Clear();
                 FilteredEnrollmentBeneficiaries.Clear();
-                SelectedEnrollmentCount = 0;
 
-                await using var context = new LocalDbContext();
-                var beneficiaries = await context.BeneficiaryStaging
-                    .AsNoTracking()
-                    .Where(item => item.VerificationStatus == VerificationStatus.Approved)
-                    .OrderBy(item => item.FullName ?? item.LastName)
-                    .Select(item => new
-                    {
-                        item.StagingID,
-                        item.BeneficiaryId,
-                        item.FullName,
-                        item.LastName,
-                        item.FirstName
-                    })
-                    .ToListAsync();
-
-                foreach (var b in beneficiaries)
+                foreach (var b in rows)
                 {
                     var option = new EnrollmentBeneficiaryOption
                     {
@@ -1407,13 +1532,23 @@ namespace AttendanceShiftingManagement.ViewModels
                         BeneficiaryId = b.BeneficiaryId ?? string.Empty,
                         FullName = string.IsNullOrWhiteSpace(b.FullName)
                             ? $"{b.LastName}, {b.FirstName}".Trim(',', ' ')
-                            : b.FullName
+                            : b.FullName,
+                        IsSelected = _selectedEnrollmentStagingIds.Contains(b.StagingID)
                     };
                     option.PropertyChanged += OnEnrollmentOptionPropertyChanged;
                     EnrollmentBeneficiaries.Add(option);
+                    FilteredEnrollmentBeneficiaries.Add(option);
                 }
 
-                FilterEnrollmentBeneficiaries();
+                var lastPageForCount = Math.Max(1, (int)Math.Ceiling(totalCount / (double)EnrollmentDisplayLimit));
+                TotalEnrollmentPages = lastPageForCount;
+                CurrentEnrollmentPage = Math.Min(page, lastPageForCount);
+
+                EnrollmentResultSummary = totalCount > EnrollmentDisplayLimit
+                    ? $"{totalCount:N0} match{(totalCount == 1 ? "" : "es")} — page {CurrentEnrollmentPage:N0} of {TotalEnrollmentPages:N0}. Type a name or ID to narrow the list."
+                    : totalCount == 0
+                        ? "No approved beneficiaries match."
+                        : $"{totalCount:N0} beneficiar{(totalCount == 1 ? "y" : "ies")} shown.";
             }
             catch (Exception ex)
             {
@@ -1423,42 +1558,66 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private void OnEnrollmentOptionPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (e.PropertyName == nameof(EnrollmentBeneficiaryOption.IsSelected))
+            if (e.PropertyName == nameof(EnrollmentBeneficiaryOption.IsSelected) &&
+                sender is EnrollmentBeneficiaryOption option)
             {
-                UpdateSelectedEnrollmentCount();
-            }
-        }
-
-        private void FilterEnrollmentBeneficiaries()
-        {
-            FilteredEnrollmentBeneficiaries.Clear();
-            var search = EnrollmentSearchText?.Trim();
-
-            foreach (var option in EnrollmentBeneficiaries)
-            {
-                if (string.IsNullOrWhiteSpace(search) ||
-                    option.FullName.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                    option.BeneficiaryId.Contains(search, StringComparison.OrdinalIgnoreCase))
+                if (option.IsSelected)
                 {
-                    FilteredEnrollmentBeneficiaries.Add(option);
+                    _selectedEnrollmentStagingIds.Add(option.StagingId);
                 }
+                else
+                {
+                    _selectedEnrollmentStagingIds.Remove(option.StagingId);
+                }
+
+                SelectedEnrollmentCount = _selectedEnrollmentStagingIds.Count;
             }
         }
 
-        private void SelectAllFilteredEnrollment()
+        /// <summary>Selects every beneficiary matching the current search DB-side (ids only), not just the visible page.</summary>
+        private async Task SelectAllFilteredEnrollmentAsync()
         {
-            foreach (var option in FilteredEnrollmentBeneficiaries)
+            try
             {
-                option.IsSelected = true;
+                var search = EnrollmentSearchText?.Trim();
+                var ids = await Task.Run(async () =>
+                {
+                    await using var context = new LocalDbContext();
+                    return await BuildEnrollmentQuery(context, search)
+                        .Select(item => item.StagingID)
+                        .ToListAsync();
+                });
+
+                foreach (var id in ids)
+                {
+                    _selectedEnrollmentStagingIds.Add(id);
+                }
+
+                foreach (var option in EnrollmentBeneficiaries)
+                {
+                    if (_selectedEnrollmentStagingIds.Contains(option.StagingId))
+                    {
+                        option.IsSelected = true;
+                    }
+                }
+
+                SelectedEnrollmentCount = _selectedEnrollmentStagingIds.Count;
+            }
+            catch (Exception ex)
+            {
+                SetErrorStatus($"Unable to select beneficiaries: {ex.Message}");
             }
         }
 
         private void DeselectAllEnrollment()
         {
+            _selectedEnrollmentStagingIds.Clear();
             foreach (var option in EnrollmentBeneficiaries)
             {
                 option.IsSelected = false;
             }
+
+            SelectedEnrollmentCount = 0;
         }
 
         private void ClearEnrollmentSelection()
@@ -1469,13 +1628,13 @@ namespace AttendanceShiftingManagement.ViewModels
             }
             EnrollmentBeneficiaries.Clear();
             FilteredEnrollmentBeneficiaries.Clear();
-            EnrollmentSearchText = string.Empty;
+            _selectedEnrollmentStagingIds.Clear();
+            _enrollmentSearchText = string.Empty;
+            OnPropertyChanged(nameof(EnrollmentSearchText));
+            EnrollmentResultSummary = string.Empty;
+            CurrentEnrollmentPage = 1;
+            TotalEnrollmentPages = 1;
             SelectedEnrollmentCount = 0;
-        }
-
-        private void UpdateSelectedEnrollmentCount()
-        {
-            SelectedEnrollmentCount = EnrollmentBeneficiaries.Count(option => option.IsSelected);
         }
 
         private async Task LoadAsync()

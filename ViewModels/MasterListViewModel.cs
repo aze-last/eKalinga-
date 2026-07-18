@@ -1864,6 +1864,22 @@ namespace AttendanceShiftingManagement.ViewModels
 
         internal async Task RefreshAsync(CancellationToken cancellationToken = default)
         {
+            // CRS is the source of truth — pull any registry beneficiaries missing
+            // locally before reloading the pages (fail-soft when offline). Task.Run
+            // keeps the CRS fetch + dedup scan off the UI thread.
+            try
+            {
+                await Task.Run(() => new CrsMasterlistMirrorService().MirrorValidatedBeneficiariesAsync(cancellationToken), cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch
+            {
+                // Local masterlist keeps serving.
+            }
+
             await Task.WhenAll(
                 LoadPendingPageAsync(1, cancellationToken),
                 LoadApprovedPageAsync(1, cancellationToken)

@@ -138,6 +138,132 @@ namespace AttendanceShiftingManagement.Services
             return value.Length <= maxLength ? value : value[..maxLength];
         }
 
+        public async Task<IReadOnlyList<CrsValBeneficiaryRow>> GetAllValidatedBeneficiariesAsync(CancellationToken cancellationToken)
+        {
+            await using var connection = new MySqlConnection(_connectionProvider.GetConnectionString());
+            await connection.OpenAsync(cancellationToken);
+
+            // READ only — same column set the staging import uses. Per the CRS schema-drift
+            // notice, `age` is never selected (removed post-migration); it is computed from
+            // date_of_birth instead.
+            await using var command = new MySqlCommand(@"
+                SELECT residents_id, beneficiary_id, civilregistry_id, last_name, first_name,
+                       middle_name, full_name, sex, date_of_birth, marital_status, address,
+                       is_pwd, pwd_id_no, disability_type, cause_of_disability, is_senior, senior_id_no
+                FROM val_beneficiaries
+                WHERE IsDeleted = 0;", connection);
+
+            var rows = new List<CrsValBeneficiaryRow>();
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                var dateOfBirth = ReadNullableString(reader, 8);
+                rows.Add(new CrsValBeneficiaryRow(
+                    reader.IsDBNull(0) ? null : Convert.ToInt64(reader.GetValue(0)),
+                    ReadNullableString(reader, 1),
+                    ReadNullableString(reader, 2),
+                    ReadNullableString(reader, 3),
+                    ReadNullableString(reader, 4),
+                    ReadNullableString(reader, 5),
+                    ReadNullableString(reader, 6),
+                    ReadNullableString(reader, 7),
+                    dateOfBirth,
+                    CrsAgeCalculator.CalculateAgeText(dateOfBirth),
+                    ReadNullableString(reader, 9),
+                    ReadNullableString(reader, 10),
+                    ReadBoolean(reader, 11),
+                    ReadNullableString(reader, 12),
+                    ReadNullableString(reader, 13),
+                    ReadNullableString(reader, 14),
+                    ReadBoolean(reader, 15),
+                    ReadNullableString(reader, 16)));
+            }
+
+            return rows;
+        }
+
+        public async Task<IReadOnlyList<CrsDigitalIdListRow>> GetAllLatestDigitalIdRowsAsync(CancellationToken cancellationToken)
+        {
+            await using var connection = new MySqlConnection(_connectionProvider.GetConnectionString());
+            await connection.OpenAsync(cancellationToken);
+
+            // READ only — most-recent row per beneficiary (contract rule: never a
+            // status-equals-Active filter; ordering mirrors the single-row lookup).
+            await using var command = new MySqlCommand(@"
+                SELECT d.beneficiary_id, d.id_number, d.status, d.issued_date, d.expiry_date, d.revoked_at, d.revocation_reason
+                FROM digital_ids d
+                INNER JOIN (
+                    SELECT beneficiary_id, MAX(issued_date) AS latest_issued
+                    FROM digital_ids
+                    WHERE IsDeleted = 0
+                    GROUP BY beneficiary_id
+                ) latest ON latest.beneficiary_id = d.beneficiary_id AND latest.latest_issued = d.issued_date
+                WHERE d.IsDeleted = 0;", connection);
+
+            var rows = new List<CrsDigitalIdListRow>();
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                var beneficiaryId = reader.IsDBNull(0) ? string.Empty : reader.GetString(0);
+                if (string.IsNullOrWhiteSpace(beneficiaryId) || !seen.Add(beneficiaryId))
+                {
+                    // Ties on issued_date could return duplicates — keep the first.
+                    continue;
+                }
+
+                rows.Add(new CrsDigitalIdListRow(
+                    beneficiaryId,
+                    reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
+                    reader.IsDBNull(2) ? string.Empty : reader.GetString(2),
+                    reader.IsDBNull(3) ? null : ReadDateTime(reader, 3),
+                    reader.IsDBNull(4) ? null : ReadDateTime(reader, 4),
+                    reader.IsDBNull(5) ? null : ReadDateTime(reader, 5),
+                    reader.IsDBNull(6) ? null : reader.GetString(6)));
+            }
+
+            return rows;
+        }
+
+        private static string? ReadNullableString(MySqlDataReader reader, int ordinal)
+        {
+            if (reader.IsDBNull(ordinal))
+            {
+                return null;
+            }
+
+            var value = reader.GetValue(ordinal);
+            if (value is MySqlDateTime mySqlDateTime)
+            {
+                return mySqlDateTime.IsValidDateTime
+                    ? mySqlDateTime.GetDateTime().ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)
+                    : null;
+            }
+
+            if (value is DateTime dateTime)
+            {
+                return dateTime.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
+            }
+
+            return Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture);
+        }
+
+        private static bool ReadBoolean(MySqlDataReader reader, int ordinal)
+        {
+            if (reader.IsDBNull(ordinal))
+            {
+                return false;
+            }
+
+            var value = reader.GetValue(ordinal);
+            return value switch
+            {
+                bool booleanValue => booleanValue,
+                string stringValue => stringValue.Equals("true", StringComparison.OrdinalIgnoreCase) || stringValue == "1",
+                _ => Convert.ToInt64(value, System.Globalization.CultureInfo.InvariantCulture) != 0
+            };
+        }
+
         public async Task<CrsSchemaProbeResult> ProbeSchemaAsync(CancellationToken cancellationToken)
         {
             try

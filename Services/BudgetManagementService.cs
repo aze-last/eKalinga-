@@ -783,6 +783,14 @@ namespace AttendanceShiftingManagement.Services
 
                 governmentPortion = request.TotalAmount;
             }
+            else if (ayudaProgram?.SourceProjectDetailsId != null)
+            {
+                // GGMS-linked projects spend their own earmarked envelope: BudgetCap equals the
+                // GGMS project budget and GetOverviewAsync already subtracts that envelope from
+                // the government pool, so the general-pool check below must not apply — the
+                // budget-cap check after this block enforces the envelope instead.
+                governmentPortion = request.TotalAmount;
+            }
             else
             {
                 var overview = await GetOverviewAsync();

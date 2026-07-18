@@ -166,6 +166,7 @@
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="16" />
                             <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
 
                         <TextBox Grid.Row="0"
@@ -234,6 +235,26 @@
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
                         </ListBox>
+
+                        <!-- Registry pager: each page shows up to 200 approved beneficiaries -->
+                        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,8,0,0">
+                            <Button Style="{StaticResource MaterialDesignIconButton}" Width="32" Height="32"
+                                    Command="{Binding PrevAddPanelPageCommand}"
+                                    Foreground="{DynamicResource ThemePrimaryActionBrush}">
+                                <materialDesign:PackIcon Kind="ChevronLeft"/>
+                            </Button>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0">
+                                <TextBlock Text="Page " FontSize="12" Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
+                                <TextBlock Text="{Binding AddPanelCurrentPage}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource ThemePrimaryActionBrush}"/>
+                                <TextBlock Text=" of " FontSize="12" Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
+                                <TextBlock Text="{Binding AddPanelTotalPages}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource ThemePrimaryActionBrush}"/>
+                            </StackPanel>
+                            <Button Style="{StaticResource MaterialDesignIconButton}" Width="32" Height="32"
+                                    Command="{Binding NextAddPanelPageCommand}"
+                                    Foreground="{DynamicResource ThemePrimaryActionBrush}">
+                                <materialDesign:PackIcon Kind="ChevronRight"/>
+                            </Button>
+                        </StackPanel>
                     </Grid>
 
                     <!-- Right: Membership Card Preview -->

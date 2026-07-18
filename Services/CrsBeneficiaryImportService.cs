@@ -58,7 +58,6 @@ namespace AttendanceShiftingManagement.Services
                         `full_name`,
                         `sex`,
                         `date_of_birth`,
-                        `age`,
                         `marital_status`,
                         `address`,
                         `is_pwd`,
@@ -155,7 +154,9 @@ namespace AttendanceShiftingManagement.Services
                         FullName = fullName,
                         Sex = GetNullableString(reader, "sex"),
                         DateOfBirth = dateOfBirth,
-                        Age = GetNullableString(reader, "age"),
+                        // age is no longer selected from CRS (column removed post-migration);
+                        // derive it from the safe-parsed birth date instead.
+                        Age = CrsAgeCalculator.CalculateAgeText(dateOfBirth),
                         MaritalStatus = GetNullableString(reader, "marital_status"),
                         Address = GetNullableString(reader, "address"),
                         IsPwd = GetBoolean(reader, "is_pwd"),

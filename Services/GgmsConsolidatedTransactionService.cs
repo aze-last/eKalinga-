@@ -52,11 +52,11 @@ namespace AttendanceShiftingManagement.Services
         private static readonly DatabaseConnectionPreset DefaultConnection = new()
         {
             DisplayName = "GGMS Consolidated Transactions",
-            Server = "194.59.164.58",
+            Server = "193.203.175.157",
             Port = 3306,
-            Database = "u621755393_ggms",
-            Username = "u621755393_ggms_user",
-            Password = "Ggms@2026"
+            Database = "u518908950_ggms",
+            Username = "u518908950_ggms",
+            Password = "Sulop@2025"
         };
 
         private readonly DatabaseConnectionPreset _ggmsConnection;
@@ -149,10 +149,14 @@ namespace AttendanceShiftingManagement.Services
                     assistanceCase.ValidatedBeneficiaryName,
                     $"AMS-{assistanceCase.CaseNumber}");
 
+                var program = assistanceCase.AyudaProgram
+                    ?? await ResolveProgramAsync(context, assistanceCase.AyudaProgramId);
+
                 var entry = new GgmsConsolidatedTransactionEntry(
                     beneficiary.BeneficiaryId,
                     beneficiary.CivilRegistryId,
-                    NormalizeAndLimit($"AMS-{assistanceCase.CaseNumber}", SharedColumnMaxLength),
+                    BuildProjectCode(program, $"AMS-{assistanceCase.CaseNumber}"),
+                    NormalizeAndLimit(program?.SourceProjectDetailsId, SharedColumnMaxLength),
                     AidRequestProjectName,
                     _officeId,
                     beneficiary.FullName,
@@ -163,7 +167,9 @@ namespace AttendanceShiftingManagement.Services
                     NormalizeAndLimit(assistanceCase.AssistanceType, SharedColumnMaxLength) ?? "Aid Request",
                     assistanceCase.ApprovedAmount,
                     assistanceCase.UpdatedAt.Date,
-                    "Released");
+                    "Released",
+                    beneficiary.Barangay,
+                    beneficiary.HouseholdNo);
 
                 return await TryInsertEntriesAsync([entry]);
             }
@@ -194,10 +200,13 @@ namespace AttendanceShiftingManagement.Services
                         ?? "Project Claim",
                     SharedColumnMaxLength);
 
+                // Two-tier project identity: project_code is always the stable AMS project code;
+                // project_details_id carries the GGMS mapping (OPP-...) only when the program is linked.
                 var entry = new GgmsConsolidatedTransactionEntry(
                     beneficiary.BeneficiaryId,
                     beneficiary.CivilRegistryId,
-                    NormalizeAndLimit($"AMS-PD-{claim.Id:D6}", SharedColumnMaxLength),
+                    BuildProjectCode(program, $"AMS-PD-{claim.Id:D6}"),
+                    NormalizeAndLimit(program?.SourceProjectDetailsId, SharedColumnMaxLength),
                     ProjectDistributionProjectName,
                     _officeId,
                     beneficiary.FullName,
@@ -208,7 +217,9 @@ namespace AttendanceShiftingManagement.Services
                     transactionType ?? "Project Claim",
                     claim.UnitAmountSnapshot,
                     claim.ClaimedAt.Date,
-                    "Released");
+                    "Released",
+                    beneficiary.Barangay,
+                    beneficiary.HouseholdNo);
 
                 return await TryInsertEntriesAsync([entry]);
             }
@@ -244,10 +255,12 @@ namespace AttendanceShiftingManagement.Services
                             ?? "Project Claim",
                         SharedColumnMaxLength);
 
+                    // Same two-tier identity rule as the single-claim write above.
                     entries.Add(new GgmsConsolidatedTransactionEntry(
                         beneficiary.BeneficiaryId,
                         beneficiary.CivilRegistryId,
-                        NormalizeAndLimit($"AMS-PD-{claim.Id:D6}", SharedColumnMaxLength),
+                        BuildProjectCode(program, $"AMS-PD-{claim.Id:D6}"),
+                        NormalizeAndLimit(program?.SourceProjectDetailsId, SharedColumnMaxLength),
                         ProjectDistributionProjectName,
                         _officeId,
                         beneficiary.FullName,
@@ -258,7 +271,9 @@ namespace AttendanceShiftingManagement.Services
                         transactionType ?? "Project Claim",
                         claim.UnitAmountSnapshot,
                         claim.ClaimedAt.Date,
-                        "Released"));
+                        "Released",
+                        beneficiary.Barangay,
+                        beneficiary.HouseholdNo));
                 }
 
                 return await TryInsertEntriesAsync(entries);
@@ -306,6 +321,12 @@ namespace AttendanceShiftingManagement.Services
                     SharedColumnMaxLength) ?? "Cash-for-Work Payout";
                 var releaseDate = (cashForWorkEvent.ReleasedAt ?? DateTime.Now).Date;
 
+                // One stable project_code per CFW event (the project/batch), not per participant.
+                var cfwProgram = cashForWorkEvent.AyudaProgram
+                    ?? await ResolveProgramAsync(context, cashForWorkEvent.AyudaProgramId);
+                var projectCode = BuildProjectCode(cfwProgram, $"AMS-CFW-{cashForWorkEvent.Id:D6}");
+                var projectDetailsId = NormalizeAndLimit(cfwProgram?.SourceProjectDetailsId, SharedColumnMaxLength);
+
                 var entries = new List<GgmsConsolidatedTransactionEntry>();
                 foreach (var participant in participants)
                 {
@@ -321,7 +342,8 @@ namespace AttendanceShiftingManagement.Services
                     entries.Add(new GgmsConsolidatedTransactionEntry(
                         beneficiary.BeneficiaryId,
                         beneficiary.CivilRegistryId,
-                        NormalizeAndLimit($"AMS-{cashForWorkEvent.Id:D6}-{participant.Id:D6}", SharedColumnMaxLength),
+                        projectCode,
+                        projectDetailsId,
                         CashForWorkProjectName,
                         _officeId,
                         beneficiary.FullName,
@@ -332,7 +354,9 @@ namespace AttendanceShiftingManagement.Services
                         transactionType,
                         perParticipantAmount,
                         releaseDate,
-                        "Released"));
+                        "Released",
+                        beneficiary.Barangay,
+                        beneficiary.HouseholdNo));
                 }
 
                 return await TryInsertEntriesAsync(entries);
@@ -372,19 +396,20 @@ namespace AttendanceShiftingManagement.Services
                 await using var connection = new MySqlConnection(ConnectionSettingsService.BuildConnectionString(_ggmsConnection));
                 await connection.OpenAsync();
                 await using var transaction = await connection.BeginTransactionAsync();
-                var hasProjectNameColumn = await HasProjectNameColumnAsync(connection, transaction);
+                var optionalColumns = await GetOptionalColumnsAsync(connection, transaction);
 
                 foreach (var entry in entries)
                 {
                     await using var command = new MySqlCommand(
-                        BuildInsertCommandText(hasProjectNameColumn),
+                        BuildInsertCommandText(optionalColumns),
                         connection,
                         transaction);
 
                     command.Parameters.AddWithValue("@beneficiary_id", ToDbValue(entry.BeneficiaryId));
                     command.Parameters.AddWithValue("@civil_registry_id", ToDbValue(entry.CivilRegistryId));
                     command.Parameters.AddWithValue("@project_code", ToDbValue(entry.ProjectCode));
-                    if (hasProjectNameColumn) command.Parameters.AddWithValue("@project_name", ToDbValue(entry.ProjectName));
+                    if (optionalColumns.Contains("project_details_id")) command.Parameters.AddWithValue("@project_details_id", ToDbValue(entry.ProjectDetailsId));
+                    if (optionalColumns.Contains("project_name")) command.Parameters.AddWithValue("@project_name", ToDbValue(entry.ProjectName));
                     command.Parameters.AddWithValue("@office_id", ToDbValue(entry.OfficeId));
                     command.Parameters.AddWithValue("@full_name", ToDbValue(entry.FullName));
                     command.Parameters.AddWithValue("@first_name", ToDbValue(entry.FirstName));
@@ -395,6 +420,8 @@ namespace AttendanceShiftingManagement.Services
                     command.Parameters.AddWithValue("@amount", entry.Amount.HasValue ? entry.Amount.Value : DBNull.Value);
                     command.Parameters.AddWithValue("@transaction_date", entry.TransactionDate.Date);
                     command.Parameters.AddWithValue("@status", ToDbValue(entry.Status));
+                    if (optionalColumns.Contains("barangay")) command.Parameters.AddWithValue("@barangay", ToDbValue(entry.Barangay));
+                    if (optionalColumns.Contains("household_no")) command.Parameters.AddWithValue("@household_no", ToDbValue(entry.HouseholdNo));
 
                     await command.ExecuteNonQueryAsync();
                 }
@@ -443,52 +470,75 @@ namespace AttendanceShiftingManagement.Services
             }
         }
 
-        private string BuildInsertCommandText(bool includeProjectNameColumn)
+        // Optional columns are probed at write time so the INSERT degrades gracefully on older GGMS schemas.
+        private string BuildInsertCommandText(IReadOnlySet<string> optionalColumns)
         {
-            return includeProjectNameColumn
-                ? $"""
+            var columns = new List<string> { "beneficiary_id", "civil_registry_id", "project_code" };
+            if (optionalColumns.Contains("project_details_id")) columns.Add("project_details_id");
+            if (optionalColumns.Contains("project_name")) columns.Add("project_name");
+            columns.AddRange(["office_id", "full_name", "first_name", "middle_name", "last_name",
+                "office_name", "transaction_type", "amount", "transaction_date", "status"]);
+            if (optionalColumns.Contains("barangay")) columns.Add("barangay");
+            if (optionalColumns.Contains("household_no")) columns.Add("household_no");
+
+            return $"""
                 INSERT INTO `{_tableName}`
-                (beneficiary_id, civil_registry_id, project_code, project_name, office_id,
-                 full_name, first_name, middle_name, last_name,
-                 office_name, transaction_type, amount, transaction_date, status)
+                ({string.Join(", ", columns)})
                 VALUES
-                (@beneficiary_id, @civil_registry_id, @project_code, @project_name, @office_id,
-                 @full_name, @first_name, @middle_name, @last_name,
-                 @office_name, @transaction_type, @amount, @transaction_date, @status);
-                """
-                : $"""
-                INSERT INTO `{_tableName}`
-                (beneficiary_id, civil_registry_id, project_code, office_id,
-                 full_name, first_name, middle_name, last_name,
-                 office_name, transaction_type, amount, transaction_date, status)
-                VALUES
-                (@beneficiary_id, @civil_registry_id, @project_code, @office_id,
-                 @full_name, @first_name, @middle_name, @last_name,
-                 @office_name, @transaction_type, @amount, @transaction_date, @status);
+                ({string.Join(", ", columns.Select(column => "@" + column))});
                 """;
         }
 
-        private async Task<bool> HasProjectNameColumnAsync(MySqlConnection connection, MySqlTransaction transaction)
+        private async Task<IReadOnlySet<string>> GetOptionalColumnsAsync(MySqlConnection connection, MySqlTransaction transaction)
         {
+            var present = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             try
             {
                 await using var command = new MySqlCommand(
                     $"""
-                    SELECT COUNT(*)
+                    SELECT COLUMN_NAME
                     FROM information_schema.COLUMNS
                     WHERE TABLE_SCHEMA = DATABASE()
                       AND TABLE_NAME = '{_tableName}'
-                      AND COLUMN_NAME = 'project_name';
+                      AND COLUMN_NAME IN ('project_details_id', 'project_name', 'barangay', 'household_no');
                     """,
                     connection,
                     transaction);
 
-                return Convert.ToInt32(await command.ExecuteScalarAsync()) > 0;
+                await using var reader = await command.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    present.Add(reader.GetString(0));
+                }
             }
             catch
             {
-                return false;
+                // Probe failure → insert only the always-present columns.
+                present.Clear();
             }
+
+            return present;
+        }
+
+        /// <summary>
+        /// project_code per the two-tier identity standard: one stable AMS-prefixed code per
+        /// project (AMS-{programId:D6}), reused on every transaction released against it.
+        /// The GGMS mapping never replaces it — that goes in project_details_id. Releases with
+        /// no program fall back to the per-release reference so the row stays identifiable.
+        /// </summary>
+        private static string? BuildProjectCode(AyudaProgram? program, string fallbackReference)
+        {
+            return program != null
+                ? NormalizeAndLimit($"AMS-{program.Id:D6}", SharedColumnMaxLength)
+                : NormalizeAndLimit(fallbackReference, SharedColumnMaxLength);
+        }
+
+        private static async Task<AyudaProgram?> ResolveProgramAsync(LocalDbContext context, int? programId)
+        {
+            if (!programId.HasValue) return null;
+            return await context.AyudaPrograms
+                .AsNoTracking()
+                .FirstOrDefaultAsync(item => item.Id == programId.Value);
         }
 
         private static async Task<GgmsBeneficiaryIdentity> ResolveBeneficiaryAsync(
@@ -577,13 +627,41 @@ namespace AttendanceShiftingManagement.Services
                 ?? string.Join(" ", new[] { firstName, middleName, lastName }
                     .Where(value => !string.IsNullOrWhiteSpace(value)));
 
+            var resolvedBeneficiaryId = NormalizeAndLimit(beneficiaryId, SharedColumnMaxLength)
+                ?? NormalizeAndLimit(uniqueFallbackBeneficiaryId, SharedColumnMaxLength)!;
+
             return new GgmsBeneficiaryIdentity(
-                NormalizeAndLimit(beneficiaryId, SharedColumnMaxLength) ?? NormalizeAndLimit(uniqueFallbackBeneficiaryId, SharedColumnMaxLength)!,
+                resolvedBeneficiaryId,
                 NormalizeAndLimit(beneficiary?.CivilRegistryId ?? fallbackCivilRegistryId, SharedColumnMaxLength),
                 NormalizeAndLimit(resolvedFullName, SharedColumnMaxLength),
                 NormalizeAndLimit(firstName, SharedColumnMaxLength),
                 NormalizeAndLimit(middleName, SharedColumnMaxLength),
-                NormalizeAndLimit(lastName, SharedColumnMaxLength));
+                NormalizeAndLimit(lastName, SharedColumnMaxLength),
+                NormalizeAndLimit(ParseBarangayFromAddress(beneficiary?.Address), SharedColumnMaxLength),
+                NormalizeAndLimit(GetHouseholdNo(resolvedBeneficiaryId), SharedColumnMaxLength));
+        }
+
+        /// <summary>
+        /// household_no per the consolidated_transactions standard: third segment of the CRS
+        /// beneficiary id (BEN-{year}-{household}-{line}). Non-CRS ids yield null, not "".
+        /// </summary>
+        internal static string? GetHouseholdNo(string? beneficiaryId)
+        {
+            if (string.IsNullOrWhiteSpace(beneficiaryId)) return null;
+            if (!beneficiaryId.StartsWith("BEN-", StringComparison.OrdinalIgnoreCase)) return null;
+            var parts = beneficiaryId.Split('-');
+            return parts.Length >= 4 && !string.IsNullOrWhiteSpace(parts[2]) ? parts[2] : null;
+        }
+
+        /// <summary>
+        /// barangay from the locally mirrored CRS address ("Purok-06, Balasinon, Sulop, ...") —
+        /// second comma segment. Derived from the local cache only, never a live CRS query.
+        /// </summary>
+        internal static string? ParseBarangayFromAddress(string? address)
+        {
+            if (string.IsNullOrWhiteSpace(address)) return null;
+            var parts = address.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            return parts.Length >= 2 ? parts[1] : null;
         }
 
         private static (string? FirstName, string? MiddleName, string? LastName) ParseNameParts(string fullName)
@@ -640,6 +718,7 @@ namespace AttendanceShiftingManagement.Services
             string? BeneficiaryId,
             string? CivilRegistryId,
             string? ProjectCode,
+            string? ProjectDetailsId,
             string? ProjectName,
             string? OfficeId,
             string? FullName,
@@ -650,7 +729,9 @@ namespace AttendanceShiftingManagement.Services
             string? TransactionType,
             decimal? Amount,
             DateTime TransactionDate,
-            string Status);
+            string Status,
+            string? Barangay,
+            string? HouseholdNo);
 
         private sealed record GgmsBeneficiaryIdentity(
             string BeneficiaryId,
@@ -658,6 +739,8 @@ namespace AttendanceShiftingManagement.Services
             string? FullName,
             string? FirstName,
             string? MiddleName,
-            string? LastName);
+            string? LastName,
+            string? Barangay,
+            string? HouseholdNo);
     }
 }

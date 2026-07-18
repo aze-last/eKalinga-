@@ -590,7 +590,6 @@
                         <StackPanel Grid.Row="1" Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,15,0,0">
                             <Button Style="{StaticResource MaterialDesignIconButton}" 
                                     Command="{Binding PreviousLedgerPageCommand}"
-                                    IsEnabled="{Binding PreviousLedgerPageCommand.CanExecute}"
                                     Foreground="{StaticResource PrimaryBrandBrush}">
                                 <materialDesign:PackIcon Kind="ChevronLeft"/>
                             </Button>
@@ -607,7 +606,6 @@
 
                             <Button Style="{StaticResource MaterialDesignIconButton}" 
                                     Command="{Binding NextLedgerPageCommand}"
-                                    IsEnabled="{Binding NextLedgerPageCommand.CanExecute}"
                                     Foreground="{StaticResource PrimaryBrandBrush}">
                                 <materialDesign:PackIcon Kind="ChevronRight"/>
                             </Button>
@@ -889,9 +887,30 @@
                                              Text="{Binding EnrollmentSearchText, UpdateSourceTrigger=PropertyChanged}"
                                              Margin="0,10,0,10"/>
 
-                                    <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,10">
-                                        <Button Content="SELECT ALL FILTERED" Command="{Binding SelectAllFilteredEnrollmentCommand}" Style="{StaticResource MaterialDesignOutlinedButton}" Height="30" FontSize="10" BorderBrush="{StaticResource PrimaryBrandBrush}" Foreground="{StaticResource PrimaryBrandBrush}" Margin="0,0,8,0"/>
-                                        <Button Content="DESELECT ALL" Command="{Binding DeselectAllEnrollmentCommand}" Style="{StaticResource MaterialDesignOutlinedButton}" Height="30" FontSize="10" BorderBrush="#64748B" Foreground="#64748B"/>
+                                    <StackPanel Grid.Row="2" Margin="0,0,0,10">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Button Content="SELECT ALL FILTERED" Command="{Binding SelectAllFilteredEnrollmentCommand}" Style="{StaticResource MaterialDesignOutlinedButton}" Height="30" FontSize="10" BorderBrush="{StaticResource PrimaryBrandBrush}" Foreground="{StaticResource PrimaryBrandBrush}" Margin="0,0,8,0"/>
+                                            <Button Content="DESELECT ALL" Command="{Binding DeselectAllEnrollmentCommand}" Style="{StaticResource MaterialDesignOutlinedButton}" Height="30" FontSize="10" BorderBrush="#64748B" Foreground="#64748B"/>
+                                        </StackPanel>
+                                        <TextBlock Text="{Binding EnrollmentResultSummary}" FontSize="11" Foreground="#64748B" Margin="0,6,0,0" TextWrapping="Wrap"/>
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,4,0,0">
+                                            <Button Style="{StaticResource MaterialDesignIconButton}" Width="28" Height="28"
+                                                    Command="{Binding PreviousEnrollmentPageCommand}"
+                                                    Foreground="{StaticResource PrimaryBrandBrush}">
+                                                <materialDesign:PackIcon Kind="ChevronLeft"/>
+                                            </Button>
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0">
+                                                <TextBlock Text="Page " FontSize="11" Foreground="#64748B"/>
+                                                <TextBlock Text="{Binding CurrentEnrollmentPage}" FontSize="11" FontWeight="Bold" Foreground="{StaticResource PrimaryBrandBrush}"/>
+                                                <TextBlock Text=" of " FontSize="11" Foreground="#64748B"/>
+                                                <TextBlock Text="{Binding TotalEnrollmentPages}" FontSize="11" FontWeight="Bold" Foreground="{StaticResource PrimaryBrandBrush}"/>
+                                            </StackPanel>
+                                            <Button Style="{StaticResource MaterialDesignIconButton}" Width="28" Height="28"
+                                                    Command="{Binding NextEnrollmentPageCommand}"
+                                                    Foreground="{StaticResource PrimaryBrandBrush}">
+                                                <materialDesign:PackIcon Kind="ChevronRight"/>
+                                            </Button>
+                                        </StackPanel>
                                     </StackPanel>
 
                                     <ListBox Grid.Row="3" ItemsSource="{Binding FilteredEnrollmentBeneficiaries}"

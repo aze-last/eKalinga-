@@ -33,6 +33,29 @@ namespace AttendanceShiftingManagement.Services
                 {
                     // Fail-safe for background threads
                 }
+
+                try
+                {
+                    // CRS is the source of truth for the masterlist — mirror any
+                    // beneficiaries it holds that are missing locally (fail-soft
+                    // when offline; local data keeps serving).
+                    await new CrsMasterlistMirrorService().MirrorValidatedBeneficiariesAsync();
+                }
+                catch
+                {
+                    // Fail-safe for background threads
+                }
+
+                try
+                {
+                    // Pre-warm the e-Kard digital ID cache so verification works
+                    // offline for every cardholder, not just previously scanned ones.
+                    await new CrsDigitalIdCacheSyncService().SyncAsync();
+                }
+                catch
+                {
+                    // Fail-safe for background threads
+                }
             });
         }
 

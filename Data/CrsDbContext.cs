@@ -14,7 +14,7 @@ namespace AttendanceShiftingManagement.Data
         public long Id { get; set; }
 
         [Column("residents_id")]
-        public long ResidentsId { get; set; }
+        public long? ResidentsId { get; set; }
 
         [Column("beneficiary_id")]
         public string BeneficiaryId { get; set; } = string.Empty;
@@ -43,8 +43,12 @@ namespace AttendanceShiftingManagement.Data
         [Column("date_of_birth")]
         public string? DateOfBirth { get; set; }
 
-        [Column("age")]
-        public string? Age { get; set; }
+        /// <summary>
+        /// Per the CRS schema-drift notice the age column must not be read (removed/type-drifted
+        /// post-migration); age is derived from the safe-parsed birth date instead.
+        /// </summary>
+        [NotMapped]
+        public string? Age => CrsAgeCalculator.CalculateAgeText(DateOfBirth);
 
         [Column("marital_status")]
         public string? MaritalStatus { get; set; }

@@ -60,6 +60,16 @@ namespace AttendanceShiftingManagement.Tests
             {
                 return Task.FromResult(new CrsSchemaProbeResult(true, null));
             }
+
+            public Task<IReadOnlyList<CrsValBeneficiaryRow>> GetAllValidatedBeneficiariesAsync(CancellationToken cancellationToken)
+            {
+                return Task.FromResult<IReadOnlyList<CrsValBeneficiaryRow>>(Array.Empty<CrsValBeneficiaryRow>());
+            }
+
+            public Task<IReadOnlyList<CrsDigitalIdListRow>> GetAllLatestDigitalIdRowsAsync(CancellationToken cancellationToken)
+            {
+                return Task.FromResult<IReadOnlyList<CrsDigitalIdListRow>>(Array.Empty<CrsDigitalIdListRow>());
+            }
         }
 
         private class PassthroughResiliencyPolicy : ICrsResiliencyPolicy

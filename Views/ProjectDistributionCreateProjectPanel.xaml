@@ -210,6 +210,7 @@
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="*" />
+                                        <RowDefinition Height="Auto" />
                                     </Grid.RowDefinitions>
                                     <Border Background="{DynamicResource ThemeCardSubtleBrush}" Padding="12,8" CornerRadius="12,12,0,0">
                                         <TextBlock Text="AVAILABLE REGISTRY" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center"/>
@@ -230,8 +231,8 @@
                                                         <TextBlock Text="{Binding FullName}" FontWeight="Bold" FontSize="13"/>
                                                         <TextBlock Text="{Binding BeneficiaryId}" FontSize="11" Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
                                                     </StackPanel>
-                                                    <Button Grid.Column="1" Content="+" 
-                                                            Style="{StaticResource MaterialDesignIconButton}" 
+                                                    <Button Grid.Column="1" Content="+"
+                                                            Style="{StaticResource MaterialDesignIconButton}"
                                                             Width="28" Height="28"
                                                             Command="{Binding DataContext.MoveToSelectedCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                             CommandParameter="{Binding}"/>
@@ -239,6 +240,25 @@
                                             </DataTemplate>
                                         </ListBox.ItemTemplate>
                                     </ListBox>
+                                    <!-- Registry pager: each page shows up to 200 approved beneficiaries -->
+                                    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,6">
+                                        <Button Style="{StaticResource MaterialDesignIconButton}" Width="28" Height="28"
+                                                Command="{Binding PrevUnpickedPageCommand}"
+                                                Foreground="{DynamicResource ThemePrimaryActionBrush}">
+                                            <materialDesign:PackIcon Kind="ChevronLeft"/>
+                                        </Button>
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0">
+                                            <TextBlock Text="Page " FontSize="11" Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
+                                            <TextBlock Text="{Binding UnpickedCurrentPage}" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource ThemePrimaryActionBrush}"/>
+                                            <TextBlock Text=" of " FontSize="11" Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
+                                            <TextBlock Text="{Binding UnpickedTotalPages}" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource ThemePrimaryActionBrush}"/>
+                                        </StackPanel>
+                                        <Button Style="{StaticResource MaterialDesignIconButton}" Width="28" Height="28"
+                                                Command="{Binding NextUnpickedPageCommand}"
+                                                Foreground="{DynamicResource ThemePrimaryActionBrush}">
+                                            <materialDesign:PackIcon Kind="ChevronRight"/>
+                                        </Button>
+                                    </StackPanel>
                                 </Grid>
                             </Border>
 
