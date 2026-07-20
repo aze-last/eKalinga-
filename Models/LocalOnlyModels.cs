@@ -238,6 +238,37 @@ namespace AttendanceShiftingManagement.Models
     }
 
     /// <summary>
+    /// Local-only cache of e-Kard CRS demographic_characteristics rows (marital
+    /// status, ethnicity, tribe), keyed by demographic_characteristics.id and
+    /// refreshed by the masterlist mirror. READ only from CRS; the profile_picture
+    /// blob is excluded — photos live in crs_photo_cache.
+    /// </summary>
+    [Table("crs_demographics_cache")]
+    public class CrsDemographicsCache
+    {
+        [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.None)]
+        public long DemographicCharacteristicId { get; set; }
+
+        [MaxLength(60)]
+        public string BeneficiaryId { get; set; } = string.Empty;
+
+        [MaxLength(100)]
+        public string? MaritalStatus { get; set; }
+
+        [MaxLength(120)]
+        public string? Ethnicity { get; set; }
+
+        [MaxLength(120)]
+        public string? Tribe { get; set; }
+
+        [MaxLength(60)]
+        public string? SourceUpdatedAt { get; set; }
+
+        public DateTime SyncedAt { get; set; } = DateTime.Now;
+    }
+
+    /// <summary>
     /// Local queue for CRS record_access_logs verification-audit rows that failed
     /// to write because the CRS database was offline. Contract rule: never block a
     /// verification on the audit write — queue and retry instead.

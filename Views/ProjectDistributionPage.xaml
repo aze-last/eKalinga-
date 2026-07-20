@@ -72,9 +72,8 @@
                         <Button Command="{Binding RefreshCommand}" Style="{StaticResource MaterialDesignFlatButton}" Foreground="White" Height="32" Padding="8,0" Margin="0,0,12,0">
                             <materialDesign:PackIcon Kind="Refresh" Width="18" Height="18"/>
                         </Button>
-                        <Button Command="{Binding DataContext.ShowDashboardCommand, RelativeSource={RelativeSource AncestorType=Window}}" Style="{StaticResource MaterialDesignFlatButton}" Foreground="White" Height="32" Padding="8,0">
-                            <materialDesign:PackIcon Kind="ChartBar" Width="18" Height="18"/>
-                        </Button>
+                        <Button Command="{Binding DataContext.ShowDashboardCommand, RelativeSource={RelativeSource AncestorType=Window}}" Style="{StaticResource MaterialDesignFlatButton}" Foreground="White" Height="32" Padding="12,0"
+                                Content="DASHBOARD" FontSize="12" FontWeight="Bold"/>
                     </StackPanel>
                 </Grid>
             </Border>
@@ -99,9 +98,8 @@
                             <Border BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="1" CornerRadius="4" Background="#F8FAFC" Padding="10,6" Width="180">
                                 <TextBlock Text="{Binding SelectedProgram.ProgramCode, TargetNullValue='--', FallbackValue='--'}" FontSize="13" FontWeight="Bold" VerticalAlignment="Center" Foreground="{DynamicResource BrandMidnightBrush}"/>
                             </Border>
-                            <Button Grid.Column="1" Click="ChangeProject_Click" Style="{StaticResource MaterialDesignFlatButton}" Margin="5,0,0,0" Padding="8,0" Height="32">
-                                <materialDesign:PackIcon Kind="FolderOpenOutline" Width="16" Height="16"/>
-                            </Button>
+                            <Button Grid.Column="1" Click="ChangeProject_Click" Style="{StaticResource MaterialDesignFlatButton}" Margin="5,0,0,0" Padding="12,0" Height="32"
+                                    Content="BROWSE" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource ThemePrimaryActionBrush}"/>
                         </Grid>
                     </StackPanel>
 
@@ -303,7 +301,7 @@
                             </Grid>
                         </materialDesign:Card>
 
-                        <!-- ===== Column 2: PENDING / NOT ELIGIBLE (Col 2) ===== -->
+                        <!-- ===== Column 2: PENDING (awaiting release) (Col 2) ===== -->
                         <materialDesign:Card Grid.Column="2" Padding="20">
                             <Grid>
                                 <Grid.RowDefinitions>
@@ -315,73 +313,7 @@
                                 <!-- Header -->
                                 <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,12">
                                     <Ellipse Width="10" Height="10" Fill="{DynamicResource BrandYellowBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                    <TextBlock Text="PENDING / NOT ELIGIBLE" FontSize="13" FontWeight="Bold"
-                                               Foreground="{DynamicResource ThemePrimaryActionBrush}"
-                                               Typography.Capitals="AllSmallCaps"/>
-                                </StackPanel>
-
-                                <!-- DataGrid -->
-                                <DataGrid Grid.Row="1"
-                                          ItemsSource="{Binding RejectedBeneficiaries}"
-                                          SelectedItem="{Binding SelectedProgramBeneficiary}"
-                                          AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True"
-                                          Background="Transparent" BorderThickness="0" HeadersVisibility="Column"
-                                          materialDesign:DataGridAssist.CellPadding="12,8">
-                                    <DataGrid.Columns>
-                                        <DataGridTextColumn Header="Beneficiaries" Binding="{Binding FullName}" Width="*" FontWeight="SemiBold"/>
-                                        <DataGridTemplateColumn Header="Status" Width="85">
-                                            <DataGridTemplateColumn.CellTemplate>
-                                                <DataTemplate>
-                                                    <TextBlock Text="Pending" FontSize="12" FontWeight="SemiBold"
-                                                               Foreground="{DynamicResource BrandYellowBrush}" VerticalAlignment="Center"/>
-                                                </DataTemplate>
-                                            </DataGridTemplateColumn.CellTemplate>
-                                        </DataGridTemplateColumn>
-                                        <DataGridTemplateColumn Header="Remarks" Width="85">
-                                            <DataGridTemplateColumn.CellTemplate>
-                                                <DataTemplate>
-                                                    <TextBlock Text="Not Eligible" FontSize="12" FontWeight="SemiBold"
-                                                               Foreground="{DynamicResource BrandRedBrush}" VerticalAlignment="Center"/>
-                                                </DataTemplate>
-                                            </DataGridTemplateColumn.CellTemplate>
-                                        </DataGridTemplateColumn>
-                                    </DataGrid.Columns>
-                                </DataGrid>
-
-                                <!-- Pagination -->
-                                <Border Grid.Row="2" Margin="0,12,0,0" Padding="0,12,0,0"
-                                        BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="0,1,0,0">
-                                    <Grid>
-                                        <TextBlock Text="{Binding RejectedPaginationText}" VerticalAlignment="Center"
-                                                   Foreground="{DynamicResource BrandTextSecondaryBrush}" FontSize="12"/>
-                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                            <Button Command="{Binding PrevRejectedPageCommand}"
-                                                    Style="{StaticResource MaterialDesignFlatButton}" Width="32" Height="32" Padding="0">
-                                                <materialDesign:PackIcon Kind="ChevronLeft" Width="18" Height="18"/>
-                                            </Button>
-                                            <Button Command="{Binding NextRejectedPageCommand}"
-                                                    Style="{StaticResource MaterialDesignFlatButton}" Width="32" Height="32" Padding="0" Margin="4,0,0,0">
-                                                <materialDesign:PackIcon Kind="ChevronRight" Width="18" Height="18"/>
-                                            </Button>
-                                        </StackPanel>
-                                    </Grid>
-                                </Border>
-                            </Grid>
-                        </materialDesign:Card>
-
-                        <!-- ===== Column 3: UNRELEASED / UNCLAIMED (Col 4) ===== -->
-                        <materialDesign:Card Grid.Column="4" Padding="20">
-                            <Grid>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="*"/>
-                                    <RowDefinition Height="Auto"/>
-                                </Grid.RowDefinitions>
-
-                                <!-- Header -->
-                                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,12">
-                                    <Ellipse Width="10" Height="10" Fill="{DynamicResource BrandRedBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                    <TextBlock Text="UNRELEASED / UNCLAIMED" FontSize="13" FontWeight="Bold"
+                                    <TextBlock Text="PENDING" FontSize="13" FontWeight="Bold"
                                                Foreground="{DynamicResource ThemePrimaryActionBrush}"
                                                Typography.Capitals="AllSmallCaps"/>
                                 </StackPanel>
@@ -399,15 +331,15 @@
                                         <DataGridTemplateColumn Header="Status" Width="85">
                                             <DataGridTemplateColumn.CellTemplate>
                                                 <DataTemplate>
-                                                    <TextBlock Text="Unreleased" FontSize="12" FontWeight="SemiBold"
-                                                               Foreground="{DynamicResource BrandMidnightBrush}" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="Pending" FontSize="12" FontWeight="SemiBold"
+                                                               Foreground="{DynamicResource BrandYellowBrush}" VerticalAlignment="Center"/>
                                                 </DataTemplate>
                                             </DataGridTemplateColumn.CellTemplate>
                                         </DataGridTemplateColumn>
                                         <DataGridTemplateColumn Header="Remarks" Width="85">
                                             <DataGridTemplateColumn.CellTemplate>
                                                 <DataTemplate>
-                                                    <TextBlock Text="Unclaimed" FontSize="12" FontWeight="SemiBold"
+                                                    <TextBlock Text="For Release" FontSize="12" FontWeight="SemiBold"
                                                                Foreground="{DynamicResource BrandMidnightBrush}" VerticalAlignment="Center"/>
                                                 </DataTemplate>
                                             </DataGridTemplateColumn.CellTemplate>
@@ -427,6 +359,72 @@
                                                 <materialDesign:PackIcon Kind="ChevronLeft" Width="18" Height="18"/>
                                             </Button>
                                             <Button Command="{Binding NextPendingPageCommand}"
+                                                    Style="{StaticResource MaterialDesignFlatButton}" Width="32" Height="32" Padding="0" Margin="4,0,0,0">
+                                                <materialDesign:PackIcon Kind="ChevronRight" Width="18" Height="18"/>
+                                            </Button>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </Grid>
+                        </materialDesign:Card>
+
+                        <!-- ===== Column 3: UNRELEASED / UNCLAIMED (not eligible) (Col 4) ===== -->
+                        <materialDesign:Card Grid.Column="4" Padding="20">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <!-- Header -->
+                                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,12">
+                                    <Ellipse Width="10" Height="10" Fill="{DynamicResource BrandRedBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <TextBlock Text="UNRELEASED / UNCLAIMED" FontSize="13" FontWeight="Bold"
+                                               Foreground="{DynamicResource ThemePrimaryActionBrush}"
+                                               Typography.Capitals="AllSmallCaps"/>
+                                </StackPanel>
+
+                                <!-- DataGrid -->
+                                <DataGrid Grid.Row="1"
+                                          ItemsSource="{Binding RejectedBeneficiaries}"
+                                          SelectedItem="{Binding SelectedProgramBeneficiary}"
+                                          AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True"
+                                          Background="Transparent" BorderThickness="0" HeadersVisibility="Column"
+                                          materialDesign:DataGridAssist.CellPadding="12,8">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Beneficiaries" Binding="{Binding FullName}" Width="*" FontWeight="SemiBold"/>
+                                        <DataGridTemplateColumn Header="Status" Width="85">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="Unreleased" FontSize="12" FontWeight="SemiBold"
+                                                               Foreground="{DynamicResource BrandMidnightBrush}" VerticalAlignment="Center"/>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                        <DataGridTemplateColumn Header="Remarks" Width="85">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="Unclaimed" FontSize="12" FontWeight="SemiBold"
+                                                               Foreground="{DynamicResource BrandRedBrush}" VerticalAlignment="Center"/>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+
+                                <!-- Pagination -->
+                                <Border Grid.Row="2" Margin="0,12,0,0" Padding="0,12,0,0"
+                                        BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="0,1,0,0">
+                                    <Grid>
+                                        <TextBlock Text="{Binding RejectedPaginationText}" VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource BrandTextSecondaryBrush}" FontSize="12"/>
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                            <Button Command="{Binding PrevRejectedPageCommand}"
+                                                    Style="{StaticResource MaterialDesignFlatButton}" Width="32" Height="32" Padding="0">
+                                                <materialDesign:PackIcon Kind="ChevronLeft" Width="18" Height="18"/>
+                                            </Button>
+                                            <Button Command="{Binding NextRejectedPageCommand}"
                                                     Style="{StaticResource MaterialDesignFlatButton}" Width="32" Height="32" Padding="0" Margin="4,0,0,0">
                                                 <materialDesign:PackIcon Kind="ChevronRight" Width="18" Height="18"/>
                                             </Button>

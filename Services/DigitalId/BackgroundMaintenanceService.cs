@@ -56,6 +56,17 @@ namespace AttendanceShiftingManagement.Services
                 {
                     // Fail-safe for background threads
                 }
+
+                try
+                {
+                    // Mirror demographics (marital status, ethnicity, tribe) so the
+                    // profile context is available offline alongside the masterlist.
+                    await new CrsDemographicsMirrorService().MirrorDemographicsAsync();
+                }
+                catch
+                {
+                    // Fail-safe for background threads
+                }
             });
         }
 

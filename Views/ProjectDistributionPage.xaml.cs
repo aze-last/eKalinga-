@@ -123,17 +123,29 @@ namespace AttendanceShiftingManagement.Views
 
         private void PendingGrid_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
-            ShowDetailDialog();
+            var viewModel = DataContext as ProjectDistributionViewModel;
+            var stagingId = viewModel?.SelectedPendingBeneficiary?.BeneficiaryStagingId ?? 0;
+            ShowDetailDialog(stagingId);
         }
 
         private void ReleasedGrid_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
-            ShowDetailDialog();
+            var viewModel = DataContext as ProjectDistributionViewModel;
+            var stagingId = viewModel?.SelectedReleasedClaim?.BeneficiaryStagingId ?? 0;
+            ShowDetailDialog(stagingId);
         }
 
-        private void ShowDetailDialog()
+        private void ShowDetailDialog(int beneficiaryStagingId = 0)
         {
             var viewModel = DataContext as ProjectDistributionViewModel;
+
+            // Load the household roster before showing so the dialog can flag members who
+            // already received this assistance.
+            if (viewModel != null && beneficiaryStagingId > 0)
+            {
+                _ = viewModel.LoadDetailDialogHouseholdAsync(beneficiaryStagingId);
+            }
+
             var dialog = new ProjectDistributionDetailDialog
             {
                 DataContext = this.DataContext,

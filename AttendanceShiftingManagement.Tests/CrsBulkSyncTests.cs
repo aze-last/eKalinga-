@@ -17,6 +17,7 @@ namespace AttendanceShiftingManagement.Tests
         {
             public IReadOnlyList<CrsValBeneficiaryRow> Beneficiaries { get; set; } = Array.Empty<CrsValBeneficiaryRow>();
             public IReadOnlyList<CrsDigitalIdListRow> DigitalIds { get; set; } = Array.Empty<CrsDigitalIdListRow>();
+            public IReadOnlyList<CrsDemographicRow> Demographics { get; set; } = Array.Empty<CrsDemographicRow>();
             public bool ThrowOnBulkRead { get; set; }
 
             public Task<IReadOnlyList<CrsValBeneficiaryRow>> GetAllValidatedBeneficiariesAsync(CancellationToken cancellationToken)
@@ -29,6 +30,12 @@ namespace AttendanceShiftingManagement.Tests
             {
                 if (ThrowOnBulkRead) throw new InvalidOperationException("CRS unreachable");
                 return Task.FromResult(DigitalIds);
+            }
+
+            public Task<IReadOnlyList<CrsDemographicRow>> GetAllDemographicCharacteristicsAsync(CancellationToken cancellationToken)
+            {
+                if (ThrowOnBulkRead) throw new InvalidOperationException("CRS unreachable");
+                return Task.FromResult(Demographics);
             }
 
             public Task<CrsDigitalIdRow?> GetLatestDigitalIdRowAsync(string beneficiaryId, CancellationToken cancellationToken)
@@ -220,6 +227,8 @@ namespace AttendanceShiftingManagement.Tests
 
             public Task<IReadOnlyList<CrsValBeneficiaryRow>> GetAllValidatedBeneficiariesAsync(CancellationToken cancellationToken)
                 => Task.FromResult<IReadOnlyList<CrsValBeneficiaryRow>>(Array.Empty<CrsValBeneficiaryRow>());
+            public Task<IReadOnlyList<CrsDemographicRow>> GetAllDemographicCharacteristicsAsync(CancellationToken cancellationToken)
+                => Task.FromResult<IReadOnlyList<CrsDemographicRow>>(Array.Empty<CrsDemographicRow>());
             public Task<CrsDigitalIdRow?> GetLatestDigitalIdRowAsync(string beneficiaryId, CancellationToken cancellationToken)
                 => Task.FromResult<CrsDigitalIdRow?>(null);
             public Task<long?> GetDemographicCharacteristicIdAsync(string beneficiaryId, CancellationToken cancellationToken)
@@ -329,6 +338,160 @@ namespace AttendanceShiftingManagement.Tests
             var metadata = await context.SyncMetadata
                 .FirstOrDefaultAsync(m => m.TableName == CrsDigitalIdCacheSyncService.SyncMetadataKey);
             Assert.NotNull(metadata);
+        }
+    }
+
+    public class CrsDemographicsMirrorServiceTests
+    {
+        private class FakeDemographicsGateway : ICrsGateway
+        {
+            public IReadOnlyList<CrsDemographicRow> Demographics { get; set; } = Array.Empty<CrsDemographicRow>();
+            public bool ThrowOnBulkRead { get; set; }
+
+            public Task<IReadOnlyList<CrsDemographicRow>> GetAllDemographicCharacteristicsAsync(CancellationToken cancellationToken)
+            {
+                if (ThrowOnBulkRead) throw new InvalidOperationException("CRS unreachable");
+                return Task.FromResult(Demographics);
+            }
+
+            public Task<IReadOnlyList<CrsValBeneficiaryRow>> GetAllValidatedBeneficiariesAsync(CancellationToken cancellationToken)
+                => Task.FromResult<IReadOnlyList<CrsValBeneficiaryRow>>(Array.Empty<CrsValBeneficiaryRow>());
+            public Task<IReadOnlyList<CrsDigitalIdListRow>> GetAllLatestDigitalIdRowsAsync(CancellationToken cancellationToken)
+                => Task.FromResult<IReadOnlyList<CrsDigitalIdListRow>>(Array.Empty<CrsDigitalIdListRow>());
+            public Task<CrsDigitalIdRow?> GetLatestDigitalIdRowAsync(string beneficiaryId, CancellationToken cancellationToken)
+                => Task.FromResult<CrsDigitalIdRow?>(null);
+            public Task<long?> GetDemographicCharacteristicIdAsync(string beneficiaryId, CancellationToken cancellationToken)
+                => Task.FromResult<long?>(null);
+            public Task<DateTime?> GetPhotoUpdatedAtAsync(long demographicCharacteristicId, CancellationToken cancellationToken)
+                => Task.FromResult<DateTime?>(null);
+            public Task<CrsPhotoRow?> GetPhotoAsync(long demographicCharacteristicId, CancellationToken cancellationToken)
+                => Task.FromResult<CrsPhotoRow?>(null);
+            public Task InsertAccessLogAsync(CrsAccessLogEntry entry, CancellationToken cancellationToken)
+                => Task.CompletedTask;
+            public Task<CrsSchemaProbeResult> ProbeSchemaAsync(CancellationToken cancellationToken)
+                => Task.FromResult(new CrsSchemaProbeResult(true, null));
+        }
+
+        [Fact]
+        public async Task Mirror_CachesDemographicRows()
+        {
+            var dbName = Guid.NewGuid().ToString("N");
+            var gateway = new FakeDemographicsGateway
+            {
+                Demographics = new[]
+                {
+                    new CrsDemographicRow(501, "BEN-2026-0001", "Married", "roman_chatholic", "bisaya", new DateTime(2026, 6, 1)),
+                    new CrsDemographicRow(502, "BEN-2026-0002", "Single", "roman_chatholic", "manobo", new DateTime(2026, 6, 2))
+                }
+            };
+            var service = new CrsDemographicsMirrorService(gateway, () => TestDbContextFactory.CreateContext(dbName));
+
+            var result = await service.MirrorDemographicsAsync();
+
+            Assert.True(result.IsSuccess);
+            Assert.Equal(2, result.AddedCount);
+            Assert.Equal(0, result.UpdatedCount);
+
+            using var context = TestDbContextFactory.CreateContext(dbName);
+            var cached = await context.CrsDemographicsCaches.FirstAsync(row => row.DemographicCharacteristicId == 501);
+            Assert.Equal("BEN-2026-0001", cached.BeneficiaryId);
+            Assert.Equal("Married", cached.MaritalStatus);
+            Assert.Equal("bisaya", cached.Tribe);
+        }
+
+        [Fact]
+        public async Task Mirror_UpdatesRow_WhenSourceUpdatedAtMoves()
+        {
+            var dbName = Guid.NewGuid().ToString("N");
+            var gateway = new FakeDemographicsGateway
+            {
+                Demographics = new[]
+                {
+                    new CrsDemographicRow(501, "BEN-2026-0001", "Single", null, "bisaya", new DateTime(2026, 6, 1))
+                }
+            };
+            var service = new CrsDemographicsMirrorService(gateway, () => TestDbContextFactory.CreateContext(dbName));
+            await service.MirrorDemographicsAsync();
+
+            gateway.Demographics = new[]
+            {
+                new CrsDemographicRow(501, "BEN-2026-0001", "Married", null, "bisaya", new DateTime(2026, 7, 1))
+            };
+            var result = await service.MirrorDemographicsAsync();
+
+            Assert.True(result.IsSuccess);
+            Assert.Equal(0, result.AddedCount);
+            Assert.Equal(1, result.UpdatedCount);
+
+            using var context = TestDbContextFactory.CreateContext(dbName);
+            var cached = await context.CrsDemographicsCaches.SingleAsync();
+            Assert.Equal("Married", cached.MaritalStatus);
+        }
+
+        [Fact]
+        public async Task Mirror_SkipsUnchangedRows()
+        {
+            var dbName = Guid.NewGuid().ToString("N");
+            var gateway = new FakeDemographicsGateway
+            {
+                Demographics = new[]
+                {
+                    new CrsDemographicRow(501, "BEN-2026-0001", "Single", null, "bisaya", new DateTime(2026, 6, 1))
+                }
+            };
+            var service = new CrsDemographicsMirrorService(gateway, () => TestDbContextFactory.CreateContext(dbName));
+            await service.MirrorDemographicsAsync();
+
+            var result = await service.MirrorDemographicsAsync();
+
+            Assert.True(result.IsSuccess);
+            Assert.Equal(0, result.AddedCount);
+            Assert.Equal(0, result.UpdatedCount);
+        }
+
+        [Fact]
+        public async Task Mirror_WhenCrsUnreachable_FailsSoft_AndKeepsExistingCache()
+        {
+            var dbName = Guid.NewGuid().ToString("N");
+            var gateway = new FakeDemographicsGateway
+            {
+                Demographics = new[]
+                {
+                    new CrsDemographicRow(501, "BEN-2026-0001", "Single", null, "bisaya", new DateTime(2026, 6, 1))
+                }
+            };
+            var service = new CrsDemographicsMirrorService(gateway, () => TestDbContextFactory.CreateContext(dbName));
+            await service.MirrorDemographicsAsync();
+
+            gateway.ThrowOnBulkRead = true;
+            var result = await service.MirrorDemographicsAsync();
+
+            Assert.False(result.IsSuccess);
+
+            using var context = TestDbContextFactory.CreateContext(dbName);
+            Assert.Equal(1, await context.CrsDemographicsCaches.CountAsync());
+        }
+
+        [Fact]
+        public async Task Mirror_RecordsSyncMetadataTimestamp()
+        {
+            var dbName = Guid.NewGuid().ToString("N");
+            var gateway = new FakeDemographicsGateway
+            {
+                Demographics = new[]
+                {
+                    new CrsDemographicRow(501, "BEN-2026-0001", "Single", null, "bisaya", new DateTime(2026, 6, 1))
+                }
+            };
+            var service = new CrsDemographicsMirrorService(gateway, () => TestDbContextFactory.CreateContext(dbName));
+
+            await service.MirrorDemographicsAsync();
+
+            using var context = TestDbContextFactory.CreateContext(dbName);
+            var metadata = await context.SyncMetadata
+                .FirstOrDefaultAsync(m => m.TableName == CrsDemographicsMirrorService.SyncMetadataKey);
+            Assert.NotNull(metadata);
+            Assert.True(metadata!.LastSyncAt > DateTime.MinValue);
         }
     }
 

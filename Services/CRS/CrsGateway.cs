@@ -225,6 +225,43 @@ namespace AttendanceShiftingManagement.Services
             return rows;
         }
 
+        public async Task<IReadOnlyList<CrsDemographicRow>> GetAllDemographicCharacteristicsAsync(CancellationToken cancellationToken)
+        {
+            await using var connection = new MySqlConnection(_connectionProvider.GetConnectionString());
+            await connection.OpenAsync(cancellationToken);
+
+            // READ only — demographics joined to their validated-beneficiary owner via
+            // val_beneficiaries.demographic_characteristic_id (same FK the photo lookup
+            // uses). The profile_picture blob is never selected here; photos flow
+            // through the crs_photo_cache two-hop path (contract Part 2).
+            await using var command = new MySqlCommand(@"
+                SELECT d.id, v.beneficiary_id, d.marital_status, d.ethnicity, d.tribe, d.updated_at
+                FROM demographic_characteristics d
+                INNER JOIN val_beneficiaries v ON v.demographic_characteristic_id = d.id
+                WHERE d.IsDeleted = 0 AND v.IsDeleted = 0;", connection);
+
+            var rows = new List<CrsDemographicRow>();
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                var beneficiaryId = reader.IsDBNull(1) ? string.Empty : reader.GetString(1);
+                if (string.IsNullOrWhiteSpace(beneficiaryId))
+                {
+                    continue;
+                }
+
+                rows.Add(new CrsDemographicRow(
+                    Convert.ToInt64(reader.GetValue(0)),
+                    beneficiaryId,
+                    ReadNullableString(reader, 2),
+                    ReadNullableString(reader, 3),
+                    ReadNullableString(reader, 4),
+                    reader.IsDBNull(5) ? null : ReadDateTime(reader, 5)));
+            }
+
+            return rows;
+        }
+
         private static string? ReadNullableString(MySqlDataReader reader, int ordinal)
         {
             if (reader.IsDBNull(ordinal))

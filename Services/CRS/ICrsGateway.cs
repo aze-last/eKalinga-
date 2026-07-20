@@ -73,6 +73,19 @@ namespace AttendanceShiftingManagement.Services
         string? RevocationReason);
 
     /// <summary>
+    /// A demographic_characteristics row joined to its val_beneficiaries owner
+    /// (READ only, bulk demographics cache). The profile_picture blob is
+    /// deliberately excluded — photos flow through the crs_photo_cache path.
+    /// </summary>
+    public sealed record CrsDemographicRow(
+        long DemographicCharacteristicId,
+        string BeneficiaryId,
+        string? MaritalStatus,
+        string? Ethnicity,
+        string? Tribe,
+        DateTime? UpdatedAt);
+
+    /// <summary>
     /// The ONLY code path that talks SQL to the e-Kard CRS database.
     /// Contract hard rules: digital_ids / val_beneficiaries / demographic_characteristics
     /// are READ only; record_access_logs is INSERT only; the photo lookup is raw SQL,
@@ -95,5 +108,12 @@ namespace AttendanceShiftingManagement.Services
         /// Never filtered by status — the contract's most-recent-row rule applies.
         /// </summary>
         Task<IReadOnlyList<CrsDigitalIdListRow>> GetAllLatestDigitalIdRowsAsync(CancellationToken cancellationToken);
+
+        /// <summary>
+        /// All non-deleted demographic_characteristics rows joined to their
+        /// val_beneficiaries owner (READ only, bulk demographics cache).
+        /// Excludes the profile_picture blob.
+        /// </summary>
+        Task<IReadOnlyList<CrsDemographicRow>> GetAllDemographicCharacteristicsAsync(CancellationToken cancellationToken);
     }
 }

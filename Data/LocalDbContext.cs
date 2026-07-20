@@ -45,6 +45,7 @@ namespace AttendanceShiftingManagement.Data
         public DbSet<DigitalIdStatusCache> DigitalIdStatusCaches => Set<DigitalIdStatusCache>();
         public DbSet<CrsStatusCache> CrsStatusCaches => Set<CrsStatusCache>();
         public DbSet<CrsPhotoCache> CrsPhotoCaches => Set<CrsPhotoCache>();
+        public DbSet<CrsDemographicsCache> CrsDemographicsCaches => Set<CrsDemographicsCache>();
         public DbSet<CrsPendingAccessLog> CrsPendingAccessLogs => Set<CrsPendingAccessLog>();
 
         public LocalDbContext()

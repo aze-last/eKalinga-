@@ -73,6 +73,20 @@ namespace AttendanceShiftingManagement.Data
                         );";
                     cmd.ExecuteNonQuery();
 
+                    // Local mirror of CRS demographic_characteristics (marital status,
+                    // ethnicity, tribe) — READ only from CRS, photo blob excluded.
+                    cmd.CommandText = @"
+                        CREATE TABLE IF NOT EXISTS crs_demographics_cache (
+                            DemographicCharacteristicId INTEGER PRIMARY KEY,
+                            BeneficiaryId TEXT NOT NULL,
+                            MaritalStatus TEXT NULL,
+                            Ethnicity TEXT NULL,
+                            Tribe TEXT NULL,
+                            SourceUpdatedAt TEXT NULL,
+                            SyncedAt TEXT NOT NULL
+                        );";
+                    cmd.ExecuteNonQuery();
+
                     cmd.CommandText = @"
                         CREATE TABLE IF NOT EXISTS crs_pending_access_logs (
                             Id INTEGER PRIMARY KEY AUTOINCREMENT,

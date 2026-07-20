@@ -70,6 +70,11 @@ namespace AttendanceShiftingManagement.Tests
             {
                 return Task.FromResult<IReadOnlyList<CrsDigitalIdListRow>>(Array.Empty<CrsDigitalIdListRow>());
             }
+
+            public Task<IReadOnlyList<CrsDemographicRow>> GetAllDemographicCharacteristicsAsync(CancellationToken cancellationToken)
+            {
+                return Task.FromResult<IReadOnlyList<CrsDemographicRow>>(Array.Empty<CrsDemographicRow>());
+            }
         }
 
         private class PassthroughResiliencyPolicy : ICrsResiliencyPolicy

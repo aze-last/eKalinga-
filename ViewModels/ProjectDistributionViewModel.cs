@@ -3893,6 +3893,29 @@ namespace AttendanceShiftingManagement.ViewModels
 
         public event Action? RequestCloseDialog;
 
+        /// <summary>
+        /// Loads the household roster for the Distribution Record Details dialog so the operator
+        /// can see whether another household member already received the same assistance.
+        /// </summary>
+        public async Task LoadDetailDialogHouseholdAsync(int beneficiaryStagingId)
+        {
+            if (SelectedProgram == null || beneficiaryStagingId <= 0)
+            {
+                return;
+            }
+
+            try
+            {
+                await using var context = new LocalDbContext();
+                var distributionService = new ProjectDistributionService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
+                await LoadHouseholdContextAsync(distributionService, beneficiaryStagingId);
+            }
+            catch
+            {
+                // Household roster is informational in the detail dialog; ignore load failures.
+            }
+        }
+
         private async Task ConfirmReleaseAsync()
         {
             if (!CanConfirmRelease() || SelectedProgram == null || SelectedPendingBeneficiary == null)

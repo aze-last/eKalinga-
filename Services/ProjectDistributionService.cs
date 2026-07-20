@@ -822,7 +822,9 @@ namespace AttendanceShiftingManagement.Services
             var householdId = staging?.LinkedHouseholdId;
             if (householdId == null)
             {
-                return new HouseholdBenefitRecords(false, string.Empty, string.Empty, Array.Empty<HouseholdMemberBenefitItem>(), 0);
+                // No operator-linked household — fall back to the CRS family group
+                // encoded in the BeneficiaryId stem (BEN-YYYY-<family>-<member>).
+                return await GetCrsFamilyBenefitRecordsAsync(staging);
             }
 
             var household = await _context.Households
@@ -866,6 +868,93 @@ namespace AttendanceShiftingManagement.Services
                 household?.HeadName ?? string.Empty,
                 memberItems,
                 claims.Count);
+        }
+
+        /// <summary>
+        /// Fallback roster when no local household is linked: CRS assigns family-scoped
+        /// beneficiary ids (BEN-YYYY-&lt;family&gt;-&lt;member&gt;), so siblings share the id stem.
+        /// Claims are matched per member via each member's own StagingID.
+        /// </summary>
+        private async Task<HouseholdBenefitRecords> GetCrsFamilyBenefitRecordsAsync(BeneficiaryStaging? staging)
+        {
+            var familyStem = ExtractCrsFamilyStem(staging?.BeneficiaryId);
+            if (staging == null || familyStem == null)
+            {
+                return new HouseholdBenefitRecords(false, string.Empty, string.Empty, Array.Empty<HouseholdMemberBenefitItem>(), 0);
+            }
+
+            var stemPrefix = familyStem + "-";
+            var familyMembers = await _context.BeneficiaryStaging
+                .AsNoTracking()
+                .Where(row => row.BeneficiaryId != null && row.BeneficiaryId.StartsWith(stemPrefix))
+                .Select(row => new { row.StagingID, row.BeneficiaryId, row.FullName, row.FirstName, row.MiddleName, row.LastName })
+                .ToListAsync();
+
+            // Guard against a prefix that over-matches (e.g. stem "1" matching "10-").
+            // Numeric suffix sort so "-2" comes before "-10".
+            familyMembers = familyMembers
+                .Where(row => ExtractCrsFamilyStem(row.BeneficiaryId) == familyStem)
+                .OrderBy(row => ExtractCrsMemberNumber(row.BeneficiaryId))
+                .ToList();
+
+            if (familyMembers.Count == 0)
+            {
+                return new HouseholdBenefitRecords(false, string.Empty, string.Empty, Array.Empty<HouseholdMemberBenefitItem>(), 0);
+            }
+
+            var memberStagingIds = familyMembers.Select(row => row.StagingID).ToList();
+            var claims = await _context.AyudaProjectClaims
+                .AsNoTracking()
+                .Where(claim => memberStagingIds.Contains(claim.BeneficiaryStagingId))
+                .Select(claim => claim.BeneficiaryStagingId)
+                .ToListAsync();
+
+            // Member "-1" is the CRS registrant; label the roster relative to them.
+            var head = familyMembers[0];
+            var headName = !string.IsNullOrWhiteSpace(head.FullName)
+                ? head.FullName.Trim()
+                : BuildDisplayName(head.FirstName, head.MiddleName, head.LastName);
+
+            var memberItems = familyMembers
+                .Select(member => new HouseholdMemberBenefitItem(
+                    !string.IsNullOrWhiteSpace(member.FullName)
+                        ? member.FullName.Trim()
+                        : BuildDisplayName(member.FirstName, member.MiddleName, member.LastName),
+                    member.StagingID == head.StagingID ? "Registrant" : "Family member",
+                    member.StagingID == staging.StagingID,
+                    claims.Count(id => id == member.StagingID)))
+                .ToList();
+
+            return new HouseholdBenefitRecords(
+                true,
+                $"CRS Family {familyStem}",
+                headName,
+                memberItems,
+                claims.Count);
+        }
+
+        /// <summary>"BEN-2026-692811519-1" → "BEN-2026-692811519"; null when the id doesn't follow the family pattern.</summary>
+        private static string? ExtractCrsFamilyStem(string? beneficiaryId)
+        {
+            if (string.IsNullOrWhiteSpace(beneficiaryId))
+            {
+                return null;
+            }
+
+            var match = System.Text.RegularExpressions.Regex.Match(
+                beneficiaryId.Trim(),
+                @"^(BEN-\d{4}-\d+)-\d+$",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            return match.Success ? match.Groups[1].Value : null;
+        }
+
+        /// <summary>"BEN-2026-692811519-4" → 4; int.MaxValue when the id doesn't follow the family pattern.</summary>
+        private static int ExtractCrsMemberNumber(string? beneficiaryId)
+        {
+            var lastDash = beneficiaryId?.TrimEnd().LastIndexOf('-') ?? -1;
+            return lastDash >= 0 && int.TryParse(beneficiaryId!.TrimEnd()[(lastDash + 1)..], out var number)
+                ? number
+                : int.MaxValue;
         }
 
         public async Task<HouseholdVerificationContext> GetHouseholdVerificationContextAsync(int ayudaProgramId, int beneficiaryStagingId)

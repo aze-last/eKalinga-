@@ -1880,6 +1880,21 @@ namespace AttendanceShiftingManagement.ViewModels
                 // Local masterlist keeps serving.
             }
 
+            // Demographics (marital status, ethnicity, tribe) ride along with the
+            // masterlist refresh into crs_demographics_cache (fail-soft when offline).
+            try
+            {
+                await Task.Run(() => new CrsDemographicsMirrorService().MirrorDemographicsAsync(cancellationToken), cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch
+            {
+                // Local demographics cache keeps serving.
+            }
+
             await Task.WhenAll(
                 LoadPendingPageAsync(1, cancellationToken),
                 LoadApprovedPageAsync(1, cancellationToken)

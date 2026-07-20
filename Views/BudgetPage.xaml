@@ -1092,6 +1092,7 @@
 
                     <StackPanel Grid.Row="1" Margin="20,16,20,8">
                         <TextBlock Text="{Binding HouseholdRecordsCandidateName}" FontSize="17" FontWeight="Bold" Foreground="{StaticResource PrimaryBrandBrush}" TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding HouseholdRecordsDemographics}" FontSize="11" Foreground="#64748B" TextWrapping="Wrap" Margin="0,4,0,0"/>
                         <StackPanel Orientation="Horizontal" Margin="0,4,0,0"
                                     Visibility="{Binding HouseholdRecordsHasHousehold, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <TextBlock Text="{Binding HouseholdRecordsCode}" FontSize="11" Foreground="#64748B"/>

@@ -177,6 +177,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _householdRecordsHeadName = string.Empty;
         private string _householdRecordsSummary = string.Empty;
         private bool _householdRecordsHasHousehold;
+        private string _householdRecordsDemographics = string.Empty;
 
         private int _currentLedgerPage = 1;
         private int _totalLedgerPages = 1;
@@ -1563,6 +1564,13 @@ namespace AttendanceShiftingManagement.ViewModels
             private set => SetProperty(ref _householdRecordsHasHousehold, value);
         }
 
+        /// <summary>CRS demographics line (marital status · ethnicity · tribe) from crs_demographics_cache.</summary>
+        public string HouseholdRecordsDemographics
+        {
+            get => _householdRecordsDemographics;
+            private set => SetProperty(ref _householdRecordsDemographics, value);
+        }
+
         /// <summary>e.g. "Showing first 200 of 40,152 — refine the search" so the capped list is never mistaken for the whole registry.</summary>
         public string EnrollmentResultSummary
         {
@@ -1794,16 +1802,25 @@ namespace AttendanceShiftingManagement.ViewModels
             HouseholdRecordsHeadName = string.Empty;
             HouseholdRecordsSummary = "Loading household records...";
             HouseholdRecordsHasHousehold = false;
+            HouseholdRecordsDemographics = string.Empty;
             OnPropertyChanged(nameof(HouseholdRecordsCandidateName));
             IsHouseholdRecordsOpen = true;
 
             try
             {
-                var records = await Task.Run(async () =>
+                var (records, demographics) = await Task.Run(async () =>
                 {
                     await using var context = new LocalDbContext();
                     var service = new ProjectDistributionService(context);
-                    return await service.GetHouseholdBenefitRecordsAsync(candidate.StagingId);
+                    var benefitRecords = await service.GetHouseholdBenefitRecordsAsync(candidate.StagingId);
+
+                    var cachedDemographics = string.IsNullOrWhiteSpace(candidate.BeneficiaryId)
+                        ? null
+                        : await context.CrsDemographicsCaches
+                            .AsNoTracking()
+                            .FirstOrDefaultAsync(row => row.BeneficiaryId == candidate.BeneficiaryId);
+
+                    return (benefitRecords, cachedDemographics);
                 });
 
                 if (_householdRecordsCandidate != candidate || !IsHouseholdRecordsOpen)
@@ -1811,6 +1828,7 @@ namespace AttendanceShiftingManagement.ViewModels
                     return; // modal was cancelled or superseded while loading
                 }
 
+                HouseholdRecordsDemographics = FormatDemographicsLine(demographics);
                 HouseholdRecordsHasHousehold = records.HasHousehold;
                 if (!records.HasHousehold)
                 {
@@ -1839,6 +1857,33 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 HouseholdRecordsSummary = $"Unable to load household records: {ex.Message}";
             }
+        }
+
+        /// <summary>One-line demographics summary from the CRS cache, or a hint when nothing is cached yet.</summary>
+        private static string FormatDemographicsLine(CrsDemographicsCache? demographics)
+        {
+            if (demographics == null)
+            {
+                return "No CRS demographics cached yet — refresh the masterlist while online.";
+            }
+
+            var parts = new List<string>();
+            if (!string.IsNullOrWhiteSpace(demographics.MaritalStatus))
+            {
+                parts.Add($"Marital status: {demographics.MaritalStatus}");
+            }
+            if (!string.IsNullOrWhiteSpace(demographics.Ethnicity))
+            {
+                parts.Add($"Ethnicity: {demographics.Ethnicity}");
+            }
+            if (!string.IsNullOrWhiteSpace(demographics.Tribe))
+            {
+                parts.Add($"Tribe: {demographics.Tribe}");
+            }
+
+            return parts.Count > 0
+                ? string.Join("  ·  ", parts)
+                : "CRS demographics on file, but no marital status, ethnicity, or tribe recorded.";
         }
 
         /// <summary>Step 2: operator reviewed the household and confirmed — move the candidate into the selected list.</summary>

@@ -93,6 +93,65 @@
 
                     <Separator Margin="0,24" Background="{DynamicResource BrandBorderBrush}"/>
 
+                    <!-- Household Members -->
+                    <TextBlock Text="HOUSEHOLD"
+                               FontSize="14" FontWeight="SemiBold"
+                               Foreground="{DynamicResource BrandMidnightBrush}"
+                               Margin="0,0,0,12"/>
+
+                    <Border Background="{DynamicResource ThemeCardSubtleBrush}"
+                            BorderBrush="{DynamicResource BrandBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="12"
+                            Padding="16">
+                        <StackPanel>
+                            <TextBlock Text="{Binding HouseholdContextSummary}"
+                                       FontSize="12"
+                                       Foreground="{DynamicResource BrandTextSecondaryBrush}"
+                                       TextWrapping="Wrap"
+                                       Margin="0,0,0,8"/>
+
+                            <TextBlock Text="{Binding HouseholdAidReceivedSummary}"
+                                       FontSize="12" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource BrandMidnightBrush}"
+                                       TextWrapping="Wrap"
+                                       Margin="0,0,0,10"/>
+
+                            <ItemsControl ItemsSource="{Binding ScannedHouseholdMembers}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border CornerRadius="6" Padding="10,6" Margin="0,0,0,4" Background="{DynamicResource ThemeCardBrush}"
+                                                BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="1">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0">
+                                                    <TextBlock Text="{Binding FullName}" FontSize="12" FontWeight="SemiBold"
+                                                               Foreground="{DynamicResource BrandMidnightBrush}" TextWrapping="Wrap"/>
+                                                    <TextBlock Text="{Binding RelationshipToHead}" FontSize="10"
+                                                               Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
+                                                </StackPanel>
+                                                <Border Grid.Column="1" VerticalAlignment="Center" Background="{DynamicResource BrandRedBrush}" CornerRadius="3" Padding="5,2"
+                                                        Visibility="{Binding AlreadyReceivedSameAssistanceType, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                    <TextBlock Text="RECEIVED" FontSize="9" FontWeight="Bold" Foreground="White"/>
+                                                </Border>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <TextBlock Text="No household members on file."
+                                       FontSize="12"
+                                       Foreground="{DynamicResource BrandTextSecondaryBrush}"
+                                       Visibility="{Binding HasHouseholdMembers, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Separator Margin="0,24" Background="{DynamicResource BrandBorderBrush}"/>
+
                     <!-- Project Details -->
                     <TextBlock Text="PROJECT &amp; ASSISTANCE"
                                FontSize="14" FontWeight="SemiBold"

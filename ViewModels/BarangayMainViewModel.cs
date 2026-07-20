@@ -165,7 +165,7 @@ namespace AttendanceShiftingManagement.ViewModels
         public bool IsSecondarySectionVisible => _currentSection != "Dashboard";
 
         public Visibility DashboardVisibility => UserPermissionService.CanAccessDashboard ? Visibility.Visible : Visibility.Collapsed;
-        public Visibility MasterListVisibility => Visibility.Collapsed; // Launch pad tile hidden per request
+        public Visibility MasterListVisibility => UserPermissionService.CanAccessMasterList ? Visibility.Visible : Visibility.Collapsed;
         public Visibility AssistanceCasesVisibility => UserPermissionService.CanAccessAssistanceCases ? Visibility.Visible : Visibility.Collapsed;
         public Visibility BudgetVisibility => UserPermissionService.CanAccessBudget ? Visibility.Visible : Visibility.Collapsed;
         public Visibility DistributionVisibility => UserPermissionService.CanAccessDistribution ? Visibility.Visible : Visibility.Collapsed;
