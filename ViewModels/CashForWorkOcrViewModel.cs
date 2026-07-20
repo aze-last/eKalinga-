@@ -21,10 +21,10 @@ namespace AttendanceShiftingManagement.ViewModels
 {
     public sealed class CashForWorkOcrViewModel : ObservableObject
     {
-        private static readonly Brush NeutralBrush = CreateBrush("#6B7280");
-        private static readonly Brush SuccessBrush = CreateBrush("#1A7A4A");
-        private static readonly Brush ErrorBrush = CreateBrush("#991B1B");
-        private static readonly Brush WarningBrush = CreateBrush("#9A6700");
+        private static readonly Brush NeutralBrush = CreateBrush("#64748B");
+        private static readonly Brush SuccessBrush = CreateBrush("#15803D");
+        private static readonly Brush ErrorBrush = CreateBrush("#BE123C");
+        private static readonly Brush WarningBrush = CreateBrush("#854D0E");
 
         private readonly User _currentUser;
         private readonly ReportsService _reportsService;

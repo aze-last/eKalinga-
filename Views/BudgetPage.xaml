@@ -13,7 +13,7 @@
              FontFamily="{materialDesign:MaterialDesignFont}">
 
     <UserControl.Resources>
-        <SolidColorBrush x:Key="PrimaryBrandBrush" Color="#1E4E89"/>
+        <SolidColorBrush x:Key="PrimaryBrandBrush" Color="#15803D"/>
         <SolidColorBrush x:Key="ActionAccentBrush" Color="#F59E0B"/>
         <SolidColorBrush x:Key="SidebarBackgroundBrush" Color="#F8FAFC"/>
         <SolidColorBrush x:Key="CardBorderBrush" Color="#E2E8F0"/>
@@ -425,8 +425,8 @@
                                 <materialDesign:Card Grid.Column="0" Margin="0,0,15,0" Style="{StaticResource SummaryCardStyle}">
                                     <Border Padding="20">
                                         <StackPanel>
-                                            <TextBlock Text="BUDGET CAP" FontSize="12" Foreground="{StaticResource PrimaryBrandBrush}" FontWeight="Bold"/>
-                                            <TextBlock Text="{Binding SelectedBudget.BudgetCap, StringFormat='N2'}" FontSize="24" FontWeight="Black" Margin="0,5" Foreground="{StaticResource PrimaryBrandBrush}"/>
+                                            <TextBlock Text="BUDGET CAP" FontSize="12" Foreground="#0F172A" FontWeight="Bold"/>
+                                            <TextBlock Text="{Binding SelectedBudget.BudgetCap, StringFormat='N2'}" FontSize="24" FontWeight="Black" Margin="0,5" Foreground="#0F172A"/>
                                             <TextBlock Text="Total allocated limit" FontSize="11" Foreground="#64748B"/>
                                         </StackPanel>
                                     </Border>
@@ -458,8 +458,8 @@
                                 <materialDesign:Card Grid.Column="2" Style="{StaticResource SummaryCardStyle}">
                                     <Border Padding="20">
                                         <StackPanel>
-                                            <TextBlock Text="STATUS" FontSize="12" Foreground="#BE123C" FontWeight="Bold"/>
-                                            <TextBlock Text="{Binding SelectedBudget.Status}" FontSize="24" FontWeight="Black" Margin="0,5" Foreground="#BE123C"/>
+                                            <TextBlock Text="STATUS" FontSize="12" Foreground="#854D0E" FontWeight="Bold"/>
+                                            <TextBlock Text="{Binding SelectedBudget.Status}" FontSize="24" FontWeight="Black" Margin="0,5" Foreground="#854D0E"/>
                                             <TextBlock Text="Current distribution state" FontSize="11" Foreground="#64748B"/>
                                         </StackPanel>
                                     </Border>
@@ -983,7 +983,7 @@
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="*"/>
                                 </Grid.RowDefinitions>
-                                <Border Background="#0F766E" Padding="10,8">
+                                <Border Background="#15803D" Padding="10,8">
                                     <TextBlock Text="Validated Residence" Foreground="White" FontSize="13" FontWeight="Bold" HorizontalAlignment="Center"/>
                                 </Border>
                                 <ListBox Grid.Row="1" ItemsSource="{Binding FilteredEnrollmentBeneficiaries}"
@@ -1029,7 +1029,7 @@
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="*"/>
                                 </Grid.RowDefinitions>
-                                <Border Background="#0F766E" Padding="10,8">
+                                <Border Background="#15803D" Padding="10,8">
                                     <TextBlock Text="Beneficiaries for the Project" Foreground="White" FontSize="13" FontWeight="Bold" HorizontalAlignment="Center"/>
                                 </Border>
                                 <ListBox Grid.Row="1" ItemsSource="{Binding SelectedEnrollmentBeneficiaries}"

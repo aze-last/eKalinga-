@@ -30,12 +30,17 @@ namespace AttendanceShiftingManagement.ViewModels
     {
         private const int PageSize = 25;
 
+        private static readonly Brush NeutralBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#64748B"));
+        private static readonly Brush SuccessBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#15803D"));
+        private static readonly Brush ErrorBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#BE123C"));
+        private static readonly Brush WarningBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#854D0E"));
+
         private readonly User _currentUser;
 
         private CashForWorkBudget? _selectedCfwProject;
         private CashForWorkEvent? _selectedEvent;
         private string _statusMessage = "Select a cash-for-work project to begin.";
-        private Brush _statusBrush = Brushes.DimGray;
+        private Brush _statusBrush = NeutralBrush;
         private string _remainingBudgetText = "—";
         private int _totalWorkers;
         private int _pendingCount;
@@ -44,7 +49,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _scannedWorkerName = string.Empty;
         private string _scannedWorkerId = string.Empty;
         private string _scannedWorkerStatus = string.Empty;
-        private Brush _scannedWorkerStatusColor = Brushes.Gray;
+        private Brush _scannedWorkerStatusColor = NeutralBrush;
         private int _scannedAttendanceDays;
         private decimal _scannedAmountDue;
         private bool _isBusy;
@@ -355,7 +360,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 {
                     ClearScannedWorker();
                     ScannedWorkerStatus = "ID NOT RECOGNIZED";
-                    ScannedWorkerStatusColor = Brushes.Firebrick;
+                    ScannedWorkerStatusColor = ErrorBrush;
                     SetErrorStatus("Scanned ID could not be resolved.");
                     return;
                 }
@@ -369,7 +374,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 if (participant == null)
                 {
                     ScannedWorkerStatus = "NOT ENROLLED IN THIS EVENT";
-                    ScannedWorkerStatusColor = Brushes.DarkGoldenrod;
+                    ScannedWorkerStatusColor = WarningBrush;
                     ScannedAttendanceDays = 0;
                     ScannedAmountDue = 0m;
                     SetErrorStatus($"{lookup.FullName} is not a participant of '{SelectedEvent.Title}'.");
@@ -382,7 +387,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 if (alreadyToday)
                 {
                     ScannedWorkerStatus = "ALREADY MARKED PRESENT TODAY";
-                    ScannedWorkerStatusColor = Brushes.DarkGoldenrod;
+                    ScannedWorkerStatusColor = WarningBrush;
                 }
                 else
                 {
@@ -391,13 +396,13 @@ namespace AttendanceShiftingManagement.ViewModels
                     if (!saved)
                     {
                         ScannedWorkerStatus = "ATTENDANCE NOT RECORDED";
-                        ScannedWorkerStatusColor = Brushes.Firebrick;
+                        ScannedWorkerStatusColor = ErrorBrush;
                         SetErrorStatus($"Could not record attendance for {lookup.FullName}.");
                         return;
                     }
 
                     ScannedWorkerStatus = "MARKED PRESENT";
-                    ScannedWorkerStatusColor = Brushes.Green;
+                    ScannedWorkerStatusColor = SuccessBrush;
                 }
 
                 ScannedAttendanceDays = await context.CashForWorkAttendances.AsNoTracking()
@@ -521,7 +526,7 @@ namespace AttendanceShiftingManagement.ViewModels
             ScannedWorkerName = string.Empty;
             ScannedWorkerId = string.Empty;
             ScannedWorkerStatus = string.Empty;
-            ScannedWorkerStatusColor = Brushes.Gray;
+            ScannedWorkerStatusColor = NeutralBrush;
             ScannedAttendanceDays = 0;
             ScannedAmountDue = 0m;
         }
@@ -529,19 +534,19 @@ namespace AttendanceShiftingManagement.ViewModels
         private void SetSuccessStatus(string message)
         {
             StatusMessage = message;
-            StatusBrush = new SolidColorBrush(Color.FromRgb(0x15, 0x80, 0x3D));
+            StatusBrush = SuccessBrush;
         }
 
         private void SetErrorStatus(string message)
         {
             StatusMessage = message;
-            StatusBrush = new SolidColorBrush(Color.FromRgb(0xBE, 0x12, 0x3C));
+            StatusBrush = ErrorBrush;
         }
 
         private void SetNeutralStatus(string message)
         {
             StatusMessage = message;
-            StatusBrush = Brushes.DimGray;
+            StatusBrush = NeutralBrush;
         }
     }
 }

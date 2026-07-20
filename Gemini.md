@@ -187,15 +187,18 @@ Strictly enforce the following rules for User Management:
     *   *SYSTEM SETTINGS:* App Database, GGMS Budget Source.
 *   **Protected Settings:** Security overlays for "Remote Snapshot," "App Database," and "GGMS Budget Source" MUST allow both `Admin` and `SuperAdmin` roles to unlock via password re-entry.
 
-### 3. Core Color Palette
-*   **Primary Brand (`BrandBrush`):** `#1E4E89` (Midnight Blue) - Used for headers, primary icons, and section titles.
+### 3. Core Color Palette (Red/Green/Yellow theme — "Barangay Heraldic")
+Each color has ONE job; never distribute the three evenly (avoid the "fast-food kiosk" look).
+*   **Primary Brand (`BrandBrush`):** `#15803D` (Forest Green) - Used for headers, primary icons, and section titles. Green doubles as the money/success signal, which fits an ayuda system. (Replaced the old `#1E4E89` Midnight Blue; rollout started with the Budget module — other modules may still carry blue until swept.)
 *   **Action Accent:** `#F59E0B` (Amber/Gold) - Reserved for high-priority operational buttons and specific CTAs.
 *   **Sidebar Background:** `#F8FAFC` (Light Slate/Off-white) - Use this lighter shade for the left action panels to maintain a clean, professional "Institutional" look. Avoid dark/Midnight sidebars.
 *   **Main Surface:** `#FFFFFF` (Pure White) for cards; `#F1F5F9` for the main page background.
+*   **Neutral Emphasis:** `#0F172A` (Dark Slate) - For KPI values that need weight without a semantic color (e.g., Budget Cap), so brand green stays meaningful next to money figures.
 *   **Feedback Colors:**
-    *   *Success:* `#15803D` (Forest Green)
-    *   *Error/Alert:* `#BE123C` (Crimson)
+    *   *Success:* `#15803D` (Forest Green — same as brand; success and brand intentionally share the hue)
+    *   *Error/Alert:* `#BE123C` (Crimson) - Red is reserved EXCLUSIVELY for errors, destructive actions, and remove affordances. Never use red as chrome/header color.
     *   *Warning:* `#854D0E` (Ochre)
+*   **Off-palette colors are banned:** no teal (`#0F766E`), no blue chrome. Yellow is fills-only with dark text — never yellow text on white.
 
 ### 3. Typography Standards
 *   **Module Header:** `24px` Bold, `BrandBrush`.

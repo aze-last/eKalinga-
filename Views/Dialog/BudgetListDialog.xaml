@@ -12,6 +12,9 @@
         ResizeMode="NoResize">
 
     <Window.Resources>
+        <!-- Pilot theme shadow: overrides the app-level blue with brand green for this dialog only -->
+        <SolidColorBrush x:Key="ThemePrimaryActionBrush" Color="#15803D" />
+
         <Style x:Key="RailButtonStyle" TargetType="Button" BasedOn="{StaticResource SecondaryActionButton}">
             <Setter Property="Height" Value="46" />
             <Setter Property="Margin" Value="0,0,0,12" />

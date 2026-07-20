@@ -11,6 +11,11 @@
              d:DesignWidth="1440"
              Background="{DynamicResource BrandSurfaceBrush}">
     <UserControl.Resources>
+        <!-- Pilot theme shadow: overrides the app-level blue with brand green for this page only -->
+        <SolidColorBrush x:Key="ThemePrimaryActionBrush" Color="#15803D" />
+        <SolidColorBrush x:Key="ThemeAccentSoftBrush" Color="#F0FDF4" />
+        <SolidColorBrush x:Key="ThemeAccentBorderBrush" Color="#BBF7D0" />
+        <SolidColorBrush x:Key="BrandRedBrush" Color="#BE123C" />
 
         <Style x:Key="SidebarHeaderStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="13" />
@@ -58,7 +63,7 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- Header (Blue Theme Like Budget Module) -->
+        <!-- Header (Brand Green Theme Like Budget Module) -->
         <Border Grid.Row="0" Background="{DynamicResource ThemePrimaryActionBrush}" Padding="20,15" Panel.ZIndex="10">
             <Grid>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">

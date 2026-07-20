@@ -1319,6 +1319,28 @@ namespace AttendanceShiftingManagement.ViewModels
                 .AsNoTracking()
                 .OrderByDescending(p => p.SourceCreatedAt)
                 .ToListAsync();
+
+            // Self-heal: IsLinked can go stale when the linked local program is removed
+            // (developer purge) — a stale flag shows a phantom project badge and blocks
+            // CREATE PROJECT on that GGMS row.
+            var staleLinkIds = ggmsProjects
+                .Where(p => p.IsLinked && allProjects.All(a => a.SourceProjectDetailsId != p.ProjectDetailsId))
+                .Select(p => p.GgmsProjectCacheId)
+                .ToList();
+            if (staleLinkIds.Count > 0)
+            {
+                await ggmsContext.GgmsProjectCache
+                    .Where(p => staleLinkIds.Contains(p.GgmsProjectCacheId))
+                    .ExecuteUpdateAsync(s => s.SetProperty(p => p.IsLinked, false));
+                foreach (var p in ggmsProjects)
+                {
+                    if (staleLinkIds.Contains(p.GgmsProjectCacheId))
+                    {
+                        p.IsLinked = false;
+                    }
+                }
+            }
+
             foreach (var b in ggmsProjects)
             {
                 var linkedProject = allProjects.FirstOrDefault(p => p.SourceProjectDetailsId == b.ProjectDetailsId);
@@ -2334,19 +2356,19 @@ namespace AttendanceShiftingManagement.ViewModels
         private void SetNeutralStatus(string message)
         {
             StatusMessage = message;
-            StatusBrush = Brushes.DimGray;
+            StatusBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#64748B"));
         }
 
         private void SetSuccessStatus(string message)
         {
             StatusMessage = message;
-            StatusBrush = Brushes.ForestGreen;
+            StatusBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#15803D"));
         }
 
         private void SetErrorStatus(string message)
         {
             StatusMessage = message;
-            StatusBrush = Brushes.Firebrick;
+            StatusBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#BE123C"));
         }
 
         private static bool TryParseAmount(string text, out decimal amount)
