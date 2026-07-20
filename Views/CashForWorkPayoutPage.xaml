@@ -1,0 +1,247 @@
+<UserControl x:Class="AttendanceShiftingManagement.Views.CashForWorkPayoutPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Background="#F1F5F9">
+
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
+    </UserControl.Resources>
+
+    <Grid>
+        <!-- Main workspace (blurred while the release confirmation overlay is open) -->
+        <Grid x:Name="MainWorkspaceGrid">
+            <Grid.Style>
+                <Style TargetType="Grid">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsReleaseConfirmVisible}" Value="True">
+                            <Setter Property="Effect">
+                                <Setter.Value>
+                                    <BlurEffect Radius="15.0"/>
+                                </Setter.Value>
+                            </Setter>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Grid.Style>
+
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- Module header -->
+            <Border Grid.Row="0" Background="White" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Padding="30,18">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="Cash-for-Work Payout" FontSize="24" FontWeight="Bold" Foreground="#1E4E89"/>
+                        <TextBlock Text="{Binding SelectedCfwProject.BudgetName, FallbackValue='No project selected'}" FontSize="12" Foreground="#64748B" Margin="0,4,0,0"/>
+                    </StackPanel>
+                    <Button Grid.Column="1" Content="REFRESH" Command="{Binding RefreshCommand}"
+                            Background="#F59E0B" Foreground="White" BorderThickness="0"
+                            Padding="16,8" FontSize="12" FontWeight="Bold" VerticalAlignment="Center" Cursor="Hand"/>
+                </Grid>
+            </Border>
+
+            <!-- Workspace: 320px sidebar + data center -->
+            <Grid Grid.Row="1" Margin="30">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="320"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Sidebar -->
+                <Border Grid.Column="0" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,20,0" VerticalAlignment="Stretch">
+                    <StackPanel>
+                        <!-- Hidden scanner capture -->
+                        <TextBox x:Name="HiddenScannerTextBox" Opacity="0" Width="1" Height="1" IsTabStop="False"/>
+
+                        <TextBlock Text="PROJECT" FontSize="13" FontWeight="Bold" Foreground="#1E4E89" Margin="0,0,0,6"/>
+                        <ComboBox ItemsSource="{Binding CfwProjects}"
+                                  SelectedItem="{Binding SelectedCfwProject}"
+                                  DisplayMemberPath="BudgetName"
+                                  FontSize="12" Margin="0,0,0,12"/>
+
+                        <TextBlock Text="WORK EVENT" FontSize="13" FontWeight="Bold" Foreground="#1E4E89" Margin="0,0,0,6"/>
+                        <ComboBox ItemsSource="{Binding ProjectEvents}"
+                                  SelectedItem="{Binding SelectedEvent}"
+                                  DisplayMemberPath="Title"
+                                  FontSize="12" Margin="0,0,0,16"/>
+
+                        <!-- Scanned worker card -->
+                        <Border Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="12" Padding="12" Margin="0,0,0,16">
+                            <StackPanel>
+                                <TextBlock Text="SCANNED WORKER" FontSize="12" FontWeight="Bold" Foreground="#64748B" Margin="0,0,0,8"/>
+                                <TextBlock Text="{Binding ScannedWorkerName, FallbackValue='Scan a worker ID...'}" FontSize="14" FontWeight="Bold" Foreground="#1E4E89" TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding ScannedWorkerId}" FontSize="12" Foreground="#64748B" Margin="0,2,0,0"/>
+                                <TextBlock Text="{Binding ScannedWorkerStatus}" FontSize="12" FontWeight="Bold" Foreground="{Binding ScannedWorkerStatusColor}" Margin="0,8,0,0" TextWrapping="Wrap"/>
+                                <Separator Margin="0,8"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Days present" FontSize="12" Foreground="#64748B"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding ScannedAttendanceDays}" FontSize="12" FontWeight="Bold" Foreground="#1E4E89"/>
+                                </Grid>
+                                <Grid Margin="0,4,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Daily rate" FontSize="12" Foreground="#64748B"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding DailyRate, StringFormat='PHP {0:N2}'}" FontSize="12" FontWeight="Bold" Foreground="#1E4E89"/>
+                                </Grid>
+                                <Grid Margin="0,4,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Amount due" FontSize="12" FontWeight="Bold" Foreground="#1E4E89"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding ScannedAmountDue, StringFormat='PHP {0:N2}'}" FontSize="12" FontWeight="Bold" Foreground="#15803D"/>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <Button Content="RELEASE EVENT PAYOUT" Command="{Binding OpenReleaseConfirmCommand}"
+                                Background="#F59E0B" Foreground="White" BorderThickness="0"
+                                Padding="16,12" FontSize="13" FontWeight="Bold" Cursor="Hand"/>
+
+                        <TextBlock Text="{Binding StatusMessage}" Foreground="{Binding StatusBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,14,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Data center -->
+                <Grid Grid.Column="1">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Metric cards -->
+                    <Grid Grid.Row="0" Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="12" Padding="14" Margin="0,0,6,0">
+                            <StackPanel>
+                                <TextBlock Text="REMAINING BUDGET" FontSize="12" FontWeight="Bold" Foreground="#64748B"/>
+                                <TextBlock Text="{Binding RemainingBudgetText}" FontSize="20" FontWeight="Heavy" Foreground="#1E4E89" Margin="0,6,0,0"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="1" Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="12" Padding="14" Margin="6,0,6,0">
+                            <StackPanel>
+                                <TextBlock Text="EVENT WORKERS" FontSize="12" FontWeight="Bold" Foreground="#64748B"/>
+                                <TextBlock Text="{Binding TotalWorkers}" FontSize="24" FontWeight="Heavy" Foreground="#1E4E89" Margin="0,6,0,0"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="2" Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="12" Padding="14" Margin="6,0,6,0">
+                            <StackPanel>
+                                <TextBlock Text="RELEASE-READY" FontSize="12" FontWeight="Bold" Foreground="#64748B"/>
+                                <TextBlock Text="{Binding PendingCount}" FontSize="24" FontWeight="Heavy" Foreground="#854D0E" Margin="0,6,0,0"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="3" Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="12" Padding="14" Margin="6,0,0,0">
+                            <StackPanel>
+                                <TextBlock Text="RELEASED EVENTS" FontSize="12" FontWeight="Bold" Foreground="#64748B"/>
+                                <TextBlock Text="{Binding PaidCount}" FontSize="24" FontWeight="Heavy" Foreground="#15803D" Margin="0,6,0,0"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <!-- Release-ready workers (paginated) -->
+                    <Border Grid.Row="1" Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,0,16">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Text="RELEASE-READY WORKERS (PRESENT)" FontSize="13" FontWeight="Bold" Foreground="#1E4E89" Margin="0,0,0,10"/>
+                            <DataGrid Grid.Row="1" ItemsSource="{Binding PendingWorkers}" AutoGenerateColumns="False" IsReadOnly="True"
+                                      BorderThickness="0" FontSize="12" HeadersVisibility="Column" GridLinesVisibility="Horizontal">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Name" Binding="{Binding FullName}" Width="*"/>
+                                    <DataGridTextColumn Header="Beneficiary ID" Binding="{Binding BeneficiaryId}" Width="160"/>
+                                    <DataGridTextColumn Header="Attendance Recorded" Binding="{Binding RecordedAtText}" Width="160"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
+                                <Button Content="Prev" Command="{Binding PrevPendingPageCommand}" Padding="10,4" FontSize="12" Margin="0,0,8,0"/>
+                                <TextBlock Text="{Binding PendingPaginationText}" FontSize="12" Foreground="#64748B" VerticalAlignment="Center"/>
+                                <Button Content="Next" Command="{Binding NextPendingPageCommand}" Padding="10,4" FontSize="12" Margin="8,0,0,0"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- Released history (paginated) -->
+                    <Border Grid.Row="2" Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="12" Padding="16">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Text="RELEASED HISTORY" FontSize="13" FontWeight="Bold" Foreground="#1E4E89" Margin="0,0,0,10"/>
+                            <DataGrid Grid.Row="1" ItemsSource="{Binding PaidEvents}" AutoGenerateColumns="False" IsReadOnly="True"
+                                      BorderThickness="0" FontSize="12" HeadersVisibility="Column" GridLinesVisibility="Horizontal">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Event" Binding="{Binding EventTitle}" Width="*"/>
+                                    <DataGridTextColumn Header="Amount" Binding="{Binding AmountText}" Width="140"/>
+                                    <DataGridTextColumn Header="Released At" Binding="{Binding ReleasedAtText}" Width="160"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
+                                <Button Content="Prev" Command="{Binding PrevPaidPageCommand}" Padding="10,4" FontSize="12" Margin="0,0,8,0"/>
+                                <TextBlock Text="{Binding PaidPaginationText}" FontSize="12" Foreground="#64748B" VerticalAlignment="Center"/>
+                                <Button Content="Next" Command="{Binding NextPaidPageCommand}" Padding="10,4" FontSize="12" Margin="8,0,0,0"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Grid>
+        </Grid>
+
+        <!-- Release confirmation overlay -->
+        <Grid Background="#CC0F172A"
+              Visibility="{Binding IsReleaseConfirmVisible, Converter={StaticResource BoolToVisibility}}">
+            <Border Background="White" CornerRadius="16" Padding="24" MaxWidth="420" VerticalAlignment="Center" HorizontalAlignment="Center">
+                <StackPanel>
+                    <TextBlock Text="Confirm Event Payout" FontSize="18" FontWeight="Bold" Foreground="#1E4E89"/>
+                    <TextBlock Text="{Binding SelectedEvent.Title}" FontSize="13" Foreground="#64748B" Margin="0,4,0,12" TextWrapping="Wrap"/>
+                    <Grid Margin="0,0,0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Workers present" FontSize="13" Foreground="#64748B"/>
+                        <TextBlock Grid.Column="1" Text="{Binding ReleaseReadyCount}" FontSize="13" FontWeight="Bold" Foreground="#1E4E89"/>
+                    </Grid>
+                    <Grid Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Total payout" FontSize="13" FontWeight="Bold" Foreground="#1E4E89"/>
+                        <TextBlock Grid.Column="1" Text="{Binding ReleaseProposedAmount, StringFormat='PHP {0:N2}'}" FontSize="15" FontWeight="Bold" Foreground="#15803D"/>
+                    </Grid>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Content="CANCEL" Command="{Binding CancelReleaseCommand}"
+                                Background="Transparent" Foreground="#64748B" BorderThickness="0"
+                                Padding="16,10" FontSize="12" FontWeight="Bold" Margin="0,0,8,0" Cursor="Hand"/>
+                        <Button Content="CONFIRM RELEASE" Command="{Binding ConfirmReleaseCommand}"
+                                Background="#F59E0B" Foreground="White" BorderThickness="0"
+                                Padding="16,10" FontSize="12" FontWeight="Bold" Cursor="Hand"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

@@ -131,6 +131,7 @@ public sealed class CashForWorkServiceTests
             new TimeSpan(11, 0, 0),
             null,
             admin.Id,
+            null,  // cashForWorkBudgetId
             0m,
             CashForWorkEventKind.Seminar);
 
@@ -209,6 +210,7 @@ public sealed class CashForWorkServiceTests
             new TimeSpan(10, 0, 0),
             null,
             admin.Id,
+            null,  // cashForWorkBudgetId
             0m,
             CashForWorkEventKind.Seminar);
 
@@ -260,6 +262,7 @@ public sealed class CashForWorkServiceTests
             new TimeSpan(10, 0, 0),
             null,
             admin.Id,
+            null,  // cashForWorkBudgetId
             0m,
             CashForWorkEventKind.Seminar);
 
@@ -320,6 +323,7 @@ public sealed class CashForWorkServiceTests
             new TimeSpan(10, 0, 0),
             null,
             admin.Id,
+            null,  // cashForWorkBudgetId
             0m,
             CashForWorkEventKind.Seminar);
 

@@ -245,5 +245,24 @@ namespace AttendanceShiftingManagement.Views
                 viewModel.ProcessScanCommand.Execute(rawText);
             }
         }
+
+        private void Scanner_QrCodeScanned(string payload)
+        {
+            var viewModel = DataContext as ProjectDistributionViewModel;
+            if (viewModel != null && viewModel.ProcessScanCommand.CanExecute(payload))
+            {
+                viewModel.ProcessScanCommand.Execute(payload);
+            }
+        }
+
+        private void Scanner_Closed()
+        {
+            var viewModel = DataContext as ProjectDistributionViewModel;
+            if (viewModel != null)
+            {
+                viewModel.IsPcScannerOpen = false;
+            }
+            FocusScanner();
+        }
     }
 }

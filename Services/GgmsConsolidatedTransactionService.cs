@@ -58,7 +58,6 @@ namespace AttendanceShiftingManagement.Services
             Username = "u518908950_ggms",
             Password = "Sulop@2025"
         };
-
         private readonly DatabaseConnectionPreset _ggmsConnection;
         private readonly string _officeId;
         private readonly string _tableName;

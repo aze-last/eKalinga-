@@ -90,11 +90,6 @@
                                                      Command="{Binding FilterCommand}" CommandParameter="All Transactions"
                                                      Height="38" HorizontalContentAlignment="Left" Margin="0,0,0,4"/>
                                         <RadioButton Style="{StaticResource MaterialDesignTabRadioButton}"
-                                                     Content="Aid Request"
-                                                     IsChecked="{Binding SelectedProjectFilter, Converter={StaticResource EqualityToBooleanConverter}, ConverterParameter='Aid Request'}"
-                                                     Command="{Binding FilterCommand}" CommandParameter="Aid Request"
-                                                     Height="38" HorizontalContentAlignment="Left" Margin="0,0,0,4"/>
-                                        <RadioButton Style="{StaticResource MaterialDesignTabRadioButton}"
                                                      Content="Cash For Work"
                                                      IsChecked="{Binding SelectedProjectFilter, Converter={StaticResource EqualityToBooleanConverter}, ConverterParameter='Cash For Work'}"
                                                      Command="{Binding FilterCommand}" CommandParameter="Cash For Work"

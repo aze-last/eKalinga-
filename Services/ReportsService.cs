@@ -8,16 +8,15 @@ namespace AttendanceShiftingManagement.Services
 {
     public enum ReportsReportType
     {
-        AidRequests,
-        ValidatedBeneficiaries,
         BudgetUtilization,
         DistributionClaims,
+        CashForWork,
         AdminActivityAudit
     }
 
     public sealed class ReportsQueryOptions
     {
-        public ReportsReportType ReportType { get; init; } = ReportsReportType.AidRequests;
+        public ReportsReportType ReportType { get; init; } = ReportsReportType.BudgetUtilization;
         public DateTime DateFrom { get; init; } = DateTime.Today.AddDays(-30);
         public DateTime DateTo { get; init; } = DateTime.Today;
         public int? AyudaProgramId { get; init; }
@@ -54,10 +53,10 @@ namespace AttendanceShiftingManagement.Services
 
             return normalizedOptions.ReportType switch
             {
-                ReportsReportType.ValidatedBeneficiaries => await BuildValidatedBeneficiariesSnapshotAsync(context, normalizedOptions, programLabel, cancellationToken),
                 ReportsReportType.BudgetUtilization => await BuildBudgetUtilizationSnapshotAsync(context, normalizedOptions, programLabel, cancellationToken),
                 ReportsReportType.DistributionClaims => await BuildDistributionClaimsSnapshotAsync(context, normalizedOptions, programLabel, cancellationToken),
-                _ => await BuildAidRequestsSnapshotAsync(context, normalizedOptions, programLabel, cancellationToken)
+                ReportsReportType.CashForWork => await BuildCashForWorkSnapshotAsync(context, normalizedOptions, programLabel, cancellationToken),
+                _ => await BuildAdminActivityAuditSnapshotAsync(context, normalizedOptions, programLabel, cancellationToken)
             };
         }
 
@@ -504,6 +503,166 @@ namespace AttendanceShiftingManagement.Services
                     rows.Count == 0 ? "No distribution claims matched the selected filters." : $"Latest claim in scope was recorded at {rows[0].ClaimedAt:MMM dd, yyyy hh:mm tt}.",
                     distinctPrograms == 0 ? "No distribution programs are represented in the current report." : $"{distinctPrograms:N0} program(s) are represented in the claims table.")
             };
+        }
+
+        private static async Task<ReportsSnapshot> BuildCashForWorkSnapshotAsync(
+            LocalDbContext context,
+            ReportsQueryOptions options,
+            string programLabel,
+            CancellationToken cancellationToken)
+        {
+            var rangeEndExclusive = options.DateTo.AddDays(1);
+
+            var eventsQuery = context.CashForWorkEvents
+                .AsNoTracking()
+                .Where(item => !item.IsDeleted && item.EventDate >= options.DateFrom && item.EventDate < rangeEndExclusive);
+
+            if (options.AyudaProgramId.HasValue)
+            {
+                eventsQuery = eventsQuery.Where(item => item.AyudaProgramId == options.AyudaProgramId.Value);
+            }
+
+            var events = await eventsQuery
+                .OrderByDescending(item => item.EventDate)
+                .ThenBy(item => item.Title)
+                .ToListAsync(cancellationToken);
+
+            var eventIds = events.Select(item => item.Id).ToList();
+
+            var participants = await context.CashForWorkParticipants
+                .AsNoTracking()
+                .Include(participant => participant.Beneficiary)
+                .Where(participant => !participant.IsDeleted && eventIds.Contains(participant.EventId))
+                .ToListAsync(cancellationToken);
+
+            var participantIds = participants.Select(participant => participant.Id).ToList();
+
+            var attendances = await context.CashForWorkAttendances
+                .AsNoTracking()
+                .Where(attendance => !attendance.IsDeleted && participantIds.Contains(attendance.ParticipantId))
+                .ToListAsync(cancellationToken);
+
+            var eventsById = events.ToDictionary(item => item.Id);
+            var latestAttendanceByParticipantId = attendances
+                .Where(attendance =>
+                {
+                    var participant = participants.FirstOrDefault(p => p.Id == attendance.ParticipantId);
+                    return participant != null
+                        && eventsById.TryGetValue(participant.EventId, out var owningEvent)
+                        && attendance.AttendanceDate.Date == owningEvent.EventDate.Date;
+                })
+                .GroupBy(attendance => attendance.ParticipantId)
+                .ToDictionary(
+                    group => group.Key,
+                    group => group.OrderByDescending(attendance => attendance.RecordedAt).First());
+
+            var presentCountByEventId = participants
+                .GroupBy(participant => participant.EventId)
+                .ToDictionary(
+                    group => group.Key,
+                    group => group.Count(participant =>
+                        latestAttendanceByParticipantId.TryGetValue(participant.Id, out var attendance) &&
+                        attendance.Status == CashForWorkAttendanceStatus.Present));
+
+            var table = CreateTable(
+                ("Event Date", typeof(string)),
+                ("Event", typeof(string)),
+                ("Kind", typeof(string)),
+                ("Location", typeof(string)),
+                ("Participant", typeof(string)),
+                ("Beneficiary ID", typeof(string)),
+                ("Attendance", typeof(string)),
+                ("Amount Paid", typeof(string)));
+
+            var presentTotal = 0;
+            foreach (var cashForWorkEvent in events)
+            {
+                var eventParticipants = participants
+                    .Where(participant => participant.EventId == cashForWorkEvent.Id)
+                    .OrderBy(participant => BuildCashForWorkParticipantName(participant))
+                    .ToList();
+
+                presentCountByEventId.TryGetValue(cashForWorkEvent.Id, out var presentCount);
+                var perHeadAmount = cashForWorkEvent.ReleaseAmount.HasValue && presentCount > 0
+                    ? cashForWorkEvent.ReleaseAmount.Value / presentCount
+                    : (decimal?)null;
+
+                foreach (var participant in eventParticipants)
+                {
+                    latestAttendanceByParticipantId.TryGetValue(participant.Id, out var attendance);
+                    var isPresent = attendance?.Status == CashForWorkAttendanceStatus.Present;
+                    var amountText = isPresent && perHeadAmount.HasValue
+                        ? perHeadAmount.Value.ToString("N2", CultureInfo.InvariantCulture)
+                        : "--";
+
+                    table.Rows.Add(
+                        cashForWorkEvent.EventDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                        cashForWorkEvent.Title,
+                        cashForWorkEvent.EventKind == CashForWorkEventKind.Seminar ? "Seminar" : "Cash-for-Work",
+                        cashForWorkEvent.Location,
+                        BuildCashForWorkParticipantName(participant),
+                        participant.Beneficiary?.BeneficiaryId ?? "--",
+                        attendance?.Status.ToString() ?? "Not Recorded",
+                        amountText);
+
+                    if (isPresent)
+                    {
+                        presentTotal++;
+                    }
+                }
+            }
+
+            var totalDisbursed = events
+                .Where(item => item.ReleaseAmount.HasValue)
+                .Sum(item => item.ReleaseAmount!.Value);
+            var releasedEventCount = events.Count(item => item.ReleaseAmount.HasValue);
+
+            return new ReportsSnapshot
+            {
+                Title = "Cash-for-Work",
+                Subtitle = "Per-participant attendance and wage payout log across cash-for-work events.",
+                ExportFilePrefix = "cash-for-work",
+                RangeLabel = BuildRangeLabel(options),
+                ProgramLabel = programLabel,
+                SuggestedOrientation = "Landscape",
+                Table = table,
+                Metrics = new[]
+                {
+                    CreateMetric("Events", events.Count.ToString("N0", CultureInfo.InvariantCulture), "Cash-for-work and seminar events in the selected period"),
+                    CreateMetric("Participants", participants.Count.ToString("N0", CultureInfo.InvariantCulture), "Beneficiaries assigned across the events in scope"),
+                    CreateMetric("Present", presentTotal.ToString("N0", CultureInfo.InvariantCulture), "Participants marked present on their event date"),
+                    CreateMetric("Total Disbursed", totalDisbursed.ToString("N2", CultureInfo.InvariantCulture), "Released payout total across events in scope")
+                },
+                Highlights = BuildHighlights(
+                    events.Count == 0
+                        ? "No cash-for-work events matched the selected filters."
+                        : $"{releasedEventCount:N0} of {events.Count:N0} event(s) in scope have a recorded payout release.",
+                    totalDisbursed == 0m
+                        ? "No payouts were released inside the selected range."
+                        : $"A total of {totalDisbursed:N2} was disbursed to present participants in the selected range.")
+            };
+        }
+
+        private static string BuildCashForWorkParticipantName(CashForWorkParticipant participant)
+        {
+            var beneficiary = participant.Beneficiary;
+            if (beneficiary == null)
+            {
+                return $"Participant #{participant.Id}";
+            }
+
+            if (!string.IsNullOrWhiteSpace(beneficiary.FullName))
+            {
+                return beneficiary.FullName.Trim();
+            }
+
+            var joined = string.Join(
+                " ",
+                new[] { beneficiary.FirstName, beneficiary.MiddleName, beneficiary.LastName }
+                    .Where(value => !string.IsNullOrWhiteSpace(value))
+                    .Select(value => value!.Trim()));
+
+            return string.IsNullOrWhiteSpace(joined) ? $"Participant #{participant.Id}" : joined;
         }
 
         private static async Task<ReportsSnapshot> BuildAdminActivityAuditSnapshotAsync(

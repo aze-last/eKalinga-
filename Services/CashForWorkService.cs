@@ -154,13 +154,15 @@ namespace AttendanceShiftingManagement.Services
             TimeSpan endTime,
             string? notes,
             int createdByUserId,
+            int? cashForWorkBudgetId = null,
             decimal unitAmount = 0m,
             CashForWorkEventKind eventKind = CashForWorkEventKind.CashForWork,
             DateTime? finishDate = null,
             CashForWorkBenefitType benefitType = CashForWorkBenefitType.None,
             string? benefitDescription = null)
         {
-            var resolvedBudgetId = await ResolveGlobalBudgetAsync();
+            // Use provided budget ID, or fall back to global budget if not specified
+            var resolvedBudgetId = cashForWorkBudgetId ?? await ResolveGlobalBudgetAsync();
 
             var cashForWorkEvent = new CashForWorkEvent
             {
@@ -472,7 +474,9 @@ namespace AttendanceShiftingManagement.Services
 
             EnsureEventCanBeModified(cashForWorkEvent);
 
-            var resolvedBudgetId = await ResolveGlobalBudgetAsync();
+            // Preserve the event's existing budget link (it may point at a per-project
+            // CFW budget); only backfill from the global budget when the event has none.
+            var resolvedBudgetId = cashForWorkEvent.CashForWorkBudgetId ?? await ResolveGlobalBudgetAsync();
 
             cashForWorkEvent.Title = title.Trim();
             cashForWorkEvent.Location = location.Trim();
@@ -627,7 +631,21 @@ namespace AttendanceShiftingManagement.Services
         {
             if (RemoteWriteExecutionService.ShouldRouteToRemote(_context))
             {
-                var localBudget = await _context.CashForWorkBudgets
+                // Mirror the budget the event is actually linked to (per-project or global),
+                // falling back to the global budget for legacy events with no link.
+                var eventBudgetId = await _context.CashForWorkEvents
+                    .AsNoTracking()
+                    .Where(item => !item.IsDeleted && item.Id == eventId)
+                    .Select(item => item.CashForWorkBudgetId)
+                    .FirstOrDefaultAsync();
+
+                var localBudget = eventBudgetId.HasValue
+                    ? await _context.CashForWorkBudgets
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(item => item.Id == eventBudgetId.Value && item.IsActive)
+                    : null;
+
+                localBudget ??= await _context.CashForWorkBudgets
                     .AsNoTracking()
                     .FirstOrDefaultAsync(item => item.BudgetCode == "GLOBAL_CFW_BUDGET" && item.IsActive);
 
@@ -640,16 +658,21 @@ namespace AttendanceShiftingManagement.Services
                             if (localBudget != null)
                             {
                                 var remoteBudget = await remoteContext.CashForWorkBudgets
-                                    .FirstOrDefaultAsync(item => item.BudgetCode == "GLOBAL_CFW_BUDGET");
+                                    .FirstOrDefaultAsync(item => item.BudgetCode == localBudget.BudgetCode);
 
                                 if (remoteBudget == null)
                                 {
+                                    // Source FK ids are local row ids and do not translate across
+                                    // databases, so only scalar fields are mirrored.
                                     remoteBudget = new CashForWorkBudget
                                     {
                                         BudgetCode = localBudget.BudgetCode,
                                         BudgetName = localBudget.BudgetName,
                                         Description = localBudget.Description,
                                         BudgetCap = localBudget.BudgetCap,
+                                        DailyRate = localBudget.DailyRate,
+                                        StartDate = localBudget.StartDate,
+                                        EndDate = localBudget.EndDate,
                                         IsActive = localBudget.IsActive,
                                         CreatedByUserId = recordedByUserId,
                                         CreatedAt = DateTime.Now,
@@ -708,10 +731,23 @@ namespace AttendanceShiftingManagement.Services
                 return new CashForWorkReleaseOperationResult(false, "This cash-for-work event already has a recorded release.");
             }
 
-            var resolvedBudgetId = await ResolveGlobalBudgetAsync();
+            // Debit the budget the event was created against (per-project CFW budget);
+            // legacy events with no link fall back to the global budget.
+            var resolvedBudgetId = cashForWorkEvent.CashForWorkBudgetId;
+            if (resolvedBudgetId.HasValue)
+            {
+                var eventBudgetIsActive = await _context.CashForWorkBudgets
+                    .AsNoTracking()
+                    .AnyAsync(item => item.Id == resolvedBudgetId.Value && item.IsActive);
+                if (!eventBudgetIsActive)
+                {
+                    resolvedBudgetId = null;
+                }
+            }
+            resolvedBudgetId ??= await ResolveGlobalBudgetAsync();
             if (!resolvedBudgetId.HasValue)
             {
-                return new CashForWorkReleaseOperationResult(false, "No active global cash-for-work budget found. Please set one in the Budget module first.");
+                return new CashForWorkReleaseOperationResult(false, "No active cash-for-work budget found for this event. Please set one in the Budget module first.");
             }
 
             var releaseReadySummary = GetReleaseReadySummary(eventId);

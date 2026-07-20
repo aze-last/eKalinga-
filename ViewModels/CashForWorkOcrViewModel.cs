@@ -1489,6 +1489,7 @@ namespace AttendanceShiftingManagement.ViewModels
                         endTime,
                         EventNotes,
                         _currentUser.Id,
+                        null,  // cashForWorkBudgetId - uses global budget as default
                         unitAmount,
                         _eventEditorKind,
                         FinishDate?.Date,

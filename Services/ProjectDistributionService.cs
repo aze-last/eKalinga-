@@ -35,6 +35,20 @@ namespace AttendanceShiftingManagement.Services
         bool IsScannedBeneficiary,
         bool AlreadyReceivedSameAssistanceType);
 
+    /// <summary>Pre-enrollment household snapshot: members with how many benefits each has already claimed across all projects.</summary>
+    public sealed record HouseholdBenefitRecords(
+        bool HasHousehold,
+        string HouseholdCode,
+        string HeadName,
+        IReadOnlyList<HouseholdMemberBenefitItem> Members,
+        int TotalHouseholdClaims);
+
+    public sealed record HouseholdMemberBenefitItem(
+        string FullName,
+        string RelationshipToHead,
+        bool IsCandidateBeneficiary,
+        int BenefitsReceivedCount);
+
     public sealed class ProjectDistributionService
     {
         private readonly LocalDbContext _context;
@@ -798,6 +812,62 @@ namespace AttendanceShiftingManagement.Services
         /// cross-project "already received the same assistance type" flag per member. Entities are
         /// mapped to DTOs inside the service so the ViewModel never sees EF types.
         /// </summary>
+        /// <summary>Household roster + per-member claim counts across ALL projects; shown before enrolling a beneficiary from the Budget module.</summary>
+        public async Task<HouseholdBenefitRecords> GetHouseholdBenefitRecordsAsync(int beneficiaryStagingId)
+        {
+            var staging = await _context.BeneficiaryStaging
+                .AsNoTracking()
+                .FirstOrDefaultAsync(row => row.StagingID == beneficiaryStagingId);
+
+            var householdId = staging?.LinkedHouseholdId;
+            if (householdId == null)
+            {
+                return new HouseholdBenefitRecords(false, string.Empty, string.Empty, Array.Empty<HouseholdMemberBenefitItem>(), 0);
+            }
+
+            var household = await _context.Households
+                .AsNoTracking()
+                .FirstOrDefaultAsync(item => item.Id == householdId.Value);
+
+            var members = await _context.HouseholdMembers
+                .AsNoTracking()
+                .Where(item => item.HouseholdId == householdId.Value)
+                .OrderBy(item => item.FullName)
+                .Select(item => new { item.Id, item.FullName, item.RelationshipToHead })
+                .ToListAsync();
+
+            // All claims by this household, any project/assistance type.
+            var claims = await _context.AyudaProjectClaims
+                .AsNoTracking()
+                .Where(claim => claim.HouseholdId == householdId.Value)
+                .Select(claim => new { claim.HouseholdMemberId, claim.FullName })
+                .ToListAsync();
+
+            var candidateMemberId = staging?.LinkedHouseholdMemberId;
+
+            var memberItems = members
+                .Select(member =>
+                {
+                    var received = claims.Count(claim =>
+                        (claim.HouseholdMemberId != null && claim.HouseholdMemberId == member.Id) ||
+                        string.Equals(claim.FullName, member.FullName, StringComparison.OrdinalIgnoreCase));
+
+                    return new HouseholdMemberBenefitItem(
+                        member.FullName,
+                        member.RelationshipToHead ?? string.Empty,
+                        candidateMemberId != null && candidateMemberId == member.Id,
+                        received);
+                })
+                .ToList();
+
+            return new HouseholdBenefitRecords(
+                true,
+                household?.HouseholdCode ?? string.Empty,
+                household?.HeadName ?? string.Empty,
+                memberItems,
+                claims.Count);
+        }
+
         public async Task<HouseholdVerificationContext> GetHouseholdVerificationContextAsync(int ayudaProgramId, int beneficiaryStagingId)
         {
             var staging = await _context.BeneficiaryStaging

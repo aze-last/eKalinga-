@@ -34,6 +34,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
             ShowDashboardCommand = new RelayCommand(_ => SwitchSection("Dashboard"));
             ShowCashForWorkCommand = new RelayCommand(_ => SwitchSection("CashForWork"));
+            ShowCashForWorkPayoutCommand = new RelayCommand(_ => SwitchSection("CashForWorkPayout"));
             ShowBudgetCommand = new RelayCommand(_ => SwitchSection("Budget"));
             ShowDistributionCommand = new RelayCommand(_ => SwitchSection("Distribution"));
             ShowMasterListCommand = new RelayCommand(_ => SwitchSection("MasterList"));
@@ -177,6 +178,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
         public RelayCommand ShowDashboardCommand { get; }
         public RelayCommand ShowCashForWorkCommand { get; }
+        public RelayCommand ShowCashForWorkPayoutCommand { get; }
         public RelayCommand ShowBudgetCommand { get; }
         public RelayCommand ShowDistributionCommand { get; }
         public RelayCommand ShowMasterListCommand { get; }
@@ -273,6 +275,10 @@ namespace AttendanceShiftingManagement.ViewModels
                     CurrentSectionTitle = "Scanning Portal";
                     CurrentSectionSubtitle = "Use the hardware scanner gun to instantly pull up beneficiary profiles and perform actions.";
                     return new ScanningPortalPage(_currentUser);
+                case "CashForWorkPayout":
+                    CurrentSectionTitle = "Cash-for-Work Payout";
+                    CurrentSectionSubtitle = "Scan workers for daily attendance, then release attendance-based payouts.";
+                    return new CashForWorkPayoutPage(_currentUser);
                 default:
                     CurrentSectionTitle = "Attendance & Payouts";
                     CurrentSectionSubtitle = "Create work events or seminars, assign participants, and save attendance to release payouts.";

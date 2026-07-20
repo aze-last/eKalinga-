@@ -28,6 +28,24 @@ namespace AttendanceShiftingManagement.Views
 
         private void OnProjectCreatedGoToDistribution(string projectName)
         {
+            // CFW projects live in the Cash-for-Work Payout module, not Distribution.
+            if (_viewModel._createdCfwBudgetId.HasValue)
+            {
+                var goToPayout = MessageBox.Show(
+                    $"Cash-for-Work project \"{projectName}\" was created successfully.\n\nGo to Cash-for-Work Payout now to create events and manage worker attendance?",
+                    "CFW Project Created",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Information);
+
+                if (goToPayout == MessageBoxResult.Yes &&
+                    Window.GetWindow(this) is MainWindow cfwMainWindow &&
+                    cfwMainWindow.DataContext is BarangayMainViewModel cfwMainVm)
+                {
+                    cfwMainVm.ShowCashForWorkPayoutCommand.Execute(null);
+                }
+                return;
+            }
+
             var result = MessageBox.Show(
                 $"Project \"{projectName}\" was created successfully.\n\nGo to Distribution now to add beneficiaries?",
                 "Project Created",

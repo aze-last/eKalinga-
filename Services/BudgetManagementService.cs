@@ -48,6 +48,24 @@ namespace AttendanceShiftingManagement.Services
 
     public sealed record CashForWorkBudgetOperationResult(bool IsSuccess, string Message, int? CashForWorkBudgetId = null);
 
+    public sealed record CashForWorkProjectRequest(
+        string BudgetCode,
+        string BudgetName,
+        string? Description,
+        decimal? DailyRate,
+        decimal? BudgetCap,
+        DateTime StartDate,
+        DateTime EndDate,
+        int? SourceDonationId = null,
+        int? SourceGGMSBudgetId = null,
+        string? SourceProjectDetailsId = null);
+
+    public sealed record CashForWorkProjectOperationResult(
+        bool Success,
+        string Message = "",
+        int BudgetId = 0,
+        string BudgetName = "");
+
     public sealed record GovernmentBudgetSnapshotRequest(
         string OfficeCode,
         string OfficeName,
@@ -306,6 +324,126 @@ namespace AttendanceShiftingManagement.Services
                 $"Updated global cash-for-work budget cap to {budgetCap:N2}.");
 
             return new CashForWorkBudgetOperationResult(true, "Updated global cash-for-work budget.", budget.Id);
+        }
+
+        public async Task<CashForWorkProjectOperationResult> CreateCashForWorkProjectAsync(
+            CashForWorkProjectRequest request, int createdByUserId)
+        {
+            int? remoteGeneratedId = null;
+            if (RemoteWriteExecutionService.ShouldRouteToRemote(_context))
+            {
+                try
+                {
+                    var remoteResult = await RemoteWriteExecutionService.ExecuteRemoteWriteAsync(
+                        _context,
+                        async remoteContext =>
+                        {
+                            var remoteService = new BudgetManagementService(remoteContext, _auditService);
+                            return await remoteService.CreateCashForWorkProjectAsync(request, createdByUserId);
+                        });
+
+                    if (!remoteResult.Success) return remoteResult;
+                    remoteGeneratedId = remoteResult.BudgetId;
+                }
+                catch (Exception ex)
+                {
+                    return new(false, $"Remote creation failed. {ex.Message}");
+                }
+            }
+
+            var budgetCode = NormalizeRequired(request.BudgetCode);
+            var budgetName = NormalizeRequired(request.BudgetName);
+
+            // Validate
+            if (string.IsNullOrWhiteSpace(budgetName))
+                return new(false, "Project name is required");
+            if (string.IsNullOrWhiteSpace(budgetCode))
+                return new(false, "Project code is required");
+            if (budgetCode.Length > 40)
+                return new(false, "Project code is too long (40 characters max including the CFW- prefix)");
+            if (request.BudgetCap.HasValue && request.BudgetCap < 0)
+                return new(false, "Budget cap cannot be negative");
+            if (request.DailyRate.HasValue && request.DailyRate <= 0)
+                return new(false, "Daily rate must be positive");
+            if (request.StartDate > request.EndDate)
+                return new(false, "Start date cannot be after end date");
+
+            // budget_code has a unique index; fail with a friendly message instead of a DbUpdateException
+            var codeExists = await _context.CashForWorkBudgets.AsNoTracking()
+                .AnyAsync(b => b.BudgetCode == budgetCode);
+            if (codeExists)
+                return new(false, $"A cash-for-work project with code '{budgetCode}' already exists");
+
+            // Verify funding source exists
+            if (request.SourceDonationId.HasValue)
+            {
+                var donationExists = await _context.PrivateDonations.AsNoTracking()
+                    .AnyAsync(d => d.Id == request.SourceDonationId.Value);
+                if (!donationExists)
+                    return new(false, "Selected donation not found");
+            }
+            if (request.SourceGGMSBudgetId.HasValue)
+            {
+                var ggmsBudgetExists = await _context.GovernmentBudgetSnapshots.AsNoTracking()
+                    .AnyAsync(g => g.Id == request.SourceGGMSBudgetId.Value);
+                if (!ggmsBudgetExists)
+                    return new(false, "Selected GGMS budget not found");
+            }
+
+            var sourceProjectDetailsId = NormalizeNullable(request.SourceProjectDetailsId);
+            var budgetCap = request.BudgetCap;
+
+            // GGMS-linked projects: the sub-allocation is the spending envelope — cap defaults
+            // to it and can never exceed it (same rule as CreateProgramAsync). The cache is a
+            // local-only SQLite mirror, so this validation is skipped on the MySQL provider.
+            if (sourceProjectDetailsId != null && _context.Database.ProviderName != "Pomelo.EntityFrameworkCore.MySql")
+            {
+                var linkedGgmsProject = await _context.GgmsProjectCache.AsNoTracking()
+                    .FirstOrDefaultAsync(cache => cache.ProjectDetailsId == sourceProjectDetailsId);
+
+                if (linkedGgmsProject == null)
+                    return new(false, $"GGMS project '{sourceProjectDetailsId}' was not found in the local mirror. Run Sync GGMS first.");
+
+                if (budgetCap.HasValue && budgetCap.Value > linkedGgmsProject.TotalBudget)
+                    return new(false, $"Budget cap cannot exceed the GGMS project budget of {linkedGgmsProject.TotalBudget:N2}.");
+                budgetCap ??= linkedGgmsProject.TotalBudget;
+            }
+
+            // Create per-project CFW budget
+            var cfwBudget = new CashForWorkBudget
+            {
+                BudgetCode = budgetCode,
+                BudgetName = budgetName,
+                Description = NormalizeNullable(request.Description),
+                BudgetCap = budgetCap,
+                DailyRate = request.DailyRate,
+                StartDate = request.StartDate,
+                EndDate = request.EndDate,
+                SourceDonationId = request.SourceDonationId,
+                SourceGGMSBudgetId = request.SourceGGMSBudgetId,
+                SourceProjectDetailsId = sourceProjectDetailsId,
+                IsActive = true,
+                CreatedByUserId = createdByUserId,
+                CreatedAt = DateTime.Now,
+                UpdatedAt = DateTime.Now
+            };
+
+            if (remoteGeneratedId.HasValue)
+            {
+                cfwBudget.Id = remoteGeneratedId.Value;
+            }
+
+            _context.CashForWorkBudgets.Add(cfwBudget);
+            await _context.SaveChangesAsync();
+
+            await _auditService.LogActivityAsync(
+                createdByUserId,
+                "CashForWorkProjectCreated",
+                nameof(CashForWorkBudget),
+                cfwBudget.Id,
+                $"Created cash-for-work project '{budgetName}' with budget cap {budgetCap:N2}");
+
+            return new(true, "Project created successfully", cfwBudget.Id, cfwBudget.BudgetName);
         }
 
         public async Task<IReadOnlyList<PrivateDonation>> GetPrivateDonationsAsync(int take = 50)
@@ -693,6 +831,10 @@ namespace AttendanceShiftingManagement.Services
 
                 budgetOwnerLabel = cashForWorkBudget.BudgetName;
                 budgetCap = cashForWorkBudget.BudgetCap;
+
+                // Read funding source from the CFW budget (Phase 3 enhancement)
+                sourceDonationId = cashForWorkBudget.SourceDonationId;
+                sourceGgmsBudgetId = cashForWorkBudget.SourceGGMSBudgetId;
             }
             else if (request.AyudaProgramId.HasValue)
             {
@@ -749,8 +891,17 @@ namespace AttendanceShiftingManagement.Services
                     .Select(p => p.Id)
                     .ToListAsync();
 
+                // CFW budgets funded by the same donation also draw from this envelope;
+                // their ledger entries carry CashForWorkBudgetId with a null ProgramId.
+                var sharingCfwBudgetIds = await _context.CashForWorkBudgets.AsNoTracking()
+                    .Where(b => b.SourceDonationId == sourceDonationId.Value)
+                    .Select(b => b.Id)
+                    .ToListAsync();
+
                 var spent = await _context.BudgetLedgerEntries.AsNoTracking()
-                    .Where(e => e.EntryType == BudgetLedgerEntryType.Release && e.ProgramId.HasValue && sharingProgramIds.Contains(e.ProgramId.Value))
+                    .Where(e => e.EntryType == BudgetLedgerEntryType.Release &&
+                        ((e.ProgramId.HasValue && sharingProgramIds.Contains(e.ProgramId.Value)) ||
+                         (e.CashForWorkBudgetId.HasValue && sharingCfwBudgetIds.Contains(e.CashForWorkBudgetId.Value))))
                     .SumAsync(e => (decimal?)e.TotalAmount) ?? 0m;
 
                 var remaining = donation.Amount - spent;
@@ -758,7 +909,7 @@ namespace AttendanceShiftingManagement.Services
                 {
                     return new BudgetReleaseOperationResult(false, $"Release cannot continue. Source donation budget short by {request.TotalAmount - remaining:N2}.");
                 }
-                
+
                 privatePortion = request.TotalAmount;
             }
             else if (sourceGgmsBudgetId.HasValue)
@@ -771,8 +922,15 @@ namespace AttendanceShiftingManagement.Services
                     .Select(p => p.Id)
                     .ToListAsync();
 
+                var sharingCfwBudgetIds = await _context.CashForWorkBudgets.AsNoTracking()
+                    .Where(b => b.SourceGGMSBudgetId == sourceGgmsBudgetId.Value)
+                    .Select(b => b.Id)
+                    .ToListAsync();
+
                 var spent = await _context.BudgetLedgerEntries.AsNoTracking()
-                    .Where(e => e.EntryType == BudgetLedgerEntryType.Release && e.ProgramId.HasValue && sharingProgramIds.Contains(e.ProgramId.Value))
+                    .Where(e => e.EntryType == BudgetLedgerEntryType.Release &&
+                        ((e.ProgramId.HasValue && sharingProgramIds.Contains(e.ProgramId.Value)) ||
+                         (e.CashForWorkBudgetId.HasValue && sharingCfwBudgetIds.Contains(e.CashForWorkBudgetId.Value))))
                     .SumAsync(e => (decimal?)e.TotalAmount) ?? 0m;
 
                 var remaining = ggms.AllocatedAmount - spent;
@@ -783,7 +941,7 @@ namespace AttendanceShiftingManagement.Services
 
                 governmentPortion = request.TotalAmount;
             }
-            else if (ayudaProgram?.SourceProjectDetailsId != null)
+            else if (ayudaProgram?.SourceProjectDetailsId != null || cashForWorkBudget?.SourceProjectDetailsId != null)
             {
                 // GGMS-linked projects spend their own earmarked envelope: BudgetCap equals the
                 // GGMS project budget and GetOverviewAsync already subtracts that envelope from

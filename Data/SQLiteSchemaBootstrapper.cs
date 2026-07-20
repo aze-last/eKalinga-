@@ -98,6 +98,31 @@ namespace AttendanceShiftingManagement.Data
                             SourceUpdatedAt TEXT NULL,
                             CachedAt TEXT NOT NULL,
                             IsLinked INTEGER NOT NULL DEFAULT 0
+                        );
+
+                        CREATE TABLE IF NOT EXISTS beneficiary_community_tax_payments (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            sync_id TEXT NOT NULL UNIQUE,
+                            beneficiary_staging_id INTEGER NOT NULL,
+                            ayuda_program_id INTEGER NULL,
+                            cedula_number TEXT NOT NULL DEFAULT '',
+                            paid_amount DECIMAL(18,2) NULL,
+                            paid_date TEXT NULL,
+                            is_deleted INTEGER NOT NULL DEFAULT 0,
+                            created_at TEXT NOT NULL
+                        );
+
+                        CREATE TABLE IF NOT EXISTS beneficiary_requirement_documents (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            sync_id TEXT NOT NULL UNIQUE,
+                            beneficiary_staging_id INTEGER NOT NULL,
+                            ayuda_program_id INTEGER NULL,
+                            document_name TEXT NOT NULL DEFAULT '',
+                            submitted_date TEXT NULL,
+                            status TEXT NOT NULL DEFAULT 'Incomplete',
+                            remarks TEXT NULL,
+                            is_deleted INTEGER NOT NULL DEFAULT 0,
+                            created_at TEXT NOT NULL
                         );";
                     cmd.ExecuteNonQuery();
                 }
@@ -116,6 +141,28 @@ namespace AttendanceShiftingManagement.Data
                 if (ayudaProgramColumns.Count > 0)
                 {
                     EnsureColumnExists(connection, "ayuda_programs", "source_project_details_id", "TEXT NULL", ayudaProgramColumns);
+                }
+
+                // Per-project CFW budget funding link + schedule columns (mirrors migration
+                // AddCashForWorkFundingSource on the MySQL side). Skipped when the table does
+                // not exist yet (EF creates it on first run with the full model).
+                // Soft-delete flag on claims (mirrors migration AddBeneficiaryEnrollmentEntities
+                // on the MySQL side). Skipped when the table does not exist yet.
+                var claimColumns = GetTableColumns(connection, "ayuda_project_claims");
+                if (claimColumns.Count > 0)
+                {
+                    EnsureColumnExists(connection, "ayuda_project_claims", "is_deleted", "INTEGER NOT NULL DEFAULT 0", claimColumns);
+                }
+
+                var cfwBudgetColumns = GetTableColumns(connection, "cash_for_work_budgets");
+                if (cfwBudgetColumns.Count > 0)
+                {
+                    EnsureColumnExists(connection, "cash_for_work_budgets", "source_donation_id", "INTEGER NULL", cfwBudgetColumns);
+                    EnsureColumnExists(connection, "cash_for_work_budgets", "source_ggms_budget_id", "INTEGER NULL", cfwBudgetColumns);
+                    EnsureColumnExists(connection, "cash_for_work_budgets", "source_project_details_id", "TEXT NULL", cfwBudgetColumns);
+                    EnsureColumnExists(connection, "cash_for_work_budgets", "daily_rate", "DECIMAL(18,2) NULL", cfwBudgetColumns);
+                    EnsureColumnExists(connection, "cash_for_work_budgets", "start_date", "TEXT NULL", cfwBudgetColumns);
+                    EnsureColumnExists(connection, "cash_for_work_budgets", "end_date", "TEXT NULL", cfwBudgetColumns);
                 }
             }
             finally

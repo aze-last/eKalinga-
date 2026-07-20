@@ -5,6 +5,7 @@ using AttendanceShiftingManagement.Services;
 using AttendanceShiftingManagement.Views;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Input;
@@ -34,6 +35,8 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _selectedProgramDescriptionText = "Select a project to review distribution performance and beneficiary history.";
         private string _programReleaseEmptyStateMessage = "Select a project to review released beneficiary history.";
         private string _scannerInputText = string.Empty;
+        /// <summary>Staging id whose attachment checklist is loaded in the release modal.</summary>
+        private int _releaseRequirementsStagingId;
 
         public string ScannerInputText
         {
@@ -64,6 +67,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private IReadOnlyDictionary<int, BeneficiaryDigitalId> _digitalIdsByStagingId = new Dictionary<int, BeneficiaryDigitalId>();
         private int _pendingCurrentPage = 1;
         private int _releasedCurrentPage = 1;
+        private int _rejectedCurrentPage = 1;
         private string _addBeneficiarySearchText = string.Empty;
         private string _pendingSearchText = string.Empty;
         private string _selectedPendingDigitalIdCardNumber = "No digital ID issued yet.";
@@ -94,6 +98,12 @@ namespace AttendanceShiftingManagement.ViewModels
         private ProjectDistributionBeneficiaryListItem? _scannedBeneficiary;
         private string? _scannedBeneficiaryStatus;
         private BitmapSource? _scannedBeneficiaryPhoto;
+        private string _scannedBeneficiaryAddress = string.Empty;
+        private string _scannedBeneficiaryAge = string.Empty;
+        private string _scannedBeneficiaryGender = string.Empty;
+        private string _scannedHouseholdNumber = string.Empty;
+        private string _scannedHouseholdRole = string.Empty;
+        private string _scannedAllocatedAmountText = string.Empty;
         private bool _isScannedResultVisible;
         private string? _lastScannedPayload;
         private DateTime _lastScannedTime = DateTime.MinValue;
@@ -147,6 +157,8 @@ namespace AttendanceShiftingManagement.ViewModels
         // True when the household modal was opened from the pending-list Payout Verification panel
         // (vs the scanner/key-in overlay); decides which release path the modal's Confirm runs.
         private bool _householdConfirmFromPendingList;
+        private bool _isBeneficiaryValidationModalOpen;
+        private DistributionBeneficiaryOption? _validatingBeneficiary;
 
         public ProjectDistributionViewModel(User currentUser)
         {
@@ -192,6 +204,8 @@ namespace AttendanceShiftingManagement.ViewModels
             NextPendingPageCommand = new RelayCommand(async _ => await ChangePendingPageAsync(1), _ => CanMovePendingPage(1));
             PrevReleasedPageCommand = new RelayCommand(async _ => await ChangeReleasedPageAsync(-1), _ => CanMoveReleasedPage(-1));
             NextReleasedPageCommand = new RelayCommand(async _ => await ChangeReleasedPageAsync(1), _ => CanMoveReleasedPage(1));
+            PrevRejectedPageCommand = new RelayCommand(async _ => await ChangeRejectedPageAsync(-1), _ => CanMoveRejectedPage(-1));
+            NextRejectedPageCommand = new RelayCommand(async _ => await ChangeRejectedPageAsync(1), _ => CanMoveRejectedPage(1));
             ConfirmReleaseCommand = new RelayCommand(async _ => await ConfirmReleaseAsync(), _ => CanConfirmRelease());
 
             OpenCreateProjectPanelCommand = new RelayCommand(_ => OpenCreateProjectPanel(), _ => !IsBusy);
@@ -200,10 +214,19 @@ namespace AttendanceShiftingManagement.ViewModels
             ConfirmCreateProjectCommand = new RelayCommand(async _ => await ConfirmCreateProjectAsync(), _ => CanConfirmCreateProject());
             ToggleBeneficiarySelectionCommand = new RelayCommand(parameter => ToggleBeneficiarySelection(parameter as DistributionBeneficiaryOption));
 
-            MoveToSelectedCommand = new RelayCommand(parameter => MoveToSelected(parameter as DistributionBeneficiaryOption));
+            MoveToSelectedCommand = new RelayCommand(parameter => OpenBeneficiaryValidation(parameter as DistributionBeneficiaryOption));
             MoveToAvailableCommand = new RelayCommand(parameter => MoveToAvailable(parameter as DistributionBeneficiaryOption));
             MoveAllToSelectedCommand = new RelayCommand(_ => MoveAllToSelected());
             MoveAllToAvailableCommand = new RelayCommand(_ => MoveAllToAvailable());
+
+            OpenBeneficiaryValidationCommand = new RelayCommand(parameter => OpenBeneficiaryValidation(parameter as DistributionBeneficiaryOption));
+            ConfirmAddRecipientCommand = new RelayCommand(_ => ConfirmAddRecipient(), _ => _validatingBeneficiary != null);
+            CancelBeneficiaryValidationCommand = new RelayCommand(_ => CancelBeneficiaryValidation());
+
+            AddCommunityTaxRowCommand = new RelayCommand(_ => AddCommunityTaxRow());
+            RemoveCommunityTaxRowCommand = new RelayCommand(parameter => RemoveCommunityTaxRow(parameter as CommunityTaxEntryRow));
+            AddRequirementRowCommand = new RelayCommand(_ => AddRequirementRow());
+            RemoveRequirementRowCommand = new RelayCommand(parameter => RemoveRequirementRow(parameter as RequirementEntryRow));
 
             _openPcScannerCommand = new RelayCommand(_ => IsPcScannerOpen = true, _ => !IsBusy && SelectedProgram != null);
             _processPcScanCommand = new RelayCommand(payload => _ = ExecuteProcessPcScan(payload as string));
@@ -211,9 +234,12 @@ namespace AttendanceShiftingManagement.ViewModels
             // already received the aid; otherwise records the release directly (fast scanner path).
             _confirmScannedClaimCommand = new RelayCommand(async _ => await RequestConfirmReleaseAsync(), _ => !IsBusy && IsScannedBeneficiaryEligible && IsIdentityVerified);
             _cancelScannedClaimCommand = new RelayCommand(_ => ResetScannedResult());
+            RejectScannedBeneficiaryCommand = new RelayCommand(async _ => await ExecuteRejectScannedBeneficiaryAsync(), _ => !IsBusy && ScannedBeneficiary != null);
             _submitManualKeyInCommand = new RelayCommand(async _ => await ExecuteManualKeyIn(), _ => !IsBusy && SelectedProgram != null && !string.IsNullOrWhiteSpace(ManualBeneficiaryIdText));
             // Household verification modal: final Confirm/Decline gate after a duplicate is flagged.
-            _confirmHouseholdReleaseCommand = new RelayCommand(async _ => await ConfirmHouseholdReleaseAsync(), _ => !IsBusy && (!RequiresHouseholdOverride || HouseholdOverrideAcknowledged));
+            // CONFIRM RELEASE additionally requires the attachment checklist (cedula, barangay
+            // certificate, ...) to be fully complete — missing items keep the beneficiary unreleased.
+            _confirmHouseholdReleaseCommand = new RelayCommand(async _ => await ConfirmHouseholdReleaseAsync(), _ => !IsBusy && AreReleaseRequirementsComplete && (!RequiresHouseholdOverride || HouseholdOverrideAcknowledged));
             _cancelHouseholdConfirmCommand = new RelayCommand(_ => CloseHouseholdConfirm());
 
             ResetCreateProjectForm();
@@ -262,10 +288,18 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand MoveToAvailableCommand { get; }
         public ICommand MoveAllToSelectedCommand { get; }
         public ICommand MoveAllToAvailableCommand { get; }
+        public ICommand OpenBeneficiaryValidationCommand { get; }
+        public ICommand ConfirmAddRecipientCommand { get; }
+        public ICommand CancelBeneficiaryValidationCommand { get; }
+        public ICommand AddCommunityTaxRowCommand { get; }
+        public ICommand RemoveCommunityTaxRowCommand { get; }
+        public ICommand AddRequirementRowCommand { get; }
+        public ICommand RemoveRequirementRowCommand { get; }
         public ICommand OpenPcScannerCommand => _openPcScannerCommand;
         public ICommand ProcessScanCommand => _processPcScanCommand;
         public ICommand ConfirmScannedClaimCommand => _confirmScannedClaimCommand;
         public ICommand CancelScannedClaimCommand => _cancelScannedClaimCommand;
+        public ICommand RejectScannedBeneficiaryCommand { get; }
         public ICommand ConfirmHouseholdReleaseCommand => _confirmHouseholdReleaseCommand;
         public ICommand CancelHouseholdConfirmCommand => _cancelHouseholdConfirmCommand;
 
@@ -280,6 +314,25 @@ namespace AttendanceShiftingManagement.ViewModels
                     OnPropertyChanged(nameof(IsAnyOverlayOpen));
                 }
             }
+        }
+
+        /// <summary>True while the per-beneficiary enrollment validation modal is shown.</summary>
+        public bool IsBeneficiaryValidationModalOpen
+        {
+            get => _isBeneficiaryValidationModalOpen;
+            private set
+            {
+                if (SetProperty(ref _isBeneficiaryValidationModalOpen, value))
+                {
+                    OnPropertyChanged(nameof(IsAnyOverlayOpen));
+                }
+            }
+        }
+
+        public DistributionBeneficiaryOption? ValidatingBeneficiary
+        {
+            get => _validatingBeneficiary;
+            private set => SetProperty(ref _validatingBeneficiary, value);
         }
 
         public ProjectDistributionBeneficiaryListItem? ScannedBeneficiary
@@ -394,10 +447,69 @@ namespace AttendanceShiftingManagement.ViewModels
             }
         }
 
+        /// <summary>Attachment checklist (cedula, barangay certificate, ...) reviewed in the release modal; all items must be complete before CONFIRM RELEASE enables.</summary>
+        public ObservableCollection<RequirementEntryRow> ReleaseRequirementRows { get; } = new();
+
+        public bool AreReleaseRequirementsComplete =>
+            ReleaseRequirementRows.Count > 0 && ReleaseRequirementRows.All(r => r.IsComplete);
+
+        public bool HasMissingReleaseRequirements => ReleaseRequirementRows.Any(r => !r.IsComplete);
+
+        public string ReleaseRequirementsSummaryText
+        {
+            get
+            {
+                var missing = ReleaseRequirementRows.Count(r => !r.IsComplete);
+                return missing == 0
+                    ? "All requirements are complete."
+                    : $"{missing} requirement{(missing == 1 ? "" : "s")} missing — the beneficiary will remain in UNRELEASED / UNCLAIMED until the attachments are presented.";
+            }
+        }
+
         public BitmapSource? ScannedBeneficiaryPhoto
         {
             get => _scannedBeneficiaryPhoto;
             private set => SetProperty(ref _scannedBeneficiaryPhoto, value);
+        }
+
+        /// <summary>Residential address shown on the scanned Beneficiaries Profile modal.</summary>
+        public string ScannedBeneficiaryAddress
+        {
+            get => _scannedBeneficiaryAddress;
+            private set => SetProperty(ref _scannedBeneficiaryAddress, value);
+        }
+
+        public string ScannedBeneficiaryAge
+        {
+            get => _scannedBeneficiaryAge;
+            private set => SetProperty(ref _scannedBeneficiaryAge, value);
+        }
+
+        public string ScannedBeneficiaryGender
+        {
+            get => _scannedBeneficiaryGender;
+            private set => SetProperty(ref _scannedBeneficiaryGender, value);
+        }
+
+        /// <summary>Household code (e.g. BG-XXXXXXX) of the scanned beneficiary's linked household.</summary>
+        public string ScannedHouseholdNumber
+        {
+            get => _scannedHouseholdNumber;
+            private set => SetProperty(ref _scannedHouseholdNumber, value);
+        }
+
+        /// <summary>The scanned beneficiary's relationship to the household head (e.g. Father, Son).</summary>
+        public string ScannedHouseholdRole
+        {
+            get => _scannedHouseholdRole;
+            private set => SetProperty(ref _scannedHouseholdRole, value);
+        }
+
+        /// <summary>Display-only allocated release per beneficiary: unit amount for Cash, item + quantity for Goods.</summary>
+        public string ScannedAllocatedAmountText
+        {
+            get => _scannedAllocatedAmountText;
+            private set => SetProperty(ref _scannedAllocatedAmountText, value);
         }
 
         public bool IsScannedResultVisible
@@ -530,6 +642,7 @@ namespace AttendanceShiftingManagement.ViewModels
         }
 
         private DistributionBeneficiaryOption? _selectedAvailableUnpickedBeneficiary;
+        private DistributionBeneficiaryOption? _selectedProjectBeneficiary;
 
         public bool IsAnyOverlayOpen => IsAddBeneficiaryPanelOpen || IsScannerPanelOpen || IsCreateProjectPanelOpen || IsCreateProjectSuccessPanelOpen || IsPcScannerOpen || IsScannedResultVisible || IsReleaseSuccessState || IsHouseholdConfirmVisible;
 
@@ -537,6 +650,12 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             get => _selectedAvailableUnpickedBeneficiary;
             set => SetProperty(ref _selectedAvailableUnpickedBeneficiary, value);
+        }
+
+        public DistributionBeneficiaryOption? SelectedProjectBeneficiary
+        {
+            get => _selectedProjectBeneficiary;
+            set => SetProperty(ref _selectedProjectBeneficiary, value);
         }
 
         public bool NewProjectIsCashKind => NewProjectSelectedReleaseKind == AssistanceReleaseKind.Cash;
@@ -870,6 +989,56 @@ namespace AttendanceShiftingManagement.ViewModels
             _ = LoadAvailableUnpickedBeneficiariesAsync();
         }
 
+        private void OpenBeneficiaryValidation(DistributionBeneficiaryOption? option)
+        {
+            if (option == null) return;
+            ValidatingBeneficiary = option;
+            IsBeneficiaryValidationModalOpen = true;
+        }
+
+        private void ConfirmAddRecipient()
+        {
+            if (_validatingBeneficiary == null) return;
+            AvailableUnpickedBeneficiaries.Remove(_validatingBeneficiary);
+            var targetStatus = _validatingBeneficiary.IsRequirementsComplete
+                ? DistributionBeneficiaryStatus.Pending
+                : DistributionBeneficiaryStatus.Rejected;
+            _validatingBeneficiary.IsSelected = true;
+            SelectedProjectBeneficiaries.Add(_validatingBeneficiary);
+            UpdateNewProjectSelectedCount();
+            CancelBeneficiaryValidation();
+        }
+
+        private void CancelBeneficiaryValidation()
+        {
+            ValidatingBeneficiary = null;
+            IsBeneficiaryValidationModalOpen = false;
+        }
+
+        private void AddCommunityTaxRow()
+        {
+            if (_validatingBeneficiary == null) return;
+            _validatingBeneficiary.CommunityTaxRows.Add(new CommunityTaxEntryRow());
+        }
+
+        private void RemoveCommunityTaxRow(CommunityTaxEntryRow? row)
+        {
+            if (_validatingBeneficiary == null || row == null) return;
+            _validatingBeneficiary.CommunityTaxRows.Remove(row);
+        }
+
+        private void AddRequirementRow()
+        {
+            if (_validatingBeneficiary == null) return;
+            _validatingBeneficiary.RequirementRows.Add(new RequirementEntryRow());
+        }
+
+        private void RemoveRequirementRow(RequirementEntryRow? row)
+        {
+            if (_validatingBeneficiary == null || row == null) return;
+            _validatingBeneficiary.RequirementRows.Remove(row);
+        }
+
         private void MoveAllToSelected()
         {
             var items = AvailableUnpickedBeneficiaries.ToList();
@@ -981,7 +1150,56 @@ namespace AttendanceShiftingManagement.ViewModels
                     return;
                 }
 
-                // NOTE: We no longer auto-release claims here. 
+                // 3. Persist cedula and requirement data for each beneficiary
+                SetNeutralStatus("Saving cedula and requirement documents...");
+                foreach (var beneficiary in SelectedProjectBeneficiaries)
+                {
+                    // Save community tax payments
+                    foreach (var taxRow in beneficiary.CommunityTaxRows)
+                    {
+                        var taxPayment = new BeneficiaryCommunityTaxPayment
+                        {
+                            BeneficiaryStagingId = beneficiary.StagingId,
+                            AyudaProgramId = programId,
+                            CedulaNumber = taxRow.CedulaNumber,
+                            PaidAmount = taxRow.GetPaidAmount(),
+                            PaidDate = taxRow.PaidDate
+                        };
+                        context.BeneficiaryCommunityTaxPayments.Add(taxPayment);
+                    }
+
+                    // Save requirement documents
+                    foreach (var reqRow in beneficiary.RequirementRows)
+                    {
+                        var reqDoc = new BeneficiaryRequirementDocument
+                        {
+                            BeneficiaryStagingId = beneficiary.StagingId,
+                            AyudaProgramId = programId,
+                            DocumentName = reqRow.DocumentName,
+                            SubmittedDate = reqRow.SubmittedDate,
+                            Status = reqRow.Status,
+                            Remarks = reqRow.Remarks
+                        };
+                        context.BeneficiaryRequirementDocuments.Add(reqDoc);
+                    }
+
+                    // Update membership status if incomplete: Rejected if no requirements or any incomplete
+                    if (!beneficiary.IsRequirementsComplete)
+                    {
+                        var membership = await context.AyudaProjectBeneficiaries
+                            .FirstOrDefaultAsync(m => m.AyudaProgramId == programId && m.BeneficiaryStagingId == beneficiary.StagingId);
+                        if (membership != null)
+                        {
+                            membership.Status = DistributionBeneficiaryStatus.Rejected;
+                            membership.StatusReason = "Incomplete requirements";
+                            membership.StatusUpdatedAt = DateTime.Now;
+                            membership.StatusUpdatedByUserId = _currentUser.Id;
+                        }
+                    }
+                }
+                await context.SaveChangesAsync();
+
+                // NOTE: We no longer auto-release claims here.
                 // Beneficiaries will remain in 'Pending' status for manual scanning or bulk release later.
 
                 await LoadProgramsAsync(programId);
@@ -1025,6 +1243,8 @@ namespace AttendanceShiftingManagement.ViewModels
         public ObservableCollection<ProjectDistributionReleaseListItem> ProgramReleaseHistory { get; } = new();
         public ObservableCollection<ProjectDistributionBeneficiaryListItem> PendingBeneficiaries { get; } = new();
         public ObservableCollection<ProjectDistributionReleaseListItem> ReleasedClaims { get; } = new();
+        /// <summary>Third status bucket: enrolled but Rejected/Not-Eligible (e.g. incomplete requirements).</summary>
+        public ObservableCollection<ProjectDistributionBeneficiaryListItem> RejectedBeneficiaries { get; } = new();
         public ObservableCollection<DistributionBeneficiaryOption> FilteredAvailableBeneficiaries { get; } = new();
 
         public ICommand RefreshCommand { get; }
@@ -1053,6 +1273,8 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand NextPendingPageCommand { get; }
         public ICommand PrevReleasedPageCommand { get; }
         public ICommand NextReleasedPageCommand { get; }
+        public ICommand PrevRejectedPageCommand { get; }
+        public ICommand NextRejectedPageCommand { get; }
         public ICommand ConfirmReleaseCommand { get; }
 
         public string PendingSearchText
@@ -1559,6 +1781,16 @@ namespace AttendanceShiftingManagement.ViewModels
                         nextReleased.RaiseCanExecuteChanged();
                     }
 
+                    if (PrevRejectedPageCommand is RelayCommand prevRejected)
+                    {
+                        prevRejected.RaiseCanExecuteChanged();
+                    }
+
+                    if (NextRejectedPageCommand is RelayCommand nextRejected)
+                    {
+                        nextRejected.RaiseCanExecuteChanged();
+                    }
+
                     if (ConfirmReleaseCommand is RelayCommand confirmRelease)
                     {
                         confirmRelease.RaiseCanExecuteChanged();
@@ -1617,12 +1849,21 @@ namespace AttendanceShiftingManagement.ViewModels
             private set => SetProperty(ref _releasedCurrentPage, value);
         }
 
+        public int RejectedCurrentPage
+        {
+            get => _rejectedCurrentPage;
+            private set => SetProperty(ref _rejectedCurrentPage, value);
+        }
+
         public int PendingTotalCount => ProgramBeneficiaries.Count(item => item.Status == DistributionBeneficiaryStatus.Pending);
         public int ReleasedTotalCount => ProgramReleaseHistory.Count;
+        public int RejectedTotalCount => ProgramBeneficiaries.Count(item => item.Status == DistributionBeneficiaryStatus.Rejected);
         public int PendingTotalPages => Math.Max(1, (int)Math.Ceiling(PendingTotalCount / (double)DistributionPageSize));
         public int ReleasedTotalPages => Math.Max(1, (int)Math.Ceiling(ReleasedTotalCount / (double)DistributionPageSize));
+        public int RejectedTotalPages => Math.Max(1, (int)Math.Ceiling(RejectedTotalCount / (double)DistributionPageSize));
         public string PendingPaginationText => $"{PendingCurrentPage} / {PendingTotalPages}";
         public string ReleasedPaginationText => $"{ReleasedCurrentPage} / {ReleasedTotalPages}";
+        public string RejectedPaginationText => $"{RejectedCurrentPage} / {RejectedTotalPages}";
 
         public string SelectedPendingDigitalIdCardNumber
         {
@@ -1868,8 +2109,10 @@ namespace AttendanceShiftingManagement.ViewModels
                 _digitalIdsByStagingId = new Dictionary<int, BeneficiaryDigitalId>();
                 PendingCurrentPage = 1;
                 ReleasedCurrentPage = 1;
+                RejectedCurrentPage = 1;
                 await GetPendingBeneficiariesPaginatedAsync();
                 await GetReleasedClaimsPaginatedAsync();
+                await GetRejectedBeneficiariesPaginatedAsync();
                 SelectedPendingBeneficiary = null;
                 RefreshLivePreview(null, null, null);
                 return;
@@ -1970,6 +2213,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 OnPropertyChanged(nameof(HasProgramReleaseHistory));
                 OnPropertyChanged(nameof(PendingTotalCount));
                 OnPropertyChanged(nameof(ReleasedTotalCount));
+                OnPropertyChanged(nameof(RejectedTotalCount));
 
                 var beneficiaryCount = releaseHistory
                     .Select(item => item.IdentityKey)
@@ -1998,8 +2242,10 @@ namespace AttendanceShiftingManagement.ViewModels
                     : string.Empty;
                 PendingCurrentPage = 1;
                 ReleasedCurrentPage = 1;
+                RejectedCurrentPage = 1;
                 await GetPendingBeneficiariesPaginatedAsync();
                 await GetReleasedClaimsPaginatedAsync();
+                await GetRejectedBeneficiariesPaginatedAsync();
                 RefreshLivePreview(selectedProgram, memberships, digitalIdsByStagingId);
             }
             catch (Exception ex)
@@ -2096,7 +2342,39 @@ namespace AttendanceShiftingManagement.ViewModels
             }
         }
 
-
+        private async Task ExecuteRejectScannedBeneficiaryAsync()
+        {
+            if (ScannedBeneficiary == null || SelectedProgram == null) return;
+            IsBusy = true;
+            SetNeutralStatus("Setting beneficiary status to Pending/Not Eligible...");
+            try
+            {
+                await using var context = new LocalDbContext();
+                var service = new ProjectDistributionService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
+                var result = await service.UpdateBeneficiaryStatusAsync(
+                    SelectedProgram.Id,
+                    ScannedBeneficiary.BeneficiaryStagingId,
+                    DistributionBeneficiaryStatus.Rejected,
+                    _currentUser.Id,
+                    null);
+                if (!result.IsSuccess)
+                {
+                    SetErrorStatus(result.Message);
+                    return;
+                }
+                await LoadProjectDetailsAsync();
+                ResetScannedResult();
+                SetSuccessStatus("Beneficiary set to Pending / Not Eligible.");
+            }
+            catch (Exception ex)
+            {
+                SetErrorStatus($"Error updating status: {ex.Message}");
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
 
         private async Task ExecuteProcessPcScan(string? payload)
         {
@@ -2247,6 +2525,10 @@ namespace AttendanceShiftingManagement.ViewModels
 
                 ScannedBeneficiaryStatus = qualification.Message;
                 ScannedBeneficiaryPhoto = string.IsNullOrWhiteSpace(lookup.PhotoPath) ? null : LocalImageLoader.Load(lookup.PhotoPath) as BitmapSource;
+                ScannedBeneficiaryAddress = lookup.Address ?? "No address on file";
+                ScannedBeneficiaryAge = lookup.Age ?? "--";
+                ScannedBeneficiaryGender = lookup.Sex ?? "--";
+                ScannedAllocatedAmountText = BuildAllocatedAmountText(SelectedProgram);
 
                 if (qualification.BeneficiaryStatus == DistributionBeneficiaryStatus.Released)
                 {
@@ -2332,6 +2614,10 @@ namespace AttendanceShiftingManagement.ViewModels
             }
             OnPropertyChanged(nameof(HasHouseholdMembers));
             HasHouseholdContext = householdContext.HasHousehold;
+            ScannedHouseholdNumber = householdContext.HasHousehold ? householdContext.HouseholdCode : "--";
+            ScannedHouseholdRole = householdContext.Members.FirstOrDefault(m => m.IsScannedBeneficiary)?.RelationshipToHead is { Length: > 0 } role
+                ? role
+                : (householdContext.HasHousehold ? "Member" : "--");
             HouseholdContextSummary = householdContext.HasHousehold
                 ? $"Household {householdContext.HouseholdCode} · Head: {householdContext.HeadName}"
                 : "No household linked to this beneficiary.";
@@ -2372,13 +2658,199 @@ namespace AttendanceShiftingManagement.ViewModels
             HouseholdConfirmBeneficiaryName = ScannedBeneficiary.FullName;
             HouseholdConfirmBeneficiaryPhoto = ScannedBeneficiaryPhoto;
             HouseholdOverrideAcknowledged = false;
+            return OpenHouseholdConfirmWithRequirementsAsync(ScannedBeneficiary.BeneficiaryStagingId);
+        }
+
+        /// <summary>Loads the attachment checklist (cedula, barangay certificate, ...) for the beneficiary, then opens the release modal.</summary>
+        private async Task OpenHouseholdConfirmWithRequirementsAsync(int beneficiaryStagingId)
+        {
+            _releaseRequirementsStagingId = beneficiaryStagingId;
+            await LoadReleaseRequirementsAsync(beneficiaryStagingId);
             IsHouseholdConfirmVisible = true;
-            return Task.CompletedTask;
+        }
+
+        /// <summary>Standard attachments every release must present; seeded when the beneficiary has no saved checklist yet.</summary>
+        private static readonly string[] DefaultReleaseRequirements =
+        {
+            "Cedula (Community Tax Certificate)",
+            "Barangay Certificate"
+        };
+
+        private async Task LoadReleaseRequirementsAsync(int beneficiaryStagingId)
+        {
+            foreach (var oldRow in ReleaseRequirementRows)
+            {
+                oldRow.PropertyChanged -= OnReleaseRequirementRowChanged;
+            }
+
+            ReleaseRequirementRows.Clear();
+
+            var programId = SelectedProgram?.Id;
+            if (programId.HasValue)
+            {
+                try
+                {
+                    await using var context = new LocalDbContext();
+                    var saved = await context.BeneficiaryRequirementDocuments
+                        .AsNoTracking()
+                        .Where(d => d.BeneficiaryStagingId == beneficiaryStagingId
+                                    && d.AyudaProgramId == programId.Value
+                                    && !d.IsDeleted)
+                        .OrderBy(d => d.Id)
+                        .ToListAsync();
+
+                    foreach (var doc in saved)
+                    {
+                        ReleaseRequirementRows.Add(new RequirementEntryRow
+                        {
+                            PersistedId = doc.Id,
+                            DocumentName = doc.DocumentName,
+                            SubmittedDate = doc.SubmittedDate,
+                            Status = doc.Status,
+                            Remarks = doc.Remarks
+                        });
+                    }
+                }
+                catch
+                {
+                    // Checklist load failure must not block the modal; fall through to defaults.
+                }
+            }
+
+            if (ReleaseRequirementRows.Count == 0)
+            {
+                foreach (var name in DefaultReleaseRequirements)
+                {
+                    ReleaseRequirementRows.Add(new RequirementEntryRow { DocumentName = name });
+                }
+            }
+
+            foreach (var row in ReleaseRequirementRows)
+            {
+                row.PropertyChanged += OnReleaseRequirementRowChanged;
+            }
+
+            RefreshReleaseRequirementState();
+        }
+
+        private void OnReleaseRequirementRowChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName is nameof(RequirementEntryRow.Status) or nameof(RequirementEntryRow.IsComplete))
+            {
+                RefreshReleaseRequirementState();
+            }
+        }
+
+        private void RefreshReleaseRequirementState()
+        {
+            OnPropertyChanged(nameof(AreReleaseRequirementsComplete));
+            OnPropertyChanged(nameof(HasMissingReleaseRequirements));
+            OnPropertyChanged(nameof(ReleaseRequirementsSummaryText));
+            _confirmHouseholdReleaseCommand.RaiseCanExecuteChanged();
+        }
+
+        /// <summary>Writes checklist edits made in the modal back to beneficiary_requirement_documents (soft-delete safe: updates or inserts, never removes).</summary>
+        private async Task SaveReleaseRequirementsAsync()
+        {
+            var programId = SelectedProgram?.Id;
+            var stagingId = _releaseRequirementsStagingId;
+            if (programId == null || stagingId == 0 || ReleaseRequirementRows.Count == 0)
+            {
+                return;
+            }
+
+            try
+            {
+                await using var context = new LocalDbContext();
+                foreach (var row in ReleaseRequirementRows)
+                {
+                    if (string.IsNullOrWhiteSpace(row.DocumentName))
+                    {
+                        continue;
+                    }
+
+                    BeneficiaryRequirementDocument? doc = null;
+                    if (row.PersistedId > 0)
+                    {
+                        doc = await context.BeneficiaryRequirementDocuments
+                            .FirstOrDefaultAsync(d => d.Id == row.PersistedId);
+                    }
+
+                    if (doc == null)
+                    {
+                        doc = new BeneficiaryRequirementDocument
+                        {
+                            BeneficiaryStagingId = stagingId,
+                            AyudaProgramId = programId.Value,
+                            DocumentName = row.DocumentName
+                        };
+                        context.BeneficiaryRequirementDocuments.Add(doc);
+                    }
+
+                    doc.DocumentName = row.DocumentName;
+                    doc.SubmittedDate = row.SubmittedDate ?? (row.IsComplete ? DateTime.Now : null);
+                    doc.Status = row.IsComplete ? "Complete" : "Incomplete";
+                    doc.Remarks = row.Remarks;
+                }
+
+                await context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                SetErrorStatus($"Requirement checklist could not be saved: {ex.Message}");
+            }
+        }
+
+        /// <summary>Stamps the membership so the UNRELEASED / UNCLAIMED card shows why the beneficiary was held back.</summary>
+        private async Task MarkMembershipMissingRequirementsAsync()
+        {
+            var programId = SelectedProgram?.Id;
+            var stagingId = _releaseRequirementsStagingId;
+            if (programId == null || stagingId == 0)
+            {
+                return;
+            }
+
+            var missingNames = ReleaseRequirementRows
+                .Where(r => !r.IsComplete && !string.IsNullOrWhiteSpace(r.DocumentName))
+                .Select(r => r.DocumentName)
+                .ToList();
+            if (missingNames.Count == 0)
+            {
+                return;
+            }
+
+            try
+            {
+                await using var context = new LocalDbContext();
+                var membership = await context.AyudaProjectBeneficiaries
+                    .FirstOrDefaultAsync(m => m.AyudaProgramId == programId.Value && m.BeneficiaryStagingId == stagingId);
+                if (membership != null && membership.Status == DistributionBeneficiaryStatus.Pending)
+                {
+                    membership.StatusReason = $"Missing requirements: {string.Join(", ", missingNames)}";
+                    membership.StatusUpdatedAt = DateTime.Now;
+                    membership.StatusUpdatedByUserId = _currentUser.Id;
+                    await context.SaveChangesAsync();
+                    await LoadProjectDetailsAsync();
+                }
+            }
+            catch
+            {
+                // Best-effort annotation; the beneficiary already stays unreleased either way.
+            }
         }
 
         /// <summary>Final Confirm from inside the household modal; routes to whichever flow opened it.</summary>
         private async Task ConfirmHouseholdReleaseAsync()
         {
+            // Hard gate: releasing without the required attachments is never allowed.
+            if (!AreReleaseRequirementsComplete)
+            {
+                SetErrorStatus("Cannot release: the beneficiary has missing requirements. They stay in UNRELEASED / UNCLAIMED.");
+                return;
+            }
+
+            await SaveReleaseRequirementsAsync();
             IsHouseholdConfirmVisible = false;
             if (_householdConfirmFromPendingList)
             {
@@ -2396,6 +2868,15 @@ namespace AttendanceShiftingManagement.ViewModels
             IsHouseholdConfirmVisible = false;
             HouseholdOverrideAcknowledged = false;
             HouseholdConfirmBeneficiaryPhoto = null;
+            // Persist whatever the operator ticked and, when items are still missing, tag the
+            // membership so the UNRELEASED / UNCLAIMED card shows the reason.
+            _ = SaveAndAnnotateMissingRequirementsAsync();
+        }
+
+        private async Task SaveAndAnnotateMissingRequirementsAsync()
+        {
+            await SaveReleaseRequirementsAsync();
+            await MarkMembershipMissingRequirementsAsync();
         }
 
         private async Task ExecuteConfirmScannedClaimAsync()
@@ -2466,6 +2947,12 @@ namespace AttendanceShiftingManagement.ViewModels
             ScannedBeneficiary = null;
             ScannedBeneficiaryStatus = null;
             ScannedBeneficiaryPhoto = null;
+            ScannedBeneficiaryAddress = string.Empty;
+            ScannedBeneficiaryAge = string.Empty;
+            ScannedBeneficiaryGender = string.Empty;
+            ScannedHouseholdNumber = string.Empty;
+            ScannedHouseholdRole = string.Empty;
+            ScannedAllocatedAmountText = string.Empty;
             HouseholdConfirmBeneficiaryPhoto = null;
             ScannedBeneficiaryHistory.Clear();
             OnPropertyChanged(nameof(HasScannedHistory));
@@ -2483,6 +2970,28 @@ namespace AttendanceShiftingManagement.ViewModels
             _lastScannedPayload = null;
             IsScannedResultVisible = false;
             RequestScannerFocus?.Invoke();
+        }
+
+        /// <summary>Allocated release per beneficiary for the profile modal: unit amount (Cash) or item + quantity (Goods).</summary>
+        private static string BuildAllocatedAmountText(AyudaProgram? program)
+        {
+            if (program == null)
+            {
+                return string.Empty;
+            }
+
+            if (program.ReleaseKind == AssistanceReleaseKind.Cash)
+            {
+                return program.UnitAmount is decimal amount
+                    ? string.Format(CultureInfo.GetCultureInfo("en-PH"), "PHP {0:N2}", amount)
+                    : "Amount not set";
+            }
+
+            var item = string.IsNullOrWhiteSpace(program.ItemName) ? program.ItemDescription : program.ItemName;
+            var quantity = program.QuantityPerBeneficiary is decimal qty
+                ? $"{qty:0.##} {program.UnitOfMeasure}".Trim()
+                : string.Empty;
+            return string.Join(" — ", new[] { item, quantity }.Where(part => !string.IsNullOrWhiteSpace(part)));
         }
 
         /// <summary>DEV: seeds the fixed mock households/beneficiaries for testing the household-verification flow.</summary>
@@ -2744,18 +3253,23 @@ namespace AttendanceShiftingManagement.ViewModels
             ProgramReleaseHistory.Clear();
             PendingBeneficiaries.Clear();
             ReleasedClaims.Clear();
+            RejectedBeneficiaries.Clear();
             _digitalIdsByStagingId = new Dictionary<int, BeneficiaryDigitalId>();
             PendingCurrentPage = 1;
             ReleasedCurrentPage = 1;
+            RejectedCurrentPage = 1;
             SelectedPendingBeneficiary = null;
             OnPropertyChanged(nameof(HasProgramBeneficiaries));
             OnPropertyChanged(nameof(HasProgramReleaseHistory));
             OnPropertyChanged(nameof(PendingTotalCount));
             OnPropertyChanged(nameof(ReleasedTotalCount));
+            OnPropertyChanged(nameof(RejectedTotalCount));
             OnPropertyChanged(nameof(PendingTotalPages));
             OnPropertyChanged(nameof(ReleasedTotalPages));
+            OnPropertyChanged(nameof(RejectedTotalPages));
             OnPropertyChanged(nameof(PendingPaginationText));
             OnPropertyChanged(nameof(ReleasedPaginationText));
+            OnPropertyChanged(nameof(RejectedPaginationText));
             ResetSelectedProgramDetails(null);
             SelectedProgramSummary = null;
             SelectedProgram = null;
@@ -2766,14 +3280,18 @@ namespace AttendanceShiftingManagement.ViewModels
             ProgramReleaseHistory.Clear();
             PendingBeneficiaries.Clear();
             ReleasedClaims.Clear();
+            RejectedBeneficiaries.Clear();
             SelectedPendingBeneficiary = null;
             OnPropertyChanged(nameof(HasProgramReleaseHistory));
             OnPropertyChanged(nameof(PendingTotalCount));
             OnPropertyChanged(nameof(ReleasedTotalCount));
+            OnPropertyChanged(nameof(RejectedTotalCount));
             OnPropertyChanged(nameof(PendingTotalPages));
             OnPropertyChanged(nameof(ReleasedTotalPages));
+            OnPropertyChanged(nameof(RejectedTotalPages));
             OnPropertyChanged(nameof(PendingPaginationText));
             OnPropertyChanged(nameof(ReleasedPaginationText));
+            OnPropertyChanged(nameof(RejectedPaginationText));
 
             if (program == null)
             {
@@ -3205,6 +3723,50 @@ namespace AttendanceShiftingManagement.ViewModels
             return Task.CompletedTask;
         }
 
+        /// <summary>Mirrors <see cref="GetPendingBeneficiariesPaginatedAsync"/> for the Rejected/Not-Eligible bucket.</summary>
+        private Task GetRejectedBeneficiariesPaginatedAsync()
+        {
+            var rejectedItems = ProgramBeneficiaries
+                .Where(item => item.Status == DistributionBeneficiaryStatus.Rejected)
+                .OrderBy(item => item.FullName)
+                .ToList();
+
+            var totalPages = Math.Max(1, (int)Math.Ceiling(rejectedItems.Count / (double)DistributionPageSize));
+            if (RejectedCurrentPage > totalPages)
+            {
+                RejectedCurrentPage = totalPages;
+            }
+
+            if (RejectedCurrentPage < 1)
+            {
+                RejectedCurrentPage = 1;
+            }
+
+            RejectedBeneficiaries.Clear();
+            foreach (var item in rejectedItems
+                .Skip((RejectedCurrentPage - 1) * DistributionPageSize)
+                .Take(DistributionPageSize))
+            {
+                RejectedBeneficiaries.Add(item);
+            }
+
+            OnPropertyChanged(nameof(RejectedTotalCount));
+            OnPropertyChanged(nameof(RejectedTotalPages));
+            OnPropertyChanged(nameof(RejectedPaginationText));
+
+            if (PrevRejectedPageCommand is RelayCommand prevRejected)
+            {
+                prevRejected.RaiseCanExecuteChanged();
+            }
+
+            if (NextRejectedPageCommand is RelayCommand nextRejected)
+            {
+                nextRejected.RaiseCanExecuteChanged();
+            }
+
+            return Task.CompletedTask;
+        }
+
         private Task GetReleasedClaimsPaginatedAsync()
         {
             var releasedItems = ProgramReleaseHistory
@@ -3267,6 +3829,22 @@ namespace AttendanceShiftingManagement.ViewModels
         private bool CanMoveReleasedPage(int direction)
         {
             return !IsBusy && ReleasedCurrentPage + direction >= 1 && ReleasedCurrentPage + direction <= ReleasedTotalPages;
+        }
+
+        private bool CanMoveRejectedPage(int direction)
+        {
+            return !IsBusy && RejectedCurrentPage + direction >= 1 && RejectedCurrentPage + direction <= RejectedTotalPages;
+        }
+
+        private async Task ChangeRejectedPageAsync(int direction)
+        {
+            if (!CanMoveRejectedPage(direction))
+            {
+                return;
+            }
+
+            RejectedCurrentPage += direction;
+            await GetRejectedBeneficiariesPaginatedAsync();
         }
 
         private async Task ChangeReleasedPageAsync(int direction)
@@ -3352,7 +3930,7 @@ namespace AttendanceShiftingManagement.ViewModels
             _householdConfirmFromPendingList = true;
             HouseholdConfirmBeneficiaryName = SelectedPendingBeneficiary.FullName;
             HouseholdOverrideAcknowledged = false;
-            IsHouseholdConfirmVisible = true;
+            await OpenHouseholdConfirmWithRequirementsAsync(SelectedPendingBeneficiary.BeneficiaryStagingId);
         }
 
         /// <summary>Records the pending-list release after the Household Review modal is confirmed.</summary>
@@ -3569,6 +4147,17 @@ namespace AttendanceShiftingManagement.ViewModels
         public int? LinkedHouseholdMemberId { get; init; }
         public bool IsSenior { get; init; }
         public bool IsPwd { get; init; }
+        public string? Address { get; init; }
+        public string? Age { get; init; }
+        public string? Sex { get; init; }
+        public string? PhotoPath { get; init; }
+        public string? HouseholdNumber { get; init; }
+        public string? HouseholdRole { get; init; }
+
+        public ObservableCollection<CommunityTaxEntryRow> CommunityTaxRows { get; } = new();
+        public ObservableCollection<RequirementEntryRow> RequirementRows { get; } = new();
+
+        public bool IsRequirementsComplete => RequirementRows.Count > 0 && RequirementRows.All(r => r.Status == "Complete");
         
         public string Initials
         {
@@ -3612,7 +4201,11 @@ namespace AttendanceShiftingManagement.ViewModels
                 BeneficiaryId = beneficiary.BeneficiaryId ?? string.Empty,
                 CivilRegistryId = beneficiary.CivilRegistryId ?? string.Empty,
                 IsSenior = beneficiary.IsSenior,
-                IsPwd = beneficiary.IsPwd
+                IsPwd = beneficiary.IsPwd,
+                Address = beneficiary.Address,
+                Age = beneficiary.Age,
+                Sex = beneficiary.Sex,
+                PhotoPath = beneficiary.PhotoPath
             };
         }
     }
@@ -3658,6 +4251,86 @@ namespace AttendanceShiftingManagement.ViewModels
                 StatusReason = beneficiary.StatusReason,
                 AddedAt = beneficiary.AddedAt
             };
+        }
+    }
+
+    public sealed class CommunityTaxEntryRow : ObservableObject
+    {
+        private string _cedulaNumber = string.Empty;
+        private string? _paidAmountText;
+        private DateTime? _paidDate;
+
+        public string CedulaNumber
+        {
+            get => _cedulaNumber;
+            set => SetProperty(ref _cedulaNumber, value);
+        }
+
+        public string? PaidAmountText
+        {
+            get => _paidAmountText;
+            set => SetProperty(ref _paidAmountText, value);
+        }
+
+        public DateTime? PaidDate
+        {
+            get => _paidDate;
+            set => SetProperty(ref _paidDate, value);
+        }
+
+        public decimal? GetPaidAmount()
+        {
+            if (decimal.TryParse(_paidAmountText, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.CurrentCulture, out var amount))
+                return amount;
+            return null;
+        }
+    }
+
+    public sealed class RequirementEntryRow : ObservableObject
+    {
+        private string _documentName = string.Empty;
+        private DateTime? _submittedDate;
+        private string _status = "Incomplete";
+        private string? _remarks;
+
+        /// <summary>Database id of the backing beneficiary_requirement_documents row; 0 = not yet persisted.</summary>
+        public int PersistedId { get; set; }
+
+        public string DocumentName
+        {
+            get => _documentName;
+            set => SetProperty(ref _documentName, value);
+        }
+
+        public DateTime? SubmittedDate
+        {
+            get => _submittedDate;
+            set => SetProperty(ref _submittedDate, value);
+        }
+
+        public string Status
+        {
+            get => _status;
+            set
+            {
+                if (SetProperty(ref _status, value))
+                {
+                    OnPropertyChanged(nameof(IsComplete));
+                }
+            }
+        }
+
+        /// <summary>Checkbox view of <see cref="Status"/>: checked = the attachment was presented ("Complete").</summary>
+        public bool IsComplete
+        {
+            get => string.Equals(_status, "Complete", StringComparison.OrdinalIgnoreCase);
+            set => Status = value ? "Complete" : "Incomplete";
+        }
+
+        public string? Remarks
+        {
+            get => _remarks;
+            set => SetProperty(ref _remarks, value);
         }
     }
 }

@@ -201,6 +201,31 @@ namespace AttendanceShiftingManagement.Models
 
         [Column("updated_at")]
         public DateTime UpdatedAt { get; set; } = DateTime.Now;
+
+        [Column("source_donation_id")]
+        public int? SourceDonationId { get; set; }
+
+        [Column("source_ggms_budget_id")]
+        public int? SourceGGMSBudgetId { get; set; }
+
+        [Column("source_project_details_id")]
+        [MaxLength(45)]
+        public string? SourceProjectDetailsId { get; set; }
+
+        [Column("daily_rate", TypeName = "decimal(18,2)")]
+        public decimal? DailyRate { get; set; }
+
+        [Column("start_date")]
+        public DateTime? StartDate { get; set; }
+
+        [Column("end_date")]
+        public DateTime? EndDate { get; set; }
+
+        [ForeignKey(nameof(SourceDonationId))]
+        public PrivateDonation? SourceDonation { get; set; }
+
+        [ForeignKey(nameof(SourceGGMSBudgetId))]
+        public GovernmentBudgetSnapshot? SourceGGMSBudget { get; set; }
     }
 
     [Table("ayuda_project_beneficiaries")]
@@ -332,6 +357,83 @@ namespace AttendanceShiftingManagement.Models
 
         [Column("claimed_at")]
         public DateTime ClaimedAt { get; set; } = DateTime.Now;
+
+        [Column("is_deleted")]
+        public bool IsDeleted { get; set; } = false;
+
+        [ForeignKey(nameof(AyudaProgramId))]
+        public AyudaProgram? AyudaProgram { get; set; }
+    }
+
+    [Table("beneficiary_community_tax_payments")]
+    public class BeneficiaryCommunityTaxPayment
+    {
+        public Guid SyncId { get; set; } = Guid.NewGuid();
+
+        [Key]
+        [Column("id")]
+        public int Id { get; set; }
+
+        [Column("beneficiary_staging_id")]
+        [Required]
+        public int BeneficiaryStagingId { get; set; }
+
+        [Column("ayuda_program_id")]
+        public int? AyudaProgramId { get; set; }
+
+        [Column("cedula_number")]
+        [MaxLength(50)]
+        public string CedulaNumber { get; set; } = string.Empty;
+
+        [Column("paid_amount", TypeName = "decimal(18,2)")]
+        public decimal? PaidAmount { get; set; }
+
+        [Column("paid_date")]
+        public DateTime? PaidDate { get; set; }
+
+        [Column("is_deleted")]
+        public bool IsDeleted { get; set; } = false;
+
+        [Column("created_at")]
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
+    }
+
+    [Table("beneficiary_requirement_documents")]
+    public class BeneficiaryRequirementDocument
+    {
+        public Guid SyncId { get; set; } = Guid.NewGuid();
+
+        [Key]
+        [Column("id")]
+        public int Id { get; set; }
+
+        [Column("beneficiary_staging_id")]
+        [Required]
+        public int BeneficiaryStagingId { get; set; }
+
+        [Column("ayuda_program_id")]
+        public int? AyudaProgramId { get; set; }
+
+        [Column("document_name")]
+        [MaxLength(100)]
+        public string DocumentName { get; set; } = string.Empty;
+
+        [Column("submitted_date")]
+        public DateTime? SubmittedDate { get; set; }
+
+        [Column("status")]
+        [MaxLength(20)]
+        public string Status { get; set; } = "Incomplete";
+
+        [Column("remarks")]
+        [MaxLength(500)]
+        public string? Remarks { get; set; }
+
+        [Column("is_deleted")]
+        public bool IsDeleted { get; set; } = false;
+
+        [Column("created_at")]
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
 
         [ForeignKey(nameof(AyudaProgramId))]
         public AyudaProgram? AyudaProgram { get; set; }

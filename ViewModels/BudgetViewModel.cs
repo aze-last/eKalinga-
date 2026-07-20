@@ -50,6 +50,18 @@ namespace AttendanceShiftingManagement.ViewModels
         }
     }
 
+    /// <summary>Row in the household-records modal shown before a beneficiary is added to the project.</summary>
+    public sealed class HouseholdBenefitRecordRow
+    {
+        public string FullName { get; init; } = string.Empty;
+        public string RelationshipToHead { get; init; } = string.Empty;
+        public bool IsCandidateBeneficiary { get; init; }
+        public int BenefitsReceivedCount { get; init; }
+        public string BenefitsReceivedText => BenefitsReceivedCount == 0
+            ? "No benefits yet"
+            : $"{BenefitsReceivedCount} benefit{(BenefitsReceivedCount == 1 ? "" : "s")} received";
+    }
+
     public sealed class BudgetViewModel : ObservableObject
     {
         private const string AllLedgerSourceFilter = "All Sources";
@@ -148,11 +160,23 @@ namespace AttendanceShiftingManagement.ViewModels
         /// <summary>Selection survives searches; the display list is capped so the 40k-row registry never lands in the UI.</summary>
         private readonly HashSet<int> _selectedEnrollmentStagingIds = new();
         private int _enrollmentSearchVersion;
+
+        /// <summary>Set only for the creation that just completed; consumed by BudgetPage to route CFW projects to the payout console.</summary>
+        internal int? _createdCfwBudgetId;
         private const int EnrollmentDisplayLimit = 200;
         private int _currentEnrollmentPage = 1;
         private int _totalEnrollmentPages = 1;
         private readonly RelayCommand _previousEnrollmentPageCommand;
         private readonly RelayCommand _nextEnrollmentPageCommand;
+
+        // "Add Beneficiaries" picker modal + household-records confirmation modal state.
+        private bool _isBeneficiaryPickerOpen;
+        private bool _isHouseholdRecordsOpen;
+        private EnrollmentBeneficiaryOption? _householdRecordsCandidate;
+        private string _householdRecordsCode = string.Empty;
+        private string _householdRecordsHeadName = string.Empty;
+        private string _householdRecordsSummary = string.Empty;
+        private bool _householdRecordsHasHousehold;
 
         private int _currentLedgerPage = 1;
         private int _totalLedgerPages = 1;
@@ -455,8 +479,19 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             if (IsBusy) return;
 
+            _createdCfwBudgetId = null;
+
             decimal? unitAmount = null;
             decimal? quantity = null;
+
+            // Cash-for-work pays a daily cash rate per attendance day; a Goods release
+            // kind has no meaning there and its item/quantity inputs would be discarded.
+            if (SelectedProgramType == AyudaProgramType.CashForWork &&
+                SelectedReleaseKind == AssistanceReleaseKind.Goods)
+            {
+                SetErrorStatus("Cash-for-work projects pay a daily cash rate. Switch the release method to Cash and enter the daily rate.");
+                return;
+            }
 
             if (SelectedReleaseKind == AssistanceReleaseKind.Goods)
             {
@@ -531,62 +566,97 @@ namespace AttendanceShiftingManagement.ViewModels
                     SetNeutralStatus("Creating project linked to source fund...");
                 }
 
-                var result = await budgetService.CreateProgramAsync(
-                    new AyudaProgramRequest(
-                        NewProjectCode,
-                        NewProjectName,
-                        SelectedProgramType,
-                        NormalizeNullable(NewProjectDescription),
-                        NormalizeNullable(NewProjectName), // Using name as assistance type for now
-                        SelectedReleaseKind,
-                        unitAmount,
-                        NormalizeNullable(NewProjectItemDescription),
-                        NewProjectItemName,
-                        quantity,
-                        NewProjectUnitOfMeasure,
-                        NewProjectStartDate,
-                        NewProjectEndDate,
-                        budgetCap,
-                        AyudaProgramDistributionStatus.Draft,
-                        NewProjectSourceDonationId,
-                        NewProjectSourceGGMSBudgetId,
-                        NormalizeNullable(NewProjectSourceProjectDetailsId)),
-                    _currentUser.Id);
-
-                if (!result.IsSuccess)
-                {
-                    SetErrorStatus(IsNewDonationMode
-                        ? $"Donation was recorded, but project creation failed: {result.Message}"
-                        : result.Message);
-                    return;
-                }
-
                 var createdName = NewProjectName;
                 var enrollmentMessage = string.Empty;
-
-                // Selection lives in the id set (not the visible page) so search-narrowed
-                // and SELECT ALL FILTERED picks are all enrolled.
                 var selectedIds = _selectedEnrollmentStagingIds.ToList();
 
-                if (selectedIds.Count > 0 && result.ProgramId.HasValue)
+                // Branch: CFW projects go through a different creation path
+                if (SelectedProgramType == AyudaProgramType.CashForWork)
                 {
-                    SetNeutralStatus("Enrolling selected beneficiaries...");
-                    try
-                    {
-                        await using var enrollContext = new LocalDbContext();
-                        var distributionService = new ProjectDistributionService(enrollContext);
-                        var enrollResult = await distributionService.BulkAddBeneficiariesAsync(
-                            result.ProgramId.Value,
-                            selectedIds,
-                            _currentUser.Id);
+                    SetNeutralStatus("Creating cash-for-work project...");
 
-                        enrollmentMessage = enrollResult.IsSuccess
-                            ? $" {selectedIds.Count} beneficiar{(selectedIds.Count == 1 ? "y" : "ies")} enrolled."
-                            : $" Beneficiary enrollment failed ({enrollResult.Message}) — use ADD BENEFICIARIES in the Distribution module.";
-                    }
-                    catch (Exception enrollEx)
+                    var cfwRequest = new CashForWorkProjectRequest(
+                        BudgetCode: $"CFW-{NewProjectCode}",
+                        BudgetName: NewProjectName,
+                        Description: NormalizeNullable(NewProjectDescription),
+                        DailyRate: unitAmount,
+                        BudgetCap: budgetCap,
+                        StartDate: NewProjectStartDate ?? DateTime.Now,
+                        EndDate: NewProjectEndDate ?? DateTime.Now,
+                        SourceDonationId: NewProjectSourceDonationId,
+                        SourceGGMSBudgetId: NewProjectSourceGGMSBudgetId,
+                        SourceProjectDetailsId: NormalizeNullable(NewProjectSourceProjectDetailsId));
+
+                    var cfwResult = await budgetService.CreateCashForWorkProjectAsync(cfwRequest, _currentUser.Id);
+                    if (!cfwResult.Success)
                     {
-                        enrollmentMessage = $" Beneficiary enrollment failed ({enrollEx.Message}) — use ADD BENEFICIARIES in the Distribution module.";
+                        SetErrorStatus(IsNewDonationMode
+                            ? $"Donation was recorded, but CFW project creation failed: {cfwResult.Message}"
+                            : cfwResult.Message);
+                        return;
+                    }
+
+                    _createdCfwBudgetId = cfwResult.BudgetId;
+
+                    // Workers are added to specific events in the CFW module, not bulk-enrolled
+                    if (selectedIds.Count > 0)
+                    {
+                        enrollmentMessage = $" {selectedIds.Count} worker{(selectedIds.Count == 1 ? "" : "s")} available for events; enroll in CFW module.";
+                    }
+                }
+                else
+                {
+                    // Distribution project path (existing logic)
+                    var result = await budgetService.CreateProgramAsync(
+                        new AyudaProgramRequest(
+                            NewProjectCode,
+                            NewProjectName,
+                            SelectedProgramType,
+                            NormalizeNullable(NewProjectDescription),
+                            NormalizeNullable(NewProjectName),
+                            SelectedReleaseKind,
+                            unitAmount,
+                            NormalizeNullable(NewProjectItemDescription),
+                            NewProjectItemName,
+                            quantity,
+                            NewProjectUnitOfMeasure,
+                            NewProjectStartDate,
+                            NewProjectEndDate,
+                            budgetCap,
+                            AyudaProgramDistributionStatus.Draft,
+                            NewProjectSourceDonationId,
+                            NewProjectSourceGGMSBudgetId,
+                            NormalizeNullable(NewProjectSourceProjectDetailsId)),
+                        _currentUser.Id);
+
+                    if (!result.IsSuccess)
+                    {
+                        SetErrorStatus(IsNewDonationMode
+                            ? $"Donation was recorded, but project creation failed: {result.Message}"
+                            : result.Message);
+                        return;
+                    }
+
+                    if (selectedIds.Count > 0 && result.ProgramId.HasValue)
+                    {
+                        SetNeutralStatus("Enrolling selected beneficiaries...");
+                        try
+                        {
+                            await using var enrollContext = new LocalDbContext();
+                            var distributionService = new ProjectDistributionService(enrollContext);
+                            var enrollResult = await distributionService.BulkAddBeneficiariesAsync(
+                                result.ProgramId.Value,
+                                selectedIds,
+                                _currentUser.Id);
+
+                            enrollmentMessage = enrollResult.IsSuccess
+                                ? $" {selectedIds.Count} beneficiar{(selectedIds.Count == 1 ? "y" : "ies")} enrolled."
+                                : $" Beneficiary enrollment failed ({enrollResult.Message}) — use ADD BENEFICIARIES in the Distribution module.";
+                        }
+                        catch (Exception enrollEx)
+                        {
+                            enrollmentMessage = $" Beneficiary enrollment failed ({enrollEx.Message}) — use ADD BENEFICIARIES in the Distribution module.";
+                        }
                     }
                 }
 
@@ -730,6 +800,13 @@ namespace AttendanceShiftingManagement.ViewModels
                 _ => { CurrentEnrollmentPage++; _ = QueryEnrollmentBeneficiariesAsync(); },
                 _ => CurrentEnrollmentPage < TotalEnrollmentPages);
 
+            OpenBeneficiaryPickerCommand = new RelayCommand(_ => IsBeneficiaryPickerOpen = true, _ => !IsBusy);
+            CloseBeneficiaryPickerCommand = new RelayCommand(_ => IsBeneficiaryPickerOpen = false);
+            RequestAddBeneficiaryCommand = new RelayCommand(async parameter => await OpenHouseholdRecordsAsync(parameter as EnrollmentBeneficiaryOption));
+            ConfirmAddBeneficiaryCommand = new RelayCommand(_ => ConfirmAddBeneficiary(), _ => _householdRecordsCandidate != null);
+            CancelHouseholdRecordsCommand = new RelayCommand(_ => CloseHouseholdRecords());
+            RemoveSelectedBeneficiaryCommand = new RelayCommand(parameter => RemoveSelectedBeneficiary(parameter as EnrollmentBeneficiaryOption));
+
             _nextLedgerPageCommand = new RelayCommand(async _ => await NextLedgerPageAsync(), _ => !IsBusy && CurrentLedgerPage < TotalLedgerPages);
             _previousLedgerPageCommand = new RelayCommand(async _ => await PreviousLedgerPageAsync(), _ => !IsBusy && CurrentLedgerPage > 1);
 
@@ -762,6 +839,13 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand DeselectAllEnrollmentCommand => _deselectAllEnrollmentCommand;
         public ICommand PreviousEnrollmentPageCommand => _previousEnrollmentPageCommand;
         public ICommand NextEnrollmentPageCommand => _nextEnrollmentPageCommand;
+
+        public ICommand OpenBeneficiaryPickerCommand { get; }
+        public ICommand CloseBeneficiaryPickerCommand { get; }
+        public ICommand RequestAddBeneficiaryCommand { get; }
+        public ICommand ConfirmAddBeneficiaryCommand { get; }
+        public ICommand CancelHouseholdRecordsCommand { get; }
+        public ICommand RemoveSelectedBeneficiaryCommand { get; }
 
         public ICommand NavigatePreviousCommand => _navigatePreviousCommand;
         public ICommand NavigateNextCommand => _navigateNextCommand;
@@ -1413,6 +1497,50 @@ namespace AttendanceShiftingManagement.ViewModels
         public ObservableCollection<EnrollmentBeneficiaryOption> EnrollmentBeneficiaries { get; } = new();
         public ObservableCollection<EnrollmentBeneficiaryOption> FilteredEnrollmentBeneficiaries { get; } = new();
 
+        /// <summary>Right list of the picker modal — beneficiaries confirmed for the project (mirrors _selectedEnrollmentStagingIds).</summary>
+        public ObservableCollection<EnrollmentBeneficiaryOption> SelectedEnrollmentBeneficiaries { get; } = new();
+
+        /// <summary>Household roster shown in the confirmation modal before a beneficiary is added.</summary>
+        public ObservableCollection<HouseholdBenefitRecordRow> HouseholdRecordsMembers { get; } = new();
+
+        public bool IsBeneficiaryPickerOpen
+        {
+            get => _isBeneficiaryPickerOpen;
+            private set => SetProperty(ref _isBeneficiaryPickerOpen, value);
+        }
+
+        public bool IsHouseholdRecordsOpen
+        {
+            get => _isHouseholdRecordsOpen;
+            private set => SetProperty(ref _isHouseholdRecordsOpen, value);
+        }
+
+        public string HouseholdRecordsCandidateName => _householdRecordsCandidate?.FullName ?? string.Empty;
+
+        public string HouseholdRecordsCode
+        {
+            get => _householdRecordsCode;
+            private set => SetProperty(ref _householdRecordsCode, value);
+        }
+
+        public string HouseholdRecordsHeadName
+        {
+            get => _householdRecordsHeadName;
+            private set => SetProperty(ref _householdRecordsHeadName, value);
+        }
+
+        public string HouseholdRecordsSummary
+        {
+            get => _householdRecordsSummary;
+            private set => SetProperty(ref _householdRecordsSummary, value);
+        }
+
+        public bool HouseholdRecordsHasHousehold
+        {
+            get => _householdRecordsHasHousehold;
+            private set => SetProperty(ref _householdRecordsHasHousehold, value);
+        }
+
         /// <summary>e.g. "Showing first 200 of 40,152 — refine the search" so the capped list is never mistaken for the whole registry.</summary>
         public string EnrollmentResultSummary
         {
@@ -1564,10 +1692,19 @@ namespace AttendanceShiftingManagement.ViewModels
                 if (option.IsSelected)
                 {
                     _selectedEnrollmentStagingIds.Add(option.StagingId);
+                    if (!SelectedEnrollmentBeneficiaries.Any(item => item.StagingId == option.StagingId))
+                    {
+                        SelectedEnrollmentBeneficiaries.Add(option);
+                    }
                 }
                 else
                 {
                     _selectedEnrollmentStagingIds.Remove(option.StagingId);
+                    var listed = SelectedEnrollmentBeneficiaries.FirstOrDefault(item => item.StagingId == option.StagingId);
+                    if (listed != null)
+                    {
+                        SelectedEnrollmentBeneficiaries.Remove(listed);
+                    }
                 }
 
                 SelectedEnrollmentCount = _selectedEnrollmentStagingIds.Count;
@@ -1616,8 +1753,110 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 option.IsSelected = false;
             }
+            SelectedEnrollmentBeneficiaries.Clear();
 
             SelectedEnrollmentCount = 0;
+        }
+
+        /// <summary>Step 1 of adding: load the candidate's household + per-member benefit history, then show the confirmation modal.</summary>
+        private async Task OpenHouseholdRecordsAsync(EnrollmentBeneficiaryOption? candidate)
+        {
+            if (candidate == null || _selectedEnrollmentStagingIds.Contains(candidate.StagingId))
+            {
+                return;
+            }
+
+            _householdRecordsCandidate = candidate;
+            HouseholdRecordsMembers.Clear();
+            HouseholdRecordsCode = string.Empty;
+            HouseholdRecordsHeadName = string.Empty;
+            HouseholdRecordsSummary = "Loading household records...";
+            HouseholdRecordsHasHousehold = false;
+            OnPropertyChanged(nameof(HouseholdRecordsCandidateName));
+            IsHouseholdRecordsOpen = true;
+
+            try
+            {
+                var records = await Task.Run(async () =>
+                {
+                    await using var context = new LocalDbContext();
+                    var service = new ProjectDistributionService(context);
+                    return await service.GetHouseholdBenefitRecordsAsync(candidate.StagingId);
+                });
+
+                if (_householdRecordsCandidate != candidate || !IsHouseholdRecordsOpen)
+                {
+                    return; // modal was cancelled or superseded while loading
+                }
+
+                HouseholdRecordsHasHousehold = records.HasHousehold;
+                if (!records.HasHousehold)
+                {
+                    HouseholdRecordsSummary = "No linked household on record for this beneficiary.";
+                    return;
+                }
+
+                HouseholdRecordsCode = records.HouseholdCode;
+                HouseholdRecordsHeadName = records.HeadName;
+                foreach (var member in records.Members)
+                {
+                    HouseholdRecordsMembers.Add(new HouseholdBenefitRecordRow
+                    {
+                        FullName = member.FullName,
+                        RelationshipToHead = member.RelationshipToHead,
+                        IsCandidateBeneficiary = member.IsCandidateBeneficiary,
+                        BenefitsReceivedCount = member.BenefitsReceivedCount
+                    });
+                }
+
+                HouseholdRecordsSummary = records.TotalHouseholdClaims == 0
+                    ? "This household has not received any benefits yet."
+                    : $"This household has received {records.TotalHouseholdClaims} benefit{(records.TotalHouseholdClaims == 1 ? "" : "s")} in total across all projects.";
+            }
+            catch (Exception ex)
+            {
+                HouseholdRecordsSummary = $"Unable to load household records: {ex.Message}";
+            }
+        }
+
+        /// <summary>Step 2: operator reviewed the household and confirmed — move the candidate into the selected list.</summary>
+        private void ConfirmAddBeneficiary()
+        {
+            var candidate = _householdRecordsCandidate;
+            if (candidate == null)
+            {
+                return;
+            }
+
+            if (_selectedEnrollmentStagingIds.Add(candidate.StagingId))
+            {
+                candidate.IsSelected = true;
+                SelectedEnrollmentBeneficiaries.Add(candidate);
+                SelectedEnrollmentCount = _selectedEnrollmentStagingIds.Count;
+            }
+
+            CloseHouseholdRecords();
+        }
+
+        private void CloseHouseholdRecords()
+        {
+            IsHouseholdRecordsOpen = false;
+            _householdRecordsCandidate = null;
+            HouseholdRecordsMembers.Clear();
+            OnPropertyChanged(nameof(HouseholdRecordsCandidateName));
+        }
+
+        private void RemoveSelectedBeneficiary(EnrollmentBeneficiaryOption? option)
+        {
+            if (option == null)
+            {
+                return;
+            }
+
+            _selectedEnrollmentStagingIds.Remove(option.StagingId);
+            option.IsSelected = false;
+            SelectedEnrollmentBeneficiaries.Remove(option);
+            SelectedEnrollmentCount = _selectedEnrollmentStagingIds.Count;
         }
 
         private void ClearEnrollmentSelection()
@@ -1628,6 +1867,7 @@ namespace AttendanceShiftingManagement.ViewModels
             }
             EnrollmentBeneficiaries.Clear();
             FilteredEnrollmentBeneficiaries.Clear();
+            SelectedEnrollmentBeneficiaries.Clear();
             _selectedEnrollmentStagingIds.Clear();
             _enrollmentSearchText = string.Empty;
             OnPropertyChanged(nameof(EnrollmentSearchText));
@@ -1635,6 +1875,8 @@ namespace AttendanceShiftingManagement.ViewModels
             CurrentEnrollmentPage = 1;
             TotalEnrollmentPages = 1;
             SelectedEnrollmentCount = 0;
+            IsBeneficiaryPickerOpen = false;
+            CloseHouseholdRecords();
         }
 
         private async Task LoadAsync()

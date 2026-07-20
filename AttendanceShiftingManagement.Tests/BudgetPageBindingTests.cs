@@ -76,13 +76,30 @@ public sealed class BudgetPageBindingTests
 
         var xaml = File.ReadAllText(pagePath);
 
+        // Right column: cleared inline list, replaced by ADD BENEFICIARIES button + roster preview
         Assert.Contains("ENROLL BENEFICIARIES (OPTIONAL)", xaml, StringComparison.Ordinal);
-        Assert.Contains("ItemsSource=\"{Binding FilteredEnrollmentBeneficiaries}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"{Binding EnrollmentSearchText, UpdateSourceTrigger=PropertyChanged}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Command=\"{Binding SelectAllFilteredEnrollmentCommand}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Command=\"{Binding DeselectAllEnrollmentCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Content=\"ADD BENEFICIARIES\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding OpenBeneficiaryPickerCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"{Binding SelectedEnrollmentCount}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("IsChecked=\"{Binding IsSelected, Mode=TwoWay}\"", xaml, StringComparison.Ordinal);
+
+        // Beneficiaries Form modal: client's dual-list design
+        Assert.Contains("Text=\"BENEFICIARIES FORM\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Visibility=\"{Binding IsBeneficiaryPickerOpen, Converter={StaticResource BooleanToVisibilityConverter}}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"Validated Residence\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"Beneficiaries for the Project\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("ItemsSource=\"{Binding FilteredEnrollmentBeneficiaries}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("ItemsSource=\"{Binding SelectedEnrollmentBeneficiaries}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding EnrollmentSearchText, UpdateSourceTrigger=PropertyChanged}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding DataContext.RequestAddBeneficiaryCommand, RelativeSource={RelativeSource AncestorType=UserControl}}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding DataContext.RemoveSelectedBeneficiaryCommand, RelativeSource={RelativeSource AncestorType=UserControl}}\"", xaml, StringComparison.Ordinal);
+
+        // Household records confirmation modal shown before every add
+        Assert.Contains("Text=\"HOUSEHOLD RECORDS REVIEW\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Visibility=\"{Binding IsHouseholdRecordsOpen, Converter={StaticResource BooleanToVisibilityConverter}}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("ItemsSource=\"{Binding HouseholdRecordsMembers}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding BenefitsReceivedText}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding ConfirmAddBeneficiaryCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding CancelHouseholdRecordsCommand}\"", xaml, StringComparison.Ordinal);
     }
 
     [Fact]

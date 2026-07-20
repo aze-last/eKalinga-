@@ -27,7 +27,10 @@ namespace AttendanceShiftingManagement.Services
         string? CivilRegistryId,
         string CardNumber,
         string? PhotoPath,
-        IReadOnlyList<BeneficiaryAssistanceLedgerEntry> ReleaseHistory);
+        IReadOnlyList<BeneficiaryAssistanceLedgerEntry> ReleaseHistory,
+        string? Address,
+        string? Age,
+        string? Sex);
 
     public sealed class BeneficiaryDigitalIdService
     {
@@ -309,7 +312,10 @@ namespace AttendanceShiftingManagement.Services
                 NormalizeNullable(stagingRow.CivilRegistryId),
                 digitalId.CardNumber,
                 NormalizeNullable(digitalId.PhotoPath),
-                releaseHistory);
+                releaseHistory,
+                NormalizeNullable(stagingRow.Address),
+                NormalizeNullable(stagingRow.Age),
+                NormalizeNullable(stagingRow.Sex));
         }
 
         /// <summary>
@@ -362,7 +368,10 @@ namespace AttendanceShiftingManagement.Services
                 NormalizeNullable(stagingRow.CivilRegistryId),
                 digitalId?.CardNumber ?? string.Empty,
                 NormalizeNullable(digitalId?.PhotoPath) ?? NormalizeNullable(stagingRow.PhotoPath),
-                releaseHistory);
+                releaseHistory,
+                NormalizeNullable(stagingRow.Address),
+                NormalizeNullable(stagingRow.Age),
+                NormalizeNullable(stagingRow.Sex));
         }
 
         private static string BuildQrPayload(int stagingId)

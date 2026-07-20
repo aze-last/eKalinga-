@@ -538,6 +538,10 @@ namespace AttendanceShiftingManagement.Data.Migrations
                         .HasColumnType("int")
                         .HasColumnName("household_member_id");
 
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
+
                     b.Property<string>("ItemDescriptionSnapshot")
                         .HasMaxLength(250)
                         .HasColumnType("varchar(250)")
@@ -695,6 +699,53 @@ namespace AttendanceShiftingManagement.Data.Migrations
                     b.ToTable("beneficiary_assistance_ledger");
                 });
 
+            modelBuilder.Entity("AttendanceShiftingManagement.Models.BeneficiaryCommunityTaxPayment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("AyudaProgramId")
+                        .HasColumnType("int")
+                        .HasColumnName("ayuda_program_id");
+
+                    b.Property<int>("BeneficiaryStagingId")
+                        .HasColumnType("int")
+                        .HasColumnName("beneficiary_staging_id");
+
+                    b.Property<string>("CedulaNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)")
+                        .HasColumnName("cedula_number");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<decimal?>("PaidAmount")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("paid_amount");
+
+                    b.Property<DateTime?>("PaidDate")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("paid_date");
+
+                    b.Property<Guid>("SyncId")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("beneficiary_community_tax_payments");
+                });
+
             modelBuilder.Entity("AttendanceShiftingManagement.Models.BeneficiaryDigitalId", b =>
                 {
                     b.Property<int>("Id")
@@ -771,6 +822,62 @@ namespace AttendanceShiftingManagement.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("beneficiary_digital_ids");
+                });
+
+            modelBuilder.Entity("AttendanceShiftingManagement.Models.BeneficiaryRequirementDocument", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("AyudaProgramId")
+                        .HasColumnType("int")
+                        .HasColumnName("ayuda_program_id");
+
+                    b.Property<int>("BeneficiaryStagingId")
+                        .HasColumnType("int")
+                        .HasColumnName("beneficiary_staging_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("DocumentName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("document_name");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<string>("Remarks")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)")
+                        .HasColumnName("remarks");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTime?>("SubmittedDate")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("submitted_date");
+
+                    b.Property<Guid>("SyncId")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AyudaProgramId");
+
+                    b.ToTable("beneficiary_requirement_documents");
                 });
 
             modelBuilder.Entity("AttendanceShiftingManagement.Models.BeneficiaryStaging", b =>
@@ -1059,14 +1166,39 @@ namespace AttendanceShiftingManagement.Data.Migrations
                         .HasColumnType("int")
                         .HasColumnName("created_by_user_id");
 
+                    b.Property<decimal?>("DailyRate")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("daily_rate");
+
                     b.Property<string>("Description")
                         .HasMaxLength(500)
                         .HasColumnType("varchar(500)")
                         .HasColumnName("description");
 
+                    b.Property<DateTime?>("EndDate")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("end_date");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("tinyint(1)")
                         .HasColumnName("is_active");
+
+                    b.Property<int?>("SourceDonationId")
+                        .HasColumnType("int")
+                        .HasColumnName("source_donation_id");
+
+                    b.Property<int?>("SourceGGMSBudgetId")
+                        .HasColumnType("int")
+                        .HasColumnName("source_ggms_budget_id");
+
+                    b.Property<string>("SourceProjectDetailsId")
+                        .HasMaxLength(45)
+                        .HasColumnType("varchar(45)")
+                        .HasColumnName("source_project_details_id");
+
+                    b.Property<DateTime?>("StartDate")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("start_date");
 
                     b.Property<Guid>("SyncId")
                         .HasColumnType("char(36)");
@@ -1079,6 +1211,10 @@ namespace AttendanceShiftingManagement.Data.Migrations
 
                     b.HasIndex("BudgetCode")
                         .IsUnique();
+
+                    b.HasIndex("SourceDonationId");
+
+                    b.HasIndex("SourceGGMSBudgetId");
 
                     b.ToTable("cash_for_work_budgets");
                 });
@@ -2073,6 +2209,15 @@ namespace AttendanceShiftingManagement.Data.Migrations
                     b.Navigation("AyudaProgram");
                 });
 
+            modelBuilder.Entity("AttendanceShiftingManagement.Models.BeneficiaryRequirementDocument", b =>
+                {
+                    b.HasOne("AttendanceShiftingManagement.Models.AyudaProgram", "AyudaProgram")
+                        .WithMany()
+                        .HasForeignKey("AyudaProgramId");
+
+                    b.Navigation("AyudaProgram");
+                });
+
             modelBuilder.Entity("AttendanceShiftingManagement.Models.BudgetLedgerEntry", b =>
                 {
                     b.HasOne("AttendanceShiftingManagement.Models.AssistanceCaseBudget", "AssistanceCaseBudget")
@@ -2111,6 +2256,21 @@ namespace AttendanceShiftingManagement.Data.Migrations
                     b.Navigation("Participant");
 
                     b.Navigation("RecordedByUser");
+                });
+
+            modelBuilder.Entity("AttendanceShiftingManagement.Models.CashForWorkBudget", b =>
+                {
+                    b.HasOne("AttendanceShiftingManagement.Models.PrivateDonation", "SourceDonation")
+                        .WithMany()
+                        .HasForeignKey("SourceDonationId");
+
+                    b.HasOne("AttendanceShiftingManagement.Models.GovernmentBudgetSnapshot", "SourceGGMSBudget")
+                        .WithMany()
+                        .HasForeignKey("SourceGGMSBudgetId");
+
+                    b.Navigation("SourceDonation");
+
+                    b.Navigation("SourceGGMSBudget");
                 });
 
             modelBuilder.Entity("AttendanceShiftingManagement.Models.CashForWorkEvent", b =>

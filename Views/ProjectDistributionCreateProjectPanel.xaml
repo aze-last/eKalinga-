@@ -360,7 +360,204 @@
             </Grid>
         </Border>
 
-        <!-- Success Success state -->
+        <!-- Beneficiary Validation Modal (Phase 2) - side-by-side design to match client mockup -->
+        <Border Visibility="{Binding IsBeneficiaryValidationModalOpen, Converter={StaticResource BooleanToVisibilityConverter}}"
+                Background="#CC0F172A"
+                Panel.ZIndex="120">
+            <Border Width="1000" Height="680" Background="{DynamicResource ThemeCardBrush}" CornerRadius="16"
+                    VerticalAlignment="Center" HorizontalAlignment="Center" Effect="{StaticResource PanelShadow}" Padding="0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <!-- Header -->
+                    <Border Grid.Row="0" Padding="24,16" Background="{DynamicResource ThemePrimaryActionBrush}" CornerRadius="16,16,0,0">
+                        <Grid>
+                            <TextBlock Text="BENEFICIARY PROFILE FORM" FontSize="18" FontWeight="Bold"
+                                       Foreground="{DynamicResource ThemePrimaryActionForegroundBrush}"/>
+                            <TextBlock Text="VALIDATION MODAL" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource BrandYellowBrush}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                        </Grid>
+                    </Border>
+
+                    <!-- Content -->
+                    <Grid Grid.Row="1" Margin="24">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="280"/>
+                            <ColumnDefinition Width="1"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Left Column: Photo + Profile Details -->
+                        <ScrollViewer Grid.Column="0" Margin="0,0,16,0" VerticalScrollBarVisibility="Auto">
+                            <StackPanel>
+                                <Border Width="140" Height="140" CornerRadius="12" Background="{DynamicResource ThemeCardSubtleBrush}"
+                                        BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="1" HorizontalAlignment="Center">
+                                    <Grid>
+                                        <materialDesign:PackIcon Kind="AccountCircle" Width="90" Height="90"
+                                                                 HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                 Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
+                                        <!-- Optional Photo if present -->
+                                        <Border CornerRadius="12" Visibility="{Binding ValidatingBeneficiary.PhotoPath, Converter={StaticResource NullToHiddenConverter}}">
+                                            <Border.Background>
+                                                <ImageBrush ImageSource="{Binding ValidatingBeneficiary.PhotoPath}" Stretch="UniformToFill"/>
+                                            </Border.Background>
+                                        </Border>
+                                    </Grid>
+                                </Border>
+                                <TextBlock Text="ID Card Details" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource ThemePrimaryActionBrush}" Margin="0,16,0,8" TextAlignment="Center"/>
+
+                                <Grid Margin="0,8,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Name: " FontSize="12" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,8,8"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding ValidatingBeneficiary.FullName}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Barcode: " FontSize="12" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,8,8"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding ValidatingBeneficiary.BeneficiaryId, TargetNullValue='N/A'}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource BrandMidnightBrush}" Margin="0,0,0,8"/>
+
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="HH Role: " FontSize="12" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,8,8"/>
+                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding ValidatingBeneficiary.HouseholdRole, TargetNullValue='Member'}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource BrandMidnightBrush}" Margin="0,0,0,8"/>
+
+                                    <TextBlock Grid.Row="3" Grid.Column="0" Text="HH No: " FontSize="12" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,8,8"/>
+                                    <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding ValidatingBeneficiary.HouseholdNumber, TargetNullValue='N/A'}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource BrandMidnightBrush}" Margin="0,0,0,8"/>
+
+                                    <TextBlock Grid.Row="4" Grid.Column="0" Text="Address: " FontSize="12" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,8,8"/>
+                                    <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding ValidatingBeneficiary.Address, TargetNullValue='Not Specified'}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource BrandMidnightBrush}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+
+                                    <TextBlock Grid.Row="5" Grid.Column="0" Text="Age: " FontSize="12" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,8,8"/>
+                                    <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding ValidatingBeneficiary.Age, TargetNullValue='Unknown'}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource BrandMidnightBrush}" Margin="0,0,0,8"/>
+
+                                    <TextBlock Grid.Row="6" Grid.Column="0" Text="Gender: " FontSize="12" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,8,0"/>
+                                    <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding ValidatingBeneficiary.Sex, TargetNullValue='Unknown'}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource BrandMidnightBrush}"/>
+                                </Grid>
+                            </StackPanel>
+                        </ScrollViewer>
+
+                        <!-- Separator -->
+                        <Border Grid.Column="1" Background="{DynamicResource BrandBorderBrush}" Margin="8,0"/>
+
+                        <!-- Right Column: Community Tax & Requirement Lists -->
+                        <Grid Grid.Column="2" Margin="16,0,0,0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Text="COMMUNITY TAX PAYMENT (CEDULA)" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,8"/>
+                            <Grid Grid.Row="1" Margin="0,0,0,16">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <DataGrid Grid.Row="0" ItemsSource="{Binding ValidatingBeneficiary.CommunityTaxRows}" AutoGenerateColumns="False"
+                                          BorderThickness="1" BorderBrush="{DynamicResource BrandBorderBrush}" Background="Transparent" HeadersVisibility="Column">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Cedula Number" Binding="{Binding CedulaNumber, UpdateSourceTrigger=PropertyChanged}" Width="150" FontWeight="SemiBold"/>
+                                        <DataGridTextColumn Header="Paid Amount" Binding="{Binding PaidAmountText, UpdateSourceTrigger=PropertyChanged}" Width="110" FontWeight="Bold"/>
+                                        <DataGridTextColumn Header="Date" Binding="{Binding PaidDate, UpdateSourceTrigger=PropertyChanged}" Width="110"/>
+                                        <DataGridTemplateColumn Header="Action" Width="*">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Button Content="✕" Style="{StaticResource MaterialDesignIconButton}" Width="24" Height="24"
+                                                            Foreground="{DynamicResource BrandErrorBrush}" Padding="0"
+                                                            Command="{Binding DataContext.RemoveCommunityTaxRowCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                            CommandParameter="{Binding}"/>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                                <Button Grid.Row="1" Content="+ Add Tax Payment" Style="{StaticResource MaterialDesignFlatButton}"
+                                        FontSize="11" Foreground="{DynamicResource BrandMidnightBrush}" HorizontalAlignment="Left" Margin="0,4,0,0"
+                                        Command="{Binding AddCommunityTaxRowCommand}"/>
+                            </Grid>
+
+                            <TextBlock Grid.Row="2" Text="REQUIREMENT DOCUMENTS" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,8"/>
+                            <Grid Grid.Row="3">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <DataGrid Grid.Row="0" ItemsSource="{Binding ValidatingBeneficiary.RequirementRows}" AutoGenerateColumns="False"
+                                          BorderThickness="1" BorderBrush="{DynamicResource BrandBorderBrush}" Background="Transparent" HeadersVisibility="Column">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Document" Binding="{Binding DocumentName, UpdateSourceTrigger=PropertyChanged}" Width="180" FontWeight="SemiBold"/>
+                                        <DataGridTextColumn Header="Date" Binding="{Binding SubmittedDate, UpdateSourceTrigger=PropertyChanged}" Width="110"/>
+                                        <DataGridTextColumn Header="Status" Binding="{Binding Status, UpdateSourceTrigger=PropertyChanged}" Width="100"/>
+                                        <DataGridTextColumn Header="Remarks" Binding="{Binding Remarks, UpdateSourceTrigger=PropertyChanged}" Width="*"/>
+                                        <DataGridTemplateColumn Header="Action" Width="60">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Button Content="✕" Style="{StaticResource MaterialDesignIconButton}" Width="24" Height="24"
+                                                            Foreground="{DynamicResource BrandErrorBrush}" Padding="0"
+                                                            Command="{Binding DataContext.RemoveRequirementRowCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                            CommandParameter="{Binding}"/>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                                <Button Grid.Row="1" Content="+ Add Requirement" Style="{StaticResource MaterialDesignFlatButton}"
+                                        FontSize="11" Foreground="{DynamicResource BrandMidnightBrush}" HorizontalAlignment="Left" Margin="0,4,0,0"
+                                        Command="{Binding AddRequirementRowCommand}"/>
+                            </Grid>
+                        </Grid>
+                    </Grid>
+
+                    <!-- Footer: Action Bar -->
+                    <Border Grid.Row="2" Padding="20" Background="{DynamicResource BrandMidnightBrush}" CornerRadius="0,0,16,16">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <!-- Program Info Summary -->
+                            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                <StackPanel Margin="0,0,30,0">
+                                    <TextBlock Text="NEW PROJECT TYPE" FontSize="10" Foreground="#A0B0C0" FontWeight="Bold"/>
+                                    <TextBlock Text="{Binding NewProjectSelectedType}" FontSize="13" Foreground="White" FontWeight="SemiBold"/>
+                                </StackPanel>
+                                <StackPanel>
+                                    <TextBlock Text="PROJECT ITEM / UNIT AMOUNT" FontSize="10" Foreground="#A0B0C0" FontWeight="Bold"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="PHP " FontSize="14" Foreground="{DynamicResource BrandYellowBrush}" FontWeight="Bold"
+                                                   Visibility="{Binding NewProjectIsCashKind, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                        <TextBlock Text="{Binding NewProjectUnitAmountText}" FontSize="14" Foreground="{DynamicResource BrandYellowBrush}" FontWeight="Bold"
+                                                   Visibility="{Binding NewProjectIsCashKind, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                        <TextBlock Text="{Binding NewProjectItemDescription}" FontSize="14" Foreground="{DynamicResource BrandYellowBrush}" FontWeight="Bold"
+                                                   Visibility="{Binding NewProjectIsCashKind, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                <Button Content="CANCEL" Command="{Binding CancelBeneficiaryValidationCommand}" Style="{StaticResource MaterialDesignFlatButton}" Foreground="White" Margin="0,0,16,0"/>
+                                <Button Content="ADD RECIPIENT" Command="{Binding ConfirmAddRecipientCommand}" Style="{StaticResource GoldActionButton}" Height="45" Padding="30,0" FontSize="16"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Border>
+        </Border>
+
+        <!-- Success state -->
         <Border Visibility="{Binding IsCreateProjectSuccessPanelOpen, Converter={StaticResource BooleanToVisibilityConverter}}"
                 Background="#EE0F172A"
                 Panel.ZIndex="100">
@@ -369,7 +566,7 @@
                     <materialDesign:PackIcon Kind="CheckCircle" Width="80" Height="80" Foreground="{DynamicResource BrandSuccessBrush}" HorizontalAlignment="Center" Margin="0,0,0,24"/>
                     <TextBlock Text="PROJECT CREATED!" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center" Foreground="{DynamicResource BrandMidnightBrush}"/>
                     <TextBlock Text="{Binding StatusMessage}" TextAlignment="Center" FontSize="14" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,16,0,32" TextWrapping="Wrap"/>
-                    <Button Content="CONTINUE TO WORKSPACE" 
+                    <Button Content="CONTINUE TO WORKSPACE"
                             Command="{Binding CloseCreateProjectSuccessPanelCommand}"
                             Style="{StaticResource GoldActionButton}"
                             Height="50"/>
