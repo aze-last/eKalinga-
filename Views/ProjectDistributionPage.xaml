@@ -695,8 +695,8 @@
                             </StackPanel>
 
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                                <Button Content="DECLINE" Command="{Binding CancelScannedClaimCommand}" Style="{StaticResource MaterialDesignFlatButton}" Foreground="White" Margin="0,0,16,0"/>
-                                <Button Content="{Binding ScannerActionLabel}" Command="{Binding ConfirmScannedClaimCommand}" Style="{StaticResource OperationalActionButton}" Height="45" Padding="30,0" FontSize="16"/>
+                                <Button Content="{Binding ScannerCancelLabel}" Command="{Binding CancelScannedClaimCommand}" Style="{StaticResource MaterialDesignFlatButton}" Foreground="White" Margin="0,0,16,0"/>
+                                <Button Content="{Binding ScannerActionLabel}" Command="{Binding ConfirmScannedClaimCommand}" Visibility="{Binding IsScannedBeneficiaryEligible, Converter={StaticResource BooleanToVisibilityConverter}}" Style="{StaticResource OperationalActionButton}" Height="45" Padding="30,0" FontSize="16"/>
                             </StackPanel>
                         </Grid>
                     </Border>

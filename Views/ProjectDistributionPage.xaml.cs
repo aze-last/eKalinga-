@@ -124,9 +124,9 @@ namespace AttendanceShiftingManagement.Views
         private void PendingGrid_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
             var viewModel = DataContext as ProjectDistributionViewModel;
-            if (viewModel?.OpenPendingBeneficiaryOverlayCommand.CanExecute(null) == true)
+            if (viewModel?.ConfirmReleaseCommand.CanExecute(null) == true)
             {
-                viewModel.OpenPendingBeneficiaryOverlayCommand.Execute(null);
+                viewModel.ConfirmReleaseCommand.Execute(null);
             }
         }
 

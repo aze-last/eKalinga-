@@ -108,6 +108,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private string? _lastScannedPayload;
         private DateTime _lastScannedTime = DateTime.MinValue;
         private string _scannerActionLabel = "CONFIRM CLAIM";
+        private string _scannerCancelLabel = "DECLINE";
         private bool _isScannerActive;
         private bool _isScannedBeneficiaryEligible;
         private bool _isReleaseSuccessState;
@@ -118,6 +119,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _programSearchText = string.Empty;
         private bool _hasHouseholdContext;
         private string _householdContextSummary = string.Empty;
+        private string _householdDemographicsSummary = string.Empty;
         private string _householdAidReceivedSummary = string.Empty;
         private string? _householdWarningMessage;
         private bool _requiresHouseholdOverride;
@@ -603,6 +605,12 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             get => _scannerActionLabel;
             set => SetProperty(ref _scannerActionLabel, value);
+        }
+
+        public string ScannerCancelLabel
+        {
+            get => _scannerCancelLabel;
+            set => SetProperty(ref _scannerCancelLabel, value);
         }
 
         public string ScannerHeader => "Payout Verification";
@@ -2540,6 +2548,8 @@ namespace AttendanceShiftingManagement.ViewModels
                     ScannedBeneficiaryStatus = "ALREADY CLAIMED";
                     ScannedBeneficiaryStatusColor = (Brush)Application.Current.Resources["BrandDangerBrush"];
                     IsScannedBeneficiaryEligible = false;
+                    ScannerActionLabel = "ALREADY CLAIMED";
+                    ScannerCancelLabel = "CLOSE";
                     _ = Task.Run(() => { try { Console.Beep(400, 600); } catch { } });
                 }
                 else if (qualification.BeneficiaryStatus == DistributionBeneficiaryStatus.Pending)
@@ -2547,12 +2557,16 @@ namespace AttendanceShiftingManagement.ViewModels
                     ScannedBeneficiaryStatus = "READY FOR RELEASE";
                     ScannedBeneficiaryStatusColor = (Brush)Application.Current.Resources["BrandSuccessBrush"];
                     IsScannedBeneficiaryEligible = true;
+                    ScannerActionLabel = "CONFIRM CLAIM";
+                    ScannerCancelLabel = "DECLINE";
                 }
                 else
                 {
                     ScannedBeneficiaryStatus = "NOT ENROLLED IN THIS PROJECT";
                     ScannedBeneficiaryStatusColor = (Brush)Application.Current.Resources["BrandWarningBrush"];
                     IsScannedBeneficiaryEligible = false;
+                    ScannerActionLabel = "NOT QUALIFIED";
+                    ScannerCancelLabel = "CLOSE";
                     _ = Task.Run(() => { try { Console.Beep(400, 600); } catch { } });
                 }
 
