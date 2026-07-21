@@ -121,6 +121,15 @@ namespace AttendanceShiftingManagement.Views
             FocusScanner();
         }
 
+        private void UnreleasedGrid_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            var viewModel = DataContext as ProjectDistributionViewModel;
+            if (viewModel?.ConfirmUnreleasedCommand.CanExecute(null) == true)
+            {
+                viewModel.ConfirmUnreleasedCommand.Execute(null);
+            }
+        }
+
         private void PendingGrid_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
             var viewModel = DataContext as ProjectDistributionViewModel;

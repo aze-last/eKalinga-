@@ -153,7 +153,13 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly RelayCommand _submitManualKeyInCommand;
         private readonly RelayCommand _confirmHouseholdReleaseCommand;
         private readonly RelayCommand _cancelHouseholdConfirmCommand;
+        private readonly RelayCommand _promptPendingReasonCommand;
+        private readonly RelayCommand _submitPendingReasonCommand;
+        private readonly RelayCommand _cancelPendingReasonCommand;
+        private readonly RelayCommand _confirmUnreleasedCommand;
         private bool _isHouseholdConfirmVisible;
+        private bool _isPendingReasonModalVisible;
+        private string _pendingReasonText = string.Empty;
         private string _householdConfirmBeneficiaryName = string.Empty;
         private BitmapSource? _householdConfirmBeneficiaryPhoto;
         // True when the household modal was opened from the pending-list Payout Verification panel
@@ -246,6 +252,10 @@ namespace AttendanceShiftingManagement.ViewModels
             // certificate, ...) to be fully complete — missing items keep the beneficiary unreleased.
             _confirmHouseholdReleaseCommand = new RelayCommand(async _ => await ConfirmHouseholdReleaseAsync(), _ => !IsBusy && AreReleaseRequirementsComplete && (!RequiresHouseholdOverride || HouseholdOverrideAcknowledged));
             _cancelHouseholdConfirmCommand = new RelayCommand(_ => CloseHouseholdConfirm());
+            _promptPendingReasonCommand = new RelayCommand(_ => PromptPendingReason());
+            _submitPendingReasonCommand = new RelayCommand(async _ => await SubmitPendingReasonAsync(), _ => !IsBusy && !string.IsNullOrWhiteSpace(PendingReasonText));
+            _cancelPendingReasonCommand = new RelayCommand(_ => CancelPendingReason());
+            _confirmUnreleasedCommand = new RelayCommand(async _ => await ConfirmUnreleasedAsync(), _ => !IsBusy && SelectedProgramBeneficiary != null);
 
             ResetCreateProjectForm();
             _ = LoadAsync();
@@ -307,6 +317,10 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand RejectScannedBeneficiaryCommand { get; }
         public ICommand ConfirmHouseholdReleaseCommand => _confirmHouseholdReleaseCommand;
         public ICommand CancelHouseholdConfirmCommand => _cancelHouseholdConfirmCommand;
+        public ICommand PromptPendingReasonCommand => _promptPendingReasonCommand;
+        public ICommand SubmitPendingReasonCommand => _submitPendingReasonCommand;
+        public ICommand CancelPendingReasonCommand => _cancelPendingReasonCommand;
+        public ICommand ConfirmUnreleasedCommand => _confirmUnreleasedCommand;
 
         /// <summary>True while the household verification modal (final Confirm/Decline gate) is shown.</summary>
         public bool IsHouseholdConfirmVisible
@@ -398,6 +412,24 @@ namespace AttendanceShiftingManagement.ViewModels
         }
 
         /// <summary>Name shown in the Household Review modal (works for both scan and pending-list flows).</summary>
+        public bool IsPendingReasonModalVisible
+        {
+            get => _isPendingReasonModalVisible;
+            private set
+            {
+                if (SetProperty(ref _isPendingReasonModalVisible, value))
+                {
+                    OnPropertyChanged(nameof(IsAnyOverlayOpen));
+                }
+            }
+        }
+
+        public string PendingReasonText
+        {
+            get => _pendingReasonText;
+            set => SetProperty(ref _pendingReasonText, value);
+        }
+
         public string HouseholdConfirmBeneficiaryName
         {
             get => _householdConfirmBeneficiaryName;
@@ -655,7 +687,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private DistributionBeneficiaryOption? _selectedAvailableUnpickedBeneficiary;
         private DistributionBeneficiaryOption? _selectedProjectBeneficiary;
 
-        public bool IsAnyOverlayOpen => IsAddBeneficiaryPanelOpen || IsScannerPanelOpen || IsCreateProjectPanelOpen || IsCreateProjectSuccessPanelOpen || IsPcScannerOpen || IsScannedResultVisible || IsReleaseSuccessState || IsHouseholdConfirmVisible;
+        public bool IsAnyOverlayOpen => IsAddBeneficiaryPanelOpen || IsScannerPanelOpen || IsCreateProjectPanelOpen || IsCreateProjectSuccessPanelOpen || IsPcScannerOpen || IsScannedResultVisible || IsReleaseSuccessState || IsHouseholdConfirmVisible || IsPendingReasonModalVisible;
 
         public DistributionBeneficiaryOption? SelectedAvailableUnpickedBeneficiary
         {
@@ -3984,7 +4016,7 @@ namespace AttendanceShiftingManagement.ViewModels
             }
             catch (Exception ex)
             {
-                SetErrorStatus($"Unable to load household context: {ex.Message}");
+                SetErrorStatus($"Household error: {ex.Message}");
                 return;
             }
             finally
@@ -3992,16 +4024,98 @@ namespace AttendanceShiftingManagement.ViewModels
                 IsBusy = false;
             }
 
-            _householdConfirmFromPendingList = true;
             HouseholdConfirmBeneficiaryName = SelectedPendingBeneficiary.FullName;
-            HouseholdOverrideAcknowledged = false;
+            _householdConfirmFromPendingList = true;
             await OpenHouseholdConfirmWithRequirementsAsync(SelectedPendingBeneficiary.BeneficiaryStagingId);
+        }
+
+        private async Task ConfirmUnreleasedAsync()
+        {
+            if (SelectedProgram == null || SelectedProgramBeneficiary == null)
+            {
+                return;
+            }
+
+            IsBusy = true;
+            SetNeutralStatus("Loading household context...");
+            try
+            {
+                await using var context = new LocalDbContext();
+                var distributionService = new ProjectDistributionService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
+                await LoadHouseholdContextAsync(distributionService, SelectedProgramBeneficiary.BeneficiaryStagingId);
+
+                var photoPath = await context.BeneficiaryStaging
+                    .AsNoTracking()
+                    .Where(s => s.StagingID == SelectedProgramBeneficiary.BeneficiaryStagingId)
+                    .Select(s => s.PhotoPath)
+                    .FirstOrDefaultAsync();
+                HouseholdConfirmBeneficiaryPhoto = string.IsNullOrWhiteSpace(photoPath) ? null : LocalImageLoader.Load(photoPath) as BitmapSource;
+            }
+            catch (Exception ex)
+            {
+                SetErrorStatus($"Household error: {ex.Message}");
+                return;
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+
+            HouseholdConfirmBeneficiaryName = SelectedProgramBeneficiary.FullName;
+            _householdConfirmFromPendingList = true;
+            await OpenHouseholdConfirmWithRequirementsAsync(SelectedProgramBeneficiary.BeneficiaryStagingId);
+        }
+
+        private void PromptPendingReason()
+        {
+            PendingReasonText = string.Empty;
+            IsPendingReasonModalVisible = true;
+        }
+
+        private void CancelPendingReason()
+        {
+            IsPendingReasonModalVisible = false;
+            PendingReasonText = string.Empty;
+        }
+
+        private async Task SubmitPendingReasonAsync()
+        {
+            if (SelectedProgram == null || string.IsNullOrWhiteSpace(PendingReasonText))
+                return;
+
+            IsBusy = true;
+            SetNeutralStatus("Marking as pending...");
+            try
+            {
+                await using var context = new LocalDbContext();
+                var distributionService = new ProjectDistributionService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
+                
+                await distributionService.UpdateBeneficiaryStatusAsync(
+                    SelectedProgram.Id, 
+                    _releaseRequirementsStagingId, 
+                    DistributionBeneficiaryStatus.Pending, 
+                    _currentUser.Id,
+                    reason: PendingReasonText);
+                
+                SetSuccessStatus("Beneficiary moved to pending.");
+                CloseHouseholdConfirm();
+                CancelPendingReason();
+                await LoadProjectDetailsAsync();
+            }
+            catch (Exception ex)
+            {
+                SetErrorStatus($"Failed to mark as pending: {ex.Message}");
+            }
+            finally
+            {
+                IsBusy = false;
+            }
         }
 
         /// <summary>Records the pending-list release after the Household Review modal is confirmed.</summary>
         private async Task ExecutePendingReleaseAsync()
         {
-            if (SelectedProgram == null || SelectedPendingBeneficiary == null)
+            if (SelectedProgram == null || _releaseRequirementsStagingId == 0)
             {
                 return;
             }
@@ -4015,11 +4129,11 @@ namespace AttendanceShiftingManagement.ViewModels
                 var service = new ProjectDistributionService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
                 // Record when the operator overrode a household duplicate warning, for the audit trail.
                 var claimRemark = RequiresHouseholdOverride
-                    ? "Released from pending list [Household duplicate warning overridden]"
+                    ? "Released from pending/unreleased list [Household duplicate warning overridden]"
                     : null;
                 var result = await service.RecordClaimAsync(
                     SelectedProgram.Id,
-                    SelectedPendingBeneficiary.BeneficiaryStagingId,
+                    _releaseRequirementsStagingId,
                     _currentUser.Id,
                     SelectedPendingDigitalIdQrPayload,
                     claimRemark);

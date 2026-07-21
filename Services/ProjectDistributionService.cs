@@ -164,7 +164,7 @@ namespace AttendanceShiftingManagement.Services
                 BeneficiaryId = NormalizeNullable(beneficiary.BeneficiaryId),
                 CivilRegistryId = NormalizeNullable(beneficiary.CivilRegistryId),
                 FullName = fullName,
-                Status = DistributionBeneficiaryStatus.Pending,
+                Status = DistributionBeneficiaryStatus.Rejected,
                 StatusUpdatedByUserId = actedByUserId,
                 StatusUpdatedAt = DateTime.Now,
                 AddedByUserId = actedByUserId,
@@ -283,7 +283,7 @@ namespace AttendanceShiftingManagement.Services
                     FullName = string.IsNullOrWhiteSpace(b.FullName) 
                         ? BuildDisplayName(b.FirstName, b.MiddleName, b.LastName) 
                         : b.FullName,
-                    Status = DistributionBeneficiaryStatus.Pending,
+                    Status = DistributionBeneficiaryStatus.Rejected,
                     StatusUpdatedByUserId = actedByUserId,
                     StatusUpdatedAt = now,
                     AddedByUserId = actedByUserId,
@@ -497,14 +497,14 @@ namespace AttendanceShiftingManagement.Services
 
             if (membership.Status == DistributionBeneficiaryStatus.Rejected)
             {
-                ScanDiagnosticLogger.Log("EvaluateQualificationAsync", _context, "RESULT=REJECTED");
+                ScanDiagnosticLogger.Log("EvaluateQualificationAsync", _context, "RESULT=REJECTED (Unclaimed/Unreleased)");
                 return new ProjectDistributionQualificationResult(
                     true,
                     false,
-                    "Beneficiary is rejected for this project.",
-                    true,
+                    "Beneficiary is in Unclaimed/Unreleased state. They can be moved to Pending or Released.",
+                    true, // Allow processing
                     membership.Status,
-                    false,
+                    true, // Can release/process
                     membership.Id);
             }
 
@@ -1225,7 +1225,7 @@ namespace AttendanceShiftingManagement.Services
                 BeneficiaryStagingId = beneficiaryStagingId,
                 AddedAt = DateTime.Now,
                 AddedByUserId = actedByUserId,
-                Status = DistributionBeneficiaryStatus.Pending
+                Status = DistributionBeneficiaryStatus.Rejected
             };
 
             _context.AyudaProjectBeneficiaries.Add(entry);
