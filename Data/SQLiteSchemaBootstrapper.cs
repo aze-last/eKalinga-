@@ -178,6 +178,15 @@ namespace AttendanceShiftingManagement.Data
                     EnsureColumnExists(connection, "cash_for_work_budgets", "start_date", "TEXT NULL", cfwBudgetColumns);
                     EnsureColumnExists(connection, "cash_for_work_budgets", "end_date", "TEXT NULL", cfwBudgetColumns);
                 }
+
+                // Seminar Attendance module permission (mirrors the MySQL-side
+                // RuntimeSchemaBootstrapper column). Skipped when the table does
+                // not exist yet (EF creates it on first run with the full model).
+                var userPermissionColumns = GetTableColumns(connection, "user_permissions");
+                if (userPermissionColumns.Count > 0)
+                {
+                    EnsureColumnExists(connection, "user_permissions", "can_access_seminar_attendance", "INTEGER NOT NULL DEFAULT 1", userPermissionColumns);
+                }
             }
             finally
             {

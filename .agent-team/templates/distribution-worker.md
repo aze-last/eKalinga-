@@ -14,7 +14,7 @@ Allowed files: `Views/ProjectDistribution*.xaml`, `ViewModels/ProjectDistributio
 4. **Audit Trail:** Every claim must be recorded with a timestamp, the user who performed the release, and the specific `AyudaProgramId`.
 
 ## UI/UX Constraints
-- **Module Layout:** Strictly adhere to the standard module layout (Left sidebar for filters/actions, Center for the main list/stats (Pending leftside and release Rightside).
+- **Module Layout:** Strictly adhere to the standard module layout: Left sidebar for filters/actions; Center is a 3-column bucket layout — **RELEASED / CLAIMED (left, Col 0)**, **PENDING (center, Col 2)**, **UNRELEASED / UNCLAIMED — not eligible (right, Col 4)**. This is the approved layout; do not reorder or collapse the buckets.
 - **Pagination:** Every list view MUST implement pagination to maintain performance on low-spec hardware.
 
 ## POS Scanner Workflow Constraints (CRITICAL)
@@ -40,3 +40,5 @@ To ensure a high-quality Dark Mode experience, you must never use hardcoded colo
 - All opération result logic should reside in `Services/ProjectDistributionService.cs`.
 - UI must remain responsive during bulk lookups or high-volume release sessions.
 - Use `AyudaProjectClaim` model for recording successful releases.
+- The create-project dropdown excludes `AssistanceCase` and `Seminar` program types (ViewModel constructor); do not re-add them.
+- Tests include text-based Source/Binding tests (e.g., `ProjectDistributionViewModelSourceTests.cs`) that assert on literal code/XAML fragments — renaming bindings, commands, or method bodies can break tests even when the build passes. Run the test suite after any rename.

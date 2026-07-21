@@ -10,60 +10,6 @@ namespace AttendanceShiftingManagement.Tests;
 public sealed class CashForWorkOcrViewModelTests
 {
     [Fact]
-    public void OpenCreateEventPanel_WhenCashForWorkEventIsSelected_ResetsEditorForNewEvent()
-    {
-        Exception? failure = null;
-
-        var thread = new Thread(() =>
-        {
-            try
-            {
-                WpfTestHost.EnsureApplication();
-
-                var viewModel = (CashForWorkOcrViewModel)RuntimeHelpers.GetUninitializedObject(typeof(CashForWorkOcrViewModel));
-                SetPrivateField(viewModel, "_selectedEvent", new CashForWorkEvent
-                {
-                    Title = "Existing Clean-Up",
-                    Location = "Covered Court",
-                    EventDate = new DateTime(2026, 4, 10),
-                    StartTime = new TimeSpan(8, 0, 0),
-                    EndTime = new TimeSpan(12, 0, 0),
-                    Notes = "Existing notes",
-                    EventKind = CashForWorkEventKind.CashForWork
-                });
-
-                var openEventEditorPanel = typeof(CashForWorkOcrViewModel).GetMethod(
-                    "OpenEventEditorPanel",
-                    BindingFlags.Instance | BindingFlags.NonPublic);
-
-                Assert.NotNull(openEventEditorPanel);
-
-                openEventEditorPanel!.Invoke(viewModel, [CashForWorkEventKind.CashForWork]);
-
-                Assert.Equal(string.Empty, viewModel.EventTitle);
-                Assert.Equal(string.Empty, viewModel.EventLocation);
-                Assert.Equal(DateTime.Today, viewModel.EventDate.Date);
-                Assert.Equal(DateTime.Today.AddHours(7), viewModel.EventStartTime);
-                Assert.Equal(DateTime.Today.AddHours(12), viewModel.EventEndTime);
-                Assert.Equal(string.Empty, viewModel.EventNotes);
-                Assert.Equal("CREATE EVENT", viewModel.EventEditorSubmitLabel);
-                Assert.Equal("New Event", viewModel.DrawerTitle);
-                Assert.DoesNotContain("update", viewModel.DrawerSubtitle, StringComparison.OrdinalIgnoreCase);
-            }
-            catch (Exception ex)
-            {
-                failure = ex;
-            }
-        });
-
-        thread.SetApartmentState(ApartmentState.STA);
-        thread.Start();
-        thread.Join();
-
-        Assert.True(failure is null, failure?.ToString());
-    }
-
-    [Fact]
     public void OpenEditEventPanel_WhenEventIsSelected_LoadsExistingValuesForUpdate()
     {
         Exception? failure = null;

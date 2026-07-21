@@ -95,6 +95,24 @@ namespace AttendanceShiftingManagement.Services
             }
         }
 
+        /// <summary>
+        /// Wraps an async endpoint handler in try/catch so any thrown exception
+        /// (SQLITE_BUSY, null ref, etc.) returns a well-formed JSON error response
+        /// instead of a bare HTTP 500 that the client cannot parse.
+        /// </summary>
+        private static async Task<IResult> SafeJson(Func<Task<IResult>> handler)
+        {
+            try
+            {
+                return await handler();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[ScannerGateway] Endpoint error: {ex}");
+                return Results.Json(new { success = false, message = "Server error while processing the scan. Please try again." });
+            }
+        }
+
         private void MapEndpoints(WebApplication app)
         {
             app.MapGet("/", () => Results.Text("Barangay Ayuda System local scanner gateway is running."));
@@ -106,6 +124,7 @@ namespace AttendanceShiftingManagement.Services
             });
 
             app.MapPost("/api/session/unlock", async Task<IResult> (ScannerPinRequest request) =>
+                await SafeJson(async () =>
             {
                 await using var db = new LocalDbContext();
                 var sessionService = new ScannerSessionService(db);
@@ -147,14 +166,16 @@ namespace AttendanceShiftingManagement.Services
                     eventTitle,
                     projectTitle
                 });
-            });
+            }));
 
             app.MapPost("/api/lookup/manual", async Task<IResult> (ScannerLookupRequest request) =>
+                await SafeJson(async () =>
             {
                 return await LookupAsync(request.SessionToken, request.Pin, request.QrPayload);
-            });
+            }));
 
             app.MapPost("/api/lookup/upload", async Task<IResult> (HttpRequest request) =>
+                await SafeJson(async () =>
             {
                 var form = await request.ReadFormAsync();
                 var sessionToken = form["sessionToken"].ToString();
@@ -181,9 +202,10 @@ namespace AttendanceShiftingManagement.Services
                 {
                     return Results.Json(new { success = false, message = "The selected image could not be processed. Use a JPG or PNG photo, or try live camera scan." });
                 }
-            });
+            }));
 
             app.MapPost("/api/attendance/mark", async Task<IResult> (ScannerAttendanceRequest request) =>
+                await SafeJson(async () =>
             {
                 await using var db = new LocalDbContext();
                 var sessionService = new ScannerSessionService(db);
@@ -243,9 +265,10 @@ namespace AttendanceShiftingManagement.Services
                         : "Attendance could not be saved. This is usually due to an ID mismatch, an invalid QR code, or attendance already being marked."
                 });
 
-            });
+            }));
 
             app.MapPost("/api/distribution/claim", async Task<IResult> (ScannerDistributionClaimRequest request) =>
+                await SafeJson(async () =>
             {
                 await using var db = new LocalDbContext();
                 var sessionService = new ScannerSessionService(db);
@@ -281,25 +304,32 @@ namespace AttendanceShiftingManagement.Services
                     success = result.IsSuccess,
                     message = result.Message
                 });
-            });
+            }));
 
             app.MapGet("/api/photo/{stagingId:int}", async Task<IResult> (int stagingId, string session, string pin) =>
             {
-                await using var db = new LocalDbContext();
-                var sessionService = new ScannerSessionService(db);
-                if (!await sessionService.ValidatePinAsync(session, pin))
+                try
+                {
+                    await using var db = new LocalDbContext();
+                    var sessionService = new ScannerSessionService(db);
+                    if (!await sessionService.ValidatePinAsync(session, pin))
+                    {
+                        return Results.NotFound();
+                    }
+
+                    var digitalIdService = new BeneficiaryDigitalIdService(db);
+                    var digitalId = await digitalIdService.GetByStagingIdAsync(stagingId);
+                    if (digitalId == null || string.IsNullOrWhiteSpace(digitalId.PhotoPath) || !File.Exists(digitalId.PhotoPath))
+                    {
+                        return Results.NotFound();
+                    }
+
+                    return Results.File(digitalId.PhotoPath, GetContentType(digitalId.PhotoPath));
+                }
+                catch
                 {
                     return Results.NotFound();
                 }
-
-                var digitalIdService = new BeneficiaryDigitalIdService(db);
-                var digitalId = await digitalIdService.GetByStagingIdAsync(stagingId);
-                if (digitalId == null || string.IsNullOrWhiteSpace(digitalId.PhotoPath) || !File.Exists(digitalId.PhotoPath))
-                {
-                    return Results.NotFound();
-                }
-
-                return Results.File(digitalId.PhotoPath, GetContentType(digitalId.PhotoPath));
             });
 
             app.MapGet("/queue-monitor", () =>
@@ -1475,6 +1505,7 @@ namespace AttendanceShiftingManagement.Services
 const sessionToken = {{JsonSerializer.Serialize(sessionToken)}};
 let activePin = "";
 let lastLookup = null;
+let lookupInFlight = false;
 const currencyFormatter = new Intl.NumberFormat("en-PH", {
   style: "currency",
   currency: "PHP",
@@ -1497,6 +1528,20 @@ let cameraStream = null;
 let cameraScanTimer = 0;
 let isCameraScanning = false;
 
+// All interactive buttons that must be disabled while a request is in flight.
+const interactiveButtons = [unlockButton, lookupManualButton, lookupImageButton, startLiveScanButton, markAttendanceButton, markReceivedButton];
+
+function setBusy(isBusy, message) {
+  interactiveButtons.forEach(btn => { if (btn) btn.disabled = isBusy; });
+  const status = document.getElementById("lookupStatus");
+  if (isBusy) {
+    status.textContent = "\u23F3 " + (message || "Processing...");
+  } else {
+    // Only clear if it still shows the spinner prefix
+    if (status.textContent.startsWith("\u23F3")) status.textContent = "";
+  }
+}
+
 unlockButton.addEventListener("click", unlockSession);
 lookupManualButton.addEventListener("click", lookupManual);
 lookupImageButton.addEventListener("click", openImageCapture);
@@ -1511,16 +1556,25 @@ window.addEventListener("beforeunload", cleanupCamera);
 initializeLiveCameraSupport();
 
 async function unlockSession() {
-  const pin = document.getElementById("pin").value.trim();
-  const response = await postJson("/api/session/unlock", { sessionToken, pin });
-  document.getElementById("unlockStatus").textContent = response.message || (response.success ? "Scanner unlocked." : "Unlock failed.");
-  if (!response.success) return;
-  activePin = pin;
-  document.getElementById("scannerCard").classList.remove("hidden");
-  setLookupBanner("Scanner unlocked. Ready to scan a beneficiary QR.", "neutral");
+  if (lookupInFlight) return;
+  lookupInFlight = true;
+  setBusy(true, "Unlocking scanner session\u2026");
+  try {
+    const pin = document.getElementById("pin").value.trim();
+    const response = await postJson("/api/session/unlock", { sessionToken, pin });
+    document.getElementById("unlockStatus").textContent = response.message || (response.success ? "Scanner unlocked." : "Unlock failed.");
+    if (!response.success) return;
+    activePin = pin;
+    document.getElementById("scannerCard").classList.remove("hidden");
+    setLookupBanner("Scanner unlocked. Ready to scan a beneficiary QR.", "neutral");
+  } finally {
+    lookupInFlight = false;
+    setBusy(false);
+  }
 }
 
 async function lookupManual() {
+  if (lookupInFlight) return;
   const qrPayload = document.getElementById("payload").value.trim();
   if (!qrPayload) {
     document.getElementById("lookupStatus").textContent = "Enter the beneficiary QR payload first.";
@@ -1537,20 +1591,37 @@ function openImageCapture() {
 }
 
 async function lookupSelectedImage() {
-  if (!imageInput.files.length) {
-    return;
+  if (!imageInput.files.length) return;
+  if (lookupInFlight) return;
+  lookupInFlight = true;
+  setBusy(true, "Uploading QR image\u2026");
+  try {
+    const data = new FormData();
+    data.append("sessionToken", sessionToken);
+    data.append("pin", activePin);
+    data.append("image", imageInput.files[0]);
+
+    let response;
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 15000);
+      const raw = await fetch("/api/lookup/upload", { method: "POST", body: data, signal: controller.signal });
+      clearTimeout(timer);
+      if (raw.ok) {
+        response = await raw.json();
+      } else {
+        try { response = await raw.json(); } catch { response = { success: false, message: "Network or server error. Check the Wi-Fi/hotspot connection and try again." }; }
+      }
+    } catch {
+      response = { success: false, message: "Couldn't reach the scanner server. Move closer to the host PC's hotspot and retry." };
+    }
+
+    imageInput.value = "";
+    renderLookupResponse(response);
+  } finally {
+    lookupInFlight = false;
+    setBusy(false);
   }
-
-  document.getElementById("lookupStatus").textContent = "Uploading QR image...";
-
-  const data = new FormData();
-  data.append("sessionToken", sessionToken);
-  data.append("pin", activePin);
-  data.append("image", imageInput.files[0]);
-
-  const response = await fetch("/api/lookup/upload", { method: "POST", body: data }).then(result => result.json());
-  imageInput.value = "";
-  renderLookupResponse(response);
 }
 
 function setLookupBanner(message, tone) {
@@ -1671,7 +1742,7 @@ function renderModeDetails(response) {
     rows.push(["Project", response.distribution.projectName || "--"]);
     rows.push(["Release Kind", response.distribution.releaseKind || "--"]);
     rows.push(["Assistance", response.distribution.assistanceType || response.distribution.itemDescription || "--"]);
-    rows.push(["Unit Amount", response.distribution.unitAmount ? "₱" + response.distribution.unitAmount : "--"]);
+    rows.push(["Unit Amount", response.distribution.unitAmount ? "\u20B1" + response.distribution.unitAmount : "--"]);
     rows.push(["Project Status", response.distribution.beneficiaryStatus || "--"]);
     rows.push(["Decision", response.distribution.message || "--"]);
   } else if (response.participantId) {
@@ -1741,7 +1812,7 @@ function renderHistory(entries) {
 
     const amount = document.createElement("div");
     amount.className = "history-amount";
-    amount.textContent = "₱" + (entry.amount || "0.00");
+    amount.textContent = "\u20B1" + (entry.amount || "0.00");
 
     top.appendChild(meta);
     top.appendChild(amount);
@@ -1792,7 +1863,7 @@ function renderBorrowingHistory(entries) {
 
     const amount = document.createElement("div");
     amount.className = "history-amount";
-    amount.textContent = "₱" + (entry.amount || "0.00");
+    amount.textContent = "\u20B1" + (entry.amount || "0.00");
 
     top.appendChild(meta);
     top.appendChild(amount);
@@ -1884,6 +1955,7 @@ async function initializeLiveCameraSupport() {
 }
 
 async function startLiveScan() {
+  if (lookupInFlight) return;
   if (!activePin) {
     document.getElementById("lookupStatus").textContent = "Unlock the scanner with the 6-digit PIN first.";
     return;
@@ -1929,6 +2001,22 @@ async function scanLiveFrame() {
     return;
   }
 
+  // Guard: skip if video isn't ready yet (prevents early-frame throws)
+  if (cameraPreview.readyState < 2 || !cameraPreview.videoWidth) {
+    if (isCameraScanning) {
+      cameraScanTimer = window.setTimeout(scanLiveFrame, 220);
+    }
+    return;
+  }
+
+  // Guard: skip detection while a lookup request is already in flight
+  if (lookupInFlight) {
+    if (isCameraScanning) {
+      cameraScanTimer = window.setTimeout(scanLiveFrame, 220);
+    }
+    return;
+  }
+
   try {
     const barcodes = await barcodeDetector.detect(cameraPreview);
     const match = barcodes.find(code => code.rawValue && code.rawValue.trim());
@@ -1946,14 +2034,19 @@ async function scanLiveFrame() {
 }
 
 async function handleDetectedPayload(qrPayload, fromCamera) {
-  stopLiveScan(false);
-  document.getElementById("payload").value = qrPayload;
-  document.getElementById("lookupStatus").textContent = fromCamera
-    ? "QR detected. Loading beneficiary..."
-    : "Looking up beneficiary...";
+  if (lookupInFlight) return;
+  lookupInFlight = true;
+  setBusy(true, fromCamera ? "QR detected. Loading beneficiary\u2026" : "Looking up beneficiary\u2026");
+  try {
+    stopLiveScan(false);
+    document.getElementById("payload").value = qrPayload;
 
-  const response = await postJson("/api/lookup/manual", { sessionToken, pin: activePin, qrPayload });
-  renderLookupResponse(response);
+    const response = await postJson("/api/lookup/manual", { sessionToken, pin: activePin, qrPayload });
+    renderLookupResponse(response);
+  } finally {
+    lookupInFlight = false;
+    setBusy(false);
+  }
 }
 
 function stopLiveScan(showStoppedMessage) {
@@ -1994,45 +2087,66 @@ function cleanupCamera() {
 }
 
 async function markAttendance() {
+  if (lookupInFlight) return;
   const activeAttendance = lastLookup && lastLookup.attendance ? lastLookup.attendance : null;
   const participantId = activeAttendance ? activeAttendance.participantId : lastLookup?.participantId;
   if (!lastLookup) return;
-  const response = await postJson("/api/attendance/mark", {
-    sessionToken,
-    pin: activePin,
-    participantId,
-    qrPayload: lastLookup.qrPayload,
-    eventId: activeAttendance ? activeAttendance.eventId : null
-  });
-  document.getElementById("lookupStatus").textContent = response.message || "";
-  setLookupBanner(response.message || "Attendance update finished.", response.success ? "success" : "error");
-  if (response.success && lastLookup.qrPayload) {
-    await handleDetectedPayload(lastLookup.qrPayload, false);
+  lookupInFlight = true;
+  setBusy(true, "Saving attendance\u2026");
+  try {
+    const response = await postJson("/api/attendance/mark", {
+      sessionToken,
+      pin: activePin,
+      participantId,
+      qrPayload: lastLookup.qrPayload,
+      eventId: activeAttendance ? activeAttendance.eventId : null
+    });
+    document.getElementById("lookupStatus").textContent = response.message || "";
+    setLookupBanner(response.message || "Attendance update finished.", response.success ? "success" : "error");
+    if (response.success && lastLookup.qrPayload) {
+      lookupInFlight = false;
+      setBusy(false);
+      await handleDetectedPayload(lastLookup.qrPayload, false);
+      return;
+    }
+  } finally {
+    lookupInFlight = false;
+    setBusy(false);
   }
 }
 
 async function markReceived() {
+  if (lookupInFlight) return;
   if (!lastLookup || !lastLookup.beneficiaryStagingId) return;
-  const response = await postJson("/api/distribution/claim", {
-    sessionToken,
-    pin: activePin,
-    beneficiaryStagingId: lastLookup.beneficiaryStagingId,
-    qrPayload: lastLookup.qrPayload,
-    remarks: null
-  });
+  lookupInFlight = true;
+  setBusy(true, "Recording release\u2026");
+  try {
+    const response = await postJson("/api/distribution/claim", {
+      sessionToken,
+      pin: activePin,
+      beneficiaryStagingId: lastLookup.beneficiaryStagingId,
+      qrPayload: lastLookup.qrPayload,
+      remarks: null
+    });
 
-  document.getElementById("lookupStatus").textContent = response.message || "";
-  setLookupBanner(response.message || "Project claim update finished.", response.success ? "success" : "error");
-  if (response.success && lastLookup.qrPayload) {
-    await handleDetectedPayload(lastLookup.qrPayload, false);
-    return;
-  }
-  if (response.success && lastLookup.distribution) {
-    lastLookup.distribution.alreadyClaimed = true;
-    lastLookup.distribution.beneficiaryStatus = "Released";
-    lastLookup.distribution.canMarkReceived = false;
-    lastLookup.distribution.message = response.message || "Beneficiary already marked as released.";
-    renderLookupResponse(lastLookup);
+    document.getElementById("lookupStatus").textContent = response.message || "";
+    setLookupBanner(response.message || "Project claim update finished.", response.success ? "success" : "error");
+    if (response.success && lastLookup.qrPayload) {
+      lookupInFlight = false;
+      setBusy(false);
+      await handleDetectedPayload(lastLookup.qrPayload, false);
+      return;
+    }
+    if (response.success && lastLookup.distribution) {
+      lastLookup.distribution.alreadyClaimed = true;
+      lastLookup.distribution.beneficiaryStatus = "Released";
+      lastLookup.distribution.canMarkReceived = false;
+      lastLookup.distribution.message = response.message || "Beneficiary already marked as released.";
+      renderLookupResponse(lastLookup);
+    }
+  } finally {
+    lookupInFlight = false;
+    setBusy(false);
   }
 }
 
@@ -2132,13 +2246,28 @@ function renderLookupResponse(response) {
   renderClaimHistory(response.claimHistory || []);
 }
 
+// postJson: NEVER throws, ALWAYS resolves to { success, message, ...rest }.
+// Uses AbortController with a 15-second timeout.
 async function postJson(url, payload) {
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  });
-  return await response.json();
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15000);
+    const raw = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    });
+    clearTimeout(timer);
+    if (raw.ok) {
+      return await raw.json();
+    }
+    // Non-OK response — try to parse JSON body for the server's error message
+    try { return await raw.json(); } catch { /* fall through */ }
+    return { success: false, message: "Network or server error. Check the Wi-Fi/hotspot connection and try again." };
+  } catch {
+    return { success: false, message: "Couldn't reach the scanner server. Move closer to the host PC's hotspot and retry." };
+  }
 }
 </script>
 </body>

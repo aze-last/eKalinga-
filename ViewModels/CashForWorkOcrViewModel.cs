@@ -31,14 +31,11 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly ReportDocumentService _documentService;
         private readonly ReportPdfExportService _pdfExportService;
         private readonly RelayCommand _saveEventCommand;
-        private readonly RelayCommand _addParticipantCommand;
         private readonly RelayCommand _saveManualAttendanceCommand;
         private readonly RelayCommand _releaseBudgetCommand;
         private readonly RelayCommand _createAttendanceScannerSessionCommand;
-        private readonly RelayCommand _openCreateEventPanelCommand;
         private readonly RelayCommand _openEditEventPanelCommand;
         private readonly RelayCommand _deleteEventCommand;
-        private readonly RelayCommand _openAddBeneficiariesPanelCommand;
         private readonly RelayCommand _openScanAttendancePanelCommand;
         private readonly RelayCommand _openPayoutPanelCommand;
         private readonly RelayCommand _openAnnouncementsPanelCommand;
@@ -63,9 +60,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private CashForWorkEvent? _selectedEvent;
         private CashForWorkSavedAttendanceRow? _selectedAttendanceRow;
-        private CashForWorkEligibleBeneficiaryOption? _selectedEligibleBeneficiary;
         private CashForWorkWorkspacePanel _activePanel;
-        private CashForWorkEventKind _eventEditorKind = CashForWorkEventKind.CashForWork;
         private int? _editingEventId;
         private bool _isBusy;
         private int _historyRequestVersion;
@@ -141,7 +136,6 @@ namespace AttendanceShiftingManagement.ViewModels
             _pdfExportService = new ReportPdfExportService();
 
             Events = new ObservableCollection<CashForWorkEvent>();
-            EligibleBeneficiaries = new ObservableCollection<CashForWorkEligibleBeneficiaryOption>();
             Participants = new ObservableCollection<CashForWorkParticipantListItem>();
             SavedAttendanceRows = new ObservableCollection<CashForWorkSavedAttendanceRow>();
             OpenAnnouncements = new ObservableCollection<CashForWorkAnnouncementItem>();
@@ -149,14 +143,11 @@ namespace AttendanceShiftingManagement.ViewModels
             HistoryHighlights = new ObservableCollection<string>();
 
             _saveEventCommand = new RelayCommand(async _ => await ExecuteSaveEventAsync(), _ => !IsBusy);
-            _addParticipantCommand = new RelayCommand(async _ => await ExecuteAddParticipantAsync(), _ => !IsBusy);
             _saveManualAttendanceCommand = new RelayCommand(async _ => await ExecuteSaveManualAttendanceAsync(), _ => !IsBusy);
             _releaseBudgetCommand = new RelayCommand(async _ => await ExecuteReleaseBudgetAsync(), _ => !IsBusy);
             _createAttendanceScannerSessionCommand = new RelayCommand(async _ => await ExecuteCreateAttendanceScannerSessionAsync(), _ => !IsBusy);
-            _openCreateEventPanelCommand = new RelayCommand(_ => OpenEventEditorPanel(CashForWorkEventKind.CashForWork), _ => !IsBusy);
             _openEditEventPanelCommand = new RelayCommand(_ => OpenEditEventPanel(), _ => !IsBusy && HasSelectedEvent);
             _deleteEventCommand = new RelayCommand(async _ => await ExecuteDeleteEventAsync(), _ => !IsBusy && HasSelectedEvent);
-            _openAddBeneficiariesPanelCommand = new RelayCommand(_ => OpenBeneficiariesPanel(), _ => !IsBusy);
             _openScanAttendancePanelCommand = new RelayCommand(_ => OpenScanAttendancePanel(), _ => !IsBusy);
             _openPayoutPanelCommand = new RelayCommand(_ => OpenPayoutPanel(), _ => !IsBusy);
             _openAnnouncementsPanelCommand = new RelayCommand(_ => OpenAnnouncementsPanel(), _ => !IsBusy);
@@ -187,7 +178,6 @@ namespace AttendanceShiftingManagement.ViewModels
         }
 
         public ObservableCollection<CashForWorkEvent> Events { get; }
-        public ObservableCollection<CashForWorkEligibleBeneficiaryOption> EligibleBeneficiaries { get; }
         public ObservableCollection<CashForWorkParticipantListItem> Participants { get; }
         public ObservableCollection<CashForWorkSavedAttendanceRow> SavedAttendanceRows { get; }
         public ObservableCollection<CashForWorkAnnouncementItem> OpenAnnouncements { get; }
@@ -195,14 +185,11 @@ namespace AttendanceShiftingManagement.ViewModels
         public ObservableCollection<string> HistoryHighlights { get; }
 
         public ICommand SaveEventCommand => _saveEventCommand;
-        public ICommand AddParticipantCommand => _addParticipantCommand;
         public ICommand SaveManualAttendanceCommand => _saveManualAttendanceCommand;
         public ICommand ReleaseBudgetCommand => _releaseBudgetCommand;
         public ICommand CreateAttendanceScannerSessionCommand => _createAttendanceScannerSessionCommand;
-        public ICommand OpenCreateEventPanelCommand => _openCreateEventPanelCommand;
         public ICommand OpenEditEventPanelCommand => _openEditEventPanelCommand;
         public ICommand DeleteEventCommand => _deleteEventCommand;
-        public ICommand OpenAddBeneficiariesPanelCommand => _openAddBeneficiariesPanelCommand;
         public ICommand OpenScanAttendancePanelCommand => _openScanAttendancePanelCommand;
         public ICommand OpenPayoutPanelCommand => _openPayoutPanelCommand;
         public ICommand OpenAnnouncementsPanelCommand => _openAnnouncementsPanelCommand;
@@ -409,7 +396,6 @@ namespace AttendanceShiftingManagement.ViewModels
 
                 ResetScannerSession();
                 RefreshSelectedEventFlags();
-                NormalizePanelAccessForSelectedEvent();
                 RefreshDrawerCopy();
                 _openEditEventPanelCommand.RaiseCanExecuteChanged();
                 _deleteEventCommand.RaiseCanExecuteChanged();
@@ -496,12 +482,6 @@ namespace AttendanceShiftingManagement.ViewModels
             }
         }
 
-        public CashForWorkEligibleBeneficiaryOption? SelectedEligibleBeneficiary
-        {
-            get => _selectedEligibleBeneficiary;
-            set => SetProperty(ref _selectedEligibleBeneficiary, value);
-        }
-
         public CashForWorkWorkspacePanel ActivePanel
         {
             get => _activePanel;
@@ -524,34 +504,6 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             get => _drawerSubtitle;
             private set => SetProperty(ref _drawerSubtitle, value);
-        }
-
-        public IEnumerable<CashForWorkEventKind> EventKinds => Enum.GetValues(typeof(CashForWorkEventKind)).Cast<CashForWorkEventKind>();
-
-        public CashForWorkEventKind EventEditorKind
-        {
-            get => _eventEditorKind;
-            set
-            {
-                if (SetProperty(ref _eventEditorKind, value))
-                {
-                    OnPropertyChanged(nameof(EventEditorKindLabel));
-                    OnPropertyChanged(nameof(EventEditorSubmitLabel));
-                    
-                    if (!_editingEventId.HasValue)
-                    {
-                        var title = _eventEditorKind == CashForWorkEventKind.Seminar
-                            ? "Create Seminar"
-                            : "Create Event";
-                        var subtitle = _eventEditorKind == CashForWorkEventKind.Seminar
-                            ? "Create a seminar using the same attendance and payout workflow."
-                            : "Create a cash-for-work event before assigning beneficiaries.";
-                        
-                        DrawerTitle = title;
-                        DrawerSubtitle = subtitle;
-                    }
-                }
-            }
         }
 
         public string EventTitle
@@ -786,14 +738,11 @@ namespace AttendanceShiftingManagement.ViewModels
                 }
 
                 _saveEventCommand.RaiseCanExecuteChanged();
-                _addParticipantCommand.RaiseCanExecuteChanged();
                 _saveManualAttendanceCommand.RaiseCanExecuteChanged();
                 _releaseBudgetCommand.RaiseCanExecuteChanged();
                 _createAttendanceScannerSessionCommand.RaiseCanExecuteChanged();
-                _openCreateEventPanelCommand.RaiseCanExecuteChanged();
                 _openEditEventPanelCommand.RaiseCanExecuteChanged();
                 _deleteEventCommand.RaiseCanExecuteChanged();
-                _openAddBeneficiariesPanelCommand.RaiseCanExecuteChanged();
                 _openScanAttendancePanelCommand.RaiseCanExecuteChanged();
                 _openPayoutPanelCommand.RaiseCanExecuteChanged();
                 _openAnnouncementsPanelCommand.RaiseCanExecuteChanged();
@@ -808,7 +757,6 @@ namespace AttendanceShiftingManagement.ViewModels
         }
 
         public bool HasSelectedEvent => SelectedEvent != null;
-        public bool IsSelectedSeminarEvent => SelectedEvent?.EventKind == CashForWorkEventKind.Seminar;
         public bool HasOpenAnnouncements => OpenAnnouncements.Count > 0;
         public Visibility SelectedEventVisibility => HasSelectedEvent ? Visibility.Visible : Visibility.Collapsed;
         public Visibility NoSelectedEventVisibility => HasSelectedEvent ? Visibility.Collapsed : Visibility.Visible;
@@ -827,14 +775,11 @@ namespace AttendanceShiftingManagement.ViewModels
         public bool IsAnyOverlayOpen => IsDrawerOpen || IsPcScannerOpen;
         public Visibility DrawerVisibility => IsDrawerOpen ? Visibility.Visible : Visibility.Collapsed;
         public Visibility EventEditorVisibility => ActivePanel == CashForWorkWorkspacePanel.EventEditor ? Visibility.Visible : Visibility.Collapsed;
-        public Visibility BeneficiariesVisibility => ActivePanel == CashForWorkWorkspacePanel.Beneficiaries ? Visibility.Visible : Visibility.Collapsed;
         public Visibility ScanAttendanceVisibility => ActivePanel == CashForWorkWorkspacePanel.ScanAttendance ? Visibility.Visible : Visibility.Collapsed;
         public Visibility PayoutVisibility => ActivePanel == CashForWorkWorkspacePanel.Payout ? Visibility.Visible : Visibility.Collapsed;
         public Visibility AnnouncementsVisibility => ActivePanel == CashForWorkWorkspacePanel.Announcements ? Visibility.Visible : Visibility.Collapsed;
-        public Visibility AddBeneficiariesRailVisibility => IsSelectedSeminarEvent ? Visibility.Collapsed : Visibility.Visible;
-        public Visibility PayoutRailVisibility => IsSelectedSeminarEvent ? Visibility.Collapsed : Visibility.Visible;
-        public Visibility ManualAttendanceVisibility => IsSelectedSeminarEvent ? Visibility.Collapsed : Visibility.Visible;
-        public Visibility SeminarScannerHintVisibility => IsSelectedSeminarEvent ? Visibility.Visible : Visibility.Collapsed;
+        public Visibility PayoutRailVisibility => Visibility.Visible;
+        public Visibility ManualAttendanceVisibility => Visibility.Visible;
         public string SelectedEventLabel => SelectedEvent?.WorkspaceLabel ?? "No event selected";
 
         public ICommand ConfirmScannedClaimCommand => _confirmScannedClaimCommand;
@@ -879,14 +824,8 @@ namespace AttendanceShiftingManagement.ViewModels
         public string ScannerHeader => "Attendance Capture";
         public string ScannerDescription => "Scan ID to record present status for this event.";
 
-        public string EventEditorKindLabel => _eventEditorKind == CashForWorkEventKind.Seminar ? "Seminar" : "Cash-for-Work";
-        public string EventEditorSubmitLabel => _editingEventId.HasValue
-            ? _eventEditorKind == CashForWorkEventKind.Seminar
-                ? "UPDATE SEMINAR"
-                : "UPDATE EVENT"
-            : _eventEditorKind == CashForWorkEventKind.Seminar
-                ? "CREATE SEMINAR"
-                : "CREATE EVENT";
+        public string EventEditorKindLabel => "Cash-for-Work";
+        public string EventEditorSubmitLabel => _editingEventId.HasValue ? "UPDATE EVENT" : "CREATE EVENT";
 
         private async Task LoadWorkspaceAsync()
         {
@@ -897,7 +836,6 @@ namespace AttendanceShiftingManagement.ViewModels
             try
             {
                 await LoadGlobalCfwBudgetCapAsync();
-                await LoadEligibleBeneficiariesAsync();
                 await LoadAnnouncementsAsync();
                 await LoadEventsAsync();
                 SetSuccessStatus("Workspace loaded.");
@@ -934,7 +872,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
             await using var context = new LocalDbContext();
             var cfwService = new CashForWorkService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
-            foreach (var cashForWorkEvent in cfwService.GetEvents())
+            foreach (var cashForWorkEvent in cfwService.GetEvents(CashForWorkEventKind.CashForWork))
             {
                 Events.Add(cashForWorkEvent);
             }
@@ -949,30 +887,19 @@ namespace AttendanceShiftingManagement.ViewModels
             _navigateNextCommand.RaiseCanExecuteChanged();
         }
 
-        private async Task LoadEligibleBeneficiariesAsync()
-        {
-            EligibleBeneficiaries.Clear();
-            await using var context = new LocalDbContext();
-            var cfwService = new CashForWorkService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
-            foreach (var beneficiary in cfwService.GetEligibleBeneficiaries())
-            {
-                EligibleBeneficiaries.Add(CashForWorkEligibleBeneficiaryOption.FromServiceModel(beneficiary));
-            }
-        }
-
         private async Task LoadAnnouncementsAsync()
         {
             OpenAnnouncements.Clear();
             await using var context = new LocalDbContext();
             var cfwService = new CashForWorkService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
 
-            foreach (var cashForWorkEvent in cfwService.GetOpenEvents())
+            foreach (var cashForWorkEvent in cfwService.GetOpenEvents(CashForWorkEventKind.CashForWork))
             {
                 OpenAnnouncements.Add(new CashForWorkAnnouncementItem
                 {
                     EventId = cashForWorkEvent.Id,
                     Title = cashForWorkEvent.Title,
-                    Kind = cashForWorkEvent.EventKind == CashForWorkEventKind.Seminar ? "Seminar" : "Cash-for-Work",
+                    Kind = "Cash-for-Work",
                     Location = cashForWorkEvent.Location,
                     DateLabel = cashForWorkEvent.EventDate.ToString("MMM dd, yyyy", CultureInfo.CurrentCulture),
                     Status = cashForWorkEvent.Status.ToString(),
@@ -1237,7 +1164,6 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 var selectedEventId = SelectedEvent?.Id;
                 await LoadGlobalCfwBudgetCapAsync();
-                await LoadEligibleBeneficiariesAsync();
                 await LoadAnnouncementsAsync();
                 await LoadEventsAsync(selectedEventId);
                 SetSuccessStatus("Cash-for-work workspace refreshed.");
@@ -1252,30 +1178,6 @@ namespace AttendanceShiftingManagement.ViewModels
             }
         }
 
-        private void OpenEventEditorPanel(CashForWorkEventKind eventKind)
-        {
-            _editingEventId = null;
-            EventEditorKind = eventKind;
-            EventTitle = string.Empty;
-            EventLocation = string.Empty;
-            EventDate = DateTime.Today;
-            FinishDate = DateTime.Today;
-            EventStartTime = DateTime.Today.AddHours(7);
-            EventEndTime = DateTime.Today.AddHours(12);
-            BenefitType = CashForWorkBenefitType.None;
-            BenefitDescription = string.Empty;
-            EventAmountText = string.Empty;
-            EventNotes = string.Empty;
-
-            OnPropertyChanged(nameof(EventEditorKindLabel));
-            OnPropertyChanged(nameof(EventEditorSubmitLabel));
-
-            var title = eventKind == CashForWorkEventKind.Seminar ? "New Seminar" : "New Event";
-            var subtitle = eventKind == CashForWorkEventKind.Seminar ? "Create a new seminar." : "Create a new cash-for-work event.";
-
-            OpenPanel(CashForWorkWorkspacePanel.EventEditor, title, subtitle);
-        }
-
         private void OpenEditEventPanel()
         {
             if (SelectedEvent == null)
@@ -1285,7 +1187,6 @@ namespace AttendanceShiftingManagement.ViewModels
             }
 
             _editingEventId = SelectedEvent.Id;
-            EventEditorKind = SelectedEvent.EventKind;
             EventTitle = SelectedEvent.Title;
             EventLocation = SelectedEvent.Location;
             EventDate = SelectedEvent.EventDate.Date;
@@ -1297,34 +1198,12 @@ namespace AttendanceShiftingManagement.ViewModels
             EventAmountText = SelectedEvent.UnitAmount.ToString("N2", CultureInfo.CurrentCulture);
             EventNotes = SelectedEvent.Notes ?? string.Empty;
 
-            OnPropertyChanged(nameof(EventEditorKindLabel));
             OnPropertyChanged(nameof(EventEditorSubmitLabel));
 
-            var title = _eventEditorKind == CashForWorkEventKind.Seminar
-                ? "Edit Seminar"
-                : "Edit Event";
-            var subtitle = _eventEditorKind == CashForWorkEventKind.Seminar
-                ? $"Update the seminar details for {SelectedEvent.Title}."
-                : $"Update the cash-for-work event details for {SelectedEvent.Title}.";
-
-            OpenPanel(CashForWorkWorkspacePanel.EventEditor, title, subtitle);
-        }
-
-        private void OpenBeneficiariesPanel()
-        {
-            if (IsSelectedSeminarEvent)
-            {
-                OpenScanAttendancePanel();
-                SetNeutralStatus("Seminar attendance is scan-based. Beneficiary assignment is not used for seminar events.");
-                return;
-            }
-
             OpenPanel(
-                CashForWorkWorkspacePanel.Beneficiaries,
-                "Add Beneficiaries",
-                HasSelectedEvent
-                    ? $"Assign approved beneficiaries to {SelectedEvent!.Title}."
-                    : "Select an event from the dropdown first.");
+                CashForWorkWorkspacePanel.EventEditor,
+                "Edit Event",
+                $"Update the cash-for-work event details for {SelectedEvent.Title}.");
         }
 
         private void OpenScanAttendancePanel()
@@ -1333,21 +1212,12 @@ namespace AttendanceShiftingManagement.ViewModels
                 CashForWorkWorkspacePanel.ScanAttendance,
                 "Scan Attendance",
                 HasSelectedEvent
-                    ? IsSelectedSeminarEvent
-                        ? $"Open scanner attendance for {SelectedEvent!.Title}. Seminar attendees register as they scan."
-                        : $"Create a scanner session or save manual attendance for {SelectedEvent!.Title}."
+                    ? $"Create a scanner session or save manual attendance for {SelectedEvent!.Title}."
                     : "Select an event from the dropdown first.");
         }
 
         private void OpenPayoutPanel()
         {
-            if (IsSelectedSeminarEvent)
-            {
-                OpenScanAttendancePanel();
-                SetNeutralStatus("Seminar events are attendance-only and do not use the payout workflow.");
-                return;
-            }
-
             OpenPanel(
                 CashForWorkWorkspacePanel.Payout,
                 "Release Budget",
@@ -1387,37 +1257,22 @@ namespace AttendanceShiftingManagement.ViewModels
                 case CashForWorkWorkspacePanel.EventEditor:
                     if (_editingEventId.HasValue && HasSelectedEvent)
                     {
-                        DrawerTitle = SelectedEvent!.EventKind == CashForWorkEventKind.Seminar ? "Edit Seminar" : "Edit Event";
-                        DrawerSubtitle = SelectedEvent.EventKind == CashForWorkEventKind.Seminar
-                            ? $"Update the seminar details for {SelectedEvent.Title}."
-                            : $"Update the cash-for-work event details for {SelectedEvent.Title}.";
+                        DrawerTitle = "Edit Event";
+                        DrawerSubtitle = $"Update the cash-for-work event details for {SelectedEvent!.Title}.";
                     }
                     else
                     {
-                        DrawerTitle = _eventEditorKind == CashForWorkEventKind.Seminar ? "Create Seminar" : "Create Event";
-                        DrawerSubtitle = _eventEditorKind == CashForWorkEventKind.Seminar
-                            ? "Create a seminar using the same attendance and payout workflow."
-                            : "Create a cash-for-work event before assigning beneficiaries.";
+                        DrawerTitle = "Create Event";
+                        DrawerSubtitle = "Create a cash-for-work event before assigning beneficiaries.";
                     }
-                    break;
-                case CashForWorkWorkspacePanel.Beneficiaries:
-                    DrawerSubtitle = IsSelectedSeminarEvent
-                        ? "Seminar attendance is open scan-based and does not use beneficiary assignment."
-                        : HasSelectedEvent
-                        ? $"Assign approved beneficiaries to {SelectedEvent!.Title}."
-                        : "Select an event from the dropdown first.";
                     break;
                 case CashForWorkWorkspacePanel.ScanAttendance:
                     DrawerSubtitle = HasSelectedEvent
-                        ? IsSelectedSeminarEvent
-                            ? $"Open scanner attendance for {SelectedEvent!.Title}. Seminar attendees register as they scan."
-                            : $"Create a scanner session or save manual attendance for {SelectedEvent!.Title}."
+                        ? $"Create a scanner session or save manual attendance for {SelectedEvent!.Title}."
                         : "Select an event from the dropdown first.";
                     break;
                 case CashForWorkWorkspacePanel.Payout:
-                    DrawerSubtitle = IsSelectedSeminarEvent
-                        ? "Seminar events are attendance-only."
-                        : HasSelectedEvent
+                    DrawerSubtitle = HasSelectedEvent
                         ? $"Review the release-ready summary and record the budget release for {SelectedEvent!.Title}."
                         : "Select an event from the dropdown first.";
                     break;
@@ -1440,12 +1295,6 @@ namespace AttendanceShiftingManagement.ViewModels
             if (!EventStartTime.HasValue || !EventEndTime.HasValue)
             {
                 MessageBox.Show("Provide both start and end times.", "Invalid Time", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            if (_eventEditorKind == CashForWorkEventKind.Seminar && BenefitType == CashForWorkBenefitType.None)
-            {
-                MessageBox.Show("Select a benefit type for the seminar (Cash or Goods). Use 'None' only if no payout/distribution is intended.", "Benefit Type Required", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -1474,7 +1323,7 @@ namespace AttendanceShiftingManagement.ViewModels
                         EventNotes,
                         _currentUser.Id,
                         unitAmount,
-                        _eventEditorKind,
+                        CashForWorkEventKind.CashForWork,
                         FinishDate?.Date,
                         BenefitType,
                         BenefitDescription);
@@ -1491,7 +1340,7 @@ namespace AttendanceShiftingManagement.ViewModels
                         _currentUser.Id,
                         null,  // cashForWorkBudgetId - uses global budget as default
                         unitAmount,
-                        _eventEditorKind,
+                        CashForWorkEventKind.CashForWork,
                         FinishDate?.Date,
                         BenefitType,
                         BenefitDescription);
@@ -1500,10 +1349,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 await LoadAnnouncementsAsync();
                 await LoadEventsAsync(savedEvent.Id);
                 ClosePanel();
-                SetSuccessStatus(
-                    isEditing
-                        ? $"{(_eventEditorKind == CashForWorkEventKind.Seminar ? "Seminar" : "Event")} updated successfully."
-                        : $"{(_eventEditorKind == CashForWorkEventKind.Seminar ? "Seminar" : "Event")} created successfully.");
+                SetSuccessStatus(isEditing ? "Event updated successfully." : "Event created successfully.");
             }
             catch (Exception ex)
             {
@@ -1558,59 +1404,11 @@ namespace AttendanceShiftingManagement.ViewModels
             }
         }
 
-        private async Task ExecuteAddParticipantAsync()
-        {
-            if (SelectedEvent == null)
-            {
-                MessageBox.Show("Select an event first.", "No Event Selected", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            if (SelectedEvent.EventKind == CashForWorkEventKind.Seminar)
-            {
-                MessageBox.Show("Seminar attendance is scan-based and does not use beneficiary assignment.", "Seminar Attendance", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-
-            if (SelectedEligibleBeneficiary == null)
-            {
-                MessageBox.Show("Select an approved beneficiary to add.", "No Beneficiary Selected", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            IsBusy = true;
-            try
-            {
-                await using var context = new LocalDbContext();
-                var cfwService = new CashForWorkService(context, ggmsConsolidatedTransactionService: new GgmsConsolidatedTransactionService());
-                cfwService.AddParticipant(SelectedEvent.Id, SelectedEligibleBeneficiary.BeneficiaryStagingId, _currentUser.Id);
-                await LoadParticipantsAsync();
-                await LoadSavedAttendanceAsync();
-                await LoadHistorySnapshotAsync(SelectedEvent.Id);
-                SetSuccessStatus($"Added {SelectedEligibleBeneficiary.FullName} to {SelectedEvent.Title}.");
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(ex.Message, "Unable to Add Beneficiary", MessageBoxButton.OK, MessageBoxImage.Warning);
-                SetErrorStatus(ex.Message);
-            }
-            finally
-            {
-                IsBusy = false;
-            }
-        }
-
         private async Task ExecuteSaveManualAttendanceAsync()
         {
             if (SelectedEvent == null)
             {
                 MessageBox.Show("Select an event first.", "No Event Selected", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            if (SelectedEvent.EventKind == CashForWorkEventKind.Seminar)
-            {
-                MessageBox.Show("Seminar attendance is scan-based only. Use the scanner session to record attendance.", "Seminar Attendance", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
@@ -1942,12 +1740,6 @@ namespace AttendanceShiftingManagement.ViewModels
                 return;
             }
 
-            if (SelectedEvent.EventKind == CashForWorkEventKind.Seminar)
-            {
-                MessageBox.Show("Seminar events are attendance-only and do not use the payout workflow.", "Seminar Attendance", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-
             if (!TryParseAmount(ReleaseAmountText, out var releaseAmount))
             {
                 MessageBox.Show("Enter a valid release amount greater than zero.", "Invalid Release Amount", MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -2058,11 +1850,6 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private async Task EnsureAttendanceScannerDigitalIdsReadyAsync()
         {
-            if (IsSelectedSeminarEvent)
-            {
-                return;
-            }
-
             var beneficiaryStagingIds = Participants
                 .Select(participant => participant.BeneficiaryStagingId)
                 .Where(stagingId => stagingId > 0)
@@ -2139,27 +1926,9 @@ namespace AttendanceShiftingManagement.ViewModels
         private void RefreshSelectedEventFlags()
         {
             OnPropertyChanged(nameof(HasSelectedEvent));
-            OnPropertyChanged(nameof(IsSelectedSeminarEvent));
             OnPropertyChanged(nameof(SelectedEventVisibility));
             OnPropertyChanged(nameof(NoSelectedEventVisibility));
             OnPropertyChanged(nameof(SelectedEventLabel));
-            OnPropertyChanged(nameof(AddBeneficiariesRailVisibility));
-            OnPropertyChanged(nameof(PayoutRailVisibility));
-            OnPropertyChanged(nameof(ManualAttendanceVisibility));
-            OnPropertyChanged(nameof(SeminarScannerHintVisibility));
-        }
-
-        private void NormalizePanelAccessForSelectedEvent()
-        {
-            if (!IsSelectedSeminarEvent)
-            {
-                return;
-            }
-
-            if (ActivePanel is CashForWorkWorkspacePanel.Beneficiaries or CashForWorkWorkspacePanel.Payout)
-            {
-                ActivePanel = CashForWorkWorkspacePanel.ScanAttendance;
-            }
         }
 
         private void RefreshDrawerVisibilityFlags()
@@ -2168,7 +1937,6 @@ namespace AttendanceShiftingManagement.ViewModels
             OnPropertyChanged(nameof(IsAnyOverlayOpen));
             OnPropertyChanged(nameof(DrawerVisibility));
             OnPropertyChanged(nameof(EventEditorVisibility));
-            OnPropertyChanged(nameof(BeneficiariesVisibility));
             OnPropertyChanged(nameof(ScanAttendanceVisibility));
             OnPropertyChanged(nameof(PayoutVisibility));
             OnPropertyChanged(nameof(AnnouncementsVisibility));
@@ -2211,14 +1979,6 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private static ReleaseSummaryPresentation BuildReleaseSummaryPresentation(CashForWorkEvent selectedEvent, CashForWorkReleaseReadySummary summary)
         {
-            if (selectedEvent.EventKind == CashForWorkEventKind.Seminar)
-            {
-                return new ReleaseSummaryPresentation(
-                    "Attendance only",
-                    $"{summary.ReleaseReadyParticipantCount} seminar attendee(s) already have attendance records for this event.",
-                    NeutralBrush);
-            }
-
             if (selectedEvent.BudgetLedgerEntryId.HasValue && selectedEvent.ReleaseAmount.HasValue)
             {
                 return new ReleaseSummaryPresentation(
@@ -2266,7 +2026,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 return "Attendance scanner sessions can only be opened on or after the event date.";
             }
 
-            if (cashForWorkEvent.EventKind != CashForWorkEventKind.Seminar && participantCount <= 0)
+            if (participantCount <= 0)
             {
                 return "Add beneficiaries to the selected event before opening the phone scanner.";
             }
@@ -2322,7 +2082,6 @@ namespace AttendanceShiftingManagement.ViewModels
     {
         None,
         EventEditor,
-        Beneficiaries,
         ScanAttendance,
         Payout,
         Announcements
@@ -2358,43 +2117,6 @@ namespace AttendanceShiftingManagement.ViewModels
         public AttendanceCaptureSource SourceValue { get; set; }
         public string Source { get; set; } = string.Empty;
         public DateTime RecordedAt { get; set; }
-    }
-
-    public sealed class CashForWorkEligibleBeneficiaryOption
-    {
-        public int BeneficiaryStagingId { get; init; }
-        public string FullName { get; init; } = string.Empty;
-        public string BeneficiaryId { get; init; } = string.Empty;
-        public string CivilRegistryId { get; init; } = string.Empty;
-
-        public string DisplayLabel
-        {
-            get
-            {
-                if (!string.IsNullOrWhiteSpace(BeneficiaryId))
-                {
-                    return $"{FullName} [{BeneficiaryId}]";
-                }
-
-                if (!string.IsNullOrWhiteSpace(CivilRegistryId))
-                {
-                    return $"{FullName} [CR: {CivilRegistryId}]";
-                }
-
-                return FullName;
-            }
-        }
-
-        public static CashForWorkEligibleBeneficiaryOption FromServiceModel(CashForWorkEligibleBeneficiary beneficiary)
-        {
-            return new CashForWorkEligibleBeneficiaryOption
-            {
-                BeneficiaryStagingId = beneficiary.BeneficiaryStagingId,
-                FullName = beneficiary.FullName,
-                BeneficiaryId = beneficiary.BeneficiaryId ?? string.Empty,
-                CivilRegistryId = beneficiary.CivilRegistryId ?? string.Empty
-            };
-        }
     }
 
     public sealed class CashForWorkAnnouncementItem

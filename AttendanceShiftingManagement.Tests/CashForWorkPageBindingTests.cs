@@ -13,8 +13,6 @@ public sealed class CashForWorkPageBindingTests
 
         var xaml = File.ReadAllText(pagePath);
 
-        Assert.Contains("Command=\"{Binding OpenCreateEventPanelCommand}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Command=\"{Binding OpenAddBeneficiariesPanelCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding OpenScanAttendancePanelCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding OpenPayoutPanelCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding OpenAnnouncementsPanelCommand}\"", xaml, StringComparison.Ordinal);
@@ -22,16 +20,12 @@ public sealed class CashForWorkPageBindingTests
         Assert.Contains("ItemsSource=\"{Binding SavedAttendanceRows}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("SelectedItem=\"{Binding SelectedAttendanceRow}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Visibility=\"{Binding EventEditorVisibility}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Visibility=\"{Binding BeneficiariesVisibility}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Visibility=\"{Binding ScanAttendanceVisibility}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Visibility=\"{Binding PayoutVisibility}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Visibility=\"{Binding AnnouncementsVisibility}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Visibility=\"{Binding AddBeneficiariesRailVisibility}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Visibility=\"{Binding PayoutRailVisibility}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Visibility=\"{Binding ManualAttendanceVisibility}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Visibility=\"{Binding SeminarScannerHintVisibility}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding SaveEventCommand}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Command=\"{Binding AddParticipantCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding SaveManualAttendanceCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding CreateAttendanceScannerSessionCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding ReleaseBudgetCommand}\"", xaml, StringComparison.Ordinal);
@@ -61,6 +55,8 @@ public sealed class CashForWorkPageBindingTests
         Assert.DoesNotContain("Visibility=\"{Binding DrawerVisibility}\"", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Click=\"OpenSettings_Click\"", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Content=\"NEW EVENT\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Visibility=\"{Binding SeminarScannerHintVisibility}\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelectedItem=\"{Binding EventEditorKind}\"", xaml, StringComparison.Ordinal);
     }
 
     [Fact]

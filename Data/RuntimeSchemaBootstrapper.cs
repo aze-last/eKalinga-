@@ -430,6 +430,12 @@ namespace AttendanceShiftingManagement.Data
 
             EnsureColumnExists(
                 connection,
+                "user_permissions",
+                "can_access_seminar_attendance",
+                "ALTER TABLE `user_permissions` ADD COLUMN `can_access_seminar_attendance` tinyint(1) NOT NULL DEFAULT 1;");
+
+            EnsureColumnExists(
+                connection,
                 "private_donations",
                 "donation_type",
                 "ALTER TABLE `private_donations` ADD COLUMN `donation_type` varchar(32) NOT NULL DEFAULT 'Cash';");

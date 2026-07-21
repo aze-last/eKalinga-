@@ -48,6 +48,7 @@ namespace AttendanceShiftingManagement.Services
             }
 
             var session = await _context.ScannerSessions
+                .AsNoTracking()
                 .FirstOrDefaultAsync(item => item.SessionToken == normalizedToken);
 
             if (session == null || !session.IsActive || session.ExpiresAt <= DateTime.Now)
@@ -60,8 +61,31 @@ namespace AttendanceShiftingManagement.Services
                 return false;
             }
 
-            session.LastAccessedAt = DateTime.Now;
-            await _context.SaveChangesAsync();
+            // Fire-and-forget best-effort last-access update, debounced to once per 60s.
+            // Uses its own DbContext so the caller's read-only context is never dirtied.
+            if (session.LastAccessedAt == null ||
+                (DateTime.Now - session.LastAccessedAt.Value).TotalSeconds > 60)
+            {
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await using var freshDb = new LocalDbContext();
+                        var tracked = await freshDb.ScannerSessions
+                            .FirstOrDefaultAsync(s => s.SessionToken == normalizedToken);
+                        if (tracked != null)
+                        {
+                            tracked.LastAccessedAt = DateTime.Now;
+                            await freshDb.SaveChangesAsync();
+                        }
+                    }
+                    catch
+                    {
+                        // Best-effort — never surface to caller.
+                    }
+                });
+            }
+
             return true;
         }
 

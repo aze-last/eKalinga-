@@ -119,9 +119,37 @@ namespace AttendanceShiftingManagement.ViewModels
                 if (SetProperty(ref _selectedCfwProject, value))
                 {
                     _ = LoadProjectDetailsAsync();
+                    OnPropertyChanged(nameof(ModuleTitle));
+                    OnPropertyChanged(nameof(WorkerLabel));
+                    OnPropertyChanged(nameof(WorkersLabel));
+                    OnPropertyChanged(nameof(ScannedWorkerHeader));
+                    OnPropertyChanged(nameof(EventWorkersHeader));
+                    OnPropertyChanged(nameof(ReleaseReadyWorkersHeader));
+                    OnPropertyChanged(nameof(WorkersPresentHeader));
+                    OnPropertyChanged(nameof(DaysPresentHeader));
+                    OnPropertyChanged(nameof(DailyRateHeader));
+                    OnPropertyChanged(nameof(AmountDueHeader));
+                    OnPropertyChanged(nameof(EventLabel));
+                    OnPropertyChanged(nameof(ReleaseConfirmTitle));
+                    OnPropertyChanged(nameof(ConfirmReleaseButtonText));
                 }
             }
         }
+
+
+        public string ModuleTitle => SelectedCfwProject?.BudgetCode?.StartsWith("SEM-") == true ? "Seminar Distribution" : "Cash-for-Work Payout";
+        public string WorkerLabel => SelectedCfwProject?.BudgetCode?.StartsWith("SEM-") == true ? "ATTENDEE" : "WORKER";
+        public string WorkersLabel => SelectedCfwProject?.BudgetCode?.StartsWith("SEM-") == true ? "ATTENDEES" : "WORKERS";
+        public string ScannedWorkerHeader => $"SCANNED {WorkerLabel}";
+        public string EventWorkersHeader => $"EVENT {WorkersLabel}";
+        public string ReleaseReadyWorkersHeader => $"RELEASE-READY {WorkersLabel} (PRESENT)";
+        public string WorkersPresentHeader => $"{WorkersLabel} present";
+        public string DaysPresentHeader => SelectedCfwProject?.BudgetCode?.StartsWith("SEM-") == true ? "Attended sessions" : "Days present";
+        public string DailyRateHeader => SelectedCfwProject?.BudgetCode?.StartsWith("SEM-") == true ? "Benefit unit value" : "Daily rate";
+        public string AmountDueHeader => SelectedCfwProject?.BudgetCode?.StartsWith("SEM-") == true ? "Benefit value due" : "Amount due";
+        public string EventLabel => SelectedCfwProject?.BudgetCode?.StartsWith("SEM-") == true ? "SEMINAR EVENT" : "WORK EVENT";
+        public string ReleaseConfirmTitle => SelectedCfwProject?.BudgetCode?.StartsWith("SEM-") == true ? "Confirm Seminar Distribution" : "Confirm Event Payout";
+        public string ConfirmReleaseButtonText => SelectedCfwProject?.BudgetCode?.StartsWith("SEM-") == true ? "CONFIRM DISTRIBUTION" : "CONFIRM RELEASE";
 
         public CashForWorkEvent? SelectedEvent
         {
@@ -174,11 +202,13 @@ namespace AttendanceShiftingManagement.ViewModels
             IsBusy = true;
             try
             {
-                SetNeutralStatus("Loading cash-for-work projects...");
+                SetNeutralStatus("Loading projects...");
 
                 await using var context = new LocalDbContext();
                 var budgetService = new BudgetManagementService(context);
-                var budgets = await budgetService.GetCashForWorkBudgetsAsync();
+                var budgets = (await budgetService.GetCashForWorkBudgetsAsync())
+                    .Where(b => b.BudgetCode != "GLOBAL_CFW_BUDGET")
+                    .ToList();
 
                 var previousSelectionId = SelectedCfwProject?.Id;
                 CfwProjects.Clear();
@@ -233,7 +263,8 @@ namespace AttendanceShiftingManagement.ViewModels
                     : $"No cap (PHP {spent:N2} released)";
 
                 var events = await context.CashForWorkEvents.AsNoTracking()
-                    .Where(e => !e.IsDeleted && e.CashForWorkBudgetId == projectId && e.EventKind == CashForWorkEventKind.CashForWork)
+                    .Where(e => !e.IsDeleted && e.CashForWorkBudgetId == projectId &&
+                                (e.EventKind == CashForWorkEventKind.CashForWork || e.EventKind == CashForWorkEventKind.Seminar))
                     .OrderByDescending(e => e.EventDate)
                     .ToListAsync();
 
@@ -276,7 +307,9 @@ namespace AttendanceShiftingManagement.ViewModels
                     _allPendingWorkers = new List<CfwPendingWorkerListItem>();
                     _pendingPage = 1;
                     RefreshPendingPage();
-                    SetNeutralStatus("No open work event for this project. Create one in the Cash-for-Work module (Attendance & Payouts).");
+                    SetNeutralStatus(SelectedCfwProject.BudgetCode.StartsWith("SEM-")
+                        ? "No open seminar event for this project. Create one in the Seminar Attendance module."
+                        : "No open work event for this project. Create one in the Cash-for-Work module (Attendance & Payouts).");
                 }
             }
             catch (Exception ex)

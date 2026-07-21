@@ -43,6 +43,7 @@ namespace AttendanceShiftingManagement.ViewModels
             ShowGgmsTransactionsCommand = new RelayCommand(_ => SwitchSection("GgmsTransactions"));
             ShowReportsCommand = new RelayCommand(_ => SwitchSection("Reports"));
             ShowScanningPortalCommand = new RelayCommand(_ => SwitchSection("ScanningPortal"));
+            ShowSeminarAttendanceCommand = new RelayCommand(_ => SwitchSection("SeminarAttendance"));
             RefreshBranding();
             RefreshConnectionSummary();
             LoadUserSummary();
@@ -162,6 +163,7 @@ namespace AttendanceShiftingManagement.ViewModels
         public bool IsAssistanceCasesSelected => _currentSection == "AssistanceCases";
         public bool IsGgmsTransactionsSelected => _currentSection == "GgmsTransactions";
         public bool IsReportsSelected => _currentSection == "Reports";
+        public bool IsSeminarAttendanceSelected => _currentSection == "SeminarAttendance";
         public bool IsSecondarySectionVisible => _currentSection != "Dashboard";
 
         public Visibility DashboardVisibility => UserPermissionService.CanAccessDashboard ? Visibility.Visible : Visibility.Collapsed;
@@ -170,6 +172,7 @@ namespace AttendanceShiftingManagement.ViewModels
         public Visibility BudgetVisibility => UserPermissionService.CanAccessBudget ? Visibility.Visible : Visibility.Collapsed;
         public Visibility DistributionVisibility => UserPermissionService.CanAccessDistribution ? Visibility.Visible : Visibility.Collapsed;
         public Visibility CashForWorkVisibility => UserPermissionService.CanAccessCashForWork ? Visibility.Visible : Visibility.Collapsed;
+        public Visibility SeminarAttendanceVisibility => UserPermissionService.CanAccessSeminarAttendance ? Visibility.Visible : Visibility.Collapsed;
         public Visibility BorrowingVisibility => Visibility.Collapsed; // Permanently hidden as per GEMINI.md
         public Visibility ReportsVisibility => UserPermissionService.CanAccessReports ? Visibility.Visible : Visibility.Collapsed;
         public Visibility GgmsTransactionsVisibility => UserPermissionService.CanAccessGgmsTransactions ? Visibility.Visible : Visibility.Collapsed;
@@ -183,6 +186,7 @@ namespace AttendanceShiftingManagement.ViewModels
         public RelayCommand ShowDistributionCommand { get; }
         public RelayCommand ShowMasterListCommand { get; }
         public RelayCommand ShowScanningPortalCommand { get; }
+        public RelayCommand ShowSeminarAttendanceCommand { get; }
         public ICommand ShowAssistanceCasesCommand { get; }
         public ICommand ShowBorrowingCommand { get; }
         public ICommand ShowGgmsTransactionsCommand { get; }
@@ -231,6 +235,7 @@ namespace AttendanceShiftingManagement.ViewModels
             OnPropertyChanged(nameof(IsAssistanceCasesSelected));
             OnPropertyChanged(nameof(IsGgmsTransactionsSelected));
             OnPropertyChanged(nameof(IsReportsSelected));
+            OnPropertyChanged(nameof(IsSeminarAttendanceSelected));
             OnPropertyChanged(nameof(IsSecondarySectionVisible));
             CurrentView = BuildView(section);
         }
@@ -275,13 +280,17 @@ namespace AttendanceShiftingManagement.ViewModels
                     CurrentSectionTitle = "Scanning Portal";
                     CurrentSectionSubtitle = "Use the hardware scanner gun to instantly pull up beneficiary profiles and perform actions.";
                     return new ScanningPortalPage(_currentUser);
+                case "SeminarAttendance":
+                    CurrentSectionTitle = "Seminar Attendance";
+                    CurrentSectionSubtitle = "Create seminars and capture scan-based attendance. Attendees register as they scan.";
+                    return new SeminarAttendancePage(_currentUser);
                 case "CashForWorkPayout":
                     CurrentSectionTitle = "Cash-for-Work Payout";
                     CurrentSectionSubtitle = "Scan workers for daily attendance, then release attendance-based payouts.";
                     return new CashForWorkPayoutPage(_currentUser);
                 default:
                     CurrentSectionTitle = "Attendance & Payouts";
-                    CurrentSectionSubtitle = "Create work events or seminars, assign participants, and save attendance to release payouts.";
+                    CurrentSectionSubtitle = "Create work events, assign participants, and save attendance to release payouts.";
                     return new CashForWorkOcrPage(_currentUser);
             }
         }

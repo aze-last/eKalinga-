@@ -35,6 +35,9 @@ namespace AttendanceShiftingManagement.Models
         [Column("can_access_cash_for_work")]
         public bool CanAccessCashForWork { get; set; } = true;
 
+        [Column("can_access_seminar_attendance")]
+        public bool CanAccessSeminarAttendance { get; set; } = true;
+
         [Column("can_access_borrowing")]
         public bool CanAccessBorrowing { get; set; } = true;
 

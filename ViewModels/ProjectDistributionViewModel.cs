@@ -165,7 +165,7 @@ namespace AttendanceShiftingManagement.ViewModels
             _currentUser = currentUser;
 
             ProgramTypes = new ObservableCollection<AyudaProgramType>(
-                Enum.GetValues<AyudaProgramType>().Where(type => type != AyudaProgramType.AssistanceCase && type != AyudaProgramType.Seminar));
+                Enum.GetValues<AyudaProgramType>().Where(type => type != AyudaProgramType.AssistanceCase && type != AyudaProgramType.Seminar && type != AyudaProgramType.CashForWork));
             ReleaseKinds = new ObservableCollection<AssistanceReleaseKind>(Enum.GetValues<AssistanceReleaseKind>());
             DistributionStatuses = new ObservableCollection<AyudaProgramDistributionStatus>(Enum.GetValues<AyudaProgramDistributionStatus>());
             AvailableUnpickedBeneficiaries = new ObservableCollection<DistributionBeneficiaryOption>();
@@ -236,6 +236,9 @@ namespace AttendanceShiftingManagement.ViewModels
             _cancelScannedClaimCommand = new RelayCommand(_ => ResetScannedResult());
             RejectScannedBeneficiaryCommand = new RelayCommand(async _ => await ExecuteRejectScannedBeneficiaryAsync(), _ => !IsBusy && ScannedBeneficiary != null);
             _submitManualKeyInCommand = new RelayCommand(async _ => await ExecuteManualKeyIn(), _ => !IsBusy && SelectedProgram != null && !string.IsNullOrWhiteSpace(ManualBeneficiaryIdText));
+
+            OpenPendingBeneficiaryOverlayCommand = new RelayCommand(async _ => await OpenPendingBeneficiaryOverlayAsync(), _ => !IsBusy && SelectedPendingBeneficiary != null);
+            OpenReleasedBeneficiaryOverlayCommand = new RelayCommand(async _ => await OpenReleasedBeneficiaryOverlayAsync(), _ => !IsBusy && SelectedReleasedClaim != null);
             // Household verification modal: final Confirm/Decline gate after a duplicate is flagged.
             // CONFIRM RELEASE additionally requires the attachment checklist (cedula, barangay
             // certificate, ...) to be fully complete — missing items keep the beneficiary unreleased.
@@ -1268,6 +1271,8 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand CloseScannerPanelCommand { get; }
         public ICommand OpenProjectActionMenuCommand { get; }
         public ICommand OpenProgramAddBeneficiaryPanelCommand { get; }
+        public ICommand OpenPendingBeneficiaryOverlayCommand { get; }
+        public ICommand OpenReleasedBeneficiaryOverlayCommand { get; }
         public ICommand OpenProgramScannerPanelCommand { get; }
         public ICommand PrevPendingPageCommand { get; }
         public ICommand NextPendingPageCommand { get; }
@@ -2651,6 +2656,9 @@ namespace AttendanceShiftingManagement.ViewModels
                 return Task.CompletedTask;
             }
 
+            // Hide the scanned result overlay so it doesn't stay visible behind the household confirm modal
+            IsScannedResultVisible = false;
+
             // Advisor requirement: the household must be reviewed on every confirm, not only on
             // duplicates. The modal always opens; the acknowledgment checkbox is only *required*
             // when a member already received the same assistance (RequiresHouseholdOverride).
@@ -2659,6 +2667,26 @@ namespace AttendanceShiftingManagement.ViewModels
             HouseholdConfirmBeneficiaryPhoto = ScannedBeneficiaryPhoto;
             HouseholdOverrideAcknowledged = false;
             return OpenHouseholdConfirmWithRequirementsAsync(ScannedBeneficiary.BeneficiaryStagingId);
+        }
+
+        private async Task OpenPendingBeneficiaryOverlayAsync()
+        {
+            if (SelectedPendingBeneficiary == null || SelectedProgram == null) return;
+            if (IsScannedResultVisible || IsReleaseSuccessState) return;
+
+            await ResolveAndPresentAsync(
+                new BeneficiaryLookupRequest(BeneficiaryLookupSource.BeneficiaryId, SelectedPendingBeneficiary.BeneficiaryId),
+                confirmToken: null);
+        }
+
+        private async Task OpenReleasedBeneficiaryOverlayAsync()
+        {
+            if (SelectedReleasedClaim == null || SelectedProgram == null) return;
+            if (IsScannedResultVisible || IsReleaseSuccessState) return;
+
+            await ResolveAndPresentAsync(
+                new BeneficiaryLookupRequest(BeneficiaryLookupSource.BeneficiaryId, SelectedReleasedClaim.IdentityKey),
+                confirmToken: null);
         }
 
         /// <summary>Loads the attachment checklist (cedula, barangay certificate, ...) for the beneficiary, then opens the release modal.</summary>

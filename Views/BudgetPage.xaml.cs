@@ -46,6 +46,24 @@ namespace AttendanceShiftingManagement.Views
                 return;
             }
 
+            // Seminar projects live in the Seminar Attendance module, not Distribution.
+            if (_viewModel._createdSeminarBudgetId.HasValue)
+            {
+                var goToSeminar = MessageBox.Show(
+                    $"Seminar project \"{projectName}\" was created successfully.\n\nGo to Seminar Attendance now to manage attendee registration?",
+                    "Seminar Project Created",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Information);
+
+                if (goToSeminar == MessageBoxResult.Yes &&
+                    Window.GetWindow(this) is MainWindow semMainWindow &&
+                    semMainWindow.DataContext is BarangayMainViewModel semMainVm)
+                {
+                    semMainVm.ShowSeminarAttendanceCommand.Execute(null);
+                }
+                return;
+            }
+
             var result = MessageBox.Show(
                 $"Project \"{projectName}\" was created successfully.\n\nGo to Distribution now to add beneficiaries?",
                 "Project Created",

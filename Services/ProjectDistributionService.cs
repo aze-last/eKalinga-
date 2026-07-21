@@ -106,6 +106,11 @@ namespace AttendanceShiftingManagement.Services
                 return new ProjectDistributionOperationResult(false, "Select an active project/program first.");
             }
 
+            if (program.ProgramType == AyudaProgramType.Seminar || program.ProgramType == AyudaProgramType.CashForWork)
+            {
+                return new ProjectDistributionOperationResult(false, $"Beneficiaries cannot be manually enrolled in a {(program.ProgramType == AyudaProgramType.Seminar ? "Seminar" : "Cash-for-Work")} project using the Distribution module.");
+            }
+
             if (program.DistributionStatus == AyudaProgramDistributionStatus.Closed)
             {
                 return new ProjectDistributionOperationResult(false, $"Beneficiaries can only be added to projects that are not 'Closed' (Current status: {program.DistributionStatus}).");
@@ -211,6 +216,11 @@ namespace AttendanceShiftingManagement.Services
             if (program == null)
             {
                 return new ProjectDistributionOperationResult(false, "Select an active project/program first.");
+            }
+
+            if (program.ProgramType == AyudaProgramType.Seminar || program.ProgramType == AyudaProgramType.CashForWork)
+            {
+                return new ProjectDistributionOperationResult(false, $"Beneficiaries cannot be manually enrolled in a {(program.ProgramType == AyudaProgramType.Seminar ? "Seminar" : "Cash-for-Work")} project using the Distribution module.");
             }
 
             if (program.DistributionStatus == AyudaProgramDistributionStatus.Closed)
@@ -468,6 +478,12 @@ namespace AttendanceShiftingManagement.Services
         public async Task<ProjectDistributionQualificationResult> EvaluateQualificationAsync(int ayudaProgramId, int beneficiaryStagingId)
         {
             ScanDiagnosticLogger.Log("EvaluateQualificationAsync", _context, $"START | ProgramId={ayudaProgramId} | StagingId={beneficiaryStagingId}");
+
+            var program = await _context.AyudaPrograms.AsNoTracking().FirstOrDefaultAsync(p => p.Id == ayudaProgramId && p.IsActive);
+            if (program == null || program.ProgramType == AyudaProgramType.Seminar || program.ProgramType == AyudaProgramType.CashForWork)
+            {
+                return new ProjectDistributionQualificationResult(false, false, "Distribution is not supported for Seminar or Cash-for-Work projects.");
+            }
 
             var membership = await ResolveMembershipAsync(ayudaProgramId, beneficiaryStagingId);
 

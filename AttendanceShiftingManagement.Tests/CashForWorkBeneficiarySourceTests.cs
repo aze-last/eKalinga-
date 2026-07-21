@@ -32,8 +32,6 @@ public sealed class CashForWorkBeneficiarySourceTests
         Assert.DoesNotContain("participant.HouseholdMember", serviceSource, StringComparison.Ordinal);
         Assert.DoesNotContain("HouseholdMemberId", serviceSource, StringComparison.Ordinal);
 
-        Assert.Contains("EligibleBeneficiaries", viewModelSource, StringComparison.Ordinal);
-        Assert.Contains("SelectedEligibleBeneficiary", viewModelSource, StringComparison.Ordinal);
         Assert.Contains("BeneficiaryId", viewModelSource, StringComparison.Ordinal);
         Assert.Contains("CivilRegistryId", viewModelSource, StringComparison.Ordinal);
         Assert.DoesNotContain("SelectedEligibleMember", viewModelSource, StringComparison.Ordinal);

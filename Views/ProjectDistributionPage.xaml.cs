@@ -124,15 +124,19 @@ namespace AttendanceShiftingManagement.Views
         private void PendingGrid_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
             var viewModel = DataContext as ProjectDistributionViewModel;
-            var stagingId = viewModel?.SelectedPendingBeneficiary?.BeneficiaryStagingId ?? 0;
-            ShowDetailDialog(stagingId);
+            if (viewModel?.OpenPendingBeneficiaryOverlayCommand.CanExecute(null) == true)
+            {
+                viewModel.OpenPendingBeneficiaryOverlayCommand.Execute(null);
+            }
         }
 
         private void ReleasedGrid_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
             var viewModel = DataContext as ProjectDistributionViewModel;
-            var stagingId = viewModel?.SelectedReleasedClaim?.BeneficiaryStagingId ?? 0;
-            ShowDetailDialog(stagingId);
+            if (viewModel?.OpenReleasedBeneficiaryOverlayCommand.CanExecute(null) == true)
+            {
+                viewModel.OpenReleasedBeneficiaryOverlayCommand.Execute(null);
+            }
         }
 
         private void ShowDetailDialog(int beneficiaryStagingId = 0)

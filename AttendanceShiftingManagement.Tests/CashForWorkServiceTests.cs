@@ -330,7 +330,7 @@ public sealed class CashForWorkServiceTests
         var result = await service.ReleaseEventAsync(seminarEvent.Id, 1000m, admin.Id, null);
 
         Assert.False(result.IsSuccess);
-        Assert.Contains("attendance-only", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("no benefit type", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

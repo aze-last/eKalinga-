@@ -163,6 +163,8 @@ namespace AttendanceShiftingManagement.ViewModels
 
         /// <summary>Set only for the creation that just completed; consumed by BudgetPage to route CFW projects to the payout console.</summary>
         internal int? _createdCfwBudgetId;
+        /// <summary>Set only for the creation that just completed; consumed by BudgetPage to route Seminar projects to the Seminar Attendance page.</summary>
+        internal int? _createdSeminarBudgetId;
         private const int EnrollmentDisplayLimit = 200;
         private int _currentEnrollmentPage = 1;
         private int _totalEnrollmentPages = 1;
@@ -481,6 +483,7 @@ namespace AttendanceShiftingManagement.ViewModels
             if (IsBusy) return;
 
             _createdCfwBudgetId = null;
+            _createdSeminarBudgetId = null;
 
             decimal? unitAmount = null;
             decimal? quantity = null;
@@ -599,11 +602,47 @@ namespace AttendanceShiftingManagement.ViewModels
 
                     _createdCfwBudgetId = cfwResult.BudgetId;
 
-                    // Workers are added to specific events in the CFW module, not bulk-enrolled
-                    if (selectedIds.Count > 0)
+                    // The linked CFW event is auto-created with the project; details are refined in the CFW module
+                    enrollmentMessage = " Its cash-for-work event was created; refine details via Edit Event in the Cash-for-Work module.";
+                }
+                else if (SelectedProgramType == AyudaProgramType.Seminar)
+                {
+                    SetNeutralStatus("Creating seminar project...");
+
+                    var benefitType = SelectedReleaseKind == AssistanceReleaseKind.Goods
+                        ? CashForWorkBenefitType.Goods
+                        : CashForWorkBenefitType.Cash;
+
+                    var benefitDescription = SelectedReleaseKind == AssistanceReleaseKind.Goods
+                        ? $"{NewProjectQuantityText} {NewProjectUnitOfMeasure} of {NewProjectItemName}"
+                        : null;
+
+                    var semRequest = new CashForWorkProjectRequest(
+                        BudgetCode: $"SEM-{NewProjectCode}",
+                        BudgetName: NewProjectName,
+                        Description: NormalizeNullable(NewProjectDescription),
+                        DailyRate: unitAmount,
+                        BudgetCap: budgetCap,
+                        StartDate: NewProjectStartDate ?? DateTime.Now,
+                        EndDate: NewProjectEndDate ?? DateTime.Now,
+                        SourceDonationId: NewProjectSourceDonationId,
+                        SourceGGMSBudgetId: NewProjectSourceGGMSBudgetId,
+                        SourceProjectDetailsId: NormalizeNullable(NewProjectSourceProjectDetailsId),
+                        EventKind: CashForWorkEventKind.Seminar,
+                        BenefitType: benefitType,
+                        BenefitDescription: benefitDescription);
+
+                    var semResult = await budgetService.CreateCashForWorkProjectAsync(semRequest, _currentUser.Id);
+                    if (!semResult.Success)
                     {
-                        enrollmentMessage = $" {selectedIds.Count} worker{(selectedIds.Count == 1 ? "" : "s")} available for events; enroll in CFW module.";
+                        SetErrorStatus(IsNewDonationMode
+                            ? $"Donation was recorded, but seminar project creation failed: {semResult.Message}"
+                            : semResult.Message);
+                        return;
                     }
+
+                    _createdSeminarBudgetId = semResult.BudgetId;
+                    enrollmentMessage = " Its seminar event was created; refine details in the Seminar Attendance module.";
                 }
                 else
                 {

@@ -60,8 +60,23 @@ namespace AttendanceShiftingManagement.Data
         {
             if (!optionsBuilder.IsConfigured)
             {
-                // Always point to local SQLite file for offline usage
-                optionsBuilder.UseSqlite("Data Source=ams.db");
+                // Always point to local SQLite file for offline usage.
+                // Cache=Shared enables shared-cache mode so multiple connections
+                // within the same process reuse the same page cache.
+                var connection = new Microsoft.Data.Sqlite.SqliteConnection(
+                    "Data Source=ams.db;Cache=Shared");
+                connection.Open();
+
+                // WAL allows concurrent readers + one writer without SQLITE_BUSY
+                // on read operations. busy_timeout makes the writer wait up to 5s
+                // for the lock instead of failing immediately.
+                using (var pragma = connection.CreateCommand())
+                {
+                    pragma.CommandText = "PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;";
+                    pragma.ExecuteNonQuery();
+                }
+
+                optionsBuilder.UseSqlite(connection);
             }
         }
 

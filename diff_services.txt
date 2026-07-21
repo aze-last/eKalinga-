@@ -1,0 +1,251 @@
+diff --git a/Services/BudgetManagementService.cs b/Services/BudgetManagementService.cs
+index 7394afa..9e81bd7 100644
+--- a/Services/BudgetManagementService.cs
++++ b/Services/BudgetManagementService.cs
+@@ -58,13 +58,17 @@ namespace AttendanceShiftingManagement.Services
+         DateTime EndDate,
+         int? SourceDonationId = null,
+         int? SourceGGMSBudgetId = null,
+-        string? SourceProjectDetailsId = null);
++        string? SourceProjectDetailsId = null,
++        CashForWorkEventKind EventKind = CashForWorkEventKind.CashForWork,
++        CashForWorkBenefitType BenefitType = CashForWorkBenefitType.Cash,
++        string? BenefitDescription = null);
+ 
+     public sealed record CashForWorkProjectOperationResult(
+         bool Success,
+         string Message = "",
+         int BudgetId = 0,
+-        string BudgetName = "");
++        string BudgetName = "",
++        int EventId = 0);
+ 
+     public sealed record GovernmentBudgetSnapshotRequest(
+         string OfficeCode,
+@@ -196,7 +200,9 @@ namespace AttendanceShiftingManagement.Services
+         {
+             return await _context.AyudaPrograms
+                 .AsNoTracking()
+-                .Where(p => p.IsActive)
++                .Where(p => p.IsActive && 
++                            (p.ProgramType == AyudaProgramType.GeneralPurpose || 
++                             p.ProgramType == AyudaProgramType.AssistanceCase))
+                 .Include(p => p.SourceDonation)
+                 .Include(p => p.SourceGGMSBudget)
+                 .OrderBy(program => program.ProgramName)
+@@ -330,6 +336,7 @@ namespace AttendanceShiftingManagement.Services
+             CashForWorkProjectRequest request, int createdByUserId)
+         {
+             int? remoteGeneratedId = null;
++            int? remoteGeneratedEventId = null;
+             if (RemoteWriteExecutionService.ShouldRouteToRemote(_context))
+             {
+                 try
+@@ -344,6 +351,7 @@ namespace AttendanceShiftingManagement.Services
+ 
+                     if (!remoteResult.Success) return remoteResult;
+                     remoteGeneratedId = remoteResult.BudgetId;
++                    remoteGeneratedEventId = remoteResult.EventId > 0 ? remoteResult.EventId : null;
+                 }
+                 catch (Exception ex)
+                 {
+@@ -436,6 +444,35 @@ namespace AttendanceShiftingManagement.Services
+             _context.CashForWorkBudgets.Add(cfwBudget);
+             await _context.SaveChangesAsync();
+ 
++            // Auto-spawn the 1:1 cash-for-work event linked to this per-project budget
++            // (event creation was removed from the CFW module; Budget is the only creator).
++            var cfwEvent = new CashForWorkEvent
++            {
++                Title = budgetName,
++                Location = budgetName,
++                EventDate = request.StartDate.Date,
++                FinishDate = request.EndDate.Date,
++                StartTime = new TimeSpan(7, 0, 0),
++                EndTime = new TimeSpan(12, 0, 0),
++                UnitAmount = request.DailyRate ?? 0m,
++                EventKind = request.EventKind,
++                BenefitType = request.BenefitType,
++                BenefitDescription = request.BenefitDescription,
++                Status = CashForWorkEventStatus.Open,
++                CashForWorkBudgetId = cfwBudget.Id,
++                CreatedByUserId = createdByUserId,
++                CreatedAt = DateTime.Now,
++                UpdatedAt = DateTime.Now
++            };
++
++            if (remoteGeneratedEventId.HasValue)
++            {
++                cfwEvent.Id = remoteGeneratedEventId.Value;
++            }
++
++            _context.CashForWorkEvents.Add(cfwEvent);
++            await _context.SaveChangesAsync();
++
+             await _auditService.LogActivityAsync(
+                 createdByUserId,
+                 "CashForWorkProjectCreated",
+@@ -443,7 +480,14 @@ namespace AttendanceShiftingManagement.Services
+                 cfwBudget.Id,
+                 $"Created cash-for-work project '{budgetName}' with budget cap {budgetCap:N2}");
+ 
+-            return new(true, "Project created successfully", cfwBudget.Id, cfwBudget.BudgetName);
++            await _auditService.LogActivityAsync(
++                createdByUserId,
++                "CashForWorkEventCreated",
++                nameof(CashForWorkEvent),
++                cfwEvent.Id,
++                $"Created event '{cfwEvent.Title}' on {cfwEvent.EventDate:yyyy-MM-dd} from cash-for-work project '{budgetName}'.");
++
++            return new(true, "Project created successfully", cfwBudget.Id, cfwBudget.BudgetName, cfwEvent.Id);
+         }
+ 
+         public async Task<IReadOnlyList<PrivateDonation>> GetPrivateDonationsAsync(int take = 50)
+diff --git a/Services/CashForWorkService.cs b/Services/CashForWorkService.cs
+index 2f7c4d2..688815a 100644
+--- a/Services/CashForWorkService.cs
++++ b/Services/CashForWorkService.cs
+@@ -45,12 +45,19 @@ namespace AttendanceShiftingManagement.Services
+                 .ToList();
+         }
+ 
+-        public List<CashForWorkEvent> GetOpenEvents()
++        public List<CashForWorkEvent> GetOpenEvents(CashForWorkEventKind? eventKind = null)
+         {
+-            var events = _context.CashForWorkEvents
++            var query = _context.CashForWorkEvents
+                 .AsNoTracking()
+                 .Where(cashForWorkEvent => !cashForWorkEvent.IsDeleted && cashForWorkEvent.Status == CashForWorkEventStatus.Open)
+-                .ToList();
++                .AsQueryable();
++
++            if (eventKind.HasValue)
++            {
++                query = query.Where(cashForWorkEvent => cashForWorkEvent.EventKind == eventKind.Value);
++            }
++
++            var events = query.ToList();
+ 
+             return events
+                 .OrderBy(cashForWorkEvent => cashForWorkEvent.EventDate)
+@@ -462,7 +469,8 @@ namespace AttendanceShiftingManagement.Services
+             CashForWorkEventKind eventKind = CashForWorkEventKind.CashForWork,
+             DateTime? finishDate = null,
+             CashForWorkBenefitType benefitType = CashForWorkBenefitType.None,
+-            string? benefitDescription = null)
++            string? benefitDescription = null,
++            int? cashForWorkBudgetId = null)
+         {
+             var cashForWorkEvent = await _context.CashForWorkEvents
+                 .FirstOrDefaultAsync(item => !item.IsDeleted && item.Id == eventId);
+@@ -474,9 +482,8 @@ namespace AttendanceShiftingManagement.Services
+ 
+             EnsureEventCanBeModified(cashForWorkEvent);
+ 
+-            // Preserve the event's existing budget link (it may point at a per-project
+-            // CFW budget); only backfill from the global budget when the event has none.
+-            var resolvedBudgetId = cashForWorkEvent.CashForWorkBudgetId ?? await ResolveGlobalBudgetAsync();
++            // Use specified budget ID, preserve existing, or fallback to global
++            var resolvedBudgetId = cashForWorkBudgetId ?? cashForWorkEvent.CashForWorkBudgetId ?? await ResolveGlobalBudgetAsync();
+ 
+             cashForWorkEvent.Title = title.Trim();
+             cashForWorkEvent.Location = location.Trim();
+@@ -721,14 +728,14 @@ namespace AttendanceShiftingManagement.Services
+                 return new CashForWorkReleaseOperationResult(false, "Cash-for-work events can only be released on or after the event date.");
+             }
+ 
+-            if (cashForWorkEvent.EventKind == CashForWorkEventKind.Seminar)
++            if (cashForWorkEvent.EventKind == CashForWorkEventKind.Seminar && cashForWorkEvent.BenefitType == CashForWorkBenefitType.None)
+             {
+-                return new CashForWorkReleaseOperationResult(false, "Seminar events are attendance-only and cannot use the payout workflow.");
++                return new CashForWorkReleaseOperationResult(false, "Seminar events with no benefit type cannot use the payout/release workflow.");
+             }
+ 
+             if (cashForWorkEvent.BudgetLedgerEntryId.HasValue)
+             {
+-                return new CashForWorkReleaseOperationResult(false, "This cash-for-work event already has a recorded release.");
++                return new CashForWorkReleaseOperationResult(false, "This event already has a recorded release.");
+             }
+ 
+             // Debit the budget the event was created against (per-project CFW budget);
+@@ -747,15 +754,19 @@ namespace AttendanceShiftingManagement.Services
+             resolvedBudgetId ??= await ResolveGlobalBudgetAsync();
+             if (!resolvedBudgetId.HasValue)
+             {
+-                return new CashForWorkReleaseOperationResult(false, "No active cash-for-work budget found for this event. Please set one in the Budget module first.");
++                return new CashForWorkReleaseOperationResult(false, "No active budget found for this event. Please set one in the Budget module first.");
+             }
+ 
+             var releaseReadySummary = GetReleaseReadySummary(eventId);
+             if (releaseReadySummary.ReleaseReadyParticipantCount <= 0)
+             {
+-                return new CashForWorkReleaseOperationResult(false, "Save attendance before releasing cash-for-work funds.");
++                return new CashForWorkReleaseOperationResult(false, "Save attendance before releasing funds.");
+             }
+ 
++            var releaseKind = cashForWorkEvent.BenefitType == CashForWorkBenefitType.Goods
++                ? AssistanceReleaseKind.Goods
++                : AssistanceReleaseKind.Cash;
++
+             var budgetService = new BudgetManagementService(_context, _auditService);
+             var budgetResult = await budgetService.RecordReleaseAsync(
+                 new BudgetReleaseRequest(
+@@ -763,7 +774,7 @@ namespace AttendanceShiftingManagement.Services
+                     BudgetLedgerFeatureSource.CashForWork,
+                     $"cash-for-work:{cashForWorkEvent.Id}",
+                     releaseReadySummary.ReleaseReadyParticipantCount,
+-                    AssistanceReleaseKind.Cash,
++                    releaseKind,
+                     totalAmount,
+                     DateTime.Now,
+                     remarks ?? cashForWorkEvent.Title,
+@@ -812,7 +823,7 @@ namespace AttendanceShiftingManagement.Services
+                     $"cfw-payout:{eventId}:{participant.Id}",
+                     DateTime.Now,
+                     totalAmount / releaseReadySummary.ReleaseReadyParticipantCount,
+-                    $"Cash-for-work payout for '{cashForWorkEvent.Title}'.",
++                    $"{(cashForWorkEvent.EventKind == CashForWorkEventKind.Seminar ? "Seminar" : "Cash-for-work")} payout for '{cashForWorkEvent.Title}'.",
+                     recordedByUserId);
+             }
+ 
+diff --git a/Services/ProjectDistributionService.cs b/Services/ProjectDistributionService.cs
+index 9f6a860..2d5e67c 100644
+--- a/Services/ProjectDistributionService.cs
++++ b/Services/ProjectDistributionService.cs
+@@ -106,6 +106,11 @@ namespace AttendanceShiftingManagement.Services
+                 return new ProjectDistributionOperationResult(false, "Select an active project/program first.");
+             }
+ 
++            if (program.ProgramType == AyudaProgramType.Seminar || program.ProgramType == AyudaProgramType.CashForWork)
++            {
++                return new ProjectDistributionOperationResult(false, $"Beneficiaries cannot be manually enrolled in a {(program.ProgramType == AyudaProgramType.Seminar ? "Seminar" : "Cash-for-Work")} project using the Distribution module.");
++            }
++
+             if (program.DistributionStatus == AyudaProgramDistributionStatus.Closed)
+             {
+                 return new ProjectDistributionOperationResult(false, $"Beneficiaries can only be added to projects that are not 'Closed' (Current status: {program.DistributionStatus}).");
+@@ -213,6 +218,11 @@ namespace AttendanceShiftingManagement.Services
+                 return new ProjectDistributionOperationResult(false, "Select an active project/program first.");
+             }
+ 
++            if (program.ProgramType == AyudaProgramType.Seminar || program.ProgramType == AyudaProgramType.CashForWork)
++            {
++                return new ProjectDistributionOperationResult(false, $"Beneficiaries cannot be manually enrolled in a {(program.ProgramType == AyudaProgramType.Seminar ? "Seminar" : "Cash-for-Work")} project using the Distribution module.");
++            }
++
+             if (program.DistributionStatus == AyudaProgramDistributionStatus.Closed)
+             {
+                 return new ProjectDistributionOperationResult(false, $"Beneficiaries can only be added to projects that are not 'Closed' (Current status: {program.DistributionStatus}).");
+@@ -469,6 +479,12 @@ namespace AttendanceShiftingManagement.Services
+         {
+             ScanDiagnosticLogger.Log("EvaluateQualificationAsync", _context, $"START | ProgramId={ayudaProgramId} | StagingId={beneficiaryStagingId}");
+ 
++            var program = await _context.AyudaPrograms.AsNoTracking().FirstOrDefaultAsync(p => p.Id == ayudaProgramId && p.IsActive);
++            if (program == null || program.ProgramType == AyudaProgramType.Seminar || program.ProgramType == AyudaProgramType.CashForWork)
++            {
++                return new ProjectDistributionQualificationResult(false, false, "Distribution is not supported for Seminar or Cash-for-Work projects.");
++            }
++
+             var membership = await ResolveMembershipAsync(ayudaProgramId, beneficiaryStagingId);
+ 
+             if (membership == null)

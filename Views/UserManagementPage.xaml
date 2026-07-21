@@ -139,6 +139,7 @@
                                 <CheckBox Content="Budget Management" IsChecked="{Binding EditingPermissions.CanAccessBudget}" Margin="0,0,10,10"/>
                                 <CheckBox Content="Project Distribution" IsChecked="{Binding EditingPermissions.CanAccessDistribution}" Margin="0,0,10,10"/>
                                 <CheckBox Content="Cash-for-Work" IsChecked="{Binding EditingPermissions.CanAccessCashForWork}" Margin="0,0,10,10"/>
+                                <CheckBox Content="Seminar Attendance" IsChecked="{Binding EditingPermissions.CanAccessSeminarAttendance}" Margin="0,0,10,10"/>
                                 <CheckBox Content="Reports" IsChecked="{Binding EditingPermissions.CanAccessReports}" Margin="0,0,10,10"/>
                                 <CheckBox Content="GGMS Transactions" IsChecked="{Binding EditingPermissions.CanAccessGgmsTransactions}" Margin="0,0,10,10"/>
                             </UniformGrid>

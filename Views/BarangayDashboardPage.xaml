@@ -598,6 +598,32 @@
                     </StackPanel>
                 </Button>
 
+                <Button Grid.Row="2"
+                        Grid.Column="2"
+                        Style="{StaticResource LaunchpadTileButtonStyle}"
+                        Background="#1E4E89"
+                        Visibility="{Binding DataContext.SeminarAttendanceVisibility, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
+                        Command="{Binding DataContext.ShowSeminarAttendanceCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}">
+                    <StackPanel>
+                        <materialDesign:PackIcon Kind="Presentation"
+                                                 Width="42"
+                                                 Height="42"
+                                                 Foreground="White"
+                                                 HorizontalAlignment="Left"/>
+                        <TextBlock Margin="0,26,0,0"
+                                   Text="SEMINAR ATTENDANCE"
+                                   FontSize="18"
+                                   FontWeight="Bold"
+                                   Foreground="White"/>
+                        <TextBlock Margin="0,8,0,0"
+                                   Text="Create seminars and capture scan-based attendance."
+                                   FontSize="13"
+                                   Foreground="White"
+                                   Opacity="0.82"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Button>
+
             </Grid>
         </ScrollViewer>
 

@@ -47,6 +47,7 @@ namespace AttendanceShiftingManagement.Services
         public static bool CanAccessBudget => Check(p => p.CanAccessBudget);
         public static bool CanAccessDistribution => Check(p => p.CanAccessDistribution);
         public static bool CanAccessCashForWork => Check(p => p.CanAccessCashForWork);
+        public static bool CanAccessSeminarAttendance => Check(p => p.CanAccessSeminarAttendance);
         public static bool CanAccessBorrowing => Check(p => p.CanAccessBorrowing);
         public static bool CanAccessReports => Check(p => p.CanAccessReports);
         public static bool CanAccessGgmsTransactions => Check(p => p.CanAccessGgmsTransactions);

@@ -58,13 +58,17 @@ namespace AttendanceShiftingManagement.Services
         DateTime EndDate,
         int? SourceDonationId = null,
         int? SourceGGMSBudgetId = null,
-        string? SourceProjectDetailsId = null);
+        string? SourceProjectDetailsId = null,
+        CashForWorkEventKind EventKind = CashForWorkEventKind.CashForWork,
+        CashForWorkBenefitType BenefitType = CashForWorkBenefitType.Cash,
+        string? BenefitDescription = null);
 
     public sealed record CashForWorkProjectOperationResult(
         bool Success,
         string Message = "",
         int BudgetId = 0,
-        string BudgetName = "");
+        string BudgetName = "",
+        int EventId = 0);
 
     public sealed record GovernmentBudgetSnapshotRequest(
         string OfficeCode,
@@ -196,7 +200,9 @@ namespace AttendanceShiftingManagement.Services
         {
             return await _context.AyudaPrograms
                 .AsNoTracking()
-                .Where(p => p.IsActive)
+                .Where(p => p.IsActive && 
+                            (p.ProgramType == AyudaProgramType.GeneralPurpose || 
+                             p.ProgramType == AyudaProgramType.AssistanceCase))
                 .Include(p => p.SourceDonation)
                 .Include(p => p.SourceGGMSBudget)
                 .OrderBy(program => program.ProgramName)
@@ -330,6 +336,7 @@ namespace AttendanceShiftingManagement.Services
             CashForWorkProjectRequest request, int createdByUserId)
         {
             int? remoteGeneratedId = null;
+            int? remoteGeneratedEventId = null;
             if (RemoteWriteExecutionService.ShouldRouteToRemote(_context))
             {
                 try
@@ -344,6 +351,7 @@ namespace AttendanceShiftingManagement.Services
 
                     if (!remoteResult.Success) return remoteResult;
                     remoteGeneratedId = remoteResult.BudgetId;
+                    remoteGeneratedEventId = remoteResult.EventId > 0 ? remoteResult.EventId : null;
                 }
                 catch (Exception ex)
                 {
@@ -436,6 +444,35 @@ namespace AttendanceShiftingManagement.Services
             _context.CashForWorkBudgets.Add(cfwBudget);
             await _context.SaveChangesAsync();
 
+            // Auto-spawn the 1:1 cash-for-work event linked to this per-project budget
+            // (event creation was removed from the CFW module; Budget is the only creator).
+            var cfwEvent = new CashForWorkEvent
+            {
+                Title = budgetName,
+                Location = budgetName,
+                EventDate = request.StartDate.Date,
+                FinishDate = request.EndDate.Date,
+                StartTime = new TimeSpan(7, 0, 0),
+                EndTime = new TimeSpan(12, 0, 0),
+                UnitAmount = request.DailyRate ?? 0m,
+                EventKind = request.EventKind,
+                BenefitType = request.BenefitType,
+                BenefitDescription = request.BenefitDescription,
+                Status = CashForWorkEventStatus.Open,
+                CashForWorkBudgetId = cfwBudget.Id,
+                CreatedByUserId = createdByUserId,
+                CreatedAt = DateTime.Now,
+                UpdatedAt = DateTime.Now
+            };
+
+            if (remoteGeneratedEventId.HasValue)
+            {
+                cfwEvent.Id = remoteGeneratedEventId.Value;
+            }
+
+            _context.CashForWorkEvents.Add(cfwEvent);
+            await _context.SaveChangesAsync();
+
             await _auditService.LogActivityAsync(
                 createdByUserId,
                 "CashForWorkProjectCreated",
@@ -443,7 +480,14 @@ namespace AttendanceShiftingManagement.Services
                 cfwBudget.Id,
                 $"Created cash-for-work project '{budgetName}' with budget cap {budgetCap:N2}");
 
-            return new(true, "Project created successfully", cfwBudget.Id, cfwBudget.BudgetName);
+            await _auditService.LogActivityAsync(
+                createdByUserId,
+                "CashForWorkEventCreated",
+                nameof(CashForWorkEvent),
+                cfwEvent.Id,
+                $"Created event '{cfwEvent.Title}' on {cfwEvent.EventDate:yyyy-MM-dd} from cash-for-work project '{budgetName}'.");
+
+            return new(true, "Project created successfully", cfwBudget.Id, cfwBudget.BudgetName, cfwEvent.Id);
         }
 
         public async Task<IReadOnlyList<PrivateDonation>> GetPrivateDonationsAsync(int take = 50)

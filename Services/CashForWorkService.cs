@@ -45,12 +45,19 @@ namespace AttendanceShiftingManagement.Services
                 .ToList();
         }
 
-        public List<CashForWorkEvent> GetOpenEvents()
+        public List<CashForWorkEvent> GetOpenEvents(CashForWorkEventKind? eventKind = null)
         {
-            var events = _context.CashForWorkEvents
+            var query = _context.CashForWorkEvents
                 .AsNoTracking()
                 .Where(cashForWorkEvent => !cashForWorkEvent.IsDeleted && cashForWorkEvent.Status == CashForWorkEventStatus.Open)
-                .ToList();
+                .AsQueryable();
+
+            if (eventKind.HasValue)
+            {
+                query = query.Where(cashForWorkEvent => cashForWorkEvent.EventKind == eventKind.Value);
+            }
+
+            var events = query.ToList();
 
             return events
                 .OrderBy(cashForWorkEvent => cashForWorkEvent.EventDate)
@@ -462,7 +469,8 @@ namespace AttendanceShiftingManagement.Services
             CashForWorkEventKind eventKind = CashForWorkEventKind.CashForWork,
             DateTime? finishDate = null,
             CashForWorkBenefitType benefitType = CashForWorkBenefitType.None,
-            string? benefitDescription = null)
+            string? benefitDescription = null,
+            int? cashForWorkBudgetId = null)
         {
             var cashForWorkEvent = await _context.CashForWorkEvents
                 .FirstOrDefaultAsync(item => !item.IsDeleted && item.Id == eventId);
@@ -474,9 +482,8 @@ namespace AttendanceShiftingManagement.Services
 
             EnsureEventCanBeModified(cashForWorkEvent);
 
-            // Preserve the event's existing budget link (it may point at a per-project
-            // CFW budget); only backfill from the global budget when the event has none.
-            var resolvedBudgetId = cashForWorkEvent.CashForWorkBudgetId ?? await ResolveGlobalBudgetAsync();
+            // Use specified budget ID, preserve existing, or fallback to global
+            var resolvedBudgetId = cashForWorkBudgetId ?? cashForWorkEvent.CashForWorkBudgetId ?? await ResolveGlobalBudgetAsync();
 
             cashForWorkEvent.Title = title.Trim();
             cashForWorkEvent.Location = location.Trim();
@@ -721,14 +728,14 @@ namespace AttendanceShiftingManagement.Services
                 return new CashForWorkReleaseOperationResult(false, "Cash-for-work events can only be released on or after the event date.");
             }
 
-            if (cashForWorkEvent.EventKind == CashForWorkEventKind.Seminar)
+            if (cashForWorkEvent.EventKind == CashForWorkEventKind.Seminar && cashForWorkEvent.BenefitType == CashForWorkBenefitType.None)
             {
-                return new CashForWorkReleaseOperationResult(false, "Seminar events are attendance-only and cannot use the payout workflow.");
+                return new CashForWorkReleaseOperationResult(false, "Seminar events with no benefit type cannot use the payout/release workflow.");
             }
 
             if (cashForWorkEvent.BudgetLedgerEntryId.HasValue)
             {
-                return new CashForWorkReleaseOperationResult(false, "This cash-for-work event already has a recorded release.");
+                return new CashForWorkReleaseOperationResult(false, "This event already has a recorded release.");
             }
 
             // Debit the budget the event was created against (per-project CFW budget);
@@ -747,14 +754,18 @@ namespace AttendanceShiftingManagement.Services
             resolvedBudgetId ??= await ResolveGlobalBudgetAsync();
             if (!resolvedBudgetId.HasValue)
             {
-                return new CashForWorkReleaseOperationResult(false, "No active cash-for-work budget found for this event. Please set one in the Budget module first.");
+                return new CashForWorkReleaseOperationResult(false, "No active budget found for this event. Please set one in the Budget module first.");
             }
 
             var releaseReadySummary = GetReleaseReadySummary(eventId);
             if (releaseReadySummary.ReleaseReadyParticipantCount <= 0)
             {
-                return new CashForWorkReleaseOperationResult(false, "Save attendance before releasing cash-for-work funds.");
+                return new CashForWorkReleaseOperationResult(false, "Save attendance before releasing funds.");
             }
+
+            var releaseKind = cashForWorkEvent.BenefitType == CashForWorkBenefitType.Goods
+                ? AssistanceReleaseKind.Goods
+                : AssistanceReleaseKind.Cash;
 
             var budgetService = new BudgetManagementService(_context, _auditService);
             var budgetResult = await budgetService.RecordReleaseAsync(
@@ -763,7 +774,7 @@ namespace AttendanceShiftingManagement.Services
                     BudgetLedgerFeatureSource.CashForWork,
                     $"cash-for-work:{cashForWorkEvent.Id}",
                     releaseReadySummary.ReleaseReadyParticipantCount,
-                    AssistanceReleaseKind.Cash,
+                    releaseKind,
                     totalAmount,
                     DateTime.Now,
                     remarks ?? cashForWorkEvent.Title,
@@ -812,7 +823,7 @@ namespace AttendanceShiftingManagement.Services
                     $"cfw-payout:{eventId}:{participant.Id}",
                     DateTime.Now,
                     totalAmount / releaseReadySummary.ReleaseReadyParticipantCount,
-                    $"Cash-for-work payout for '{cashForWorkEvent.Title}'.",
+                    $"{(cashForWorkEvent.EventKind == CashForWorkEventKind.Seminar ? "Seminar" : "Cash-for-work")} payout for '{cashForWorkEvent.Title}'.",
                     recordedByUserId);
             }
 

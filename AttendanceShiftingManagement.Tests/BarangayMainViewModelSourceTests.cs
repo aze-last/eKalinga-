@@ -71,4 +71,26 @@ public sealed class BarangayMainViewModelSourceTests
         Assert.Contains("CurrentSectionTitle = \"Reports\";", source, StringComparison.Ordinal);
         Assert.Contains("return new ReportsPage(_currentUser);", source, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void BarangayMainViewModel_ExposesSeminarAttendanceWorkspaceRouting()
+    {
+        var viewModelPath = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..",
+            "..",
+            "..",
+            "..",
+            "ViewModels",
+            "BarangayMainViewModel.cs"));
+
+        var source = File.ReadAllText(viewModelPath);
+
+        Assert.Contains("ShowSeminarAttendanceCommand", source, StringComparison.Ordinal);
+        Assert.Contains("IsSeminarAttendanceSelected", source, StringComparison.Ordinal);
+        Assert.Contains("SeminarAttendanceVisibility => UserPermissionService.CanAccessSeminarAttendance", source, StringComparison.Ordinal);
+        Assert.Contains("case \"SeminarAttendance\":", source, StringComparison.Ordinal);
+        Assert.Contains("CurrentSectionTitle = \"Seminar Attendance\";", source, StringComparison.Ordinal);
+        Assert.Contains("return new SeminarAttendancePage(_currentUser);", source, StringComparison.Ordinal);
+    }
 }
