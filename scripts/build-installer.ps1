@@ -3,7 +3,7 @@ param(
     [string]$Configuration = "Release",
     [string]$RuntimeIdentifier = "win-x64",
     [bool]$SelfContained = $true,
-    [bool]$PublishSingleFile = $false,
+    [bool]$PublishSingleFile = $true,
     [switch]$BootstrapInnoSetup,
     [switch]$Clean
 )
@@ -210,10 +210,6 @@ if (-not (Test-Path -LiteralPath $publishedExecutable)) {
 }
 
 $publishedSettingsPath = Join-Path $publishDir "appsettings.json"
-if (Test-Path -LiteralPath $appSettingsTemplatePath) {
-    Write-Host "Applying installer default appsettings from template..."
-    Copy-Item -LiteralPath $appSettingsTemplatePath -Destination $publishedSettingsPath -Force
-}
 
 $appVersion = Get-AppVersion -ExecutablePath $publishedExecutable
 Write-Host "Resolved app version: $appVersion"

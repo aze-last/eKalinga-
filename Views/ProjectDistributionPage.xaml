@@ -610,6 +610,8 @@
                                 <Border BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="1,0,1,1" CornerRadius="0,0,6,6" Padding="8">
                                     <StackPanel>
                                         <TextBlock Text="{Binding HouseholdContextSummary}" FontSize="10" TextWrapping="Wrap"
+                                                   Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="2,0,2,2"/>
+                                        <TextBlock Text="{Binding HouseholdDemographicsSummary}" FontSize="10" TextWrapping="Wrap"
                                                    Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="2,0,2,8"/>
                                         <ItemsControl ItemsSource="{Binding ScannedHouseholdMembers}">
                                             <ItemsControl.ItemTemplate>
@@ -718,151 +720,274 @@
         </Grid>
 
         <!-- ============================ HOUSEHOLD REVIEW MODAL ============================ -->
-        <!-- Pops on every CONFIRM so the operator reviews the household before releasing (scanner path). -->
+        <!-- Pops on every CONFIRM so the operator reviews the household before releasing (scanner & list path). -->
         <Grid Grid.RowSpan="2" Panel.ZIndex="140"
               Visibility="{Binding IsHouseholdConfirmVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
             <Border Background="#CC0F172A"/>
-            <Border Style="{StaticResource PanelCardStyle}" HorizontalAlignment="Center" VerticalAlignment="Center" Width="560" MaxHeight="600">
-                <Grid Margin="28,24">
+            <Border Style="{StaticResource PanelCardStyle}" HorizontalAlignment="Center" VerticalAlignment="Center" Width="1020" MaxHeight="720" CornerRadius="16" Padding="0">
+                <Grid>
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <!-- Header -->
-                    <Grid Grid.Row="0" Margin="0,0,0,12">
-                        <StackPanel Orientation="Horizontal"
-                                    Visibility="{Binding RequiresHouseholdOverride, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
-                            <materialDesign:PackIcon Kind="HomeGroup" Width="26" Height="26" VerticalAlignment="Center" Foreground="{DynamicResource BrandMidnightBrush}"/>
-                            <TextBlock Text="HOUSEHOLD REVIEW" FontSize="16" FontWeight="Bold" Margin="10,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource BrandMidnightBrush}"/>
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal"
-                                    Visibility="{Binding RequiresHouseholdOverride, Converter={StaticResource BooleanToVisibilityConverter}}">
-                            <materialDesign:PackIcon Kind="HomeAlert" Width="26" Height="26" VerticalAlignment="Center" Foreground="{DynamicResource BrandWarningBrush}"/>
-                            <TextBlock Text="HOUSEHOLD VERIFICATION" FontSize="16" FontWeight="Bold" Margin="10,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource BrandMidnightBrush}"/>
-                        </StackPanel>
-                    </Grid>
-
-                    <!-- Summary + who this is -->
-                    <StackPanel Grid.Row="1" Margin="0,0,0,12">
-                        <Grid Margin="0,0,0,8">
+                    <!-- Top Bar: Header info + RECEIVED AMOUNT / ITEM -->
+                    <Border Grid.Row="0" Background="{DynamicResource ThemePrimaryActionBrush}" CornerRadius="16,16,0,0" Padding="24,18">
+                        <Grid>
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <!-- Beneficiary photo -->
-                            <Grid Grid.Column="0" Width="64" Height="64" Margin="0,0,14,0">
-                                <Ellipse Width="64" Height="64" Fill="{DynamicResource ThemeCardSubtleBrush}" Stroke="{DynamicResource BrandBorderBrush}" StrokeThickness="1"/>
-                                <Ellipse Width="64" Height="64"
-                                         Visibility="{Binding HouseholdConfirmBeneficiaryPhoto, Converter={StaticResource NullToHiddenConverter}}">
-                                    <Ellipse.Fill>
-                                        <ImageBrush ImageSource="{Binding HouseholdConfirmBeneficiaryPhoto}" Stretch="UniformToFill"/>
-                                    </Ellipse.Fill>
-                                </Ellipse>
-                                <materialDesign:PackIcon Kind="AccountCircle" Width="48" Height="48"
-                                                         HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                         Foreground="{DynamicResource BrandTextSecondaryBrush}"
-                                                         Visibility="{Binding HouseholdConfirmBeneficiaryPhoto, Converter={StaticResource NullToHiddenConverter}, ConverterParameter=Inverse}"/>
-                            </Grid>
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                <TextBlock Text="{Binding HouseholdConfirmBeneficiaryName}" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource BrandMidnightBrush}" TextWrapping="Wrap"/>
-                                <TextBlock Text="{Binding HouseholdContextSummary}" FontSize="12" Foreground="{DynamicResource BrandTextSecondaryBrush}" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="BENEFICIARIES PROFILE FORM" FontSize="18" FontWeight="Bold" Foreground="White"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                    <TextBlock Text="{Binding SelectedProgram.ProjectCode, StringFormat='Project Code: {0}'}" FontSize="12" Foreground="#CCFFFFFF"/>
+                                    <TextBlock Text="  ·  " FontSize="12" Foreground="#CCFFFFFF"/>
+                                    <TextBlock Text="{Binding SelectedProgram.FundSourceCode, StringFormat='Source of Fund: {0}'}" FontSize="12" Foreground="#CCFFFFFF"/>
+                                </StackPanel>
+                                <TextBlock Text="{Binding SelectedProgram.ProgramName}" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource BrandYellowBrush}" Margin="0,4,0,0"/>
                             </StackPanel>
+                            <!-- Received Amount / Item -->
+                            <Border Grid.Column="1" Background="#22FFFFFF" CornerRadius="8" Padding="16,10" VerticalAlignment="Center">
+                                <StackPanel>
+                                    <TextBlock Text="RECEIVED AMOUNT / ITEM" FontSize="10" FontWeight="Bold" Foreground="#CCFFFFFF"/>
+                                    <TextBlock Text="{Binding ScannedAllocatedAmountText}" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource BrandYellowBrush}"/>
+                                </StackPanel>
+                            </Border>
                         </Grid>
-                        <!-- Neutral summary card -->
-                        <Border Background="{DynamicResource ThemeCardSubtleBrush}" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12,10"
-                                Visibility="{Binding RequiresHouseholdOverride, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
-                            <TextBlock Text="{Binding HouseholdAidReceivedSummary}" FontSize="13" FontWeight="Bold" TextWrapping="Wrap" Foreground="{DynamicResource BrandMidnightBrush}"/>
-                        </Border>
-                        <!-- Warning summary card -->
-                        <Border Background="{DynamicResource ThemeCardSubtleBrush}" BorderBrush="{DynamicResource BrandWarningBrush}" BorderThickness="1" CornerRadius="8" Padding="12,10"
-                                Visibility="{Binding RequiresHouseholdOverride, Converter={StaticResource BooleanToVisibilityConverter}}">
-                            <TextBlock Text="{Binding HouseholdAidReceivedSummary}" FontSize="13" FontWeight="Bold" TextWrapping="Wrap" Foreground="{DynamicResource BrandMidnightBrush}"/>
-                        </Border>
-                    </StackPanel>
+                    </Border>
 
-                    <!-- Household roster + requirements checklist -->
-                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
-                        <StackPanel>
-                            <TextBlock Text="HOUSEHOLD MEMBERS" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,6"/>
-                            <ItemsControl ItemsSource="{Binding ScannedHouseholdMembers}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border CornerRadius="6" Padding="10,7" Margin="0,0,0,5" Background="{DynamicResource ThemeSurfaceBrush}"
-                                                BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="1">
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                </Grid.ColumnDefinitions>
-                                                <StackPanel Grid.Column="0">
-                                                    <StackPanel Orientation="Horizontal">
-                                                        <TextBlock Text="{Binding FullName}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource BrandMidnightBrush}" TextWrapping="Wrap"/>
-                                                        <materialDesign:PackIcon Kind="AccountCheck" Width="15" Height="15" Margin="6,0,0,0" VerticalAlignment="Center"
-                                                                                 Foreground="{DynamicResource BrandSuccessBrush}"
-                                                                                 Visibility="{Binding IsScannedBeneficiary, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                                                    </StackPanel>
-                                                    <TextBlock Text="{Binding RelationshipToHead}" FontSize="10" Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
-                                                </StackPanel>
-                                                <!-- BUG FIX: BrandDangerBrush → BrandRedBrush -->
-                                                <Border Grid.Column="1" VerticalAlignment="Center" Background="{DynamicResource BrandRedBrush}" CornerRadius="3" Padding="6,2"
-                                                        Visibility="{Binding AlreadyReceivedSameAssistanceType, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                                    <TextBlock Text="RECEIVED" FontSize="9" FontWeight="Bold" Foreground="White"/>
-                                                </Border>
-                                            </Grid>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
+                    <Grid Grid.Row="1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="240"/>
+                            <ColumnDefinition Width="1"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="1"/>
+                            <ColumnDefinition Width="300"/>
+                        </Grid.ColumnDefinitions>
 
-                            <!-- Requirements checklist: cedula / barangay certificate must be presented before release. -->
-                            <TextBlock Text="REQUIREMENTS CHECKLIST" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,12,0,6"/>
-                            <ItemsControl ItemsSource="{Binding ReleaseRequirementRows}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border CornerRadius="6" Padding="10,7" Margin="0,0,0,5" Background="{DynamicResource ThemeSurfaceBrush}"
-                                                BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="1">
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                </Grid.ColumnDefinitions>
-                                                <CheckBox Grid.Column="0" IsChecked="{Binding IsComplete, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center"/>
-                                                <TextBlock Grid.Column="1" Text="{Binding DocumentName}" FontSize="13" FontWeight="SemiBold" Margin="8,0,0,0"
-                                                           VerticalAlignment="Center" Foreground="{DynamicResource BrandMidnightBrush}" TextWrapping="Wrap"/>
-                                                <TextBlock Grid.Column="2" Text="MISSING" FontSize="9" FontWeight="Bold" VerticalAlignment="Center"
-                                                           Foreground="{DynamicResource BrandRedBrush}"
-                                                           Visibility="{Binding IsComplete, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
-                                            </Grid>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                            <!-- Missing-requirements warning: beneficiary stays in UNRELEASED / UNCLAIMED. -->
-                            <Border Background="{DynamicResource ThemeCardSubtleBrush}" BorderBrush="{DynamicResource BrandRedBrush}" BorderThickness="1" CornerRadius="8" Padding="12,10"
-                                    Visibility="{Binding HasMissingReleaseRequirements, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                <TextBlock Text="{Binding ReleaseRequirementsSummaryText}" FontSize="12" FontWeight="Bold" TextWrapping="Wrap" Foreground="{DynamicResource BrandRedBrush}"/>
+                        <!-- Left: Photo + Beneficiary ID -->
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="20">
+                            <Border Width="150" Height="150" CornerRadius="12" Background="{DynamicResource ThemeCardSubtleBrush}"
+                                    BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="1">
+                                <Grid>
+                                    <materialDesign:PackIcon Kind="AccountCircle" Width="90" Height="90"
+                                                             HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                             Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
+                                    <Border CornerRadius="12" Visibility="{Binding HouseholdConfirmBeneficiaryPhoto, Converter={StaticResource NullToHiddenConverter}}">
+                                        <Border.Background>
+                                            <ImageBrush ImageSource="{Binding HouseholdConfirmBeneficiaryPhoto}" Stretch="UniformToFill"/>
+                                        </Border.Background>
+                                    </Border>
+                                </Grid>
+                            </Border>
+                            <TextBlock Text="Beneficiary ID:" FontSize="11" Foreground="{DynamicResource BrandTextSecondaryBrush}"
+                                       TextAlignment="Center" Margin="0,14,0,2"/>
+                            <TextBlock Text="{Binding ScannedBeneficiary.BeneficiaryId}" FontSize="14" FontWeight="Bold"
+                                       Foreground="{DynamicResource BrandMidnightBrush}" TextAlignment="Center"/>
+                            <!-- Dynamic Status Badge -->
+                            <Border Background="{Binding ScannedBeneficiaryStatusColor}" Padding="14,8" CornerRadius="8" Margin="0,14,0,0">
+                                <TextBlock Text="{Binding ScannedBeneficiaryStatus}" FontSize="12" FontWeight="Bold" Foreground="White"
+                                           TextAlignment="Center" TextWrapping="Wrap"/>
                             </Border>
                         </StackPanel>
-                    </ScrollViewer>
 
-                    <!-- Override acknowledgment -->
-                    <CheckBox Grid.Row="3" Margin="0,14,0,0"
-                              Content="I have verified this beneficiary and authorize the release despite the household warning."
-                              IsChecked="{Binding HouseholdOverrideAcknowledged}"
-                              Visibility="{Binding RequiresHouseholdOverride, Converter={StaticResource BooleanToVisibilityConverter}}"
-                              FontSize="12" Foreground="{DynamicResource BrandMidnightBrush}"/>
+                        <Border Grid.Column="1" Background="{DynamicResource BrandBorderBrush}" Margin="0,24"/>
 
-                    <!-- Actions -->
-                    <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0">
-                        <Button Content="DECLINE" Command="{Binding CancelHouseholdConfirmCommand}" Style="{StaticResource MaterialDesignOutlinedButton}" Height="44" Padding="24,0" Margin="0,0,12,0"/>
-                        <Button Content="MARK AS PENDING" Command="{Binding PromptPendingReasonCommand}" Style="{StaticResource MaterialDesignOutlinedButton}" Height="44" Padding="24,0" Margin="0,0,12,0"/>
-                        <Button Content="CONFIRM RELEASE" Command="{Binding ConfirmHouseholdReleaseCommand}" Style="{StaticResource OperationalActionButton}" Height="44" Padding="28,0" FontSize="14"/>
-                    </StackPanel>
+                        <!-- Center: Beneficiary detail block + Requirements Checklist -->
+                        <ScrollViewer Grid.Column="2" Margin="26,24" VerticalScrollBarVisibility="Auto">
+                            <StackPanel>
+                                <TextBlock Text="BENEFICIARY PROFILE" FontSize="12" FontWeight="Bold"
+                                           Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,16"/>
+
+                                <Grid Margin="0,0,0,14">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Household Member:" FontSize="13" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,14,12"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding ScannedHouseholdRole}" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}" Margin="0,0,0,12"/>
+
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Household Number:" FontSize="13" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,14,12"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding ScannedHouseholdNumber}" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource BrandMidnightBrush}" Margin="0,0,0,12"/>
+
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Name:" FontSize="13" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,14,12"/>
+                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding HouseholdConfirmBeneficiaryName}" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}" TextWrapping="Wrap" Margin="0,0,0,12"/>
+
+                                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Address:" FontSize="13" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,14,12"/>
+                                    <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding ScannedBeneficiaryAddress}" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource BrandMidnightBrush}" TextWrapping="Wrap" Margin="0,0,0,12"/>
+
+                                    <TextBlock Grid.Row="4" Grid.Column="0" Text="Age:" FontSize="13" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,14,12"/>
+                                    <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding ScannedBeneficiaryAge}" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource BrandMidnightBrush}" Margin="0,0,0,12"/>
+
+                                    <TextBlock Grid.Row="5" Grid.Column="0" Text="Gender:" FontSize="13" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,14,0"/>
+                                    <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding ScannedBeneficiaryGender}" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource BrandMidnightBrush}"/>
+                                </Grid>
+
+                                <!-- Household aid-received summary -->
+                                <Border Margin="0,18,0,0" Padding="14,10" CornerRadius="8"
+                                        Background="{DynamicResource ThemeCardSubtleBrush}"
+                                        BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="1"
+                                        Visibility="{Binding HasHouseholdContext, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="HomeGroup" Width="20" Height="20" VerticalAlignment="Center" Foreground="{DynamicResource ThemePrimaryActionBrush}"/>
+                                        <TextBlock Text="{Binding HouseholdAidReceivedSummary}" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap"
+                                                   Margin="8,0,0,0" VerticalAlignment="Center" MaxWidth="280" Foreground="{DynamicResource BrandMidnightBrush}"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Requirements checklist: cedula / barangay certificate must be presented before release. -->
+                                <TextBlock Text="REQUIREMENTS CHECKLIST" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,18,0,6"/>
+                                <ItemsControl ItemsSource="{Binding ReleaseRequirementRows}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border CornerRadius="6" Padding="10,7" Margin="0,0,0,5" Background="{DynamicResource ThemeSurfaceBrush}"
+                                                    BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="1">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <CheckBox Grid.Column="0" IsChecked="{Binding IsComplete, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center"/>
+                                                    <TextBlock Grid.Column="1" Text="{Binding DocumentName}" FontSize="13" FontWeight="SemiBold" Margin="8,0,0,0"
+                                                               VerticalAlignment="Center" Foreground="{DynamicResource BrandMidnightBrush}" TextWrapping="Wrap"/>
+                                                    <TextBlock Grid.Column="2" Text="MISSING" FontSize="9" FontWeight="Bold" VerticalAlignment="Center"
+                                                               Foreground="{DynamicResource BrandRedBrush}"
+                                                               Visibility="{Binding IsComplete, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <!-- Missing-requirements warning: beneficiary stays in UNRELEASED / UNCLAIMED. -->
+                                <Border Background="{DynamicResource ThemeCardSubtleBrush}" BorderBrush="{DynamicResource BrandRedBrush}" BorderThickness="1" CornerRadius="8" Padding="12,10" Margin="0,6,0,0"
+                                        Visibility="{Binding HasMissingReleaseRequirements, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <TextBlock Text="{Binding ReleaseRequirementsSummaryText}" FontSize="12" FontWeight="Bold" TextWrapping="Wrap" Foreground="{DynamicResource BrandRedBrush}"/>
+                                </Border>
+                            </StackPanel>
+                        </ScrollViewer>
+
+                        <Border Grid.Column="3" Background="{DynamicResource BrandBorderBrush}" Margin="0,24"/>
+
+                        <!-- Right: Household Relationship table + Distribution History -->
+                        <ScrollViewer Grid.Column="4" Margin="20,24" VerticalScrollBarVisibility="Auto">
+                            <StackPanel>
+                                <Border Background="{DynamicResource ThemePrimaryActionBrush}" CornerRadius="6,6,0,0" Padding="10,7">
+                                    <TextBlock Text="HOUSEHOLD RELATIONSHIP" FontSize="11" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center"/>
+                                </Border>
+                                <Border BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="1,0,1,1" CornerRadius="0,0,6,6" Padding="8">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding HouseholdContextSummary}" FontSize="10" TextWrapping="Wrap"
+                                                   Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="2,0,2,2"/>
+                                        <TextBlock Text="{Binding HouseholdDemographicsSummary}" FontSize="10" TextWrapping="Wrap"
+                                                   Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="2,0,2,8"/>
+                                        <ItemsControl ItemsSource="{Binding ScannedHouseholdMembers}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border CornerRadius="6" Padding="10,6" Margin="0,0,0,4" Background="{DynamicResource ThemeSurfaceBrush}"
+                                                            BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="1">
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                            </Grid.ColumnDefinitions>
+                                                            <StackPanel Grid.Column="0">
+                                                                <StackPanel Orientation="Horizontal">
+                                                                    <TextBlock Text="{Binding FullName}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource BrandMidnightBrush}" TextWrapping="Wrap"/>
+                                                                    <materialDesign:PackIcon Kind="AccountCheck" Width="14" Height="14" Margin="6,0,0,0" VerticalAlignment="Center"
+                                                                                             Foreground="{DynamicResource BrandSuccessBrush}"
+                                                                                             Visibility="{Binding IsScannedBeneficiary, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                                                </StackPanel>
+                                                                <TextBlock Text="{Binding RelationshipToHead}" FontSize="10" Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
+                                                            </StackPanel>
+                                                            <Border Grid.Column="1" VerticalAlignment="Center" Background="{DynamicResource BrandRedBrush}" CornerRadius="3" Padding="5,2"
+                                                                    Visibility="{Binding AlreadyReceivedSameAssistanceType, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                                <TextBlock Text="RECEIVED" FontSize="9" FontWeight="Bold" Foreground="White"/>
+                                                            </Border>
+                                                        </Grid>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                        <TextBlock Text="No household members on file." FontSize="11" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="2,2,0,0"
+                                                   Visibility="{Binding HasHouseholdMembers, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Distribution history -->
+                                <TextBlock Text="DISTRIBUTION HISTORY" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,16,0,8"/>
+                                <ItemsControl ItemsSource="{Binding ScannedBeneficiaryHistory}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Background="{DynamicResource ThemeSurfaceBrush}" CornerRadius="8" Padding="12" Margin="0,0,0,8">
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding AssistanceLabel}" FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource BrandMidnightBrush}"/>
+                                                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                                        <TextBlock Text="{Binding ReleasedAt, StringFormat=MMM yyyy}" FontSize="11" Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
+                                                        <TextBlock Text=" - " FontSize="11" Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
+                                                        <TextBlock Text="Released" FontWeight="Bold" FontSize="11" Foreground="{DynamicResource BrandSuccessBrush}"/>
+                                                    </StackPanel>
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <TextBlock Text="No previous distributions." FontSize="13" Foreground="{DynamicResource BrandTextSecondaryBrush}"
+                                           Visibility="{Binding HasScannedHistory, Converter={StaticResource InverseBooleanToVisibilityConverter}}"
+                                           Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Grid>
+
+                    <!-- Household Duplicate Warning Banner -->
+                    <Border Grid.Row="2" Padding="16,12" Background="{DynamicResource ThemeCardSubtleBrush}"
+                            BorderBrush="{DynamicResource BrandWarningBrush}" BorderThickness="1,1,1,0"
+                            Visibility="{Binding HasHouseholdWarning, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="AlertOutline" Width="18" Height="18" VerticalAlignment="Center" Foreground="{DynamicResource BrandWarningBrush}"/>
+                            <TextBlock Text="{Binding HouseholdWarningMessage}" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap" Margin="8,0,0,0"
+                                       VerticalAlignment="Center" Foreground="{DynamicResource BrandMidnightBrush}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Bottom: Action Bar -->
+                    <Border Grid.Row="3" Padding="20" Background="{DynamicResource BrandMidnightBrush}" CornerRadius="0,0,16,16">
+                        <Grid>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <StackPanel Margin="0,0,30,0">
+                                    <TextBlock Text="FUNDING SOURCE" FontSize="10" Foreground="#A0B0C0" FontWeight="Bold"/>
+                                    <TextBlock Text="{Binding SelectedProgram.FundSourceCode}" FontSize="14" Foreground="White" FontWeight="SemiBold"/>
+                                </StackPanel>
+                                <StackPanel>
+                                    <TextBlock Text="RECEIVED AMOUNT / ITEM" FontSize="10" Foreground="#A0B0C0" FontWeight="Bold"/>
+                                    <TextBlock Text="{Binding ScannedAllocatedAmountText}" FontSize="18" Foreground="{DynamicResource BrandYellowBrush}" FontWeight="Bold"/>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                <CheckBox Margin="0,0,16,0" VerticalAlignment="Center"
+                                          Content="Authorize override"
+                                          IsChecked="{Binding HouseholdOverrideAcknowledged}"
+                                          Visibility="{Binding RequiresHouseholdOverride, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                          FontSize="12" Foreground="White"/>
+                                <Button Content="DECLINE" Command="{Binding CancelHouseholdConfirmCommand}" Style="{StaticResource MaterialDesignOutlinedButton}" Foreground="White" BorderBrush="White" Margin="0,0,12,0"/>
+                                <Button Content="MARK AS PENDING" Command="{Binding PromptPendingReasonCommand}" Style="{StaticResource MaterialDesignOutlinedButton}" Foreground="White" BorderBrush="White" Margin="0,0,12,0"/>
+                                <Button Content="CONFIRM RELEASE" Command="{Binding ConfirmHouseholdReleaseCommand}" Style="{StaticResource OperationalActionButton}" Height="45" Padding="30,0" FontSize="16"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
                 </Grid>
             </Border>
         </Grid>

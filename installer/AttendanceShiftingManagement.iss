@@ -63,6 +63,9 @@ Source: "{#MyProjectDir}\Images\municipal-house.ico"; DestDir: "{app}"; Flags: i
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\municipal-house.ico"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon; IconFilename: "{app}\municipal-house.ico"
 
+[Dirs]
+Name: "{app}"; Permissions: users-modify
+
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
 

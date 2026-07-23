@@ -404,6 +404,12 @@ namespace AttendanceShiftingManagement.ViewModels
             private set => SetProperty(ref _householdContextSummary, value);
         }
 
+        public string HouseholdDemographicsSummary
+        {
+            get => _householdDemographicsSummary;
+            private set => SetProperty(ref _householdDemographicsSummary, value);
+        }
+
         /// <summary>Front-and-center decision line: how many household members already received this assistance.</summary>
         public string HouseholdAidReceivedSummary
         {
@@ -2676,6 +2682,85 @@ namespace AttendanceShiftingManagement.ViewModels
             RequiresHouseholdOverride = householdContext.AnyMemberAlreadyReceived;
             HouseholdOverrideAcknowledged = false;
 
+            // Load beneficiary profile details, CRS demographics, and distribution history
+            try
+            {
+                await using var context = new LocalDbContext();
+                var staging = await context.BeneficiaryStaging
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(s => s.StagingID == beneficiaryStagingId);
+
+                if (staging != null)
+                {
+                    var beneficiaryId = staging.BeneficiaryId ?? string.Empty;
+                    ScannedBeneficiaryAddress = staging.Address ?? "No address on file";
+                    ScannedBeneficiaryAge = CrsAgeCalculator.CalculateAgeText(staging.DateOfBirth);
+                    ScannedBeneficiaryGender = staging.Sex ?? "--";
+                    ScannedAllocatedAmountText = BuildAllocatedAmountText(SelectedProgram);
+
+                    if (ScannedBeneficiary == null || ScannedBeneficiary.BeneficiaryStagingId != beneficiaryStagingId)
+                    {
+                        var qualification = await distributionService.EvaluateQualificationAsync(SelectedProgram.Id, beneficiaryStagingId);
+                        ScannedBeneficiary = new ProjectDistributionBeneficiaryListItem
+                        {
+                            FullName = staging.FullName,
+                            BeneficiaryId = beneficiaryId,
+                            CivilRegistryId = staging.CivilRegistryId ?? string.Empty,
+                            BeneficiaryStagingId = staging.StagingID,
+                            Status = qualification.BeneficiaryStatus ?? DistributionBeneficiaryStatus.Pending
+                        };
+                        ScannedBeneficiaryStatus = qualification.Message;
+                        ScannedBeneficiaryStatusColor = qualification.BeneficiaryStatus == DistributionBeneficiaryStatus.Released
+                            ? (Brush)Application.Current.Resources["BrandDangerBrush"]
+                            : (qualification.BeneficiaryStatus == DistributionBeneficiaryStatus.Pending
+                                ? (Brush)Application.Current.Resources["BrandSuccessBrush"]
+                                : (Brush)Application.Current.Resources["BrandWarningBrush"]);
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(staging.PhotoPath))
+                    {
+                        var loadedPhoto = LocalImageLoader.Load(staging.PhotoPath) as BitmapSource;
+                        ScannedBeneficiaryPhoto = loadedPhoto;
+                        HouseholdConfirmBeneficiaryPhoto = loadedPhoto;
+                    }
+
+                    var cachedDemographics = string.IsNullOrWhiteSpace(beneficiaryId)
+                        ? null
+                        : await context.CrsDemographicsCaches
+                            .AsNoTracking()
+                            .FirstOrDefaultAsync(c => c.BeneficiaryId == beneficiaryId);
+
+                    HouseholdDemographicsSummary = FormatDemographicsLine(cachedDemographics);
+
+                    // Distribution history
+                    var history = await context.BudgetLedgerEntries
+                        .AsNoTracking()
+                        .Include(e => e.Program)
+                        .Where(e => e.SourceRecordId == beneficiaryStagingId.ToString() && e.ProgramId != SelectedProgram.Id && e.EntryType == BudgetLedgerEntryType.Release)
+                        .OrderByDescending(e => e.EntryDate)
+                        .Select(e => new ProjectDistributionReleaseListItem
+                        {
+                            IdentityKey = e.ProgramId.ToString() ?? "",
+                            AssistanceLabel = e.Program != null ? e.Program.ProgramName : "Unknown Project",
+                            ReleasedAt = e.EntryDate,
+                            ReferenceLabel = e.Remarks ?? ""
+                        })
+                        .Take(5)
+                        .ToListAsync();
+
+                    ScannedBeneficiaryHistory.Clear();
+                    foreach (var item in history)
+                    {
+                        ScannedBeneficiaryHistory.Add(item);
+                    }
+                    OnPropertyChanged(nameof(HasScannedHistory));
+                }
+            }
+            catch
+            {
+                HouseholdDemographicsSummary = string.Empty;
+            }
+
             // Front-and-center decision line: how many in the family have already received this assistance.
             if (!householdContext.HasHousehold)
             {
@@ -2689,6 +2774,32 @@ namespace AttendanceShiftingManagement.ViewModels
                     ? $"{receivedCount} of {totalCount} household member(s) already received this assistance."
                     : $"No one in this household ({totalCount} member(s)) has received this assistance yet.";
             }
+        }
+
+        private static string FormatDemographicsLine(CrsDemographicsCache? demographics)
+        {
+            if (demographics == null)
+            {
+                return "No CRS demographics cached yet - refresh the masterlist while online.";
+            }
+
+            var parts = new List<string>();
+            if (!string.IsNullOrWhiteSpace(demographics.MaritalStatus))
+            {
+                parts.Add($"Marital status: {demographics.MaritalStatus}");
+            }
+            if (!string.IsNullOrWhiteSpace(demographics.Ethnicity))
+            {
+                parts.Add($"Ethnicity: {demographics.Ethnicity}");
+            }
+            if (!string.IsNullOrWhiteSpace(demographics.Tribe))
+            {
+                parts.Add($"Tribe: {demographics.Tribe}");
+            }
+
+            return parts.Count > 0
+                ? string.Join(" · ", parts)
+                : "No demographic specifics recorded.";
         }
 
         /// <summary>

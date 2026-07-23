@@ -949,6 +949,90 @@ namespace AttendanceShiftingManagement.Services
                 claims.Count);
         }
 
+        /// <summary>
+        /// Fallback verification context when no local household is linked: CRS assigns family-scoped
+        /// beneficiary ids (BEN-YYYY-&lt;family&gt;-&lt;member&gt;), so siblings share the id stem.
+        /// Checks prior claims for the same assistance type.
+        /// </summary>
+        private async Task<HouseholdVerificationContext> GetCrsFamilyVerificationContextAsync(BeneficiaryStaging? staging, int ayudaProgramId)
+        {
+            var familyStem = ExtractCrsFamilyStem(staging?.BeneficiaryId);
+            if (staging == null || familyStem == null)
+            {
+                return new HouseholdVerificationContext(false, string.Empty, string.Empty, Array.Empty<HouseholdMemberVerificationItem>(), false, null);
+            }
+
+            var stemPrefix = familyStem + "-";
+            var familyMembers = await _context.BeneficiaryStaging
+                .AsNoTracking()
+                .Where(row => row.BeneficiaryId != null && row.BeneficiaryId.StartsWith(stemPrefix))
+                .Select(row => new { row.StagingID, row.BeneficiaryId, row.FullName, row.FirstName, row.MiddleName, row.LastName })
+                .ToListAsync();
+
+            familyMembers = familyMembers
+                .Where(row => ExtractCrsFamilyStem(row.BeneficiaryId) == familyStem)
+                .OrderBy(row => ExtractCrsMemberNumber(row.BeneficiaryId))
+                .ToList();
+
+            if (familyMembers.Count == 0)
+            {
+                return new HouseholdVerificationContext(false, string.Empty, string.Empty, Array.Empty<HouseholdMemberVerificationItem>(), false, null);
+            }
+
+            var program = await _context.AyudaPrograms
+                .AsNoTracking()
+                .FirstOrDefaultAsync(item => item.Id == ayudaProgramId);
+            var assistanceType = NormalizeNullable(program?.AssistanceType);
+
+            var memberStagingIds = familyMembers.Select(row => row.StagingID).ToList();
+
+            var priorClaims = await (
+                from claim in _context.AyudaProjectClaims.AsNoTracking()
+                join prog in _context.AyudaPrograms.AsNoTracking() on claim.AyudaProgramId equals prog.Id
+                where memberStagingIds.Contains(claim.BeneficiaryStagingId)
+                      && (assistanceType == null || prog.AssistanceType == assistanceType)
+                select new { claim.BeneficiaryStagingId, claim.FullName })
+                .ToListAsync();
+
+            var head = familyMembers[0];
+            var headName = !string.IsNullOrWhiteSpace(head.FullName)
+                ? head.FullName.Trim()
+                : BuildDisplayName(head.FirstName, head.MiddleName, head.LastName);
+
+            var memberItems = familyMembers
+                .Select(member =>
+                {
+                    var memberName = !string.IsNullOrWhiteSpace(member.FullName)
+                        ? member.FullName.Trim()
+                        : BuildDisplayName(member.FirstName, member.MiddleName, member.LastName);
+
+                    var alreadyReceived = priorClaims.Any(claim =>
+                        claim.BeneficiaryStagingId == member.StagingID ||
+                        string.Equals(claim.FullName, memberName, StringComparison.OrdinalIgnoreCase));
+
+                    return new HouseholdMemberVerificationItem(
+                        memberName,
+                        member.StagingID == head.StagingID ? "Registrant" : "Family member",
+                        member.StagingID == staging.StagingID,
+                        alreadyReceived);
+                })
+                .ToList();
+
+            var anyReceived = priorClaims.Count > 0;
+            var assistanceLabel = assistanceType ?? program?.ProgramName ?? "this assistance";
+            var warning = anyReceived
+                ? $"A member of this family group has already received '{assistanceLabel}' assistance ({priorClaims.Count} claim(s) in this family)."
+                : null;
+
+            return new HouseholdVerificationContext(
+                true,
+                $"CRS Family {familyStem}",
+                headName,
+                memberItems,
+                anyReceived,
+                warning);
+        }
+
         /// <summary>"BEN-2026-692811519-1" → "BEN-2026-692811519"; null when the id doesn't follow the family pattern.</summary>
         private static string? ExtractCrsFamilyStem(string? beneficiaryId)
         {
@@ -982,7 +1066,8 @@ namespace AttendanceShiftingManagement.Services
             var householdId = staging?.LinkedHouseholdId;
             if (householdId == null)
             {
-                return new HouseholdVerificationContext(false, string.Empty, string.Empty, Array.Empty<HouseholdMemberVerificationItem>(), false, null);
+                // Fallback to CRS family group when no operator-linked household exists (preserves CRS stem family matching)
+                return await GetCrsFamilyVerificationContextAsync(staging, ayudaProgramId);
             }
 
             var program = await _context.AyudaPrograms

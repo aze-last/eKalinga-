@@ -60,11 +60,16 @@ namespace AttendanceShiftingManagement.Data
         {
             if (!optionsBuilder.IsConfigured)
             {
-                // Always point to local SQLite file for offline usage.
+                // Always point to local SQLite file for offline usage, stored in AppData
+                // to avoid permission issues when installed in Program Files.
+                string appDataFolder = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "eKalingaPlus");
+                System.IO.Directory.CreateDirectory(appDataFolder);
+                string dbPath = System.IO.Path.Combine(appDataFolder, "ams.db");
+
                 // Cache=Shared enables shared-cache mode so multiple connections
                 // within the same process reuse the same page cache.
                 var connection = new Microsoft.Data.Sqlite.SqliteConnection(
-                    "Data Source=ams.db;Cache=Shared");
+                    $"Data Source={dbPath};Cache=Shared");
                 connection.Open();
 
                 // WAL allows concurrent readers + one writer without SQLITE_BUSY
