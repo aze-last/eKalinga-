@@ -770,6 +770,37 @@ namespace AttendanceShiftingManagement.ViewModels
             set => SetProperty(ref _newProjectAssistanceType, value);
         }
 
+        private bool _newProjectIsOpenAttendance = true;
+        private bool _newProjectHasSeminarBenefit = false;
+
+        public bool NewProjectIsOpenAttendance
+        {
+            get => _newProjectIsOpenAttendance;
+            set => SetProperty(ref _newProjectIsOpenAttendance, value);
+        }
+
+        public bool NewProjectHasSeminarBenefit
+        {
+            get => _newProjectHasSeminarBenefit;
+            set
+            {
+                if (SetProperty(ref _newProjectHasSeminarBenefit, value))
+                {
+                    OnPropertyChanged(nameof(NewProjectShowBenefitControls));
+                    if (ConfirmCreateProjectCommand is RelayCommand confirm)
+                    {
+                        confirm.RaiseCanExecuteChanged();
+                    }
+                }
+            }
+        }
+
+        public bool IsSeminarSelected => NewProjectSelectedType == AyudaProgramType.Seminar;
+
+        public bool IsAttendanceBasedSelected => NewProjectSelectedType == AyudaProgramType.Seminar || NewProjectSelectedType == AyudaProgramType.CashForWork;
+
+        public bool NewProjectShowBenefitControls => !IsSeminarSelected || NewProjectHasSeminarBenefit;
+
         public AyudaProgramType NewProjectSelectedType
         {
             get => _newProjectSelectedType;
@@ -779,6 +810,9 @@ namespace AttendanceShiftingManagement.ViewModels
                 {
                     OnPropertyChanged(nameof(NewProjectCashAmountVisibility));
                     OnPropertyChanged(nameof(NewProjectGoodsDescriptionVisibility));
+                    OnPropertyChanged(nameof(IsSeminarSelected));
+                    OnPropertyChanged(nameof(IsAttendanceBasedSelected));
+                    OnPropertyChanged(nameof(NewProjectShowBenefitControls));
                 }
             }
         }
@@ -1126,7 +1160,7 @@ namespace AttendanceShiftingManagement.ViewModels
             return !IsBusy && 
                    !string.IsNullOrWhiteSpace(NewProjectCode) && 
                    !string.IsNullOrWhiteSpace(NewProjectName) &&
-                   NewProjectSelectedCount > 0;
+                   (IsAttendanceBasedSelected || NewProjectSelectedCount > 0);
         }
 
         private async Task ConfirmCreateProjectAsync()
@@ -1146,7 +1180,7 @@ namespace AttendanceShiftingManagement.ViewModels
             }
 
             IsBusy = true;
-            SetNeutralStatus("Creating project and enrolling beneficiaries...");
+            SetNeutralStatus("Creating project...");
 
             try
             {
@@ -1182,21 +1216,24 @@ namespace AttendanceShiftingManagement.ViewModels
 
                 int programId = programResult.ProgramId ?? throw new Exception("Program created but no ID returned.");
 
-                // 2. Bulk Enroll Selected Beneficiaries
+                // 2. Bulk Enroll Selected Beneficiaries (if any)
                 var selectedIds = SelectedProjectBeneficiaries
                     .Select(b => b.StagingId)
                     .ToList();
 
-                SetNeutralStatus($"Enrolling {selectedIds.Count} beneficiaries...");
-                var enrollResult = await distributionService.BulkAddBeneficiariesAsync(
-                    programId, 
-                    selectedIds, 
-                    _currentUser.Id);
-
-                if (!enrollResult.IsSuccess)
+                if (selectedIds.Count > 0)
                 {
-                    SetErrorStatus($"Project created, but enrollment failed: {enrollResult.Message}");
-                    return;
+                    SetNeutralStatus($"Enrolling {selectedIds.Count} beneficiaries...");
+                    var enrollResult = await distributionService.BulkAddBeneficiariesAsync(
+                        programId, 
+                        selectedIds, 
+                        _currentUser.Id);
+
+                    if (!enrollResult.IsSuccess)
+                    {
+                        SetErrorStatus($"Project created, but enrollment failed: {enrollResult.Message}");
+                        return;
+                    }
                 }
 
                 // 3. Persist cedula and requirement data for each beneficiary
@@ -2206,7 +2243,20 @@ namespace AttendanceShiftingManagement.ViewModels
 
                 await Task.WhenAll(membershipsTask, legacyProjectClaimsTask, distributedAmountTask);
 
-                var memberships = await membershipsTask;
+                var rawMemberships = await membershipsTask;
+                var memberships = rawMemberships
+                    .GroupBy(m => new
+                    {
+                        Key = m.BeneficiaryStagingId > 0 ? m.BeneficiaryStagingId.ToString() :
+                              !string.IsNullOrWhiteSpace(m.CivilRegistryId) ? m.CivilRegistryId.Trim().ToLowerInvariant() :
+                              !string.IsNullOrWhiteSpace(m.BeneficiaryId) ? m.BeneficiaryId.Trim().ToLowerInvariant() :
+                              !string.IsNullOrWhiteSpace(m.FullName) ? m.FullName.Trim().ToLowerInvariant() :
+                              m.Id.ToString(),
+                        m.Status
+                    })
+                    .Select(g => g.First())
+                    .ToList();
+
                 var legacyProjectClaims = await legacyProjectClaimsTask;
                 var distributedAmount = (await distributedAmountTask) ?? 0m;
 
@@ -2249,6 +2299,7 @@ namespace AttendanceShiftingManagement.ViewModels
                     return;
                 }
 
+                ProgramBeneficiaries.Clear();
                 foreach (var membership in memberships)
                 {
                     ProgramBeneficiaries.Add(ProjectDistributionBeneficiaryListItem.FromEntity(membership));
@@ -2256,6 +2307,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
                 OnPropertyChanged(nameof(HasProgramBeneficiaries));
 
+                ProgramReleaseHistory.Clear();
                 foreach (var release in releaseHistory)
                 {
                     ProgramReleaseHistory.Add(release);
@@ -2548,7 +2600,7 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 await using var context = new LocalDbContext();
                 var digitalIdService = new BeneficiaryDigitalIdService(context);
-                var lookup = await digitalIdService.ResolveLookupAsync(request);
+                var lookup = await digitalIdService.ResolveLookupAsync(request, SelectedProgram?.Id);
 
                 if (lookup == null)
                 {
@@ -2559,6 +2611,15 @@ namespace AttendanceShiftingManagement.ViewModels
                     SetErrorStatus(request.Source == BeneficiaryLookupSource.BeneficiaryId
                         ? "Beneficiary ID not found."
                         : "Invalid QR code or beneficiary not found.");
+                    return;
+                }
+
+                if (lookup.IsOfflineError)
+                {
+                    _ = Task.Run(() => { try { Console.Beep(400, 600); } catch { } });
+                    LastScanSummaryText = "Last Scan: Offline Error";
+                    LastScanSummaryBrush = (Brush)Application.Current.Resources["BrandWarningBrush"];
+                    SetErrorStatus(lookup.ErrorMessage ?? "OFFLINE — CANNOT VERIFY");
                     return;
                 }
 

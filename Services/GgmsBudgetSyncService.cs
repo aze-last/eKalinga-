@@ -106,8 +106,8 @@ namespace AttendanceShiftingManagement.Services
 
         public static string BuildBudgetAllocationQuery(string? allocationTable, string? officeTable)
         {
-            var allocation = NormalizeTableName(allocationTable, "budget_allocations");
-            var office = NormalizeTableName(officeTable, "tbl_offices");
+            var allocation = EscapeIdentifier(NormalizeTableName(allocationTable, "budget_allocations"));
+            var office = EscapeIdentifier(NormalizeTableName(officeTable, "tbl_offices"));
 
             return $"""
                 SELECT
@@ -128,8 +128,8 @@ namespace AttendanceShiftingManagement.Services
 
         public static string BuildLegacyAllocationQuery(string? allocationTable, string? officeTable)
         {
-            var allocation = NormalizeTableName(allocationTable, "officeallocations");
-            var office = NormalizeTableName(officeTable, "tbl_offices");
+            var allocation = EscapeIdentifier(NormalizeTableName(allocationTable, "officeallocations"));
+            var office = EscapeIdentifier(NormalizeTableName(officeTable, "tbl_offices"));
 
             return $"""
                 SELECT
@@ -150,7 +150,7 @@ namespace AttendanceShiftingManagement.Services
 
         public static string BuildSpentAmountQuery(string? configuredTableName)
         {
-            var tableName = NormalizeTableName(configuredTableName, "consolidated_transactions");
+            var tableName = EscapeIdentifier(NormalizeTableName(configuredTableName, "consolidated_transactions"));
 
             return $"""
                 SELECT COALESCE(SUM(amount), 0)
@@ -163,6 +163,9 @@ namespace AttendanceShiftingManagement.Services
         {
             return !string.IsNullOrWhiteSpace(configured) ? configured.Trim() : fallback;
         }
+
+        private static string EscapeIdentifier(string identifier) =>
+            identifier.Replace("`", "");
 
         private static bool HasConnectionDetails(DatabaseConnectionPreset preset)
         {

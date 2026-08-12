@@ -141,10 +141,19 @@ namespace AttendanceShiftingManagement.Services
 
 
 
+            var benUpper = NormalizeNullable(beneficiary.BeneficiaryId)?.ToUpperInvariant();
+            var civilUpper = NormalizeNullable(beneficiary.CivilRegistryId)?.ToUpperInvariant();
+            var searchFullName = (string.IsNullOrWhiteSpace(beneficiary.FullName)
+                ? BuildDisplayName(beneficiary.FirstName, beneficiary.MiddleName, beneficiary.LastName)
+                : beneficiary.FullName).Trim().ToUpperInvariant();
+
             var existingMembership = await _context.AyudaProjectBeneficiaries
                 .FirstOrDefaultAsync(item =>
                     item.AyudaProgramId == ayudaProgramId &&
-                    item.BeneficiaryStagingId == beneficiaryStagingId);
+                    (item.BeneficiaryStagingId == beneficiaryStagingId ||
+                     (!string.IsNullOrEmpty(benUpper) && item.BeneficiaryId != null && item.BeneficiaryId.Trim().ToUpper() == benUpper) ||
+                     (!string.IsNullOrEmpty(civilUpper) && item.CivilRegistryId != null && item.CivilRegistryId.Trim().ToUpper() == civilUpper) ||
+                     (!string.IsNullOrEmpty(searchFullName) && item.FullName != null && item.FullName.Trim().ToUpper() == searchFullName)));
 
             if (existingMembership != null)
             {
@@ -235,11 +244,16 @@ namespace AttendanceShiftingManagement.Services
             }
 
             var existingMemberships = await _context.AyudaProjectBeneficiaries
-                .Where(item => item.AyudaProgramId == ayudaProgramId && stagingIds.Contains(item.BeneficiaryStagingId))
-                .Select(item => item.BeneficiaryStagingId)
+                .AsNoTracking()
+                .Where(item => item.AyudaProgramId == ayudaProgramId)
                 .ToListAsync();
 
-            var newStagingIds = stagingIds.Except(existingMemberships).ToList();
+            var existingStagingIds = existingMemberships.Select(item => item.BeneficiaryStagingId).ToHashSet();
+            var existingCivilIds = existingMemberships.Where(item => !string.IsNullOrWhiteSpace(item.CivilRegistryId)).Select(item => item.CivilRegistryId!.Trim().ToLowerInvariant()).ToHashSet();
+            var existingBenIds = existingMemberships.Where(item => !string.IsNullOrWhiteSpace(item.BeneficiaryId)).Select(item => item.BeneficiaryId!.Trim().ToLowerInvariant()).ToHashSet();
+            var existingFullNames = existingMemberships.Where(item => !string.IsNullOrWhiteSpace(item.FullName)).Select(item => item.FullName.Trim().ToLowerInvariant()).ToHashSet();
+
+            var newStagingIds = stagingIds.Where(id => !existingStagingIds.Contains(id)).ToList();
             if (newStagingIds.Count == 0)
             {
                 return new ProjectDistributionOperationResult(false, "All selected beneficiaries are already included in this project.");
@@ -272,6 +286,22 @@ namespace AttendanceShiftingManagement.Services
 
             foreach (var b in beneficiaries)
             {
+                var benId = NormalizeNullable(b.BeneficiaryId)?.ToLowerInvariant();
+                var civilId = NormalizeNullable(b.CivilRegistryId)?.ToLowerInvariant();
+                var fullNameStr = (string.IsNullOrWhiteSpace(b.FullName)
+                    ? BuildDisplayName(b.FirstName, b.MiddleName, b.LastName)
+                    : b.FullName).Trim().ToLowerInvariant();
+
+                if (existingStagingIds.Contains(b.StagingID)) continue;
+                if (civilId != null && existingCivilIds.Contains(civilId)) continue;
+                if (benId != null && existingBenIds.Contains(benId)) continue;
+                if (!string.IsNullOrEmpty(fullNameStr) && existingFullNames.Contains(fullNameStr)) continue;
+
+                existingStagingIds.Add(b.StagingID);
+                if (civilId != null) existingCivilIds.Add(civilId);
+                if (benId != null) existingBenIds.Add(benId);
+                if (!string.IsNullOrEmpty(fullNameStr)) existingFullNames.Add(fullNameStr);
+
                 newMemberships.Add(new AyudaProjectBeneficiary
                 {
                     AyudaProgramId = ayudaProgramId,
@@ -646,7 +676,12 @@ namespace AttendanceShiftingManagement.Services
             if (!string.IsNullOrWhiteSpace(qrPayload))
             {
                 var digitalIdService = new BeneficiaryDigitalIdService(_context);
-                var lookupResult = await digitalIdService.LookupByQrPayloadAsync(qrPayload);
+                var lookupResult = await digitalIdService.LookupByQrPayloadAsync(qrPayload, ayudaProgramId);
+
+                if (lookupResult != null && lookupResult.IsOfflineError)
+                {
+                    return new ProjectDistributionOperationResult(false, lookupResult.ErrorMessage ?? "OFFLINE — CANNOT VERIFY");
+                }
 
                 if (lookupResult == null)
                 {
@@ -806,12 +841,24 @@ namespace AttendanceShiftingManagement.Services
 
         public async Task<IReadOnlyList<AyudaProjectBeneficiary>> GetBeneficiariesAsync(int ayudaProgramId)
         {
-            return await _context.AyudaProjectBeneficiaries
+            var rawList = await _context.AyudaProjectBeneficiaries
                 .AsNoTracking()
                 .Where(item => item.AyudaProgramId == ayudaProgramId)
                 .OrderBy(item => item.Status)
                 .ThenBy(item => item.FullName)
                 .ToListAsync();
+
+            return rawList
+                .GroupBy(m => new
+                {
+                    Key = !string.IsNullOrWhiteSpace(m.CivilRegistryId) ? m.CivilRegistryId.Trim().ToLowerInvariant() :
+                          !string.IsNullOrWhiteSpace(m.BeneficiaryId) ? m.BeneficiaryId.Trim().ToLowerInvariant() :
+                          !string.IsNullOrWhiteSpace(m.FullName) ? m.FullName.Trim().ToLowerInvariant() :
+                          m.BeneficiaryStagingId.ToString(),
+                    m.Status
+                })
+                .Select(g => g.First())
+                .ToList();
         }
 
         public async Task<IReadOnlyList<AyudaProjectClaim>> GetClaimsAsync(int ayudaProgramId)

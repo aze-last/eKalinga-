@@ -69,6 +69,9 @@ namespace AttendanceShiftingManagement.Models
         [Column("is_active")]
         public bool IsActive { get; set; } = true;
 
+        [Column("is_open_attendance")]
+        public bool IsOpenAttendance { get; set; } = true;
+
         [Column("created_by_user_id")]
         public int CreatedByUserId { get; set; }
 

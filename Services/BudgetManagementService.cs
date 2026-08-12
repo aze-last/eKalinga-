@@ -61,7 +61,8 @@ namespace AttendanceShiftingManagement.Services
         string? SourceProjectDetailsId = null,
         CashForWorkEventKind EventKind = CashForWorkEventKind.CashForWork,
         CashForWorkBenefitType BenefitType = CashForWorkBenefitType.Cash,
-        string? BenefitDescription = null);
+        string? BenefitDescription = null,
+        bool IsOpenAttendance = true);
 
     public sealed record CashForWorkProjectOperationResult(
         bool Success,
@@ -458,6 +459,7 @@ namespace AttendanceShiftingManagement.Services
                 EventKind = request.EventKind,
                 BenefitType = request.BenefitType,
                 BenefitDescription = request.BenefitDescription,
+                IsOpenAttendance = request.IsOpenAttendance,
                 Status = CashForWorkEventStatus.Open,
                 CashForWorkBudgetId = cfwBudget.Id,
                 CreatedByUserId = createdByUserId,

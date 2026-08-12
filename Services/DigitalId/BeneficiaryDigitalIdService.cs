@@ -30,7 +30,9 @@ namespace AttendanceShiftingManagement.Services
         IReadOnlyList<BeneficiaryAssistanceLedgerEntry> ReleaseHistory,
         string? Address,
         string? Age,
-        string? Sex);
+        string? Sex,
+        bool IsOfflineError = false,
+        string? ErrorMessage = null);
 
     public sealed class BeneficiaryDigitalIdService
     {
@@ -158,7 +160,7 @@ namespace AttendanceShiftingManagement.Services
             return true;
         }
 
-        public async Task<BeneficiaryDigitalIdLookupResult?> LookupByQrPayloadAsync(string qrPayload, CancellationToken cancellationToken = default)
+        public async Task<BeneficiaryDigitalIdLookupResult?> LookupByQrPayloadAsync(string qrPayload, int? ayudaProgramId = null, CancellationToken cancellationToken = default)
         {
             var normalizedPayload = NormalizeNullable(qrPayload);
             if (normalizedPayload == null)
@@ -166,10 +168,17 @@ namespace AttendanceShiftingManagement.Services
                 return null;
             }
 
+            ScanDiagnosticLogger.Log("LookupByQrPayloadAsync", _context, $"START | RawPayload='{qrPayload}' | ProgramId={ayudaProgramId}");
+
             // 1. Try exact match first (works for new format and exact old format)
             var digitalId = await _context.BeneficiaryDigitalIds
                 .AsNoTracking()
                 .FirstOrDefaultAsync(item => item.IsActive && item.QrPayload == normalizedPayload, cancellationToken);
+
+            if (digitalId != null)
+            {
+                ScanDiagnosticLogger.Log("LookupByQrPayloadAsync", _context, $"MATCH_STRATEGY=ExactMatch | DigitalId={digitalId.Id} | StagingId={digitalId.BeneficiaryStagingId}");
+            }
 
             // 2. Try replacing '?' with '|' (in case database has not run bootstrap repairs yet)
             if (digitalId == null && normalizedPayload.Contains('?'))
@@ -178,55 +187,127 @@ namespace AttendanceShiftingManagement.Services
                 digitalId = await _context.BeneficiaryDigitalIds
                     .AsNoTracking()
                     .FirstOrDefaultAsync(item => item.IsActive && item.QrPayload == fallbackPayload, cancellationToken);
+
+                if (digitalId != null)
+                {
+                    ScanDiagnosticLogger.Log("LookupByQrPayloadAsync", _context, $"MATCH_STRATEGY=QuestionMarkFallback | DigitalId={digitalId.Id} | StagingId={digitalId.BeneficiaryStagingId}");
+                }
             }
 
-            // 3. Fallback: Normalize by stripping delimiters ('|', '?', '-', spaces) to match database payload
+            // 3. Fallback: Robust Regex-based numeric StagingId extraction (handles ASMBID000123, ASM-BID|123, BID-123, etc. with variable digit lengths)
             if (digitalId == null)
             {
-                var cleanPayload = normalizedPayload.Replace("|", "").Replace("?", "").Replace("-", "").Replace(" ", "");
+                var match = System.Text.RegularExpressions.Regex.Match(
+                    normalizedPayload,
+                    @"(?i)(?:ASMBID|ASM[?|\-]?BID|BID)[?|\-]?(\d+)",
+                    System.Text.RegularExpressions.RegexOptions.CultureInvariant);
 
-                // If it looks like our local format, extract staging ID to do an indexed query
-                if (cleanPayload.StartsWith("ASMBID", StringComparison.OrdinalIgnoreCase) && cleanPayload.Length >= 12)
+                if (match.Success && int.TryParse(match.Groups[1].Value, out var stagingId))
                 {
-                    var stagingIdStr = cleanPayload.Substring(6, 6);
-                    if (int.TryParse(stagingIdStr, out var stagingId))
-                    {
-                        var potentialId = await _context.BeneficiaryDigitalIds
-                            .AsNoTracking()
-                            .FirstOrDefaultAsync(item => item.IsActive && item.BeneficiaryStagingId == stagingId, cancellationToken);
+                    var potentialId = await _context.BeneficiaryDigitalIds
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(item => item.IsActive && item.BeneficiaryStagingId == stagingId, cancellationToken);
 
-                        if (potentialId != null)
-                        {
-                            var dbCleanPayload = potentialId.QrPayload.Replace("|", "").Replace("?", "").Replace("-", "").Replace(" ", "");
-                            if (string.Equals(dbCleanPayload, cleanPayload, StringComparison.OrdinalIgnoreCase))
-                            {
-                                digitalId = potentialId;
-                            }
-                        }
+                    if (potentialId != null)
+                    {
+                        digitalId = potentialId;
+                        ScanDiagnosticLogger.Log("LookupByQrPayloadAsync", _context, $"MATCH_STRATEGY=RegexStagingIdMatch | ExtractedStagingId={stagingId} | DigitalId={digitalId.Id}");
                     }
                 }
             }
 
             if (digitalId == null)
             {
-                var remoteResult = await _verificationService.VerifyDigitalIdAsync(
-                    new DigitalIdVerificationRequest { QrPayload = normalizedPayload },
-                    cancellationToken);
+                ScanDiagnosticLogger.Log("LookupByQrPayloadAsync", _context, "LOCAL_MATCH=NONE | Attempting remote verification...");
+
+                VerificationResult? remoteResult = null;
+                try
+                {
+                    remoteResult = await _verificationService.VerifyDigitalIdAsync(
+                        new DigitalIdVerificationRequest { QrPayload = normalizedPayload },
+                        cancellationToken);
+                }
+                catch (Exception ex) when (ex is System.Net.Http.HttpRequestException || ex is TimeoutException || ex is System.Net.Sockets.SocketException || ex is InvalidOperationException)
+                {
+                    ScanDiagnosticLogger.Log("LookupByQrPayloadAsync", _context, $"REMOTE_VERIFY_EXCEPTION | Error={ex.Message}");
+                    return new BeneficiaryDigitalIdLookupResult(
+                        0, null, null, null,
+                        "OFFLINE — CANNOT VERIFY",
+                        null, null, "OFFLINE", null,
+                        Array.Empty<BeneficiaryAssistanceLedgerEntry>(),
+                        null, null, null,
+                        IsOfflineError: true,
+                        ErrorMessage: "OFFLINE — CANNOT VERIFY");
+                }
 
                 if (remoteResult != null && remoteResult.IsValid && remoteResult.BeneficiaryDetails != null)
                 {
                     var details = remoteResult.BeneficiaryDetails;
-                    
-                    var importedStaging = await _context.BeneficiaryStaging
-                        .FirstOrDefaultAsync(row => row.BeneficiaryId == details.BeneficiaryId, cancellationToken);
+                    var searchBenId = NormalizeNullable(details.BeneficiaryId);
+                    var searchCivilId = NormalizeNullable(details.CivilRegistryId);
 
+                    ScanDiagnosticLogger.Log("LookupByQrPayloadAsync", _context, $"REMOTE_VERIFY_SUCCESS | BeneficiaryId={searchBenId} | CivilRegistryId={searchCivilId}");
+
+                    // BUG 1 FIX: Case-insensitive, trimmed comparison on BOTH BeneficiaryId AND CivilRegistryId
+                    BeneficiaryStaging? importedStaging = null;
+                    if (searchBenId != null || searchCivilId != null)
+                    {
+                        var benUpper = searchBenId?.ToUpperInvariant();
+                        var civilUpper = searchCivilId?.ToUpperInvariant();
+
+                        var candidates = await _context.BeneficiaryStaging
+                            .Where(row =>
+                                (!string.IsNullOrEmpty(benUpper) && row.BeneficiaryId != null && row.BeneficiaryId.Trim().ToUpper() == benUpper) ||
+                                (!string.IsNullOrEmpty(civilUpper) && row.CivilRegistryId != null && row.CivilRegistryId.Trim().ToUpper() == civilUpper))
+                            .ToListAsync(cancellationToken);
+
+                        importedStaging = candidates.FirstOrDefault();
+                    }
+
+                    // BUG 2 FIX: Gate auto-import behind explicit project enrollment check if beneficiary does NOT exist locally
                     if (importedStaging == null)
                     {
+                        bool isEnrolled = false;
+                        if (ayudaProgramId.HasValue)
+                        {
+                            var benUpper = searchBenId?.ToUpperInvariant();
+                            var civilUpper = searchCivilId?.ToUpperInvariant();
+
+                            if (!string.IsNullOrEmpty(benUpper) || !string.IsNullOrEmpty(civilUpper))
+                            {
+                                isEnrolled = await _context.AyudaProjectBeneficiaries
+                                    .AnyAsync(apb => apb.AyudaProgramId == ayudaProgramId.Value &&
+                                        ((!string.IsNullOrEmpty(benUpper) && apb.BeneficiaryId != null && apb.BeneficiaryId.Trim().ToUpper() == benUpper) ||
+                                         (!string.IsNullOrEmpty(civilUpper) && apb.CivilRegistryId != null && apb.CivilRegistryId.Trim().ToUpper() == civilUpper)),
+                                        cancellationToken);
+                            }
+                        }
+
+                        if (ayudaProgramId.HasValue && !isEnrolled)
+                        {
+                            ScanDiagnosticLogger.Log("LookupByQrPayloadAsync", _context, $"REMOTE_UNENROLLED | Beneficiary '{details.FullName}' not enrolled in Program #{ayudaProgramId}. Returning read-only result without saving to DB.");
+
+                            return new BeneficiaryDigitalIdLookupResult(
+                                0,
+                                details.ResidentsId,
+                                null,
+                                null,
+                                details.FullName ?? BuildDisplayName(details.FirstName, details.MiddleName, details.LastName),
+                                searchBenId,
+                                searchCivilId,
+                                remoteResult.IdNumber ?? "REMOTE-UNPERSISTED",
+                                null,
+                                Array.Empty<BeneficiaryAssistanceLedgerEntry>(),
+                                NormalizeNullable(details.Address),
+                                NormalizeNullable(details.Age),
+                                NormalizeNullable(details.Sex));
+                        }
+
                         importedStaging = new BeneficiaryStaging
                         {
                             ResidentsId = details.ResidentsId,
-                            BeneficiaryId = details.BeneficiaryId,
-                            CivilRegistryId = details.CivilRegistryId,
+                            BeneficiaryId = searchBenId,
+                            CivilRegistryId = searchCivilId,
                             LastName = details.LastName,
                             FirstName = details.FirstName,
                             MiddleName = details.MiddleName,
@@ -247,6 +328,7 @@ namespace AttendanceShiftingManagement.Services
                         };
                         _context.BeneficiaryStaging.Add(importedStaging);
                         await _context.SaveChangesAsync(cancellationToken);
+                        ScanDiagnosticLogger.Log("LookupByQrPayloadAsync", _context, $"STAGING_IMPORTED | StagingId={importedStaging.StagingID}");
                     }
 
                     var importedDigitalId = await _context.BeneficiaryDigitalIds
@@ -282,12 +364,28 @@ namespace AttendanceShiftingManagement.Services
                         };
                         _context.BeneficiaryDigitalIds.Add(importedDigitalId);
                         await _context.SaveChangesAsync(cancellationToken);
+                        ScanDiagnosticLogger.Log("LookupByQrPayloadAsync", _context, $"DIGITAL_ID_IMPORTED | DigitalId={importedDigitalId.Id}");
                     }
 
                     digitalId = importedDigitalId;
                 }
                 else
                 {
+                    var status = remoteResult?.Status;
+                    if (status == "OfflineUnavailable" || status == "NetworkError")
+                    {
+                        ScanDiagnosticLogger.Log("LookupByQrPayloadAsync", _context, $"REMOTE_VERIFY_OFFLINE | Status={status}");
+                        return new BeneficiaryDigitalIdLookupResult(
+                            0, null, null, null,
+                            "OFFLINE — CANNOT VERIFY",
+                            null, null, "OFFLINE", null,
+                            Array.Empty<BeneficiaryAssistanceLedgerEntry>(),
+                            null, null, null,
+                            IsOfflineError: true,
+                            ErrorMessage: "OFFLINE — CANNOT VERIFY");
+                    }
+
+                    ScanDiagnosticLogger.Log("LookupByQrPayloadAsync", _context, $"REMOTE_VERIFY_FAILED | Status={status ?? "NULL"}");
                     return null;
                 }
             }
@@ -322,7 +420,7 @@ namespace AttendanceShiftingManagement.Services
         /// Single resolution pipeline for both QR scans and manual Beneficiary ID key-in.
         /// Both sources return the identical <see cref="BeneficiaryDigitalIdLookupResult"/>.
         /// </summary>
-        public async Task<BeneficiaryDigitalIdLookupResult?> ResolveLookupAsync(BeneficiaryLookupRequest request, CancellationToken cancellationToken = default)
+        public async Task<BeneficiaryDigitalIdLookupResult?> ResolveLookupAsync(BeneficiaryLookupRequest request, int? ayudaProgramId = null, CancellationToken cancellationToken = default)
         {
             var value = NormalizeNullable(request.Value);
             if (value == null)
@@ -332,7 +430,7 @@ namespace AttendanceShiftingManagement.Services
 
             return request.Source switch
             {
-                BeneficiaryLookupSource.QrPayload => await LookupByQrPayloadAsync(value, cancellationToken),
+                BeneficiaryLookupSource.QrPayload => await LookupByQrPayloadAsync(value, ayudaProgramId, cancellationToken),
                 BeneficiaryLookupSource.BeneficiaryId => await LookupByBeneficiaryIdAsync(value, cancellationToken),
                 _ => null
             };
@@ -387,7 +485,12 @@ namespace AttendanceShiftingManagement.Services
                 return row.FullName.Trim();
             }
 
-            return string.Join(" ", new[] { row.FirstName, row.MiddleName, row.LastName }
+            return BuildDisplayName(row.FirstName, row.MiddleName, row.LastName);
+        }
+
+        private static string BuildDisplayName(string? firstName, string? middleName, string? lastName)
+        {
+            return string.Join(" ", new[] { firstName, middleName, lastName }
                 .Where(value => !string.IsNullOrWhiteSpace(value))
                 .Select(value => value!.Trim()));
         }

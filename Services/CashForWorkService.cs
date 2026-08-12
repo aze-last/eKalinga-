@@ -166,7 +166,8 @@ namespace AttendanceShiftingManagement.Services
             CashForWorkEventKind eventKind = CashForWorkEventKind.CashForWork,
             DateTime? finishDate = null,
             CashForWorkBenefitType benefitType = CashForWorkBenefitType.None,
-            string? benefitDescription = null)
+            string? benefitDescription = null,
+            bool isOpenAttendance = true)
         {
             // Use provided budget ID, or fall back to global budget if not specified
             var resolvedBudgetId = cashForWorkBudgetId ?? await ResolveGlobalBudgetAsync();
@@ -187,6 +188,7 @@ namespace AttendanceShiftingManagement.Services
                 BenefitDescription = benefitDescription,
                 UnitAmount = unitAmount,
                 CashForWorkBudgetId = resolvedBudgetId,
+                IsOpenAttendance = isOpenAttendance,
                 CreatedAt = DateTime.Now,
                 UpdatedAt = DateTime.Now
             };
@@ -410,7 +412,7 @@ namespace AttendanceShiftingManagement.Services
                     : null;
             }
 
-            if (cashForWorkEvent.EventKind != CashForWorkEventKind.Seminar)
+            if (!cashForWorkEvent.IsOpenAttendance)
             {
                 return null;
             }

@@ -89,6 +89,22 @@ public sealed class BeneficiaryDigitalIdServiceTests
         Assert.Null(result);
     }
 
+    [Fact]
+    public async Task LookupByQrPayloadAsync_RegexMatchesVariableDigitsAndDelimiters()
+    {
+        using var context = TestDbContextFactory.CreateContext();
+        var admin = SeedAdmin(context);
+        var stagingRow = SeedApprovedStaging(context);
+        var service = new BeneficiaryDigitalIdService(context);
+
+        var digitalId = await service.EnsureIssuedAsync(stagingRow.StagingID, admin.Id);
+
+        // Test regex payload extraction matching ASMBID + staging ID + random suffix
+        var lookup = await service.LookupByQrPayloadAsync($"ASMBID{stagingRow.StagingID:D6}XYZ9999");
+        Assert.NotNull(lookup);
+        Assert.Equal(stagingRow.StagingID, lookup!.BeneficiaryStagingId);
+    }
+
     private static User SeedAdmin(Data.LocalDbContext context)
     {
         var user = new User

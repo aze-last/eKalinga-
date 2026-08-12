@@ -58,6 +58,9 @@ namespace AttendanceShiftingManagement.Models
         [Column("event_kind")]
         public CashForWorkEventKind EventKind { get; set; } = CashForWorkEventKind.CashForWork;
 
+        [Column("is_open_attendance")]
+        public bool IsOpenAttendance { get; set; } = true;
+
         [Column("ayuda_program_id")]
         public int? AyudaProgramId { get; set; }
 

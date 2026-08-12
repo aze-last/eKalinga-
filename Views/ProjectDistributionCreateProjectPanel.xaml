@@ -135,25 +135,43 @@
                                       Style="{StaticResource MaterialDesignOutlinedComboBox}"
                                       Margin="0,0,0,16"/>
 
-                            <ComboBox ItemsSource="{Binding ReleaseKinds}"
-                                      SelectedItem="{Binding NewProjectSelectedReleaseKind}"
-                                      materialDesign:HintAssist.Hint="Release Format *"
-                                      Style="{StaticResource MaterialDesignOutlinedComboBox}"
-                                      Margin="0,0,0,16"/>
+                            <CheckBox IsChecked="{Binding NewProjectIsOpenAttendance}"
+                                      Content="Open Attendance Mode (Scan without pre-enrollment)"
+                                      Visibility="{Binding IsSeminarSelected, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                      Margin="0,0,0,16"
+                                      FontSize="12"
+                                      FontWeight="SemiBold"
+                                      Foreground="{DynamicResource BrandMidnightBrush}"/>
 
-                            <!-- Cash Amount (Visible if Cash) -->
-                            <TextBox Text="{Binding NewProjectUnitAmountText}"
-                                     materialDesign:HintAssist.Hint="Unit Amount (PHP) *"
-                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                     Margin="0,0,0,16"
-                                     Visibility="{Binding NewProjectIsCashKind, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                            <CheckBox IsChecked="{Binding NewProjectHasSeminarBenefit}"
+                                      Content="Include Benefit Distribution (Cash or Goods Payout)"
+                                      Visibility="{Binding IsSeminarSelected, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                      Margin="0,0,0,16"
+                                      FontSize="12"
+                                      FontWeight="SemiBold"
+                                      Foreground="{DynamicResource BrandMidnightBrush}"/>
 
-                            <!-- Item Description (Visible if Goods) -->
-                            <TextBox Text="{Binding NewProjectItemDescription}"
-                                     materialDesign:HintAssist.Hint="Item/Goods Detail *"
-                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                     Margin="0,0,0,16"
-                                     Visibility="{Binding NewProjectIsCashKind, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
+                            <StackPanel Visibility="{Binding NewProjectShowBenefitControls, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <ComboBox ItemsSource="{Binding ReleaseKinds}"
+                                          SelectedItem="{Binding NewProjectSelectedReleaseKind}"
+                                          materialDesign:HintAssist.Hint="Release Format *"
+                                          Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                          Margin="0,0,0,16"/>
+
+                                <!-- Cash Amount (Visible if Cash) -->
+                                <TextBox Text="{Binding NewProjectUnitAmountText}"
+                                         materialDesign:HintAssist.Hint="Unit Amount (PHP) *"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         Margin="0,0,0,16"
+                                         Visibility="{Binding NewProjectIsCashKind, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+
+                                <!-- Item Description (Visible if Goods) -->
+                                <TextBox Text="{Binding NewProjectItemDescription}"
+                                         materialDesign:HintAssist.Hint="Item/Goods Detail *"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         Margin="0,0,0,16"
+                                         Visibility="{Binding NewProjectIsCashKind, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
+                            </StackPanel>
 
                             <TextBox Text="{Binding NewProjectBudgetCapText}"
                                      materialDesign:HintAssist.Hint="Total Budget Cap (Optional)"
@@ -187,14 +205,26 @@
                             <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
 
-                        <TextBlock Text="BENEFICIARY ENROLLMENT" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,8"/>
+                        <StackPanel Grid.Row="0">
+                            <TextBlock Text="BENEFICIARY ENROLLMENT" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,8"/>
 
-                        <TextBox Grid.Row="0"
-                                 Text="{Binding NewProjectSearchText, UpdateSourceTrigger=PropertyChanged}"
-                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                 materialDesign:HintAssist.Hint="Search unassigned approved beneficiaries..."
-                                 materialDesign:TextFieldAssist.HasClearButton="True"
-                                 FontSize="14"/>
+                            <Border Visibility="{Binding IsAttendanceBasedSelected, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                    Background="{DynamicResource ThemeCardSubtleBrush}"
+                                    CornerRadius="8"
+                                    Padding="12,8"
+                                    Margin="0,0,0,12">
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon Kind="InformationOutline" Width="18" Height="18" Foreground="{DynamicResource ThemePrimaryActionBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <TextBlock Text="Attendance-Based Event: Beneficiaries are registered dynamically upon scanning attendance." FontSize="11" Foreground="{DynamicResource BrandMidnightBrush}" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Border>
+
+                            <TextBox Text="{Binding NewProjectSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     materialDesign:HintAssist.Hint="Search unassigned approved beneficiaries..."
+                                     materialDesign:TextFieldAssist.HasClearButton="True"
+                                     FontSize="14"/>
+                        </StackPanel>
 
                         <!-- Dual List Interaction -->
                         <Grid Grid.Row="2">

@@ -1,4 +1,6 @@
+using AttendanceShiftingManagement.Models;
 using AttendanceShiftingManagement.Services;
+using MaterialDesignThemes.Wpf;
 using System;
 using System.Windows;
 
@@ -43,6 +45,34 @@ namespace AttendanceShiftingManagement.Views
 
         public string EventNotes { get; private set; } = string.Empty;
 
+        public bool IsOpenAttendance { get; private set; } = true;
+
+        public CashForWorkBenefitType BenefitType { get; private set; } = CashForWorkBenefitType.None;
+
+        public decimal UnitAmount { get; private set; } = 0m;
+
+        public string? BenefitDescription { get; private set; }
+
+        public void SetIsSeminarEvent(bool isSeminar)
+        {
+            OpenAttendanceCheckBox.Visibility = isSeminar ? Visibility.Visible : Visibility.Collapsed;
+            HasBenefitCheckBox.Visibility = isSeminar ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private void HasBenefitCheckBox_Click(object sender, RoutedEventArgs e)
+        {
+            SeminarBenefitControlsGrid.Visibility = HasBenefitCheckBox.IsChecked == true
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        }
+
+        private void SeminarBenefitTypeComboBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        {
+            if (SeminarBenefitDetailTextBox == null) return;
+            var isCash = SeminarBenefitTypeComboBox.SelectedIndex == 0;
+            materialDesign:HintAssist.SetHint(SeminarBenefitDetailTextBox, isCash ? "Unit Amount (PHP)" : "Goods Detail / Pack");
+        }
+
         private void Create_Click(object sender, RoutedEventArgs e)
         {
             var eventTitle = TitleTextBox.Text?.Trim() ?? string.Empty;
@@ -76,6 +106,37 @@ namespace AttendanceShiftingManagement.Views
             EventStartTime = startTime;
             EventEndTime = endTime;
             EventNotes = NotesTextBox.Text?.Trim() ?? string.Empty;
+            IsOpenAttendance = OpenAttendanceCheckBox.IsChecked == true;
+
+            if (HasBenefitCheckBox.IsChecked == true)
+            {
+                var isCash = SeminarBenefitTypeComboBox.SelectedIndex == 0;
+                var detail = SeminarBenefitDetailTextBox.Text?.Trim() ?? string.Empty;
+
+                if (isCash)
+                {
+                    BenefitType = CashForWorkBenefitType.Cash;
+                    if (decimal.TryParse(detail, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.CurrentCulture, out var amt))
+                    {
+                        UnitAmount = amt;
+                    }
+                    else if (decimal.TryParse(detail, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out var amtInv))
+                    {
+                        UnitAmount = amtInv;
+                    }
+                }
+                else
+                {
+                    BenefitType = CashForWorkBenefitType.Goods;
+                    BenefitDescription = detail;
+                }
+            }
+            else
+            {
+                BenefitType = CashForWorkBenefitType.None;
+                UnitAmount = 0m;
+                BenefitDescription = null;
+            }
 
             DialogResult = true;
             Close();

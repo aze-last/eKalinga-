@@ -268,7 +268,19 @@ namespace AttendanceShiftingManagement.Data
                 connection,
                 "ayuda_programs",
                 "source_project_details_id",
-                "ALTER TABLE `ayuda_programs` ADD COLUMN `source_project_details_id` varchar(45) NULL;");
+                "ALTER TABLE `ayuda_programs` ADD COLUMN `source_project_details_id` varchar(64) NULL;");
+
+            EnsureColumnExists(
+                connection,
+                "ayuda_programs",
+                "is_open_attendance",
+                "ALTER TABLE `ayuda_programs` ADD COLUMN `is_open_attendance` tinyint(1) NOT NULL DEFAULT 1;");
+
+            EnsureColumnExists(
+                connection,
+                "cash_for_work_events",
+                "is_open_attendance",
+                "ALTER TABLE `cash_for_work_events` ADD COLUMN `is_open_attendance` tinyint(1) NOT NULL DEFAULT 1;");
 
             EnsureColumnExists(
                 connection,

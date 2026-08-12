@@ -995,7 +995,7 @@
         <!-- ========================================== -->
         <!-- OVERLAY: Pending Reason Modal              -->
         <!-- ========================================== -->
-        <Grid Background="#CC0F172A" Visibility="{Binding IsPendingReasonModalVisible, Converter={StaticResource BooleanToVisibilityConverter}}" Panel.ZIndex="350">
+        <Grid Grid.RowSpan="2" Background="#CC0F172A" Visibility="{Binding IsPendingReasonModalVisible, Converter={StaticResource BooleanToVisibilityConverter}}" Panel.ZIndex="350">
             <Border Background="White" Width="450" VerticalAlignment="Center" HorizontalAlignment="Center" CornerRadius="16" Padding="30">
                 <Border.Effect>
                     <DropShadowEffect BlurRadius="30" ShadowDepth="10" Opacity="0.1" Direction="270"/>

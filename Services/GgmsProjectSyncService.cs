@@ -228,7 +228,7 @@ namespace AttendanceShiftingManagement.Services
         /// </summary>
         public static string BuildProjectDetailsQuery(string? projectDetailsTable)
         {
-            var table = NormalizeTableName(projectDetailsTable, "project_details");
+            var table = EscapeIdentifier(NormalizeTableName(projectDetailsTable, "project_details"));
 
             return $"""
                 SELECT
@@ -253,6 +253,9 @@ namespace AttendanceShiftingManagement.Services
         {
             return !string.IsNullOrWhiteSpace(configured) ? configured.Trim() : fallback;
         }
+
+        private static string EscapeIdentifier(string identifier) =>
+            identifier.Replace("`", "");
 
         private static bool HasConnectionDetails(DatabaseConnectionPreset preset)
         {

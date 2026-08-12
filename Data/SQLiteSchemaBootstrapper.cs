@@ -155,6 +155,13 @@ namespace AttendanceShiftingManagement.Data
                 if (ayudaProgramColumns.Count > 0)
                 {
                     EnsureColumnExists(connection, "ayuda_programs", "source_project_details_id", "TEXT NULL", ayudaProgramColumns);
+                    EnsureColumnExists(connection, "ayuda_programs", "is_open_attendance", "INTEGER NOT NULL DEFAULT 1", ayudaProgramColumns);
+                }
+
+                var cfwEventColumns = GetTableColumns(connection, "cash_for_work_events");
+                if (cfwEventColumns.Count > 0)
+                {
+                    EnsureColumnExists(connection, "cash_for_work_events", "is_open_attendance", "INTEGER NOT NULL DEFAULT 1", cfwEventColumns);
                 }
 
                 // Per-project CFW budget funding link + schedule columns (mirrors migration

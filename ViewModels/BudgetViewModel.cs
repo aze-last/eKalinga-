@@ -1937,7 +1937,10 @@ namespace AttendanceShiftingManagement.ViewModels
             if (_selectedEnrollmentStagingIds.Add(candidate.StagingId))
             {
                 candidate.IsSelected = true;
-                SelectedEnrollmentBeneficiaries.Add(candidate);
+                if (!SelectedEnrollmentBeneficiaries.Any(item => item.StagingId == candidate.StagingId))
+                {
+                    SelectedEnrollmentBeneficiaries.Add(candidate);
+                }
                 SelectedEnrollmentCount = _selectedEnrollmentStagingIds.Count;
             }
 
