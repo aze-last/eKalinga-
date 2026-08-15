@@ -40,7 +40,7 @@
             <SolidColorBrush x:Key="ThemeCardSubtleBrush" Color="#F8FAFC" />
             <SolidColorBrush x:Key="ThemeInputSurfaceBrush" Color="#FFFFFF" />
             <SolidColorBrush x:Key="ThemeInputBorderBrush" Color="#CCD6E3" />
-            <SolidColorBrush x:Key="ThemePrimaryActionBrush" Color="#1E4E89" />
+            <SolidColorBrush x:Key="ThemePrimaryActionBrush" Color="#15803D" />
             <SolidColorBrush x:Key="ThemePrimaryActionForegroundBrush" Color="#FFFFFF" />
             <SolidColorBrush x:Key="ThemeSecondaryActionBrush" Color="#F8FAFD" />
             <SolidColorBrush x:Key="ThemeSecondaryActionBorderBrush" Color="#CCD6E3" />
@@ -61,6 +61,7 @@
             <helpers:StringToVisibilityConverter x:Key="StringToVisibilityConverter" />
             <helpers:EqualityToBooleanConverter x:Key="EqualityToBooleanConverter" />
             <helpers:EqualityToBooleanConverter x:Key="EqualityToBooleanInverseConverter" Inverse="True" />
+            <helpers:AyudaProgramTypeToDisplayNameConverter x:Key="AyudaProgramTypeToDisplayNameConverter" />
 
             <!-- Local fallback style keys so the app and designer do not depend on
                  toolkit-specific keyed resources being present in every environment. -->

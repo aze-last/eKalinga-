@@ -18,16 +18,12 @@ public sealed class MasterListPageBindingTests
 
         Assert.Contains("Text=\"MASTERLIST &amp; REGISTRY\"", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Text=\"Validated Beneficiaries\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("ItemsSource=\"{Binding PendingBeneficiaries}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("ItemsSource=\"{Binding ApprovedBeneficiaries}\"", xaml, StringComparison.Ordinal);
         
-        // Independent pagination commands
-        Assert.Contains("Command=\"{Binding PreviousPendingPageCommand}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Command=\"{Binding NextPendingPageCommand}\"", xaml, StringComparison.Ordinal);
+        // Registry pagination commands
         Assert.Contains("Command=\"{Binding PreviousApprovedPageCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding NextApprovedPageCommand}\"", xaml, StringComparison.Ordinal);
 
-        Assert.Contains("Text=\"{Binding PendingPageSummary}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"{Binding ApprovedPageSummary}\"", xaml, StringComparison.Ordinal);
         
         Assert.Contains("Background=\"{DynamicResource ThemeCardSubtleBrush}\"", xaml, StringComparison.Ordinal);

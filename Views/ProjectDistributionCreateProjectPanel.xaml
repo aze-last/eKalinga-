@@ -131,9 +131,16 @@
 
                             <ComboBox ItemsSource="{Binding ProgramTypes}"
                                       SelectedItem="{Binding NewProjectSelectedType}"
-                                      materialDesign:HintAssist.Hint="Assistance Category *"
+                                      materialDesign:HintAssist.Hint="Project Purpose *"
+                                      materialDesign:HintAssist.HelperText="💡 Operational purpose &amp; tracking rules for this project"
                                       Style="{StaticResource MaterialDesignOutlinedComboBox}"
-                                      Margin="0,0,0,16"/>
+                                      Margin="0,0,0,16">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Converter={StaticResource AyudaProgramTypeToDisplayNameConverter}}"/>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
 
                             <CheckBox IsChecked="{Binding NewProjectIsOpenAttendance}"
                                       Content="Open Attendance Mode (Scan without pre-enrollment)"

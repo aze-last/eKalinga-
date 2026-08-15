@@ -28,41 +28,6 @@ namespace AttendanceShiftingManagement.Services
                 return new InitialAdminState(false, "An active admin account already exists for this database.");
             }
 
-            var hasAnyUsers = context.Users.Any();
-            if (!hasAnyUsers)
-            {
-                var timestamp = DateTime.Now;
-                var user = new User
-                {
-                    Username = "admin",
-                    Email = "admin@barangay.local",
-                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("admin123"),
-                    Role = UserRole.SuperAdmin,
-                    IsActive = true,
-                    CreatedAt = timestamp,
-                    UpdatedAt = timestamp
-                };
-                context.Users.Add(user);
-                context.SaveChanges();
-
-                context.UserProfiles.Add(new UserProfile
-                {
-                    UserId = user.Id,
-                    FullName = "System Administrator",
-                    Nickname = "admin",
-                    Address = "Barangay Hall",
-                    Phone = string.Empty,
-                    EmergencyContactName = string.Empty,
-                    EmergencyContactPhone = string.Empty,
-                    PhotoPath = string.Empty,
-                    CreatedAt = timestamp,
-                    UpdatedAt = timestamp
-                });
-                context.SaveChanges();
-
-                return new InitialAdminState(false, "Default admin seeded.");
-            }
-
             return new InitialAdminState(true, "No active admin account exists for this database. Create one now to restore access.");
         }
 

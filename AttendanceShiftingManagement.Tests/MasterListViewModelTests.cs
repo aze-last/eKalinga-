@@ -11,35 +11,18 @@ public sealed class MasterListViewModelTests
     {
         var queryService = new FakeMasterListQueryService();
         
-        // Result for Pending
         queryService.Enqueue(new MasterListPageResult
         {
-            Beneficiaries = BuildBeneficiaries(1, 10),
+            Beneficiaries = BuildBeneficiaries(1, 25),
             TotalBeneficiaries = 40000,
-            PendingCount = 39975,
-            ApprovedCount = 25,
+            PendingCount = 0,
+            ApprovedCount = 40000,
             LinkedCivilRegistryCount = 32000,
             SeniorCount = 8000,
             PwdCount = 1200,
-            FilteredBeneficiaryCount = 39975,
-            SourceDatabase = "ayuda_local",
-            SourceServer = "127.0.0.1",
-            LastUpdatedAt = new DateTime(2026, 3, 26, 9, 30, 0)
-        });
-
-        // Result for Approved
-        queryService.Enqueue(new MasterListPageResult
-        {
-            Beneficiaries = BuildBeneficiaries(11, 25),
-            TotalBeneficiaries = 40000,
-            PendingCount = 39975,
-            ApprovedCount = 25,
-            LinkedCivilRegistryCount = 32000,
-            SeniorCount = 8000,
-            PwdCount = 1200,
-            FilteredBeneficiaryCount = 25,
-            SourceDatabase = "ayuda_local",
-            SourceServer = "127.0.0.1",
+            FilteredBeneficiaryCount = 40000,
+            SourceDatabase = "ams.db",
+            SourceServer = "eKalinga Local Registry",
             LastUpdatedAt = new DateTime(2026, 3, 26, 9, 30, 0)
         });
 
@@ -47,30 +30,17 @@ public sealed class MasterListViewModelTests
 
         await viewModel.RefreshAsync();
 
-        Assert.Equal(2, queryService.Requests.Count);
+        Assert.Single(queryService.Requests);
         
-        // Check Pending Request
-        var pendingRequest = queryService.Requests[0];
-        Assert.Equal(1, pendingRequest.PageNumber);
-        Assert.Contains(MasterListQuickFilters.Pending, pendingRequest.QuickFilters);
+        var request = queryService.Requests[0];
+        Assert.Equal(1, request.PageNumber);
 
-        // Check Approved Request
-        var approvedRequest = queryService.Requests[1];
-        Assert.Equal(1, approvedRequest.PageNumber);
-        Assert.Contains(MasterListQuickFilters.Approved, approvedRequest.QuickFilters);
-
-        Assert.Equal(10, viewModel.PendingBeneficiaries.Count);
         Assert.Equal(25, viewModel.ApprovedBeneficiaries.Count);
-        
-        Assert.Equal(1, viewModel.PendingCurrentPage);
-        Assert.Equal(400, viewModel.PendingTotalPages); // 39975 / 100 = 399.75 -> 400
-        Assert.Equal("Page 1 of 400", viewModel.PendingPageIndicator);
-        
         Assert.Equal(1, viewModel.ApprovedCurrentPage);
-        Assert.Equal(1, viewModel.ApprovedTotalPages); // 25 / 100 = 0.25 -> 1
+        Assert.Equal(400, viewModel.ApprovedTotalPages); // 40000 / 100 = 400
+        Assert.Equal("Page 1 of 400", viewModel.ApprovedPageIndicator);
         
-        Assert.Equal(25, viewModel.TotalApprovedBeneficiaries);
-        Assert.Equal(39975, viewModel.TotalPendingBeneficiaries);
+        Assert.Equal(40000, viewModel.TotalApprovedBeneficiaries);
     }
 
     [Fact]
@@ -87,16 +57,12 @@ public sealed class MasterListViewModelTests
     }
 
     [Fact]
-    public async Task GoToNextPendingPageAsync_RequestsNextPageUsingCurrentFilters()
+    public async Task GoToNextApprovedPageAsync_RequestsNextPageUsingCurrentFilters()
     {
         var queryService = new FakeMasterListQueryService();
         
-        // Refresh calls: Pending then Approved
-        queryService.Enqueue(new MasterListPageResult { FilteredBeneficiaryCount = 200, PendingCount = 200, Beneficiaries = BuildBeneficiaries(1, 10) });
-        queryService.Enqueue(new MasterListPageResult { FilteredBeneficiaryCount = 50, ApprovedCount = 50, Beneficiaries = BuildBeneficiaries(11, 40) });
-        
-        // NextPage call: Pending
-        queryService.Enqueue(new MasterListPageResult { FilteredBeneficiaryCount = 200, PendingCount = 200, Beneficiaries = BuildBeneficiaries(21, 10) });
+        queryService.Enqueue(new MasterListPageResult { TotalBeneficiaries = 200, FilteredBeneficiaryCount = 200, ApprovedCount = 200, Beneficiaries = BuildBeneficiaries(1, 10) });
+        queryService.Enqueue(new MasterListPageResult { TotalBeneficiaries = 200, FilteredBeneficiaryCount = 200, ApprovedCount = 200, Beneficiaries = BuildBeneficiaries(21, 10) });
 
         var viewModel = new MasterListViewModel(null, queryService, autoLoad: false, autoRefresh: false)
         {
@@ -108,20 +74,19 @@ public sealed class MasterListViewModelTests
         seniorFilter.IsSelected = true;
 
         await viewModel.RefreshAsync();
-        await viewModel.GoToNextPendingPageAsync();
+        await viewModel.GoToNextApprovedPageAsync();
 
-        Assert.Equal(3, queryService.Requests.Count);
+        Assert.Equal(2, queryService.Requests.Count);
 
-        // Check requests use ana and senior
         foreach (var req in queryService.Requests)
         {
             Assert.Equal("ana", req.SearchText);
             Assert.Contains(MasterListQuickFilters.SeniorCitizens, req.QuickFilters);
         }
 
-        Assert.Equal(2, queryService.Requests[2].PageNumber); // NextPage call
-        Assert.Equal(2, viewModel.PendingCurrentPage);
-        Assert.Equal(4, viewModel.PendingTotalPages); // 200 / 50 = 4
+        Assert.Equal(2, queryService.Requests[1].PageNumber);
+        Assert.Equal(2, viewModel.ApprovedCurrentPage);
+        Assert.Equal(4, viewModel.ApprovedTotalPages); // 200 / 50 = 4
     }
 
     [Fact]

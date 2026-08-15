@@ -11,7 +11,7 @@
       FontFamily="{materialDesign:MaterialDesignFont}">
 
     <UserControl.Resources>
-        <SolidColorBrush x:Key="PrimaryBrandBrush" Color="#1E4E89"/>
+        <SolidColorBrush x:Key="PrimaryBrandBrush" Color="#15803D"/>
         <SolidColorBrush x:Key="ActionAccentBrush" Color="#F59E0B"/>
         <SolidColorBrush x:Key="SidebarBackgroundBrush" Color="#F8FAFC"/>
         <SolidColorBrush x:Key="CardBorderBrush" Color="#E2E8F0"/>

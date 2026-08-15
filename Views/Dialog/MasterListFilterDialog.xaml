@@ -73,35 +73,6 @@
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
-
-                <Separator Margin="0,16" Background="{DynamicResource BrandBorderBrush}"/>
-
-                <TextBlock Text="MOBILE SCANNER" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="4,0,0,8"/>
-                <materialDesign:Card Padding="12" Background="{DynamicResource ThemeCardSubtleBrush}" UniformCornerRadius="12">
-                    <Grid MinHeight="100">
-                        <Button Content="CREATE LOOKUP SESSION"
-                                Command="{Binding CreateLookupScannerSessionCommand}"
-                                Style="{StaticResource GoldActionButton}"
-                                Height="36" FontSize="11"
-                                Visibility="{Binding LookupScannerSessionUrl, Converter={StaticResource NullToHiddenConverter}, ConverterParameter=Inverse}"/>
-
-                        <StackPanel Visibility="{Binding LookupScannerSessionUrl, Converter={StaticResource NullToHiddenConverter}}">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <Border Background="White" Padding="4" CornerRadius="6" Grid.Column="0">
-                                    <Image Source="{Binding LookupScannerQrImage}" Height="80" Width="80"/>
-                                </Border>
-                                <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
-                                    <TextBlock Text="PIN" FontSize="9" Foreground="{DynamicResource BrandTextSecondaryBrush}" FontWeight="Bold"/>
-                                    <TextBlock Text="{Binding LookupScannerSessionPin}" FontSize="18" Foreground="{DynamicResource BrandMidnightBrush}" FontWeight="ExtraBold" />
-                                </StackPanel>
-                            </Grid>
-                        </StackPanel>
-                    </Grid>
-                </materialDesign:Card>
             </StackPanel>
         </ScrollViewer>
 

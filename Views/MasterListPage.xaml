@@ -251,12 +251,6 @@
                                             <TextBlock Text="SCAN VIA PC CAMERA" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </Button>
-                                    <Button Command="{Binding PrintDigitalIdCommand}" Style="{StaticResource RailButton}">
-                                        <StackPanel Orientation="Horizontal">
-                                            <materialDesign:PackIcon Kind="PrinterOutline" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                            <TextBlock Text="PRINT DIGITAL ID" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                    </Button>
                                     <Button Command="{Binding UploadDigitalIdPhotoCommand}" Style="{StaticResource RailButton}">
                                         <StackPanel Orientation="Horizontal">
                                             <materialDesign:PackIcon Kind="ImagePlusOutline" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,10,0"/>
@@ -267,30 +261,6 @@
                             </Border>
                         </ScrollViewer>
 
-                        <!-- Mobile Scanner Status (Budget Style Footer) -->
-                        <Border Grid.Row="2" Padding="20" Background="{DynamicResource ThemeCardBrush}" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="0,1,0,0">
-                            <StackPanel>
-                                <TextBlock Text="MOBILE GATEWAY" Style="{StaticResource SidebarHeaderStyle}"/>
-                                <materialDesign:Card Padding="12" Background="{DynamicResource BrandMidnightBrush}" UniformCornerRadius="10">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-                                        <Border Background="White" Padding="4" CornerRadius="4">
-                                            <Image Source="{Binding LookupScannerQrImage}" Height="60" Width="60" Stretch="Uniform"/>
-                                        </Border>
-                                        <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
-                                            <TextBlock Foreground="White" FontWeight="Bold" FontSize="14">
-                                                <Run Text="PIN:"/><Run Text="{Binding LookupScannerSessionPin}"/>
-                                            </TextBlock>
-                                            <TextBlock Text="{Binding LookupScannerSessionExpiresAtText}" Foreground="#94A3B8" FontSize="10"/>
-                                        </StackPanel>
-                                    </Grid>
-                                </materialDesign:Card>
-                                <Button Content="CREATE SESSION" Command="{Binding CreateLookupScannerSessionCommand}" Style="{StaticResource MaterialDesignFlatButton}" Foreground="{DynamicResource ThemePrimaryActionBrush}" Height="30" Margin="0,8,0,0" FontSize="11"/>
-                            </StackPanel>
-                        </Border>
                     </Grid>
                 </Border>
 
@@ -317,15 +287,15 @@
 
                                 <materialDesign:Card Grid.Column="0" Padding="15">
                                     <StackPanel>
-                                        <TextBlock Text="PENDING STAGING" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,4"/>
-                                        <TextBlock Text="{Binding TotalPendingBeneficiaries, StringFormat=N0}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}"/>
+                                        <TextBlock Text="TOTAL REGISTERED" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,4"/>
+                                        <TextBlock Text="{Binding TotalApprovedBeneficiaries, StringFormat=N0}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}"/>
                                     </StackPanel>
                                 </materialDesign:Card>
 
                                 <materialDesign:Card Grid.Column="2" Padding="15">
                                     <StackPanel>
-                                        <TextBlock Text="APPROVED REGISTRY" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,4"/>
-                                        <TextBlock Text="{Binding TotalApprovedBeneficiaries, StringFormat=N0}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource BrandSuccessBrush}"/>
+                                        <TextBlock Text="CIVIL REGISTRY LINKED" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,4"/>
+                                        <TextBlock Text="{Binding LinkedCivilRegistryCount, StringFormat=N0}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource BrandSuccessBrush}"/>
                                     </StackPanel>
                                 </materialDesign:Card>
 
@@ -338,7 +308,7 @@
 
                                 <materialDesign:Card Grid.Column="6" Padding="15">
                                     <StackPanel>
-                                        <TextBlock Text="SENIOR COUNT" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,4"/>
+                                        <TextBlock Text="SENIOR CITIZENS" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,4"/>
                                         <TextBlock Text="{Binding SeniorCount, StringFormat=N0}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}"/>
                                     </StackPanel>
                                 </materialDesign:Card>
@@ -369,72 +339,40 @@
                                         </StackPanel>
                                     </Grid>
 
-                                    <!-- Registry Tabs (Pending vs Approved) -->
-                                    <TabControl materialDesign:ColorZoneAssist.Mode="Standard" BorderThickness="0" Background="Transparent">
-                                        <TabItem Header="PENDING STAGING" FontSize="12" FontWeight="Bold">
-                                            <StackPanel Margin="0,20,0,0">
-                                                <DataGrid ItemsSource="{Binding PendingBeneficiaries}"
-                                                          SelectedItem="{Binding SelectedPendingBeneficiary}"
-                                                          AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" MinHeight="450"
-                                                          Background="Transparent" BorderThickness="0" HeadersVisibility="Column"
-                                                          materialDesign:DataGridAssist.CellPadding="12,8">
-                                                    <DataGrid.Columns>
-                                                        <DataGridTextColumn Header="FULL NAME" Binding="{Binding FullName}" Width="*" FontWeight="SemiBold"/>
-                                                        <DataGridTextColumn Header="BENEFICIARY ID" Binding="{Binding BeneficiaryId}" Width="150"/>
-                                                        <DataGridTextColumn Header="STATUS" Binding="{Binding VerificationStatus}" Width="120"/>
-                                                        <DataGridTextColumn Header="AGE" Binding="{Binding Age}" Width="60"/>
-                                                    </DataGrid.Columns>
-                                                </DataGrid>
-                                                <!-- Pagination Pending -->
-                                                <Border Margin="0,20,0,0" Padding="0,15,0,0" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="0,1,0,0">
-                                                    <Grid>
-                                                        <TextBlock Text="{Binding PendingPageSummary}" VerticalAlignment="Center" Foreground="{DynamicResource BrandTextSecondaryBrush}" FontSize="12"/>
-                                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                                            <Button Command="{Binding PreviousPendingPageCommand}" Style="{StaticResource MaterialDesignFlatButton}" Width="40" Height="40" Padding="0">
-                                                                <materialDesign:PackIcon Kind="ChevronLeft" Width="24" Height="24"/>
-                                                            </Button>
-                                                            <TextBlock Text="{Binding PendingCurrentPage}" VerticalAlignment="Center" Margin="15,0" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}"/>
-                                                            <Button Command="{Binding NextPendingPageCommand}" Style="{StaticResource MaterialDesignFlatButton}" Width="40" Height="40" Padding="0">
-                                                                <materialDesign:PackIcon Kind="ChevronRight" Width="24" Height="24"/>
-                                                            </Button>
-                                                        </StackPanel>
-                                                    </Grid>
-                                                </Border>
-                                            </StackPanel>
-                                        </TabItem>
-                                        <TabItem Header="APPROVED REGISTRY" FontSize="12" FontWeight="Bold">
-                                            <StackPanel Margin="0,20,0,0">
-                                                <DataGrid x:Name="ApprovedDataGrid" ItemsSource="{Binding ApprovedBeneficiaries}"
-                                                          SelectedItem="{Binding SelectedApprovedBeneficiary}"
-                                                          SelectionMode="Extended"
-                                                          AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" MinHeight="450"
-                                                          Background="Transparent" BorderThickness="0" HeadersVisibility="Column"
-                                                          materialDesign:DataGridAssist.CellPadding="12,8">
-                                                    <DataGrid.Columns>
-                                                        <DataGridTextColumn Header="FULL NAME" Binding="{Binding FullName}" Width="*" FontWeight="SemiBold"/>
-                                                        <DataGridTextColumn Header="BENEFICIARY ID" Binding="{Binding BeneficiaryId}" Width="150"/>
-                                                        <DataGridTextColumn Header="CIVIL REGISTRY #" Binding="{Binding CivilRegistryId}" Width="150"/>
-                                                        <DataGridTextColumn Header="STATUS" Binding="{Binding VerificationStatus}" Width="120"/>
-                                                    </DataGrid.Columns>
-                                                </DataGrid>
-                                                <!-- Pagination Approved -->
-                                                <Border Margin="0,20,0,0" Padding="0,15,0,0" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="0,1,0,0">
-                                                    <Grid>
-                                                        <TextBlock Text="{Binding ApprovedPageSummary}" VerticalAlignment="Center" Foreground="{DynamicResource BrandTextSecondaryBrush}" FontSize="12"/>
-                                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                                            <Button Command="{Binding PreviousApprovedPageCommand}" Style="{StaticResource MaterialDesignFlatButton}" Width="40" Height="40" Padding="0">
-                                                                <materialDesign:PackIcon Kind="ChevronLeft" Width="24" Height="24"/>
-                                                            </Button>
-                                                            <TextBlock Text="{Binding ApprovedCurrentPage}" VerticalAlignment="Center" Margin="15,0" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}"/>
-                                                            <Button Command="{Binding NextApprovedPageCommand}" Style="{StaticResource MaterialDesignFlatButton}" Width="40" Height="40" Padding="0">
-                                                                <materialDesign:PackIcon Kind="ChevronRight" Width="24" Height="24"/>
-                                                            </Button>
-                                                        </StackPanel>
-                                                    </Grid>
-                                                </Border>
-                                            </StackPanel>
-                                        </TabItem>
-                                    </TabControl>
+                                    <!-- Single Unified Registry DataGrid -->
+                                    <StackPanel Margin="0,10,0,0">
+                                        <DataGrid x:Name="ApprovedDataGrid" ItemsSource="{Binding ApprovedBeneficiaries}"
+                                                  SelectedItem="{Binding SelectedApprovedBeneficiary}"
+                                                  SelectionMode="Single"
+                                                  AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" MinHeight="450"
+                                                  Background="Transparent" BorderThickness="0" HeadersVisibility="Column"
+                                                  materialDesign:DataGridAssist.CellPadding="12,8">
+                                            <DataGrid.Columns>
+                                                <DataGridTextColumn Header="FULL NAME" Binding="{Binding FullName}" Width="*" FontWeight="SemiBold"/>
+                                                <DataGridTextColumn Header="BENEFICIARY ID" Binding="{Binding BeneficiaryId}" Width="160"/>
+                                                <DataGridTextColumn Header="CIVIL REGISTRY #" Binding="{Binding CivilRegistryId}" Width="140"/>
+                                                <DataGridTextColumn Header="BARANGAY / ADDRESS" Binding="{Binding Address}" Width="180"/>
+                                                <DataGridTextColumn Header="DEMOGRAPHICS" Binding="{Binding FlagsSummary}" Width="130"/>
+                                                <DataGridTextColumn Header="STATUS" Binding="{Binding VerificationStatus}" Width="100"/>
+                                            </DataGrid.Columns>
+                                        </DataGrid>
+
+                                        <!-- Pagination Controls -->
+                                        <Border Margin="0,20,0,0" Padding="0,15,0,0" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="0,1,0,0">
+                                            <Grid>
+                                                <TextBlock Text="{Binding ApprovedPageSummary}" VerticalAlignment="Center" Foreground="{DynamicResource BrandTextSecondaryBrush}" FontSize="12"/>
+                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                                    <Button Command="{Binding PreviousApprovedPageCommand}" Style="{StaticResource MaterialDesignFlatButton}" Width="40" Height="40" Padding="0">
+                                                        <materialDesign:PackIcon Kind="ChevronLeft" Width="24" Height="24"/>
+                                                    </Button>
+                                                    <TextBlock Text="{Binding ApprovedCurrentPage}" VerticalAlignment="Center" Margin="15,0" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}"/>
+                                                    <Button Command="{Binding NextApprovedPageCommand}" Style="{StaticResource MaterialDesignFlatButton}" Width="40" Height="40" Padding="0">
+                                                        <materialDesign:PackIcon Kind="ChevronRight" Width="24" Height="24"/>
+                                                    </Button>
+                                                </StackPanel>
+                                            </Grid>
+                                        </Border>
+                                    </StackPanel>
                                 </StackPanel>
                             </materialDesign:Card>
                         </StackPanel>
@@ -522,22 +460,10 @@
                                         <TextBlock Text="REJECT RECORD" VerticalAlignment="Center"/>
                                     </StackPanel>
                                 </Button>
-                                <Button Command="{Binding ReturnToPendingCommand}" Style="{StaticResource RailButton}">
-                                    <StackPanel Orientation="Horizontal">
-                                        <materialDesign:PackIcon Kind="Undo" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                        <TextBlock Text="RETURN TO PENDING" VerticalAlignment="Center"/>
-                                    </StackPanel>
-                                </Button>
                                 <Button Command="{Binding OpenEnrollmentPanelCommand}" Style="{StaticResource RailButton}">
                                     <StackPanel Orientation="Horizontal">
                                         <materialDesign:PackIcon Kind="AccountArrowRight" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,10,0"/>
                                         <TextBlock Text="ENROLL IN PROJECT" VerticalAlignment="Center"/>
-                                    </StackPanel>
-                                </Button>
-                                <Button Command="{Binding PrintDigitalIdCommand}" Style="{StaticResource RailButton}">
-                                    <StackPanel Orientation="Horizontal">
-                                        <materialDesign:PackIcon Kind="PrinterOutline" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                        <TextBlock Text="PRINT DIGITAL ID" VerticalAlignment="Center"/>
                                     </StackPanel>
                                 </Button>
                             </StackPanel>
@@ -641,31 +567,63 @@
 
                         <!-- Left: General Information + Household -->
                         <StackPanel Grid.Column="0">
-                            <!-- General Information -->
+                            <!-- General Information (Read-Only) -->
                             <Border Style="{StaticResource DetailCardStyle}">
                                 <StackPanel>
                                     <TextBlock Text="GENERAL INFORMATION" Style="{StaticResource SidebarHeaderStyle}"/>
-                                    <UniformGrid Columns="3" Margin="0,4,0,16">
-                                        <TextBox Text="{Binding EditableFirstName, UpdateSourceTrigger=PropertyChanged}"
-                                                 materialDesign:HintAssist.Hint="First Name"
-                                                 Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="0,0,6,0"/>
-                                        <TextBox Text="{Binding EditableMiddleName, UpdateSourceTrigger=PropertyChanged}"
-                                                 materialDesign:HintAssist.Hint="Middle Name"
-                                                 Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="6,0,6,0"/>
-                                        <TextBox Text="{Binding EditableLastName, UpdateSourceTrigger=PropertyChanged}"
-                                                 materialDesign:HintAssist.Hint="Last Name"
-                                                 Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="6,0,0,0"/>
-                                    </UniformGrid>
-                                    <TextBox Text="{Binding EditableAddress, UpdateSourceTrigger=PropertyChanged}"
-                                             materialDesign:HintAssist.Hint="Permanent Address"
-                                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                             TextWrapping="Wrap" AcceptsReturn="True" MinHeight="80" Margin="0,0,0,16"/>
-                                    <TextBlock Text="INTERNAL REVIEW NOTES" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,10"/>
-                                    <TextBox Text="{Binding EditableReviewNotes, UpdateSourceTrigger=PropertyChanged}"
-                                             materialDesign:HintAssist.Hint="Explain rejection or update reason..."
-                                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                             TextWrapping="Wrap" AcceptsReturn="True" MinHeight="90" Margin="0,0,0,18"/>
-                                    <Button Content="SAVE CORRECTIONS" Command="{Binding SaveCorrectionsCommand}" Style="{StaticResource GoldActionButton}" Height="46"/>
+                                    
+                                    <Grid Margin="0,4,0,16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                                            <TextBlock Text="BENEFICIARY ID" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,4"/>
+                                            <TextBlock Text="{Binding SelectedBeneficiary.BeneficiaryId, FallbackValue='--'}" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock Text="CIVIL REGISTRY #" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,4"/>
+                                            <TextBlock Text="{Binding SelectedBeneficiary.CivilRegistryId, FallbackValue='--'}" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource BrandSuccessBrush}"/>
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <Grid Margin="0,0,0,16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                                            <TextBlock Text="SEX" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,4"/>
+                                            <TextBlock Text="{Binding SelectedBeneficiary.Sex, FallbackValue='--'}" FontSize="13" Foreground="{DynamicResource BrandMidnightBrush}"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Margin="0,0,8,0">
+                                            <TextBlock Text="DATE OF BIRTH" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,4"/>
+                                            <TextBlock Text="{Binding SelectedBeneficiary.DateOfBirth, FallbackValue='--'}" FontSize="13" Foreground="{DynamicResource BrandMidnightBrush}"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2">
+                                            <TextBlock Text="AGE" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,4"/>
+                                            <TextBlock Text="{Binding SelectedBeneficiary.Age, FallbackValue='--'}" FontSize="13" Foreground="{DynamicResource BrandMidnightBrush}"/>
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <Grid Margin="0,0,0,16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                                            <TextBlock Text="MARITAL STATUS" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,4"/>
+                                            <TextBlock Text="{Binding SelectedBeneficiary.MaritalStatus, FallbackValue='--'}" FontSize="13" Foreground="{DynamicResource BrandMidnightBrush}"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock Text="DEMOGRAPHICS" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,4"/>
+                                            <TextBlock Text="{Binding SelectedBeneficiary.FlagsSummary, FallbackValue='None'}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource ThemePrimaryActionBrush}"/>
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <TextBlock Text="PERMANENT ADDRESS" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,4"/>
+                                    <TextBlock Text="{Binding SelectedBeneficiary.Address, FallbackValue='--'}" FontSize="13" Foreground="{DynamicResource BrandMidnightBrush}" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </Border>
 
@@ -737,14 +695,10 @@
                                     <TextBlock Text="{Binding DigitalIdCardNumber}" FontSize="16" FontWeight="ExtraBold" Foreground="{DynamicResource BrandMidnightBrush}" HorizontalAlignment="Center"/>
                                     <TextBlock Text="{Binding DigitalIdIssuedAtText}" FontSize="11" Foreground="{DynamicResource BrandTextSecondaryBrush}" HorizontalAlignment="Center" Margin="0,4,0,0"/>
 
-                                    <materialDesign:Card Background="White" Padding="10" Margin="0,14,0,14" HorizontalAlignment="Center"
+                                    <materialDesign:Card Background="White" Padding="10" Margin="0,14,0,0" HorizontalAlignment="Center"
                                                          Visibility="{Binding DigitalIdQrImage, Converter={StaticResource NullToHiddenConverter}}">
                                         <Image Source="{Binding DigitalIdQrImage}" Height="140" Width="140" Stretch="Uniform"/>
                                     </materialDesign:Card>
-
-                                    <Button Content="UPLOAD PHOTO" Command="{Binding UploadDigitalIdPhotoCommand}" Style="{StaticResource MaterialDesignOutlinedButton}" Height="38" Margin="0,0,0,8"/>
-                                    <Button Content="CROP / REPOSITION" Command="{Binding CropDigitalIdPhotoCommand}" Style="{StaticResource MaterialDesignOutlinedButton}" Height="38" Margin="0,0,0,8"/>
-                                    <Button Content="PRINT DIGITAL ID" Command="{Binding PrintDigitalIdCommand}" Style="{StaticResource GoldActionButton}" Height="42"/>
                                 </StackPanel>
                             </Border>
 

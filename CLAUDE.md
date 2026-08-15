@@ -35,7 +35,7 @@ MVVM without a framework: `Helpers/ObservableObject.cs` and `Helpers/RelayComman
 
 **Aid request lifecycle:** `Pending` → `UnderReview` → `Approved` → `Released` (or `Rejected`/`Cancelled`). Only valid transitions; release requires an assigned `ApprovedAmount` and program.
 
-**Project distributions** are spawned from a specific funding source (Private Donation or GGMS budget, 1:1) in the Budget module — never created independently. Beneficiary enrollment is manual/bulk selection from the masterlist only (no demographic auto-enrollment).
+**Projects & Events** (Distribution, Cash-for-Work, Seminar) are spawned from a specific funding source (Private Donation or GGMS budget, 1:1) in the Budget module — never created independently. Beneficiary enrollment is manual/bulk selection from the masterlist only (no demographic auto-enrollment).
 
 ## Hard rules
 
@@ -47,7 +47,7 @@ MVVM without a framework: `Helpers/ObservableObject.cs` and `Helpers/RelayComman
 
 ## UI design system (eKalinga+ theme lock)
 
-- Colors: brand `#1E4E89` (headers/titles), action accent `#F59E0B` (gold, primary operational buttons), sidebar background `#F8FAFC` (keep sidebars light), page background `#F1F5F9`, cards white with `1px #E2E8F0` borders. Success `#15803D`, error `#BE123C`, warning `#854D0E`.
+- Colors: brand `#15803D` (Forest Green, headers/titles), action accent `#F59E0B` (gold, primary operational buttons), sidebar background `#F8FAFC` (keep sidebars light), page background `#F1F5F9`, cards white with `1px #E2E8F0` borders. Success `#15803D`, error `#BE123C`, warning `#854D0E`.
 - Layout: fixed 320px left sidebar (navigation, filters, gold action buttons), main data center, optional detail panel right; 30px content padding; 12–16px card radius, 6–8px button radius.
 - Every operational action (Create/Edit/Payout/etc.) opens as a blurred overlay above the main content: `BlurRadius` 15.0 on the main grid, `#CC0F172A` backdrop; the list stays visible behind it — never swap or collapse the center area.
 - Typography: module headers 24px bold brand; sidebar section headers 13px bold all-caps; DataGrid text 12–13px; card labels 12px bold muted above 24px heavy values.

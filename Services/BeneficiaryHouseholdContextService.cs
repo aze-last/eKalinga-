@@ -41,43 +41,84 @@ namespace AttendanceShiftingManagement.Services
 
         public async Task<BeneficiaryHouseholdContext> GetHouseholdContextAsync(
             int? linkedHouseholdId,
-            int? linkedHouseholdMemberId)
+            int? linkedHouseholdMemberId,
+            string? beneficiaryId = null)
         {
-            if (linkedHouseholdId == null)
+            if (linkedHouseholdId != null)
             {
-                return Empty;
+                var household = await _context.Households
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(h => h.Id == linkedHouseholdId.Value);
+
+                if (household != null)
+                {
+                    var members = await _context.HouseholdMembers
+                        .AsNoTracking()
+                        .Where(m => m.HouseholdId == linkedHouseholdId.Value)
+                        .OrderBy(m => m.FullName)
+                        .Select(m => new { m.Id, m.FullName, m.RelationshipToHead })
+                        .ToListAsync();
+
+                    var items = members
+                        .Select(m => new BeneficiaryHouseholdMemberItem(
+                            m.FullName,
+                            m.RelationshipToHead ?? string.Empty,
+                            linkedHouseholdMemberId != null && linkedHouseholdMemberId.Value == m.Id))
+                        .ToList();
+
+                    return new BeneficiaryHouseholdContext(
+                        true,
+                        household.HouseholdCode,
+                        household.HeadName,
+                        household.AddressLine,
+                        household.Purok,
+                        items);
+                }
             }
 
-            var household = await _context.Households
-                .AsNoTracking()
-                .FirstOrDefaultAsync(h => h.Id == linkedHouseholdId.Value);
-
-            if (household == null)
+            // Fallback: Resolve household roster from BeneficiaryStaging using BeneficiaryId pattern
+            // (e.g. BEN-2026-692811519-1 -> Family Code: 692811519, Prefix: BEN-2026-692811519-)
+            if (!string.IsNullOrWhiteSpace(beneficiaryId))
             {
-                return Empty;
+                var trimmedId = beneficiaryId.Trim();
+                var lastDashIndex = trimmedId.LastIndexOf('-');
+                if (lastDashIndex > 0)
+                {
+                    var prefix = trimmedId.Substring(0, lastDashIndex + 1); // e.g. "BEN-2026-692811519-"
+                    var rawCode = trimmedId.Substring(0, lastDashIndex); // e.g. "BEN-2026-692811519"
+                    var secondLastDash = rawCode.LastIndexOf('-');
+                    var householdCode = secondLastDash > 0 ? $"HH-{rawCode.Substring(secondLastDash + 1)}" : rawCode;
+
+                    var stagingMembers = await _context.BeneficiaryStaging
+                        .AsNoTracking()
+                        .Where(b => b.BeneficiaryId != null && b.BeneficiaryId.StartsWith(prefix))
+                        .OrderBy(b => b.BeneficiaryId)
+                        .Select(b => new { b.BeneficiaryId, b.FullName, b.Address })
+                        .ToListAsync();
+
+                    if (stagingMembers.Count > 0)
+                    {
+                        var head = stagingMembers.FirstOrDefault(m => m.BeneficiaryId != null && m.BeneficiaryId.EndsWith("-1")) ?? stagingMembers[0];
+                        var memberItems = stagingMembers.Select(m =>
+                        {
+                            var isHead = m.BeneficiaryId != null && m.BeneficiaryId.EndsWith("-1");
+                            var isSelected = string.Equals(m.BeneficiaryId, trimmedId, StringComparison.OrdinalIgnoreCase);
+                            var relation = isHead ? "Head of Household" : "Family Member";
+                            return new BeneficiaryHouseholdMemberItem(m.FullName ?? string.Empty, relation, isSelected);
+                        }).ToList();
+
+                        return new BeneficiaryHouseholdContext(
+                            true,
+                            householdCode,
+                            head.FullName ?? string.Empty,
+                            head.Address ?? string.Empty,
+                            string.Empty,
+                            memberItems);
+                    }
+                }
             }
 
-            var members = await _context.HouseholdMembers
-                .AsNoTracking()
-                .Where(m => m.HouseholdId == linkedHouseholdId.Value)
-                .OrderBy(m => m.FullName)
-                .Select(m => new { m.Id, m.FullName, m.RelationshipToHead })
-                .ToListAsync();
-
-            var items = members
-                .Select(m => new BeneficiaryHouseholdMemberItem(
-                    m.FullName,
-                    m.RelationshipToHead ?? string.Empty,
-                    linkedHouseholdMemberId != null && linkedHouseholdMemberId.Value == m.Id))
-                .ToList();
-
-            return new BeneficiaryHouseholdContext(
-                true,
-                household.HouseholdCode,
-                household.HeadName,
-                household.AddressLine,
-                household.Purok,
-                items);
+            return Empty;
         }
     }
 }

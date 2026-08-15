@@ -19,8 +19,7 @@ namespace AttendanceShiftingManagement.Views
 
         private void MasterListPage_Loaded(object sender, RoutedEventArgs e)
         {
-            // Open filters on load as per Pattern B
-            OpenFilterDialog();
+            // Do not popup filter dialog automatically on page load
         }
 
         private void Filter_Click(object sender, RoutedEventArgs e)

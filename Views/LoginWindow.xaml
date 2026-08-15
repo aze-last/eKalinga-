@@ -65,16 +65,32 @@
 
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="44,0,44,0">
 
-                    <!-- ── LGU Seal (prominent, always shown) ── -->
-                    <Border HorizontalAlignment="Center" Margin="0,0,0,18" 
-                            Background="White" CornerRadius="64" Padding="12">
-                        <Border.Effect>
-                            <DropShadowEffect BlurRadius="28" ShadowDepth="0" Opacity="0.3" Color="#000000"/>
-                        </Border.Effect>
-                        <Image x:Name="LguSealImage"
-                               Source="{Binding BrandLogoImage}"
-                               Width="110" Height="110" Stretch="Uniform"/>
-                    </Border>
+                    <!-- ── LGU Seal & eKalinga+ Logo (Side-by-Side) ── -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,18">
+                        <!-- LGU Seal -->
+                        <Border Background="White" CornerRadius="50" Padding="10" VerticalAlignment="Center">
+                            <Border.Effect>
+                                <DropShadowEffect BlurRadius="24" ShadowDepth="0" Opacity="0.3" Color="#000000"/>
+                            </Border.Effect>
+                            <Image x:Name="LguSealImage"
+                                   Source="{Binding BrandLogoImage}"
+                                   Width="88" Height="88" Stretch="Uniform"/>
+                        </Border>
+
+                        <!-- Connector / Spacing -->
+                        <TextBlock Text="+" FontSize="22" FontWeight="Bold" Foreground="#BBDEFB" 
+                                   VerticalAlignment="Center" Margin="20,0,0,0"/>
+
+                        <!-- eKalinga+ Logo -->
+                        <Image x:Name="EKalingaLogoImage"
+                               Source="pack://application:,,,/Images/Gemini_Generated_Image_1ivs1t1ivs1t1ivs-removebg-preview.png"
+                               Width="180" Height="180" Stretch="Uniform"
+                               VerticalAlignment="Center">
+                            <Image.Effect>
+                                <DropShadowEffect BlurRadius="16" ShadowDepth="2" Opacity="1.00" Color="#000000"/>
+                            </Image.Effect>
+                        </Image>
+                    </StackPanel>
 
                     <!-- Government heading -->
                     <TextBlock Text="Republic of the Philippines"
@@ -161,7 +177,7 @@
 
                             <!-- System logo -->
                             <Image x:Name="LogoImage"
-                               Source="{Binding BrandLogoImage}"
+                               Source="pack://application:,,,/Images/Gemini_Generated_Image_1ivs1t1ivs1t1ivs-removebg-preview.png"
                                Width="100" Height="100" Stretch="Uniform"
                                HorizontalAlignment="Center" Margin="0,0,0,12"/>
 

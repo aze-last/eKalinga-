@@ -1,9 +1,13 @@
 using AForge.Video;
 using AForge.Video.DirectShow;
 using AttendanceShiftingManagement.Services;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media.Imaging;
@@ -15,8 +19,10 @@ namespace AttendanceShiftingManagement.Views
     {
         private FilterInfoCollection? _videoDevices;
         private VideoCaptureDevice? _videoSource;
-        private readonly DispatcherTimer _scanTimer;
-        private bool _isScanning = true;
+        private volatile bool _isScanning = true;
+        private volatile bool _isDecoding = false;
+        private DateTime _lastDecodeAttempt = DateTime.MinValue;
+        private INotifyPropertyChanged? _observedDataContext;
 
         public event Action<string>? QrCodeScanned;
         public event Action? Closed;
@@ -24,34 +30,112 @@ namespace AttendanceShiftingManagement.Views
         public DesktopScannerOverlay()
         {
             InitializeComponent();
-            
-            _scanTimer = new DispatcherTimer
-            {
-                Interval = TimeSpan.FromMilliseconds(500)
-            };
-            _scanTimer.Tick += ScanTimer_Tick;
-            
+
             Loaded += DesktopScannerOverlay_Loaded;
             Unloaded += DesktopScannerOverlay_Unloaded;
+            IsVisibleChanged += DesktopScannerOverlay_IsVisibleChanged;
+            DataContextChanged += DesktopScannerOverlay_DataContextChanged;
         }
 
         private void DesktopScannerOverlay_Loaded(object sender, RoutedEventArgs e)
         {
+            InitializeCameraDevices();
+            if (IsVisible)
+            {
+                StartCamera();
+            }
+        }
+
+        private void DesktopScannerOverlay_Unloaded(object sender, RoutedEventArgs e)
+        {
+            StopCamera();
+            UnhookDataContext();
+        }
+
+        private void DesktopScannerOverlay_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+        {
+            if (IsVisible)
+            {
+                InitializeCameraDevices();
+                _isScanning = true;
+                _isDecoding = false;
+                StartCamera();
+            }
+            else
+            {
+                StopCamera();
+            }
+        }
+
+        private void DesktopScannerOverlay_DataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
+        {
+            UnhookDataContext();
+
+            if (DataContext is INotifyPropertyChanged npc)
+            {
+                _observedDataContext = npc;
+                _observedDataContext.PropertyChanged += ObservedDataContext_PropertyChanged;
+            }
+        }
+
+        private void ObservedDataContext_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == "IsScannedResultVisible")
+            {
+                var isResultVisible = false;
+                if (DataContext != null)
+                {
+                    var prop = DataContext.GetType().GetProperty("IsScannedResultVisible");
+                    if (prop?.GetValue(DataContext) is bool val)
+                    {
+                        isResultVisible = val;
+                    }
+                }
+
+                if (!isResultVisible && IsVisible)
+                {
+                    // Scan result was dismissed/cancelled, re-enable live QR scanner
+                    _isScanning = true;
+                    _isDecoding = false;
+                    Dispatcher.BeginInvoke(() =>
+                    {
+                        StatusText.Text = "Camera active. Point at a beneficiary QR code or click Capture.";
+                    });
+                }
+            }
+        }
+
+        private void UnhookDataContext()
+        {
+            if (_observedDataContext != null)
+            {
+                _observedDataContext.PropertyChanged -= ObservedDataContext_PropertyChanged;
+                _observedDataContext = null;
+            }
+        }
+
+        private void InitializeCameraDevices()
+        {
             try
             {
-                _videoDevices = new FilterInfoCollection(FilterCategory.VideoInputDevice);
-                if (_videoDevices.Count == 0)
+                if (_videoDevices == null || _videoDevices.Count == 0)
                 {
-                    StatusText.Text = "No camera devices found.";
-                    return;
-                }
+                    _videoDevices = new FilterInfoCollection(FilterCategory.VideoInputDevice);
+                    CameraSelector.Items.Clear();
 
-                foreach (FilterInfo device in _videoDevices)
-                {
-                    CameraSelector.Items.Add(device.Name);
-                }
+                    if (_videoDevices.Count == 0)
+                    {
+                        StatusText.Text = "No camera devices found.";
+                        return;
+                    }
 
-                CameraSelector.SelectedIndex = 0;
+                    foreach (FilterInfo device in _videoDevices)
+                    {
+                        CameraSelector.Items.Add(device.Name);
+                    }
+
+                    CameraSelector.SelectedIndex = 0;
+                }
             }
             catch (Exception ex)
             {
@@ -59,29 +143,34 @@ namespace AttendanceShiftingManagement.Views
             }
         }
 
-        private void DesktopScannerOverlay_Unloaded(object sender, RoutedEventArgs e)
-        {
-            StopCamera();
-        }
-
         private void CameraSelector_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            StartCamera();
+            if (IsVisible)
+            {
+                StartCamera();
+            }
         }
 
         private void StartCamera()
         {
             StopCamera();
 
-            if (CameraSelector.SelectedIndex < 0 || _videoDevices == null) return;
+            if (CameraSelector.SelectedIndex < 0 || _videoDevices == null || _videoDevices.Count == 0)
+            {
+                return;
+            }
 
             try
             {
                 _videoSource = new VideoCaptureDevice(_videoDevices[CameraSelector.SelectedIndex].MonikerString);
                 _videoSource.NewFrame += VideoSource_NewFrame;
                 _videoSource.Start();
-                _isScanning = false; // Disable automatic scanning
-                StatusText.Text = "Camera active. Position ID and click 'CAPTURE & SCAN ID'.";
+
+                _isScanning = true;
+                _isDecoding = false;
+                _lastDecodeAttempt = DateTime.MinValue;
+
+                StatusText.Text = "Camera active. Point at a beneficiary QR code or click Capture.";
             }
             catch (Exception ex)
             {
@@ -91,25 +180,83 @@ namespace AttendanceShiftingManagement.Views
 
         private void StopCamera()
         {
-            _scanTimer.Stop();
-            if (_videoSource != null && _videoSource.IsRunning)
+            _isScanning = false;
+            _isDecoding = false;
+
+            if (_videoSource != null)
             {
-                _videoSource.SignalToStop();
-                _videoSource.NewFrame -= VideoSource_NewFrame;
-                _videoSource = null;
+                try
+                {
+                    _videoSource.NewFrame -= VideoSource_NewFrame;
+                    if (_videoSource.IsRunning)
+                    {
+                        _videoSource.SignalToStop();
+                    }
+                }
+                catch
+                {
+                    // Ignore stop errors
+                }
+                finally
+                {
+                    _videoSource = null;
+                }
             }
         }
 
         private void VideoSource_NewFrame(object sender, NewFrameEventArgs eventArgs)
         {
+            if (!IsVisible) return;
+
             try
             {
                 using var bitmap = (Bitmap)eventArgs.Frame.Clone();
-                
-                Dispatcher.Invoke(() =>
+                var imageSource = BitmapToImageSource(bitmap);
+
+                Dispatcher.BeginInvoke(DispatcherPriority.Render, new Action(() =>
                 {
-                    CameraFeed.Source = BitmapToImageSource(bitmap);
-                }, DispatcherPriority.Render);
+                    if (IsVisible && _videoSource != null)
+                    {
+                        CameraFeed.Source = imageSource;
+                    }
+                }));
+
+                // Auto QR capture
+                if (_isScanning && !_isDecoding && (DateTime.UtcNow - _lastDecodeAttempt).TotalMilliseconds >= 250)
+                {
+                    _lastDecodeAttempt = DateTime.UtcNow;
+                    _isDecoding = true;
+
+                    var cloneForDecode = (Bitmap)eventArgs.Frame.Clone();
+                    _ = Task.Run(() =>
+                    {
+                        try
+                        {
+                            var text = TryDecode(cloneForDecode);
+                            if (!string.IsNullOrWhiteSpace(text))
+                            {
+                                _isScanning = false;
+                                Dispatcher.BeginInvoke(new Action(() =>
+                                {
+                                    if (IsVisible)
+                                    {
+                                        StatusText.Text = "QR Code Detected!";
+                                        QrCodeScanned?.Invoke(text);
+                                    }
+                                }));
+                            }
+                        }
+                        catch
+                        {
+                            // Ignore decode errors
+                        }
+                        finally
+                        {
+                            cloneForDecode.Dispose();
+                            _isDecoding = false;
+                        }
+                    });
+                }
             }
             catch
             {
@@ -126,7 +273,7 @@ namespace AttendanceShiftingManagement.Views
             }
 
             StatusText.Text = "Capturing ID and scanning QR...";
-            
+
             var bitmap = BitmapSourceToBitmap(bitmapSource);
             if (bitmap == null) return;
 
@@ -135,6 +282,7 @@ namespace AttendanceShiftingManagement.Views
                 var result = await Task.Run(() => TryDecode(bitmap));
                 if (!string.IsNullOrWhiteSpace(result))
                 {
+                    _isScanning = false;
                     StatusText.Text = "ID Captured and QR Decoded!";
                     QrCodeScanned?.Invoke(result);
                 }
@@ -149,37 +297,41 @@ namespace AttendanceShiftingManagement.Views
             }
         }
 
-        private void ScanTimer_Tick(object? sender, EventArgs e)
-        {
-            // Automatic scanning disabled as per user request for "Capture then Scan" workflow
-        }
-
         private string? TryDecode(Bitmap bitmap)
         {
-            var reader = new ZXing.BarcodeReaderGeneric
-            {
-                AutoRotate = true,
-                Options = new ZXing.Common.DecodingOptions
-                {
-                    TryHarder = true,
-                    TryInverted = true,
-                    PossibleFormats = new List<ZXing.BarcodeFormat> 
-                    { 
-                        ZXing.BarcodeFormat.QR_CODE, 
-                        ZXing.BarcodeFormat.PDF_417,
-                        ZXing.BarcodeFormat.CODE_128
-                    }
-                }
-            };
-
             try
             {
-                var source = new ZXing.Windows.Compatibility.BitmapLuminanceSource(bitmap);
-                var result = reader.Decode(source);
-                return result?.Text;
+                var reader = new ZXing.Windows.Compatibility.BarcodeReader
+                {
+                    AutoRotate = true,
+                    Options = new ZXing.Common.DecodingOptions
+                    {
+                        TryHarder = true,
+                        TryInverted = true,
+                        PossibleFormats = new List<ZXing.BarcodeFormat>
+                        {
+                            ZXing.BarcodeFormat.QR_CODE,
+                            ZXing.BarcodeFormat.CODE_128,
+                            ZXing.BarcodeFormat.PDF_417
+                        }
+                    }
+                };
+
+                var result = reader.Decode(bitmap);
+                if (result != null && !string.IsNullOrWhiteSpace(result.Text))
+                {
+                    return result.Text.Trim();
+                }
+
+                // If direct decode didn't catch it, run multi-scale decode via QrCodeToolkitService
+                using var ms = new MemoryStream();
+                bitmap.Save(ms, ImageFormat.Png);
+                ms.Position = 0;
+                return QrCodeToolkitService.TryDecodePayload(ms);
             }
-            catch
+            catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"[DesktopScannerOverlay] Decode error: {ex.Message}");
                 return null;
             }
         }

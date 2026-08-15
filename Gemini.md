@@ -266,8 +266,8 @@ Run dotnet build.
 *   **Attendance & Payouts:** Wages are distributed based on logged attendance. Payouts must be verified against attendance records.
 *   **Budget Coupling:** Payouts pull directly from the `CashForWorkBudget` bucket (Global or Earmarked), which in turn triggers the overarching Budget Waterfall.
 
-### 4. Project Distribution Workflow
-*   **Structure:** Designed for bulk disbursements. Projects are no longer created independently but are spawned directly from a specific funding source (Private Donation or GGMS Budget) in the Budget Module.
+### 4. Project Distribution & Event Creation Workflow
+*   **Structure:** Designed for bulk disbursements and structured events. All projects and events (Distribution, Cash-for-Work, Seminar) are no longer created independently in operational modules, but are spawned directly from a specific funding source (Private Donation or GGMS Budget) in the Budget Module.
 *   **Enrollment:** Beneficiary selection relies exclusively on manual and bulk selection from the approved masterlist. Auto-enrollment via demographics (e.g., all Senior Citizens) is NOT supported.
 *   **Funding & Claiming:** The project funding is automatically derived from and constrained by its parent donation/GGMS amount (1:1 relationship). The required budget (Unit Amount * Selected Beneficiaries) must never exceed the source fund. When a beneficiary claims their distribution, it logs a `BudgetLedgerEntry` pulling directly from the explicitly linked source fund.
 

@@ -105,6 +105,37 @@ public sealed class BeneficiaryDigitalIdServiceTests
         Assert.Equal(stagingRow.StagingID, lookup!.BeneficiaryStagingId);
     }
 
+    [Fact]
+    public async Task LookupByQrPayloadAsync_WhenScannedWithBeneficiaryId_ResolvesDirectlyWithoutPreExistingDigitalIdRow()
+    {
+        using var context = TestDbContextFactory.CreateContext();
+        var stagingRow = SeedApprovedStaging(context);
+        var service = new BeneficiaryDigitalIdService(context);
+
+        // Scan raw BeneficiaryId (e.g. BEN-1) directly without EnsureIssuedAsync
+        var lookup = await service.LookupByQrPayloadAsync(stagingRow.BeneficiaryId!);
+
+        Assert.NotNull(lookup);
+        Assert.Equal(stagingRow.StagingID, lookup!.BeneficiaryStagingId);
+        Assert.Equal("Elena Rivera", lookup.FullName);
+        Assert.Equal("BEN-1", lookup.BeneficiaryId);
+    }
+
+    [Fact]
+    public async Task LookupByQrPayloadAsync_WhenScannedWithCivilRegistryId_ResolvesDirectly()
+    {
+        using var context = TestDbContextFactory.CreateContext();
+        var stagingRow = SeedApprovedStaging(context);
+        var service = new BeneficiaryDigitalIdService(context);
+
+        // Scan raw CivilRegistryId (e.g. CRS-1)
+        var lookup = await service.LookupByQrPayloadAsync(stagingRow.CivilRegistryId!);
+
+        Assert.NotNull(lookup);
+        Assert.Equal(stagingRow.StagingID, lookup!.BeneficiaryStagingId);
+        Assert.Equal("CRS-1", lookup.CivilRegistryId);
+    }
+
     private static User SeedAdmin(Data.LocalDbContext context)
     {
         var user = new User

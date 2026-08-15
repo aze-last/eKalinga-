@@ -775,6 +775,30 @@ namespace AttendanceShiftingManagement.Services
                 return new PrivateDonationOperationResult(false, "A donation can only have a single target.");
             }
 
+            int? remoteGeneratedId = null;
+            int? remoteGeneratedLedgerId = null;
+            if (RemoteWriteExecutionService.ShouldRouteToRemote(_context))
+            {
+                try
+                {
+                    var remoteResult = await RemoteWriteExecutionService.ExecuteRemoteWriteAsync(
+                        _context,
+                        async remoteContext =>
+                        {
+                            var remoteService = new BudgetManagementService(remoteContext, _auditService);
+                            return await remoteService.RecordPrivateDonationAsync(request, recordedByUserId);
+                        });
+
+                    if (!remoteResult.IsSuccess) return remoteResult;
+                    remoteGeneratedId = remoteResult.DonationId;
+                    remoteGeneratedLedgerId = remoteResult.LedgerEntryId;
+                }
+                catch (Exception ex)
+                {
+                    return new PrivateDonationOperationResult(false, $"Remote donation creation failed. {ex.Message}");
+                }
+            }
+
             var donorName = NormalizeRequired(request.DonorName);
             var donation = new PrivateDonation
             {
@@ -797,6 +821,11 @@ namespace AttendanceShiftingManagement.Services
                 TargetCashForWorkBudgetId = request.TargetCashForWorkBudgetId,
                 CreatedAt = DateTime.Now
             };
+
+            if (remoteGeneratedId.HasValue)
+            {
+                donation.Id = remoteGeneratedId.Value;
+            }
 
             _context.PrivateDonations.Add(donation);
             await _context.SaveChangesAsync();

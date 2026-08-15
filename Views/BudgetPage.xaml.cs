@@ -11,7 +11,7 @@ namespace AttendanceShiftingManagement.Views
     {
         private readonly BudgetViewModel _viewModel;
 
-        public BudgetPage(User currentUser)
+        public BudgetPage(User currentUser, AyudaProgramType? initialProgramType = null)
         {
             InitializeComponent();
             _viewModel = new BudgetViewModel(currentUser);
@@ -19,6 +19,12 @@ namespace AttendanceShiftingManagement.Views
             _viewModel.ProjectCreatedGoToDistribution += OnProjectCreatedGoToDistribution;
             Unloaded += OnBudgetPageUnloaded;
             DataContext = _viewModel;
+
+            if (initialProgramType.HasValue)
+            {
+                _viewModel.SelectedProgramType = initialProgramType.Value;
+                _viewModel.SetNeutralStatus($"Select a Private Donation or GGMS Fund row below, then click CREATE PROJECT to spawn your {(initialProgramType.Value == AyudaProgramType.Seminar ? "Seminar & Training" : "Cash-for-Work")} event.");
+            }
         }
 
         private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)

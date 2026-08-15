@@ -36,6 +36,8 @@ namespace AttendanceShiftingManagement.ViewModels
             ShowCashForWorkCommand = new RelayCommand(_ => SwitchSection("CashForWork"));
             ShowCashForWorkPayoutCommand = new RelayCommand(_ => SwitchSection("CashForWorkPayout"));
             ShowBudgetCommand = new RelayCommand(_ => SwitchSection("Budget"));
+            ShowBudgetForSeminarCommand = new RelayCommand(_ => NavigateToBudgetWithPurpose(AyudaProgramType.Seminar));
+            ShowBudgetForCashForWorkCommand = new RelayCommand(_ => NavigateToBudgetWithPurpose(AyudaProgramType.CashForWork));
             ShowDistributionCommand = new RelayCommand(_ => SwitchSection("Distribution"));
             ShowMasterListCommand = new RelayCommand(_ => SwitchSection("MasterList"));
             ShowAssistanceCasesCommand = new RelayCommand(_ => SwitchSection("AssistanceCases"));
@@ -183,6 +185,8 @@ namespace AttendanceShiftingManagement.ViewModels
         public RelayCommand ShowCashForWorkCommand { get; }
         public RelayCommand ShowCashForWorkPayoutCommand { get; }
         public RelayCommand ShowBudgetCommand { get; }
+        public RelayCommand ShowBudgetForSeminarCommand { get; }
+        public RelayCommand ShowBudgetForCashForWorkCommand { get; }
         public RelayCommand ShowDistributionCommand { get; }
         public RelayCommand ShowMasterListCommand { get; }
         public RelayCommand ShowScanningPortalCommand { get; }
@@ -238,6 +242,24 @@ namespace AttendanceShiftingManagement.ViewModels
             OnPropertyChanged(nameof(IsSeminarAttendanceSelected));
             OnPropertyChanged(nameof(IsSecondarySectionVisible));
             CurrentView = BuildView(section);
+        }
+
+        public void NavigateToBudgetWithPurpose(AyudaProgramType programType)
+        {
+            _currentSection = "Budget";
+            OnPropertyChanged(nameof(IsDashboardSelected));
+            OnPropertyChanged(nameof(IsCashForWorkSelected));
+            OnPropertyChanged(nameof(IsBudgetSelected));
+            OnPropertyChanged(nameof(IsDistributionSelected));
+            OnPropertyChanged(nameof(IsMasterListSelected));
+            OnPropertyChanged(nameof(IsAssistanceCasesSelected));
+            OnPropertyChanged(nameof(IsGgmsTransactionsSelected));
+            OnPropertyChanged(nameof(IsReportsSelected));
+            OnPropertyChanged(nameof(IsSeminarAttendanceSelected));
+            OnPropertyChanged(nameof(IsSecondarySectionVisible));
+            CurrentSectionTitle = "Budget & Finance";
+            CurrentSectionSubtitle = $"Select a funding source to create a new {(programType == AyudaProgramType.Seminar ? "Seminar & Training" : "Cash-for-Work")} project.";
+            CurrentView = new BudgetPage(_currentUser, programType);
         }
 
         private object BuildView(string section)

@@ -1,6 +1,7 @@
 <UserControl x:Class="AttendanceShiftingManagement.Views.CashForWorkPayoutPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
     Background="#F1F5F9">
 
     <UserControl.Resources>
@@ -108,9 +109,27 @@
 
                         <Button Content="RELEASE EVENT PAYOUT" Command="{Binding OpenReleaseConfirmCommand}"
                                 Background="#F59E0B" Foreground="White" BorderThickness="0"
-                                Padding="16,12" FontSize="13" FontWeight="Bold" Cursor="Hand"/>
+                                Padding="16,12" FontSize="13" FontWeight="Bold" Cursor="Hand" Margin="0,0,0,12"/>
 
-                        <TextBlock Text="{Binding StatusMessage}" Foreground="{Binding StatusBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,14,0,0"/>
+                        <Button Content="+ NEW EVENT VIA BUDGET"
+                                Command="{Binding DataContext.ShowBudgetForCashForWorkCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                Background="Transparent" Foreground="#15803D" BorderBrush="#15803D" BorderThickness="1.5"
+                                Padding="16,10" FontSize="12" FontWeight="Bold" Cursor="Hand" Margin="0,0,0,16"
+                                ToolTip="Allocate funds and create a new Cash-for-Work project in the Budget module"/>
+
+                        <!-- Educational Tip Card for Budget Waterfall Alignment -->
+                        <Border Background="#F0FDF4" BorderBrush="#BBF7D0" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,12">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                    <materialDesign:PackIcon Kind="LightbulbOutline" Width="16" Height="16" Foreground="#15803D" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                    <TextBlock Text="Earmarked Funding" FontSize="11" FontWeight="Bold" Foreground="#15803D" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <TextBlock Text="All Cash-for-Work projects are funded and spawned in the Budget module from Government (GGMS) or Private Donations."
+                                           FontSize="11" Foreground="#166534" TextWrapping="Wrap" LineHeight="15"/>
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock Text="{Binding StatusMessage}" Foreground="{Binding StatusBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,4,0,0"/>
                     </StackPanel>
                 </Border>
 

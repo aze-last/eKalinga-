@@ -775,7 +775,8 @@
                                 <Grid>
                                     <materialDesign:PackIcon Kind="AccountCircle" Width="90" Height="90"
                                                              HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                             Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
+                                                             Foreground="{DynamicResource BrandTextSecondaryBrush}"
+                                                             Visibility="{Binding HouseholdConfirmBeneficiaryPhoto, Converter={StaticResource NullToHiddenConverter}, ConverterParameter=Inverse}"/>
                                     <Border CornerRadius="12" Visibility="{Binding HouseholdConfirmBeneficiaryPhoto, Converter={StaticResource NullToHiddenConverter}}">
                                         <Border.Background>
                                             <ImageBrush ImageSource="{Binding HouseholdConfirmBeneficiaryPhoto}" Stretch="UniformToFill"/>
@@ -982,9 +983,9 @@
                                           IsChecked="{Binding HouseholdOverrideAcknowledged}"
                                           Visibility="{Binding RequiresHouseholdOverride, Converter={StaticResource BooleanToVisibilityConverter}}"
                                           FontSize="12" Foreground="White"/>
-                                <Button Content="DECLINE" Command="{Binding CancelHouseholdConfirmCommand}" Style="{StaticResource MaterialDesignOutlinedButton}" Foreground="White" BorderBrush="White" Margin="0,0,12,0"/>
-                                <Button Content="MARK AS PENDING" Command="{Binding PromptPendingReasonCommand}" Style="{StaticResource MaterialDesignOutlinedButton}" Foreground="White" BorderBrush="White" Margin="0,0,12,0"/>
-                                <Button Content="CONFIRM RELEASE" Command="{Binding ConfirmHouseholdReleaseCommand}" Style="{StaticResource OperationalActionButton}" Height="45" Padding="30,0" FontSize="16"/>
+                                <Button Content="DECLINE" Command="{Binding CancelHouseholdConfirmCommand}" Style="{StaticResource MaterialDesignOutlinedButton}" Foreground="#FCA5A5" BorderBrush="#EF4444" FontWeight="Bold" Margin="0,0,12,0"/>
+                                <Button Content="MARK AS PENDING" Command="{Binding PromptPendingReasonCommand}" Style="{StaticResource MaterialDesignOutlinedButton}" Foreground="#FEF08A" BorderBrush="#F59E0B" FontWeight="Bold" Height="45" Padding="18,0" Margin="0,0,12,0"/>
+                                <Button Content="CONFIRM RELEASE" Command="{Binding ConfirmHouseholdReleaseCommand}" Style="{StaticResource OperationalActionButton}" Height="45" Padding="30,0" FontSize="16" FontWeight="Bold"/>
                             </StackPanel>
                         </Grid>
                     </Border>
@@ -1017,8 +1018,8 @@
                              Height="100" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" Margin="0,0,0,24"/>
 
                     <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right">
-                        <Button Content="CANCEL" Command="{Binding CancelPendingReasonCommand}" Style="{StaticResource MaterialDesignOutlinedButton}" Height="40" Padding="20,0" Margin="0,0,12,0"/>
-                        <Button Content="SUBMIT" Command="{Binding SubmitPendingReasonCommand}" Style="{StaticResource OperationalActionButton}" Height="40" Padding="20,0"/>
+                        <Button Content="CANCEL" Command="{Binding CancelPendingReasonCommand}" Style="{StaticResource MaterialDesignOutlinedButton}" Foreground="#475569" BorderBrush="#94A3B8" FontWeight="SemiBold" Height="40" Padding="20,0" Margin="0,0,12,0"/>
+                        <Button Content="SUBMIT" Command="{Binding SubmitPendingReasonCommand}" Style="{StaticResource OperationalActionButton}" FontWeight="Bold" Height="40" Padding="20,0"/>
                     </StackPanel>
                 </Grid>
             </Border>

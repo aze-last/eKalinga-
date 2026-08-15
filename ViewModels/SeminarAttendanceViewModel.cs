@@ -919,22 +919,14 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private void OpenCreateSeminarPanel()
         {
-            _editingEventId = null;
-            EventTitle = string.Empty;
-            EventLocation = string.Empty;
-            EventDate = DateTime.Today;
-            FinishDate = DateTime.Today;
-            EventStartTime = DateTime.Today.AddHours(7);
-            EventEndTime = DateTime.Today.AddHours(12);
-            EventNotes = string.Empty;
-            SelectedBudgetId = null;
-            SelectedBenefitType = CashForWorkBenefitType.None;
-            UnitAmountText = string.Empty;
-            BenefitDescriptionText = string.Empty;
-
-            OnPropertyChanged(nameof(SeminarEditorSubmitLabel));
-
-            OpenPanel(SeminarWorkspacePanel.SeminarEditor, "New Seminar", "Create a new seminar. Attendees register themselves as they scan.");
+            if (Application.Current?.MainWindow?.DataContext is BarangayMainViewModel mainVm)
+            {
+                mainVm.NavigateToBudgetWithPurpose(AyudaProgramType.Seminar);
+            }
+            else
+            {
+                SetNeutralStatus("Please open the Budget & Finance module to allocate funds and create a new Seminar event.");
+            }
         }
 
         private void OpenEditSeminarPanel()
@@ -1349,7 +1341,13 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private async Task ExecuteProcessPcScan(string? payload)
         {
-            if (string.IsNullOrWhiteSpace(payload) || SelectedEvent == null) return;
+            if (string.IsNullOrWhiteSpace(payload)) return;
+
+            if (SelectedEvent == null)
+            {
+                SetErrorStatus("Please select a Seminar event first before scanning attendance.");
+                return;
+            }
 
             IsBusy = true;
             SetNeutralStatus("Analyzing ID card...");

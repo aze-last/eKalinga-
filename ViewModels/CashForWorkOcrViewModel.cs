@@ -1636,7 +1636,13 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private async Task ExecuteProcessPcScan(string? payload)
         {
-            if (string.IsNullOrWhiteSpace(payload) || SelectedEvent == null) return;
+            if (string.IsNullOrWhiteSpace(payload)) return;
+
+            if (SelectedEvent == null)
+            {
+                SetErrorStatus("Please select a Cash for Work event first before scanning attendance.");
+                return;
+            }
             
             IsBusy = true;
             SetNeutralStatus("Analyzing ID card...");

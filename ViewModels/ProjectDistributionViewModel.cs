@@ -2554,11 +2554,24 @@ namespace AttendanceShiftingManagement.ViewModels
                     _ = Task.Run(() => { try { Console.Beep(400, 600); } catch { } });
                     return;
                 case EKardValidity.NotFound:
-                    SetErrorStatus($"No e-Kard ID ever issued for {result.BeneficiaryId}.");
-                    _ = Task.Run(() => { try { Console.Beep(400, 600); } catch { } });
-                    return;
                 default:
-                    SetErrorStatus($"e-Kard status UNKNOWN (CRS offline, never cached): {result.BeneficiaryId}.");
+                    await using (var checkContext = new LocalDbContext())
+                    {
+                        var localMatch = await checkContext.BeneficiaryStaging
+                            .AsNoTracking()
+                            .AnyAsync(b => b.BeneficiaryId == result.BeneficiaryId || b.CivilRegistryId == result.BeneficiaryId);
+
+                        if (localMatch)
+                        {
+                            SetNeutralStatus($"Local Beneficiary found: {result.BeneficiaryId}. Checking project enrollment...");
+                            break;
+                        }
+                    }
+
+                    SetErrorStatus(result.Validity == EKardValidity.NotFound 
+                        ? $"No e-Kard ID ever issued for {result.BeneficiaryId}."
+                        : $"e-Kard status UNKNOWN (CRS offline, never cached): {result.BeneficiaryId}.");
+                    _ = Task.Run(() => { try { Console.Beep(400, 600); } catch { } });
                     return;
             }
 

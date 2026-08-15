@@ -11,10 +11,10 @@
              Background="{DynamicResource BrandSurfaceBrush}">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
-        <!-- eKalinga+ brand theme (blue headers, gold actions) -->
-        <SolidColorBrush x:Key="ThemePrimaryActionBrush" Color="#1E4E89" />
-        <SolidColorBrush x:Key="ThemeAccentSoftBrush" Color="#EFF6FF" />
-        <SolidColorBrush x:Key="ThemeAccentBorderBrush" Color="#BFDBFE" />
+        <!-- eKalinga+ brand theme (Forest Green headers, gold actions) -->
+        <SolidColorBrush x:Key="ThemePrimaryActionBrush" Color="#15803D" />
+        <SolidColorBrush x:Key="ThemeAccentSoftBrush" Color="#F0FDF4" />
+        <SolidColorBrush x:Key="ThemeAccentBorderBrush" Color="#BBF7D0" />
         <SolidColorBrush x:Key="BrandRedBrush" Color="#BE123C" />
 
         <Style x:Key="SidebarHeaderStyle" TargetType="TextBlock">
@@ -131,6 +131,11 @@
                 </Style>
             </Grid.Style>
 
+            <!-- Hidden scanner textbox for physical USB barcode/QR scanner capture -->
+            <TextBox x:Name="HiddenScannerTextBox" Text="{Binding ScannerInputText, UpdateSourceTrigger=PropertyChanged}" 
+                     Opacity="0" Width="1" Height="1" Focusable="True"
+                     HorizontalAlignment="Left" VerticalAlignment="Top"/>
+
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="{Binding SidebarWidth, FallbackValue=320}" />
@@ -160,15 +165,28 @@
                                 <StackPanel>
                                     <TextBlock Text="OPERATIONS" Style="{StaticResource SidebarHeaderStyle}"/>
 
-                                    <Button Content="CREATE SEMINAR"
+                                    <Button Content="+ NEW EVENT VIA BUDGET"
                                             Command="{Binding OpenCreateSeminarPanelCommand}"
                                             Style="{StaticResource GoldActionButton}"
-                                            HorizontalContentAlignment="Left" Height="45" Margin="0,0,0,8" FontSize="14"/>
+                                            ToolTip="Allocate funds and create a new Seminar event in the Budget module"
+                                            HorizontalContentAlignment="Left" Height="45" Margin="0,0,0,8" FontSize="13" FontWeight="Bold"/>
 
                                     <Button Content="BROWSE SEMINARS"
                                             Click="Browse_Click"
                                             Style="{StaticResource MaterialDesignOutlinedButton}"
-                                            HorizontalContentAlignment="Left" Height="45" Margin="0,0,0,20" FontSize="14"/>
+                                            HorizontalContentAlignment="Left" Height="45" Margin="0,0,0,12" FontSize="14"/>
+
+                                    <!-- Educational Tip Card for Budget Waterfall Alignment -->
+                                    <Border Background="#F0FDF4" BorderBrush="#BBF7D0" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,20">
+                                        <StackPanel>
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                                <materialDesign:PackIcon Kind="LightbulbOutline" Width="16" Height="16" Foreground="#15803D" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                                <TextBlock Text="Earmarked Funding" FontSize="11" FontWeight="Bold" Foreground="#15803D" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                            <TextBlock Text="All seminars are funded and spawned in the Budget module from Government (GGMS) or Private Donations."
+                                                       FontSize="11" Foreground="#166534" TextWrapping="Wrap" LineHeight="15"/>
+                                        </StackPanel>
+                                    </Border>
 
                                     <TextBlock Text="SEMINAR WORKFLOW" Style="{StaticResource SidebarHeaderStyle}"/>
 

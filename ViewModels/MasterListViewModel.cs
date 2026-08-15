@@ -368,7 +368,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 // Match the local masterlist (no auto-import).
                 var localMatch = await context.BeneficiaryStaging
                     .AsNoTracking()
-                    .FirstOrDefaultAsync(b => b.BeneficiaryId == result.BeneficiaryId);
+                    .FirstOrDefaultAsync(b => b.BeneficiaryId == result.BeneficiaryId || b.CivilRegistryId == result.BeneficiaryId);
 
                 ScannedBeneficiary = new MasterListBeneficiary
                 {
@@ -696,25 +696,25 @@ namespace AttendanceShiftingManagement.ViewModels
         public string LookupScannerSessionUrl
         {
             get => _lookupScannerSessionUrl;
-            private set => SetProperty(ref _lookupScannerSessionUrl, value);
+            set => SetProperty(ref _lookupScannerSessionUrl, value);
         }
 
         public string LookupScannerSessionPin
         {
             get => _lookupScannerSessionPin;
-            private set => SetProperty(ref _lookupScannerSessionPin, value);
+            set => SetProperty(ref _lookupScannerSessionPin, value);
         }
 
         public string? LookupScannerSessionExpiresAtText
         {
             get => _lookupScannerSessionExpiresAtText;
-            private set => SetProperty(ref _lookupScannerSessionExpiresAtText, value);
+            set => SetProperty(ref _lookupScannerSessionExpiresAtText, value);
         }
 
         public BitmapSource? LookupScannerQrImage
         {
             get => _lookupScannerQrImage;
-            private set => SetProperty(ref _lookupScannerQrImage, value);
+            set => SetProperty(ref _lookupScannerQrImage, value);
         }
 
         public MasterListBeneficiary? ScannedBeneficiary
@@ -929,7 +929,8 @@ namespace AttendanceShiftingManagement.ViewModels
                 var householdService = new BeneficiaryHouseholdContextService(context);
                 var householdContext = await householdService.GetHouseholdContextAsync(
                     staging?.LinkedHouseholdId,
-                    staging?.LinkedHouseholdMemberId);
+                    staging?.LinkedHouseholdMemberId,
+                    beneficiary.BeneficiaryId ?? staging?.BeneficiaryId);
                 ApplyHouseholdContext(householdContext);
             }
             catch (Exception ex)
@@ -1864,53 +1865,53 @@ namespace AttendanceShiftingManagement.ViewModels
 
         internal async Task RefreshAsync(CancellationToken cancellationToken = default)
         {
-            // CRS is the source of truth — pull any registry beneficiaries missing
-            // locally before reloading the pages (fail-soft when offline). Task.Run
-            // keeps the CRS fetch + dedup scan off the UI thread.
-            try
-            {
-                await Task.Run(() => new CrsMasterlistMirrorService().MirrorValidatedBeneficiariesAsync(cancellationToken), cancellationToken);
-            }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch
-            {
-                // Local masterlist keeps serving.
-            }
+            // 1. Immediately load local registry records so the table displays instantly (0ms lag)
+            await LoadApprovedPageAsync(1, cancellationToken);
 
-            // Demographics (marital status, ethnicity, tribe) ride along with the
-            // masterlist refresh into crs_demographics_cache (fail-soft when offline).
-            try
+            // 2. In background, mirror CRS validated beneficiaries & demographics if online (fail-soft)
+            _ = Task.Run(async () =>
             {
-                await Task.Run(() => new CrsDemographicsMirrorService().MirrorDemographicsAsync(cancellationToken), cancellationToken);
-            }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch
-            {
-                // Local demographics cache keeps serving.
-            }
+                try
+                {
+                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                    var mirrorResult = await new CrsMasterlistMirrorService().MirrorValidatedBeneficiariesAsync(cts.Token);
+                    if (mirrorResult.AddedCount > 0)
+                    {
+                        var app = Application.Current;
+                        if (app != null)
+                        {
+                            await app.Dispatcher.InvokeAsync(async () =>
+                            {
+                                await LoadApprovedPageAsync(ApprovedCurrentPage, CancellationToken.None);
+                            });
+                        }
+                    }
+                }
+                catch
+                {
+                    // Local masterlist keeps serving.
+                }
 
-            await Task.WhenAll(
-                LoadPendingPageAsync(1, cancellationToken),
-                LoadApprovedPageAsync(1, cancellationToken)
-            );
+                try
+                {
+                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                    await new CrsDemographicsMirrorService().MirrorDemographicsAsync(cts.Token);
+                }
+                catch
+                {
+                    // Local demographics cache keeps serving.
+                }
+            }, cancellationToken);
         }
 
         internal Task GoToNextPendingPageAsync(CancellationToken cancellationToken = default)
         {
-            if (PendingCurrentPage >= PendingTotalPages) return Task.CompletedTask;
-            return LoadPendingPageAsync(PendingCurrentPage + 1, cancellationToken);
+            return GoToNextApprovedPageAsync(cancellationToken);
         }
 
         internal Task GoToPreviousPendingPageAsync(CancellationToken cancellationToken = default)
         {
-            if (PendingCurrentPage <= 1) return Task.CompletedTask;
-            return LoadPendingPageAsync(PendingCurrentPage - 1, cancellationToken);
+            return GoToPreviousApprovedPageAsync(cancellationToken);
         }
 
         internal Task GoToNextApprovedPageAsync(CancellationToken cancellationToken = default)
@@ -1925,43 +1926,9 @@ namespace AttendanceShiftingManagement.ViewModels
             return LoadApprovedPageAsync(ApprovedCurrentPage - 1, cancellationToken);
         }
 
-        private async Task LoadPendingPageAsync(int targetPage, CancellationToken cancellationToken)
+        private Task LoadPendingPageAsync(int targetPage, CancellationToken cancellationToken)
         {
-            IsBusy = true;
-            try
-            {
-                var searchText = (SearchText ?? string.Empty).Trim();
-                var filters = FilterOptions.Where(o => o.IsSelected).Select(o => o.Label).ToList();
-                if (!filters.Contains(MasterListQuickFilters.Pending)) filters.Add(MasterListQuickFilters.Pending);
-
-                var result = await _queryService.LoadPageAsync(new MasterListPageRequest
-                {
-                    SearchText = searchText,
-                    QuickFilters = filters,
-                    PageNumber = Math.Max(1, targetPage),
-                    PageSize = SelectedPageSize
-                }, cancellationToken);
-
-                if (result != null)
-                {
-                    _pendingBeneficiaries.Clear();
-                    foreach (var b in result.Beneficiaries) _pendingBeneficiaries.Add(b);
-                    
-                    TotalPendingBeneficiaries = result.PendingCount;
-                    FilteredPendingCount = result.FilteredBeneficiaryCount;
-                    PendingCurrentPage = Math.Max(1, targetPage);
-                    
-                    SnapshotSourceSummary = $"Snapshot from {result.SourceDatabase} on {result.SourceServer}";
-                    LastUpdatedSummary = result.LastUpdatedAt.HasValue
-                        ? $"Last synced: {result.LastUpdatedAt.Value:MMM dd, yyyy hh:mm tt}"
-                        : "Last synced: --";
-                }
-            }
-            finally
-            {
-                IsBusy = false;
-                OnPropertyChanged(nameof(NoResultsVisibility));
-            }
+            return LoadApprovedPageAsync(targetPage, cancellationToken);
         }
 
         private async Task LoadApprovedPageAsync(int targetPage, CancellationToken cancellationToken)
@@ -1971,7 +1938,6 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 var searchText = (SearchText ?? string.Empty).Trim();
                 var filters = FilterOptions.Where(o => o.IsSelected).Select(o => o.Label).ToList();
-                if (!filters.Contains(MasterListQuickFilters.Approved)) filters.Add(MasterListQuickFilters.Approved);
 
                 var result = await _queryService.LoadPageAsync(new MasterListPageRequest
                 {
@@ -1986,9 +1952,18 @@ namespace AttendanceShiftingManagement.ViewModels
                     _approvedBeneficiaries.Clear();
                     foreach (var b in result.Beneficiaries) _approvedBeneficiaries.Add(b);
                     
-                    TotalApprovedBeneficiaries = result.ApprovedCount;
+                    TotalApprovedBeneficiaries = result.TotalBeneficiaries;
+                    TotalPendingBeneficiaries = 0;
+                    LinkedCivilRegistryCount = result.LinkedCivilRegistryCount;
+                    SeniorCount = result.SeniorCount;
+                    PwdCount = result.PwdCount;
                     FilteredApprovedCount = result.FilteredBeneficiaryCount;
                     ApprovedCurrentPage = Math.Max(1, targetPage);
+                    
+                    SnapshotSourceSummary = $"Registry: {result.TotalBeneficiaries:N0} records from {result.SourceDatabase}";
+                    LastUpdatedSummary = result.LastUpdatedAt.HasValue
+                        ? $"Last updated: {result.LastUpdatedAt.Value:MMM dd, yyyy hh:mm tt}"
+                        : "Last updated: --";
                 }
             }
             finally

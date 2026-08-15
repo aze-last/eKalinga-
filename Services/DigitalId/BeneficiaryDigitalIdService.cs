@@ -170,14 +170,30 @@ namespace AttendanceShiftingManagement.Services
 
             ScanDiagnosticLogger.Log("LookupByQrPayloadAsync", _context, $"START | RawPayload='{qrPayload}' | ProgramId={ayudaProgramId}");
 
-            // 1. Try exact match first (works for new format and exact old format)
-            var digitalId = await _context.BeneficiaryDigitalIds
+            BeneficiaryDigitalId? digitalId = null;
+            BeneficiaryStaging? stagingRow = null;
+
+            // 1. Try exact match on BeneficiaryDigitalIds.QrPayload
+            digitalId = await _context.BeneficiaryDigitalIds
                 .AsNoTracking()
                 .FirstOrDefaultAsync(item => item.IsActive && item.QrPayload == normalizedPayload, cancellationToken);
 
             if (digitalId != null)
             {
                 ScanDiagnosticLogger.Log("LookupByQrPayloadAsync", _context, $"MATCH_STRATEGY=ExactMatch | DigitalId={digitalId.Id} | StagingId={digitalId.BeneficiaryStagingId}");
+            }
+
+            // 1b. Try exact match on BeneficiaryDigitalIds.CardNumber
+            if (digitalId == null)
+            {
+                digitalId = await _context.BeneficiaryDigitalIds
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(item => item.IsActive && item.CardNumber == normalizedPayload, cancellationToken);
+
+                if (digitalId != null)
+                {
+                    ScanDiagnosticLogger.Log("LookupByQrPayloadAsync", _context, $"MATCH_STRATEGY=CardNumberMatch | DigitalId={digitalId.Id} | StagingId={digitalId.BeneficiaryStagingId}");
+                }
             }
 
             // 2. Try replacing '?' with '|' (in case database has not run bootstrap repairs yet)
@@ -194,8 +210,23 @@ namespace AttendanceShiftingManagement.Services
                 }
             }
 
-            // 3. Fallback: Robust Regex-based numeric StagingId extraction (handles ASMBID000123, ASM-BID|123, BID-123, etc. with variable digit lengths)
+            // 3. Fallback: Check local BeneficiaryStaging directly by BeneficiaryId or CivilRegistryId
             if (digitalId == null)
+            {
+                stagingRow = await _context.BeneficiaryStaging
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(row =>
+                        (row.BeneficiaryId != null && row.BeneficiaryId == normalizedPayload) ||
+                        (row.CivilRegistryId != null && row.CivilRegistryId == normalizedPayload), cancellationToken);
+
+                if (stagingRow != null)
+                {
+                    ScanDiagnosticLogger.Log("LookupByQrPayloadAsync", _context, $"MATCH_STRATEGY=BeneficiaryStagingDirectMatch | StagingId={stagingRow.StagingID} | BeneficiaryId={stagingRow.BeneficiaryId}");
+                }
+            }
+
+            // 4. Fallback: Robust Regex-based numeric StagingId extraction (handles ASMBID000123, ASM-BID|123, BID-123, etc. with variable digit lengths)
+            if (digitalId == null && stagingRow == null)
             {
                 var match = System.Text.RegularExpressions.Regex.Match(
                     normalizedPayload,
@@ -204,19 +235,66 @@ namespace AttendanceShiftingManagement.Services
 
                 if (match.Success && int.TryParse(match.Groups[1].Value, out var stagingId))
                 {
-                    var potentialId = await _context.BeneficiaryDigitalIds
+                    stagingRow = await _context.BeneficiaryStaging
                         .AsNoTracking()
-                        .FirstOrDefaultAsync(item => item.IsActive && item.BeneficiaryStagingId == stagingId, cancellationToken);
+                        .FirstOrDefaultAsync(row => row.StagingID == stagingId, cancellationToken);
 
-                    if (potentialId != null)
+                    if (stagingRow != null)
                     {
-                        digitalId = potentialId;
-                        ScanDiagnosticLogger.Log("LookupByQrPayloadAsync", _context, $"MATCH_STRATEGY=RegexStagingIdMatch | ExtractedStagingId={stagingId} | DigitalId={digitalId.Id}");
+                        ScanDiagnosticLogger.Log("LookupByQrPayloadAsync", _context, $"MATCH_STRATEGY=RegexStagingIdMatch | ExtractedStagingId={stagingId}");
                     }
                 }
             }
 
-            if (digitalId == null)
+            // 5. Fallback: Direct numeric StagingId or ResidentsId
+            if (digitalId == null && stagingRow == null && int.TryParse(normalizedPayload, out var directId))
+            {
+                stagingRow = await _context.BeneficiaryStaging
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(row => row.StagingID == directId || row.ResidentsId == directId, cancellationToken);
+
+                if (stagingRow != null)
+                {
+                    ScanDiagnosticLogger.Log("LookupByQrPayloadAsync", _context, $"MATCH_STRATEGY=DirectNumericMatch | StagingId={stagingRow.StagingID}");
+                }
+            }
+
+            // If digitalId was found, load its stagingRow if not already loaded
+            if (digitalId != null && stagingRow == null)
+            {
+                stagingRow = await _context.BeneficiaryStaging
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(row => row.StagingID == digitalId.BeneficiaryStagingId, cancellationToken);
+            }
+
+            // If a local staging row was found (either directly or via digitalId), return the result
+            if (stagingRow != null)
+            {
+                if (digitalId == null)
+                {
+                    digitalId = await _context.BeneficiaryDigitalIds
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(item => item.IsActive && item.BeneficiaryStagingId == stagingRow.StagingID, cancellationToken);
+                }
+
+                var releaseHistory = await _ledgerService.GetEntriesAsync(stagingRow.CivilRegistryId, stagingRow.BeneficiaryId);
+                return new BeneficiaryDigitalIdLookupResult(
+                    stagingRow.StagingID,
+                    stagingRow.ResidentsId,
+                    digitalId?.HouseholdId ?? stagingRow.LinkedHouseholdId,
+                    digitalId?.HouseholdMemberId ?? stagingRow.LinkedHouseholdMemberId,
+                    BuildDisplayName(stagingRow),
+                    NormalizeNullable(stagingRow.BeneficiaryId),
+                    NormalizeNullable(stagingRow.CivilRegistryId),
+                    digitalId?.CardNumber ?? $"BID-{stagingRow.StagingID:D6}",
+                    NormalizeNullable(digitalId?.PhotoPath) ?? NormalizeNullable(stagingRow.PhotoPath),
+                    releaseHistory,
+                    NormalizeNullable(stagingRow.Address),
+                    NormalizeNullable(stagingRow.Age),
+                    NormalizeNullable(stagingRow.Sex));
+            }
+
+            if (digitalId == null && stagingRow == null)
             {
                 ScanDiagnosticLogger.Log("LookupByQrPayloadAsync", _context, "LOCAL_MATCH=NONE | Attempting remote verification...");
 
@@ -390,30 +468,35 @@ namespace AttendanceShiftingManagement.Services
                 }
             }
 
-            var stagingRow = await _context.BeneficiaryStaging
-                .AsNoTracking()
-                .FirstOrDefaultAsync(row => row.StagingID == digitalId.BeneficiaryStagingId, cancellationToken);
-
-            if (stagingRow == null)
+            if (digitalId == null)
             {
                 return null;
             }
 
-            var releaseHistory = await _ledgerService.GetEntriesAsync(stagingRow.CivilRegistryId, stagingRow.BeneficiaryId);
+            var remoteStagingRow = await _context.BeneficiaryStaging
+                .AsNoTracking()
+                .FirstOrDefaultAsync(row => row.StagingID == digitalId.BeneficiaryStagingId, cancellationToken);
+
+            if (remoteStagingRow == null)
+            {
+                return null;
+            }
+
+            var remoteReleaseHistory = await _ledgerService.GetEntriesAsync(remoteStagingRow.CivilRegistryId, remoteStagingRow.BeneficiaryId);
             return new BeneficiaryDigitalIdLookupResult(
-                stagingRow.StagingID,
-                stagingRow.ResidentsId,
+                remoteStagingRow.StagingID,
+                remoteStagingRow.ResidentsId,
                 digitalId.HouseholdId,
                 digitalId.HouseholdMemberId,
-                BuildDisplayName(stagingRow),
-                NormalizeNullable(stagingRow.BeneficiaryId),
-                NormalizeNullable(stagingRow.CivilRegistryId),
+                BuildDisplayName(remoteStagingRow),
+                NormalizeNullable(remoteStagingRow.BeneficiaryId),
+                NormalizeNullable(remoteStagingRow.CivilRegistryId),
                 digitalId.CardNumber,
                 NormalizeNullable(digitalId.PhotoPath),
-                releaseHistory,
-                NormalizeNullable(stagingRow.Address),
-                NormalizeNullable(stagingRow.Age),
-                NormalizeNullable(stagingRow.Sex));
+                remoteReleaseHistory,
+                NormalizeNullable(remoteStagingRow.Address),
+                NormalizeNullable(remoteStagingRow.Age),
+                NormalizeNullable(remoteStagingRow.Sex));
         }
 
         /// <summary>

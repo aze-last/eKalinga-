@@ -1,5 +1,11 @@
+using AttendanceShiftingManagement.Data;
 using AttendanceShiftingManagement.Models;
-using MySqlConnector;
+using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace AttendanceShiftingManagement.Services
 {
@@ -55,7 +61,6 @@ namespace AttendanceShiftingManagement.Services
 
     internal sealed class MasterListService : IMasterListQueryService
     {
-        private const string TableName = "val_beneficiaries";
         private const int MaxPageSize = 500;
 
         public async Task<MasterListPageResult> LoadPageAsync(MasterListPageRequest request, CancellationToken cancellationToken = default)
@@ -65,308 +70,98 @@ namespace AttendanceShiftingManagement.Services
             var pageNumber = Math.Max(1, request.PageNumber);
             var pageSize = Math.Clamp(request.PageSize, 1, MaxPageSize);
 
-            var settings = ConnectionSettingsService.Load();
-            var activePreset = settings.GetPreset(settings.SelectedPreset);
+            await using var context = new LocalDbContext();
 
-            await using var connection = new MySqlConnection(ConnectionSettingsService.BuildConnectionString(activePreset));
-            await connection.OpenAsync(cancellationToken);
+            // Compute summary metrics across local staging registry
+            var totalCount = await context.BeneficiaryStaging.CountAsync(cancellationToken);
+            var seniorCount = await context.BeneficiaryStaging.CountAsync(b => b.IsSenior, cancellationToken);
+            var pwdCount = await context.BeneficiaryStaging.CountAsync(b => b.IsPwd, cancellationToken);
+            var linkedCivilCount = await context.BeneficiaryStaging.CountAsync(b => !string.IsNullOrWhiteSpace(b.CivilRegistryId), cancellationToken);
 
-            if (!await TableExistsAsync(connection, activePreset.Database, cancellationToken))
-            {
-                throw new InvalidOperationException($"Table `val_beneficiaries` was not found in the active database `{activePreset.Database}`. Snapshot it first from Settings or Load Tables.");
-            }
+            IQueryable<BeneficiaryStaging> query = context.BeneficiaryStaging.AsNoTracking();
 
-            var normalizedRequest = new MasterListPageRequest
-            {
-                SearchText = request.SearchText,
-                QuickFilters = request.QuickFilters,
-                PageNumber = pageNumber,
-                PageSize = pageSize
-            };
-
-            var summary = await LoadSummaryAsync(connection, cancellationToken);
-            var filteredCount = await LoadFilteredCountAsync(connection, normalizedRequest, cancellationToken);
-
-            var beneficiaries = filteredCount == 0
-                ? Array.Empty<MasterListBeneficiary>()
-                : await LoadBeneficiariesAsync(connection, normalizedRequest, cancellationToken);
-
-            return new MasterListPageResult
-            {
-                Beneficiaries = beneficiaries,
-                TotalBeneficiaries = summary.TotalBeneficiaries,
-                ApprovedCount = summary.ApprovedCount,
-                PendingCount = summary.PendingCount,
-                LinkedCivilRegistryCount = summary.LinkedCivilRegistryCount,
-                SeniorCount = summary.SeniorCount,
-                PwdCount = summary.PwdCount,
-                FilteredBeneficiaryCount = filteredCount,
-                SourceDatabase = activePreset.Database,
-                SourceServer = activePreset.Server,
-                LastUpdatedAt = summary.LastUpdatedAt
-            };
-        }
-
-        private static async Task<SummarySnapshot> LoadSummaryAsync(MySqlConnection connection, CancellationToken cancellationToken)
-        {
-            const string sql =
-                """
-                SELECT
-                    (SELECT COUNT(*) FROM val_beneficiaries) AS total_count,
-                    (SELECT COUNT(*) FROM val_beneficiaries v 
-                     LEFT JOIN BeneficiaryStaging s ON v.residents_id = s.ResidentsId 
-                     WHERE COALESCE(s.VerificationStatus, 0) = 1) AS approved_count,
-                    (SELECT COUNT(*) FROM val_beneficiaries v 
-                     LEFT JOIN BeneficiaryStaging s ON v.residents_id = s.ResidentsId 
-                     WHERE COALESCE(s.VerificationStatus, 0) = 0) AS pending_count,
-                    SUM(CASE WHEN TRIM(COALESCE(v.civilregistry_id, '')) <> '' THEN 1 ELSE 0 END) AS linked_count,
-                    SUM(CASE WHEN COALESCE(v.is_senior, 0) <> 0 THEN 1 ELSE 0 END) AS senior_count,
-                    SUM(CASE WHEN COALESCE(v.is_pwd, 0) <> 0 THEN 1 ELSE 0 END) AS pwd_count,
-                    MAX(v.updated_at) AS last_updated
-                FROM val_beneficiaries v;
-                """;
-
-            await using var command = new MySqlCommand(sql, connection);
-            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-
-            if (!await reader.ReadAsync(cancellationToken))
-            {
-                return new SummarySnapshot(0, 0, 0, 0, 0, 0, null);
-            }
-
-            return new SummarySnapshot(
-                GetIntValue(reader, "total_count"),
-                GetIntValue(reader, "approved_count"),
-                GetIntValue(reader, "pending_count"),
-                GetIntValue(reader, "linked_count"),
-                GetIntValue(reader, "senior_count"),
-                GetIntValue(reader, "pwd_count"),
-                reader.IsDBNull(reader.GetOrdinal("last_updated"))
-                    ? null
-                    : (DateTime?)reader.GetDateTime(reader.GetOrdinal("last_updated")));
-        }
-
-        private static async Task<int> LoadFilteredCountAsync(MySqlConnection connection, MasterListPageRequest request, CancellationToken cancellationToken)
-        {
-            await using var command = new MySqlCommand();
-            command.Connection = connection;
-
-            var whereClause = BuildWhereClause(command, request);
-            command.CommandText = 
-                $"""
-                SELECT COUNT(*) 
-                FROM {TableName} v
-                LEFT JOIN BeneficiaryStaging s ON v.residents_id = s.ResidentsId
-                {whereClause};
-                """;
-
-            var count = await command.ExecuteScalarAsync(cancellationToken);
-            return Convert.ToInt32(count);
-        }
-
-        private static async Task<IReadOnlyList<MasterListBeneficiary>> LoadBeneficiariesAsync(MySqlConnection connection, MasterListPageRequest request, CancellationToken cancellationToken)
-        {
-            var beneficiaries = new List<MasterListBeneficiary>();
-
-            await using var command = new MySqlCommand();
-            command.Connection = connection;
-
-            var whereClause = BuildWhereClause(command, request);
-            command.CommandText =
-                $"""
-                SELECT
-                    v.id,
-                    v.residents_id,
-                    v.beneficiary_id,
-                    v.user_id,
-                    v.civilregistry_id,
-                    v.last_name,
-                    v.first_name,
-                    v.middle_name,
-                    v.full_name,
-                    v.sex,
-                    v.date_of_birth,
-                    v.age,
-                    v.marital_status,
-                    v.address,
-                    v.is_pwd,
-                    v.pwd_id_no,
-                    v.is_senior,
-                    v.senior_id_no,
-                    v.disability_type,
-                    v.cause_of_disability,
-                    v.created_at,
-                    v.updated_at,
-                    COALESCE(s.VerificationStatus, 0) as verification_status
-                FROM {TableName} v
-                LEFT JOIN BeneficiaryStaging s ON v.residents_id = s.ResidentsId
-                {whereClause}
-                ORDER BY v.full_name, v.beneficiary_id
-                LIMIT @pageSize OFFSET @offset;
-                """;
-
-            command.Parameters.AddWithValue("@pageSize", request.PageSize);
-            command.Parameters.AddWithValue("@offset", (request.PageNumber - 1) * request.PageSize);
-
-            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-
-            while (await reader.ReadAsync(cancellationToken))
-            {
-                beneficiaries.Add(new MasterListBeneficiary
-                {
-                    Id = reader.GetInt64(reader.GetOrdinal("id")),
-                    ResidentsId = reader.GetInt64(reader.GetOrdinal("residents_id")),
-                    BeneficiaryId = GetString(reader, "beneficiary_id"),
-                    UserId = IsDBNull(reader, "user_id") ? null : reader.GetInt32(reader.GetOrdinal("user_id")),
-                    CivilRegistryId = GetString(reader, "civilregistry_id"),
-                    LastName = GetString(reader, "last_name"),
-                    FirstName = GetString(reader, "first_name"),
-                    MiddleName = GetString(reader, "middle_name"),
-                    FullName = GetString(reader, "full_name"),
-                    Sex = GetString(reader, "sex"),
-                    DateOfBirth = GetString(reader, "date_of_birth"),
-                    Age = GetString(reader, "age"),
-                    MaritalStatus = GetString(reader, "marital_status"),
-                    Address = GetString(reader, "address"),
-                    IsPwd = GetBoolean(reader, "is_pwd"),
-                    PwdIdNo = GetString(reader, "pwd_id_no"),
-                    IsSenior = GetBoolean(reader, "is_senior"),
-                    SeniorIdNo = GetString(reader, "senior_id_no"),
-                    DisabilityType = GetString(reader, "disability_type"),
-                    CauseOfDisability = GetString(reader, "cause_of_disability"),
-                    VerificationStatus = (VerificationStatus)reader.GetInt32(reader.GetOrdinal("verification_status")),
-                    CreatedAt = IsDBNull(reader, "created_at") ? null : reader.GetDateTime(reader.GetOrdinal("created_at")),
-                    UpdatedAt = IsDBNull(reader, "updated_at") ? null : reader.GetDateTime(reader.GetOrdinal("updated_at"))
-                });
-            }
-
-            return beneficiaries;
-        }
-
-        private static string BuildWhereClause(MySqlCommand command, MasterListPageRequest request)
-        {
-            var clauses = new List<string>();
-
+            // Quick filters
             foreach (var filter in request.QuickFilters)
             {
                 switch (filter)
                 {
                     case MasterListQuickFilters.SeniorCitizens:
-                        clauses.Add("COALESCE(v.is_senior, 0) <> 0");
+                        query = query.Where(b => b.IsSenior);
                         break;
                     case MasterListQuickFilters.PersonsWithDisability:
-                        clauses.Add("COALESCE(v.is_pwd, 0) <> 0");
+                        query = query.Where(b => b.IsPwd);
                         break;
                     case MasterListQuickFilters.WithCivilRegistryId:
-                        clauses.Add("TRIM(COALESCE(v.civilregistry_id, '')) <> ''");
+                        query = query.Where(b => b.CivilRegistryId != null && b.CivilRegistryId != "");
                         break;
                     case MasterListQuickFilters.MissingCivilRegistryId:
-                        clauses.Add("TRIM(COALESCE(v.civilregistry_id, '')) = ''");
-                        break;
-                    case MasterListQuickFilters.Approved:
-                        clauses.Add("COALESCE(s.VerificationStatus, 0) = 1");
-                        break;
-                    case MasterListQuickFilters.Pending:
-                        clauses.Add("COALESCE(s.VerificationStatus, 0) = 0");
+                        query = query.Where(b => b.CivilRegistryId == null || b.CivilRegistryId == "");
                         break;
                 }
             }
 
-            var searchText = request.SearchText?.Trim() ?? string.Empty;
+            // Search filter
+            var searchText = request.SearchText?.Trim();
             if (!string.IsNullOrWhiteSpace(searchText))
             {
-                clauses.Add(
-                    """
-                    (
-                        COALESCE(v.full_name, '') LIKE @searchPattern
-                        OR COALESCE(v.beneficiary_id, '') LIKE @searchPattern
-                        OR COALESCE(v.civilregistry_id, '') LIKE @searchPattern
-                        OR COALESCE(v.address, '') LIKE @searchPattern
-                        OR COALESCE(v.sex, '') LIKE @searchPattern
-                    )
-                    """);
-
-                command.Parameters.AddWithValue("@searchPattern", $"%{searchText}%");
+                var lower = searchText.ToLower();
+                query = query.Where(b =>
+                    (b.FullName != null && b.FullName.ToLower().Contains(lower)) ||
+                    (b.BeneficiaryId != null && b.BeneficiaryId.ToLower().Contains(lower)) ||
+                    (b.CivilRegistryId != null && b.CivilRegistryId.ToLower().Contains(lower)) ||
+                    (b.LastName != null && b.LastName.ToLower().Contains(lower)) ||
+                    (b.FirstName != null && b.FirstName.ToLower().Contains(lower)) ||
+                    (b.Address != null && b.Address.ToLower().Contains(lower)));
             }
 
-            return clauses.Count == 0
-                ? string.Empty
-                : $" WHERE {string.Join(" AND ", clauses)}";
-        }
+            var filteredCount = await query.CountAsync(cancellationToken);
 
-        private static async Task<bool> TableExistsAsync(MySqlConnection connection, string databaseName, CancellationToken cancellationToken)
-        {
-            const string sql =
-                """
-                SELECT COUNT(*)
-                FROM information_schema.tables
-                WHERE table_schema = @databaseName
-                  AND table_name = @tableName
-                  AND table_type = 'BASE TABLE';
-                """;
+            var items = await query
+                .OrderBy(b => b.FullName)
+                .ThenBy(b => b.BeneficiaryId)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .Select(b => new MasterListBeneficiary
+                {
+                    Id = b.StagingID,
+                    ResidentsId = b.ResidentsId ?? 0,
+                    BeneficiaryId = b.BeneficiaryId ?? string.Empty,
+                    CivilRegistryId = b.CivilRegistryId ?? string.Empty,
+                    LastName = b.LastName ?? string.Empty,
+                    FirstName = b.FirstName ?? string.Empty,
+                    MiddleName = b.MiddleName ?? string.Empty,
+                    FullName = b.FullName ?? string.Empty,
+                    Sex = b.Sex ?? string.Empty,
+                    DateOfBirth = b.DateOfBirth ?? string.Empty,
+                    Age = b.Age ?? string.Empty,
+                    MaritalStatus = b.MaritalStatus ?? string.Empty,
+                    Address = b.Address ?? string.Empty,
+                    IsPwd = b.IsPwd,
+                    PwdIdNo = b.PwdIdNo ?? string.Empty,
+                    IsSenior = b.IsSenior,
+                    SeniorIdNo = b.SeniorIdNo ?? string.Empty,
+                    DisabilityType = b.DisabilityType ?? string.Empty,
+                    CauseOfDisability = b.CauseOfDisability ?? string.Empty,
+                    VerificationStatus = VerificationStatus.Approved,
+                    CreatedAt = b.ImportedAt,
+                    UpdatedAt = b.UpdatedAt
+                })
+                .ToListAsync(cancellationToken);
 
-            await using var command = new MySqlCommand(sql, connection);
-            command.Parameters.AddWithValue("@databaseName", databaseName);
-            command.Parameters.AddWithValue("@tableName", TableName);
-
-            var count = await command.ExecuteScalarAsync(cancellationToken);
-            return Convert.ToInt32(count) > 0;
-        }
-
-        private static int GetIntValue(MySqlDataReader reader, string columnName)
-        {
-            var ordinal = reader.GetOrdinal(columnName);
-            if (reader.IsDBNull(ordinal))
+            return new MasterListPageResult
             {
-                return 0;
-            }
-
-            return Convert.ToInt32(reader.GetValue(ordinal));
-        }
-
-        private static string GetString(MySqlDataReader reader, string columnName)
-        {
-            var ordinal = reader.GetOrdinal(columnName);
-            return reader.IsDBNull(ordinal) ? string.Empty : reader.GetString(ordinal);
-        }
-
-        private static bool GetBoolean(MySqlDataReader reader, string columnName)
-        {
-            var ordinal = reader.GetOrdinal(columnName);
-            if (reader.IsDBNull(ordinal))
-            {
-                return false;
-            }
-
-            var rawValue = reader.GetValue(ordinal);
-            return rawValue switch
-            {
-                bool boolValue => boolValue,
-                sbyte signedByte => signedByte != 0,
-                byte unsignedByte => unsignedByte != 0,
-                short shortValue => shortValue != 0,
-                ushort unsignedShort => unsignedShort != 0,
-                int intValue => intValue != 0,
-                uint unsignedInt => unsignedInt != 0,
-                long longValue => longValue != 0,
-                ulong unsignedLong => unsignedLong != 0,
-                string stringValue when int.TryParse(stringValue, out var parsed) => parsed != 0,
-                _ => Convert.ToBoolean(rawValue)
+                Beneficiaries = items,
+                TotalBeneficiaries = totalCount,
+                ApprovedCount = totalCount,
+                PendingCount = 0,
+                LinkedCivilRegistryCount = linkedCivilCount,
+                SeniorCount = seniorCount,
+                PwdCount = pwdCount,
+                FilteredBeneficiaryCount = filteredCount,
+                SourceDatabase = "ams.db (Local Masterlist)",
+                SourceServer = "eKalinga Local Registry",
+                LastUpdatedAt = DateTime.Now
             };
         }
-
-        private static bool IsDBNull(MySqlDataReader reader, string columnName)
-        {
-            return reader.IsDBNull(reader.GetOrdinal(columnName));
-        }
-
-        private sealed record SummarySnapshot(
-            int TotalBeneficiaries,
-            int ApprovedCount,
-            int PendingCount,
-            int LinkedCivilRegistryCount,
-            int SeniorCount,
-            int PwdCount,
-            DateTime? LastUpdatedAt);
     }
 }

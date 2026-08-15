@@ -234,13 +234,7 @@
                                     BorderBrush="{DynamicResource ThemeInputBorderBrush}"
                                     Foreground="{DynamicResource BrandTextSecondaryBrush}"
                                     Height="40"
-                                    FontSize="11"
-                                    Margin="0,0,0,12"/>
-
-                            <Button Content="PRINT DIGITAL ID CARD"
-                                    Command="{Binding PrintDigitalIdCommand}"
-                                    Style="{StaticResource GoldActionButton}"
-                                    Height="50"/>
+                                    FontSize="11"/>
                         </StackPanel>
                     </ScrollViewer>
                 </TabItem>
@@ -274,7 +268,7 @@
                                                 <TextBlock Text="{Binding Remarks}" FontSize="12" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,6,0,0" TextWrapping="Wrap"/>
                                                 <TextBlock Text="{Binding SourceModule}" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource BrandGoldTextBrush}" Margin="0,8,0,0"/>
                                             </StackPanel>      
-                                            <TextBlock Grid.Column="1" Text="{Binding Amount, StringFormat='PHP {0:N2}'}" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource BrandSuccessBrush}" VerticalAlignment="Center"/>
+                                             <TextBlock Grid.Column="1" Text="{Binding Amount, StringFormat='PHP {0:N2}'}" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource BrandSuccessBrush}" VerticalAlignment="Center"/>
                                         </Grid>
                                     </Border>
                                 </DataTemplate>
@@ -288,7 +282,7 @@
 
                         <!-- History Empty State -->
                         <StackPanel Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center"
-                                    Visibility="{Binding HistoryEmptyStateVisibility}">
+                                     Visibility="{Binding HistoryEmptyStateVisibility}">
                             <materialDesign:PackIcon Kind="History" Width="56" Height="56" Foreground="{DynamicResource ThemeInputBorderBrush}" HorizontalAlignment="Center"/>
                             <TextBlock Text="No aid history found" Foreground="{DynamicResource BrandTextSecondaryBrush}" FontSize="13" Margin="0,12,0,0"/>
                         </StackPanel>
@@ -299,24 +293,14 @@
             <!-- Footer Actions -->
             <Border Grid.Row="2" Padding="24" Background="{DynamicResource ThemeCardSubtleBrush}" CornerRadius="0,0,20,20">
                 <StackPanel>
-                    <UniformGrid Columns="2" Margin="0,0,0,16">
-                        <Button Content="RETURN TO PENDING"    
-                                Command="{Binding ReturnToPendingCommand}"
-                                Style="{StaticResource MaterialDesignOutlinedButton}"
-                                BorderBrush="{DynamicResource ThemeInputBorderBrush}"
-                                Foreground="{DynamicResource BrandTextSecondaryBrush}"
-                                Height="44"
-                                FontSize="12"
-                                Margin="0,0,8,0"/>
-                        <Button Content="REJECT RECORD"        
-                                Command="{Binding RejectCommand}"
-                                Style="{StaticResource MaterialDesignOutlinedButton}"
-                                BorderBrush="#FCA5A5"
-                                Foreground="#B91C1C"
-                                Height="44"
-                                FontSize="12"
-                                Margin="8,0,0,0"/>
-                    </UniformGrid>
+                    <Button Content="REJECT RECORD"        
+                            Command="{Binding RejectCommand}"
+                            Style="{StaticResource MaterialDesignOutlinedButton}"
+                            BorderBrush="#FCA5A5"
+                            Foreground="#B91C1C"
+                            Height="44"
+                            FontSize="12"
+                            Margin="0,0,0,16"/>
                     <Button Content="APPROVE &amp; ISSUE DIGITAL ID"
                             Command="{Binding ApproveCommand}" 
                             Style="{StaticResource GoldActionButton}"

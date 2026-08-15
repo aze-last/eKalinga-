@@ -1,3 +1,4 @@
+using System.Linq;
 using AttendanceShiftingManagement.Data;
 using AttendanceShiftingManagement.Helpers;
 using AttendanceShiftingManagement.Models;
@@ -214,7 +215,7 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand CloseProjectCreationPanelCommand => _closeProjectCreationPanelCommand;
         public ICommand ConfirmCreateProjectCommand => _confirmCreateProjectCommand;
 
-        public ObservableCollection<AyudaProgramType> ProgramTypes { get; } = new(Enum.GetValues<AyudaProgramType>());
+        public ObservableCollection<AyudaProgramType> ProgramTypes { get; } = new(Enum.GetValues<AyudaProgramType>().Where(type => type != AyudaProgramType.AssistanceCase));
         public ObservableCollection<AssistanceReleaseKind> ReleaseKinds { get; } = new(Enum.GetValues<AssistanceReleaseKind>());
 
         public int? NewProjectSourceDonationId { get; set; }
@@ -312,8 +313,18 @@ namespace AttendanceShiftingManagement.ViewModels
         public AyudaProgramType SelectedProgramType
         {
             get => _selectedProgramType;
-            set => SetProperty(ref _selectedProgramType, value);
+            set
+            {
+                if (SetProperty(ref _selectedProgramType, value))
+                {
+                    OnPropertyChanged(nameof(IsEnrollBeneficiariesVisible));
+                    OnPropertyChanged(nameof(IsAttendanceBasedProgram));
+                }
+            }
         }
+
+        public bool IsEnrollBeneficiariesVisible => _selectedProgramType != AyudaProgramType.CashForWork && _selectedProgramType != AyudaProgramType.Seminar;
+        public bool IsAttendanceBasedProgram => _selectedProgramType == AyudaProgramType.CashForWork || _selectedProgramType == AyudaProgramType.Seminar;
 
         public AssistanceReleaseKind SelectedReleaseKind
         {
@@ -524,6 +535,12 @@ namespace AttendanceShiftingManagement.ViewModels
                 && string.IsNullOrWhiteSpace(NewProjectSourceProjectDetailsId))
             {
                 SetErrorStatus("A source fund must be selected to create a project.");
+                return;
+            }
+
+            if (!IsNewDonationMode && SelectedBudget != null && SelectedBudget.HasLinkedProject)
+            {
+                SetErrorStatus($"Source fund '{SelectedBudget.Name}' already has a linked project ('{SelectedBudget.LinkedProjectName}'). Duplicate project creation is blocked.");
                 return;
             }
 
@@ -1308,7 +1325,7 @@ namespace AttendanceShiftingManagement.ViewModels
                     Id = b.Id,
                     Code = b.BudgetCode,
                     Name = b.BudgetName,
-                    Category = "Global CFW Cap",
+                    Category = "Cash for Work Project",
                     BudgetCap = b.BudgetCap,
                     Status = b.IsActive ? "Active" : "Inactive",
                     OriginalItem = b
@@ -1322,6 +1339,10 @@ namespace AttendanceShiftingManagement.ViewModels
             foreach (var b in donations)
             {
                 var linkedProject = allProjects.FirstOrDefault(p => p.SourceDonationId == b.Id);
+                var linkedCfwProject = cfwBudgets.FirstOrDefault(p => p.SourceDonationId == b.Id);
+                var linkedName = linkedProject?.ProgramName ?? linkedCfwProject?.BudgetName ?? string.Empty;
+                var isLinked = linkedProject != null || linkedCfwProject != null;
+
                 AllBudgets.Add(new BudgetRecordListItem
                 {
                     Id = b.Id,
@@ -1331,8 +1352,8 @@ namespace AttendanceShiftingManagement.ViewModels
                     BudgetCap = b.Amount,
                     Status = "Active",
                     OriginalItem = b,
-                    HasLinkedProject = linkedProject != null,
-                    LinkedProjectName = linkedProject?.ProgramName ?? string.Empty
+                    HasLinkedProject = isLinked,
+                    LinkedProjectName = linkedName
                 });
             }
 
@@ -1340,6 +1361,10 @@ namespace AttendanceShiftingManagement.ViewModels
             foreach (var b in snapshots)
             {
                 var linkedProject = allProjects.FirstOrDefault(p => p.SourceGGMSBudgetId == b.Id);
+                var linkedCfwProject = cfwBudgets.FirstOrDefault(p => p.SourceGGMSBudgetId == b.Id);
+                var linkedName = linkedProject?.ProgramName ?? linkedCfwProject?.BudgetName ?? string.Empty;
+                var isLinked = linkedProject != null || linkedCfwProject != null;
+
                 AllBudgets.Add(new BudgetRecordListItem
                 {
                     Id = b.Id,
@@ -1349,8 +1374,8 @@ namespace AttendanceShiftingManagement.ViewModels
                     BudgetCap = b.AllocatedAmount,
                     Status = "Active",
                     OriginalItem = b,
-                    HasLinkedProject = linkedProject != null,
-                    LinkedProjectName = linkedProject?.ProgramName ?? string.Empty
+                    HasLinkedProject = isLinked,
+                    LinkedProjectName = linkedName
                 });
             }
 
@@ -1364,7 +1389,7 @@ namespace AttendanceShiftingManagement.ViewModels
             // (developer purge) — a stale flag shows a phantom project badge and blocks
             // CREATE PROJECT on that GGMS row.
             var staleLinkIds = ggmsProjects
-                .Where(p => p.IsLinked && allProjects.All(a => a.SourceProjectDetailsId != p.ProjectDetailsId))
+                .Where(p => p.IsLinked && allProjects.All(a => a.SourceProjectDetailsId != p.ProjectDetailsId) && cfwBudgets.All(c => c.SourceProjectDetailsId != p.ProjectDetailsId))
                 .Select(p => p.GgmsProjectCacheId)
                 .ToList();
             if (staleLinkIds.Count > 0)
@@ -1384,6 +1409,10 @@ namespace AttendanceShiftingManagement.ViewModels
             foreach (var b in ggmsProjects)
             {
                 var linkedProject = allProjects.FirstOrDefault(p => p.SourceProjectDetailsId == b.ProjectDetailsId);
+                var linkedCfwProject = cfwBudgets.FirstOrDefault(p => p.SourceProjectDetailsId == b.ProjectDetailsId);
+                var linkedName = linkedProject?.ProgramName ?? linkedCfwProject?.BudgetName ?? string.Empty;
+                var isLinked = linkedProject != null || linkedCfwProject != null || b.IsLinked;
+
                 AllBudgets.Add(new BudgetRecordListItem
                 {
                     Id = b.GgmsProjectCacheId,
@@ -1393,8 +1422,8 @@ namespace AttendanceShiftingManagement.ViewModels
                     BudgetCap = b.TotalBudget,
                     Status = string.Equals(b.Status, "archived", StringComparison.OrdinalIgnoreCase) ? "Archived" : "Active",
                     OriginalItem = b,
-                    HasLinkedProject = linkedProject != null || b.IsLinked,
-                    LinkedProjectName = linkedProject?.ProgramName ?? string.Empty
+                    HasLinkedProject = isLinked,
+                    LinkedProjectName = linkedName
                 });
             }
 
@@ -2440,19 +2469,19 @@ namespace AttendanceShiftingManagement.ViewModels
             DonationUnitOfMeasure = string.Empty;
         }
 
-        private void SetNeutralStatus(string message)
+        public void SetNeutralStatus(string message)
         {
             StatusMessage = message;
             StatusBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#64748B"));
         }
 
-        private void SetSuccessStatus(string message)
+        public void SetSuccessStatus(string message)
         {
             StatusMessage = message;
             StatusBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#15803D"));
         }
 
-        private void SetErrorStatus(string message)
+        public void SetErrorStatus(string message)
         {
             StatusMessage = message;
             StatusBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#BE123C"));
