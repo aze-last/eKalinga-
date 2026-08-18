@@ -49,6 +49,28 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <Style x:Key="SkeletonBlockStyle" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource BrandBorderBrush}"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Opacity" Value="0.6"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsBusy}" Value="True">
+                    <DataTrigger.EnterActions>
+                        <BeginStoryboard x:Name="SkeletonPulse">
+                            <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                 From="0.3" To="0.85"
+                                                 Duration="0:0:0.75"/>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </DataTrigger.EnterActions>
+                    <DataTrigger.ExitActions>
+                        <StopStoryboard BeginStoryboardName="SkeletonPulse"/>
+                    </DataTrigger.ExitActions>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
     </UserControl.Resources>
 
     <Grid>
@@ -251,34 +273,94 @@
                                                Typography.Capitals="AllSmallCaps"/>
                                 </StackPanel>
 
-                                <!-- DataGrid -->
-                                <DataGrid Grid.Row="1"
-                                          ItemsSource="{Binding ReleasedClaims}"
-                                          SelectedItem="{Binding SelectedReleasedClaim}"
-                                          AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True"
-                                          Background="Transparent" BorderThickness="0" HeadersVisibility="Column"
-                                          materialDesign:DataGridAssist.CellPadding="12,8"
-                                          MouseDoubleClick="ReleasedGrid_MouseDoubleClick">
-                                    <DataGrid.Columns>
-                                        <DataGridTextColumn Header="Beneficiaries" Binding="{Binding FullName}" Width="*" FontWeight="SemiBold"/>
-                                        <DataGridTemplateColumn Header="Status" Width="85">
-                                            <DataGridTemplateColumn.CellTemplate>
-                                                <DataTemplate>
-                                                    <TextBlock Text="Released" FontSize="12" FontWeight="SemiBold"
-                                                               Foreground="{DynamicResource BrandSuccessBrush}" VerticalAlignment="Center"/>
-                                                </DataTemplate>
-                                            </DataGridTemplateColumn.CellTemplate>
-                                        </DataGridTemplateColumn>
-                                        <DataGridTemplateColumn Header="Remarks" Width="85">
-                                            <DataGridTemplateColumn.CellTemplate>
-                                                <DataTemplate>
-                                                    <TextBlock Text="Claimed" FontSize="12" FontWeight="SemiBold"
-                                                               Foreground="{DynamicResource BrandSuccessBrush}" VerticalAlignment="Center"/>
-                                                </DataTemplate>
-                                            </DataGridTemplateColumn.CellTemplate>
-                                        </DataGridTemplateColumn>
-                                    </DataGrid.Columns>
-                                </DataGrid>
+                                <!-- DataGrid with Skeleton Dual-State -->
+                                <Grid Grid.Row="1">
+                                    <DataGrid ItemsSource="{Binding ReleasedClaims}"
+                                              SelectedItem="{Binding SelectedReleasedClaim}"
+                                              AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True"
+                                              Background="Transparent" BorderThickness="0" HeadersVisibility="Column"
+                                              materialDesign:DataGridAssist.CellPadding="12,8"
+                                              MouseDoubleClick="ReleasedGrid_MouseDoubleClick"
+                                              Visibility="{Binding IsBusy, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Header="Beneficiaries" Binding="{Binding FullName}" Width="*" FontWeight="SemiBold"/>
+                                            <DataGridTemplateColumn Header="Status" Width="85">
+                                                <DataGridTemplateColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="Released" FontSize="12" FontWeight="SemiBold"
+                                                                   Foreground="{DynamicResource BrandSuccessBrush}" VerticalAlignment="Center"/>
+                                                    </DataTemplate>
+                                                </DataGridTemplateColumn.CellTemplate>
+                                            </DataGridTemplateColumn>
+                                            <DataGridTemplateColumn Header="Remarks" Width="85">
+                                                <DataGridTemplateColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="Claimed" FontSize="12" FontWeight="SemiBold"
+                                                                   Foreground="{DynamicResource BrandSuccessBrush}" VerticalAlignment="Center"/>
+                                                    </DataTemplate>
+                                                </DataGridTemplateColumn.CellTemplate>
+                                            </DataGridTemplateColumn>
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+
+                                    <!-- Skeleton Placeholder Rows -->
+                                    <StackPanel Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}" Margin="0,8,0,0">
+                                        <Grid Margin="0,0,0,12">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="85"/>
+                                                <ColumnDefinition Width="85"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="140" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="1" Style="{StaticResource SkeletonBlockStyle}" Height="18" Width="60" CornerRadius="9" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="2" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="55" HorizontalAlignment="Left"/>
+                                        </Grid>
+                                        <Border Height="1" Background="{DynamicResource BrandBorderBrush}" Opacity="0.5" Margin="0,0,0,12"/>
+                                        <Grid Margin="0,0,0,12">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="85"/>
+                                                <ColumnDefinition Width="85"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="180" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="1" Style="{StaticResource SkeletonBlockStyle}" Height="18" Width="60" CornerRadius="9" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="2" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="55" HorizontalAlignment="Left"/>
+                                        </Grid>
+                                        <Border Height="1" Background="{DynamicResource BrandBorderBrush}" Opacity="0.5" Margin="0,0,0,12"/>
+                                        <Grid Margin="0,0,0,12">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="85"/>
+                                                <ColumnDefinition Width="85"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="120" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="1" Style="{StaticResource SkeletonBlockStyle}" Height="18" Width="60" CornerRadius="9" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="2" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="55" HorizontalAlignment="Left"/>
+                                        </Grid>
+                                        <Border Height="1" Background="{DynamicResource BrandBorderBrush}" Opacity="0.5" Margin="0,0,0,12"/>
+                                        <Grid Margin="0,0,0,12">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="85"/>
+                                                <ColumnDefinition Width="85"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="160" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="1" Style="{StaticResource SkeletonBlockStyle}" Height="18" Width="60" CornerRadius="9" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="2" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="55" HorizontalAlignment="Left"/>
+                                        </Grid>
+                                        <Border Height="1" Background="{DynamicResource BrandBorderBrush}" Opacity="0.5" Margin="0,0,0,12"/>
+                                        <Grid Margin="0,0,0,12">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="85"/>
+                                                <ColumnDefinition Width="85"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="135" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="1" Style="{StaticResource SkeletonBlockStyle}" Height="18" Width="60" CornerRadius="9" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="2" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="55" HorizontalAlignment="Left"/>
+                                        </Grid>
+                                    </StackPanel>
+                                </Grid>
 
                                 <!-- Pagination -->
                                 <Border Grid.Row="2" Margin="0,12,0,0" Padding="0,12,0,0"
@@ -318,34 +400,94 @@
                                                Typography.Capitals="AllSmallCaps"/>
                                 </StackPanel>
 
-                                <!-- DataGrid -->
-                                <DataGrid Grid.Row="1"
-                                          ItemsSource="{Binding PendingBeneficiaries}"
-                                          SelectedItem="{Binding SelectedPendingBeneficiary}"
-                                          AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True"
-                                          Background="Transparent" BorderThickness="0" HeadersVisibility="Column"
-                                          materialDesign:DataGridAssist.CellPadding="12,8"
-                                          MouseDoubleClick="PendingGrid_MouseDoubleClick">
-                                    <DataGrid.Columns>
-                                        <DataGridTextColumn Header="Beneficiaries" Binding="{Binding FullName}" Width="*" FontWeight="SemiBold"/>
-                                        <DataGridTemplateColumn Header="Status" Width="85">
-                                            <DataGridTemplateColumn.CellTemplate>
-                                                <DataTemplate>
-                                                    <TextBlock Text="Pending" FontSize="12" FontWeight="SemiBold"
-                                                               Foreground="{DynamicResource BrandYellowBrush}" VerticalAlignment="Center"/>
-                                                </DataTemplate>
-                                            </DataGridTemplateColumn.CellTemplate>
-                                        </DataGridTemplateColumn>
-                                        <DataGridTemplateColumn Header="Remarks" Width="85">
-                                            <DataGridTemplateColumn.CellTemplate>
-                                                <DataTemplate>
-                                                    <TextBlock Text="For Release" FontSize="12" FontWeight="SemiBold"
-                                                               Foreground="{DynamicResource BrandMidnightBrush}" VerticalAlignment="Center"/>
-                                                </DataTemplate>
-                                            </DataGridTemplateColumn.CellTemplate>
-                                        </DataGridTemplateColumn>
-                                    </DataGrid.Columns>
-                                </DataGrid>
+                                <!-- DataGrid with Skeleton Dual-State -->
+                                <Grid Grid.Row="1">
+                                    <DataGrid ItemsSource="{Binding PendingBeneficiaries}"
+                                              SelectedItem="{Binding SelectedPendingBeneficiary}"
+                                              AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True"
+                                              Background="Transparent" BorderThickness="0" HeadersVisibility="Column"
+                                              materialDesign:DataGridAssist.CellPadding="12,8"
+                                              MouseDoubleClick="PendingGrid_MouseDoubleClick"
+                                              Visibility="{Binding IsBusy, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Header="Beneficiaries" Binding="{Binding FullName}" Width="*" FontWeight="SemiBold"/>
+                                            <DataGridTemplateColumn Header="Status" Width="85">
+                                                <DataGridTemplateColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="Pending" FontSize="12" FontWeight="SemiBold"
+                                                                   Foreground="{DynamicResource BrandYellowBrush}" VerticalAlignment="Center"/>
+                                                    </DataTemplate>
+                                                </DataGridTemplateColumn.CellTemplate>
+                                            </DataGridTemplateColumn>
+                                            <DataGridTemplateColumn Header="Remarks" Width="85">
+                                                <DataGridTemplateColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="For Release" FontSize="12" FontWeight="SemiBold"
+                                                                   Foreground="{DynamicResource BrandMidnightBrush}" VerticalAlignment="Center"/>
+                                                    </DataTemplate>
+                                                </DataGridTemplateColumn.CellTemplate>
+                                            </DataGridTemplateColumn>
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+
+                                    <!-- Skeleton Placeholder Rows -->
+                                    <StackPanel Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}" Margin="0,8,0,0">
+                                        <Grid Margin="0,0,0,12">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="85"/>
+                                                <ColumnDefinition Width="85"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="140" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="1" Style="{StaticResource SkeletonBlockStyle}" Height="18" Width="60" CornerRadius="9" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="2" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="55" HorizontalAlignment="Left"/>
+                                        </Grid>
+                                        <Border Height="1" Background="{DynamicResource BrandBorderBrush}" Opacity="0.5" Margin="0,0,0,12"/>
+                                        <Grid Margin="0,0,0,12">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="85"/>
+                                                <ColumnDefinition Width="85"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="180" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="1" Style="{StaticResource SkeletonBlockStyle}" Height="18" Width="60" CornerRadius="9" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="2" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="55" HorizontalAlignment="Left"/>
+                                        </Grid>
+                                        <Border Height="1" Background="{DynamicResource BrandBorderBrush}" Opacity="0.5" Margin="0,0,0,12"/>
+                                        <Grid Margin="0,0,0,12">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="85"/>
+                                                <ColumnDefinition Width="85"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="120" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="1" Style="{StaticResource SkeletonBlockStyle}" Height="18" Width="60" CornerRadius="9" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="2" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="55" HorizontalAlignment="Left"/>
+                                        </Grid>
+                                        <Border Height="1" Background="{DynamicResource BrandBorderBrush}" Opacity="0.5" Margin="0,0,0,12"/>
+                                        <Grid Margin="0,0,0,12">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="85"/>
+                                                <ColumnDefinition Width="85"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="160" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="1" Style="{StaticResource SkeletonBlockStyle}" Height="18" Width="60" CornerRadius="9" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="2" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="55" HorizontalAlignment="Left"/>
+                                        </Grid>
+                                        <Border Height="1" Background="{DynamicResource BrandBorderBrush}" Opacity="0.5" Margin="0,0,0,12"/>
+                                        <Grid Margin="0,0,0,12">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="85"/>
+                                                <ColumnDefinition Width="85"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="135" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="1" Style="{StaticResource SkeletonBlockStyle}" Height="18" Width="60" CornerRadius="9" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="2" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="55" HorizontalAlignment="Left"/>
+                                        </Grid>
+                                    </StackPanel>
+                                </Grid>
 
                                 <!-- Pagination -->
                                 <Border Grid.Row="2" Margin="0,12,0,0" Padding="0,12,0,0"
@@ -385,34 +527,94 @@
                                                Typography.Capitals="AllSmallCaps"/>
                                 </StackPanel>
 
-                                <!-- DataGrid -->
-                                <DataGrid Grid.Row="1"
-                                          ItemsSource="{Binding RejectedBeneficiaries}"
-                                          SelectedItem="{Binding SelectedProgramBeneficiary}"
-                                          AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True"
-                                          Background="Transparent" BorderThickness="0" HeadersVisibility="Column"
-                                          materialDesign:DataGridAssist.CellPadding="12,8"
-                                          MouseDoubleClick="UnreleasedGrid_MouseDoubleClick">
-                                    <DataGrid.Columns>
-                                        <DataGridTextColumn Header="Beneficiaries" Binding="{Binding FullName}" Width="*" FontWeight="SemiBold"/>
-                                        <DataGridTemplateColumn Header="Status" Width="85">
-                                            <DataGridTemplateColumn.CellTemplate>
-                                                <DataTemplate>
-                                                    <TextBlock Text="Unreleased" FontSize="12" FontWeight="SemiBold"
-                                                               Foreground="{DynamicResource BrandMidnightBrush}" VerticalAlignment="Center"/>
-                                                </DataTemplate>
-                                            </DataGridTemplateColumn.CellTemplate>
-                                        </DataGridTemplateColumn>
-                                        <DataGridTemplateColumn Header="Remarks" Width="85">
-                                            <DataGridTemplateColumn.CellTemplate>
-                                                <DataTemplate>
-                                                    <TextBlock Text="Unclaimed" FontSize="12" FontWeight="SemiBold"
-                                                               Foreground="{DynamicResource BrandRedBrush}" VerticalAlignment="Center"/>
-                                                </DataTemplate>
-                                            </DataGridTemplateColumn.CellTemplate>
-                                        </DataGridTemplateColumn>
-                                    </DataGrid.Columns>
-                                </DataGrid>
+                                <!-- DataGrid with Skeleton Dual-State -->
+                                <Grid Grid.Row="1">
+                                    <DataGrid ItemsSource="{Binding RejectedBeneficiaries}"
+                                              SelectedItem="{Binding SelectedProgramBeneficiary}"
+                                              AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True"
+                                              Background="Transparent" BorderThickness="0" HeadersVisibility="Column"
+                                              materialDesign:DataGridAssist.CellPadding="12,8"
+                                              MouseDoubleClick="UnreleasedGrid_MouseDoubleClick"
+                                              Visibility="{Binding IsBusy, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Header="Beneficiaries" Binding="{Binding FullName}" Width="*" FontWeight="SemiBold"/>
+                                            <DataGridTemplateColumn Header="Status" Width="85">
+                                                <DataGridTemplateColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="Unreleased" FontSize="12" FontWeight="SemiBold"
+                                                                   Foreground="{DynamicResource BrandMidnightBrush}" VerticalAlignment="Center"/>
+                                                    </DataTemplate>
+                                                </DataGridTemplateColumn.CellTemplate>
+                                            </DataGridTemplateColumn>
+                                            <DataGridTemplateColumn Header="Remarks" Width="85">
+                                                <DataGridTemplateColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="Unclaimed" FontSize="12" FontWeight="SemiBold"
+                                                                   Foreground="{DynamicResource BrandRedBrush}" VerticalAlignment="Center"/>
+                                                    </DataTemplate>
+                                                </DataGridTemplateColumn.CellTemplate>
+                                            </DataGridTemplateColumn>
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+
+                                    <!-- Skeleton Placeholder Rows -->
+                                    <StackPanel Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}" Margin="0,8,0,0">
+                                        <Grid Margin="0,0,0,12">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="85"/>
+                                                <ColumnDefinition Width="85"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="140" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="1" Style="{StaticResource SkeletonBlockStyle}" Height="18" Width="60" CornerRadius="9" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="2" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="55" HorizontalAlignment="Left"/>
+                                        </Grid>
+                                        <Border Height="1" Background="{DynamicResource BrandBorderBrush}" Opacity="0.5" Margin="0,0,0,12"/>
+                                        <Grid Margin="0,0,0,12">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="85"/>
+                                                <ColumnDefinition Width="85"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="180" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="1" Style="{StaticResource SkeletonBlockStyle}" Height="18" Width="60" CornerRadius="9" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="2" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="55" HorizontalAlignment="Left"/>
+                                        </Grid>
+                                        <Border Height="1" Background="{DynamicResource BrandBorderBrush}" Opacity="0.5" Margin="0,0,0,12"/>
+                                        <Grid Margin="0,0,0,12">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="85"/>
+                                                <ColumnDefinition Width="85"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="120" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="1" Style="{StaticResource SkeletonBlockStyle}" Height="18" Width="60" CornerRadius="9" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="2" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="55" HorizontalAlignment="Left"/>
+                                        </Grid>
+                                        <Border Height="1" Background="{DynamicResource BrandBorderBrush}" Opacity="0.5" Margin="0,0,0,12"/>
+                                        <Grid Margin="0,0,0,12">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="85"/>
+                                                <ColumnDefinition Width="85"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="160" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="1" Style="{StaticResource SkeletonBlockStyle}" Height="18" Width="60" CornerRadius="9" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="2" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="55" HorizontalAlignment="Left"/>
+                                        </Grid>
+                                        <Border Height="1" Background="{DynamicResource BrandBorderBrush}" Opacity="0.5" Margin="0,0,0,12"/>
+                                        <Grid Margin="0,0,0,12">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="85"/>
+                                                <ColumnDefinition Width="85"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="135" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="1" Style="{StaticResource SkeletonBlockStyle}" Height="18" Width="60" CornerRadius="9" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="2" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="55" HorizontalAlignment="Left"/>
+                                        </Grid>
+                                    </StackPanel>
+                                </Grid>
 
                                 <!-- Pagination -->
                                 <Border Grid.Row="2" Margin="0,12,0,0" Padding="0,12,0,0"

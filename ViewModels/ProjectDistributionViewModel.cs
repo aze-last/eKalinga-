@@ -2207,6 +2207,11 @@ namespace AttendanceShiftingManagement.ViewModels
             }
 
             var programId = selectedProgram.Id;
+            var wasBusy = IsBusy;
+            if (!wasBusy)
+            {
+                IsBusy = true;
+            }
 
             try
             {
@@ -2354,6 +2359,13 @@ namespace AttendanceShiftingManagement.ViewModels
             catch (Exception ex)
             {
                 SetErrorStatus($"Error loading project details: {ex.Message}");
+            }
+            finally
+            {
+                if (!wasBusy)
+                {
+                    IsBusy = false;
+                }
             }
         }
 
