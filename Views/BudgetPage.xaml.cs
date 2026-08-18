@@ -10,6 +10,7 @@ namespace AttendanceShiftingManagement.Views
     public partial class BudgetPage : UserControl
     {
         private readonly BudgetViewModel _viewModel;
+        private DispatcherTimer? _guidanceTimer;
 
         public BudgetPage(User currentUser, AyudaProgramType? initialProgramType = null)
         {
@@ -23,7 +24,16 @@ namespace AttendanceShiftingManagement.Views
             if (initialProgramType.HasValue)
             {
                 _viewModel.SelectedProgramType = initialProgramType.Value;
+                _viewModel.IsCreateProjectGuided = true;
                 _viewModel.SetNeutralStatus($"Select a Private Donation or GGMS Fund row below, then click CREATE PROJECT to spawn your {(initialProgramType.Value == AyudaProgramType.Seminar ? "Seminar & Training" : "Cash-for-Work")} event.");
+
+                _guidanceTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(10) };
+                _guidanceTimer.Tick += (sender, args) =>
+                {
+                    _viewModel.IsCreateProjectGuided = false;
+                    _guidanceTimer?.Stop();
+                };
+                _guidanceTimer.Start();
             }
         }
 
@@ -87,6 +97,8 @@ namespace AttendanceShiftingManagement.Views
 
         private void OnBudgetPageUnloaded(object sender, System.Windows.RoutedEventArgs e)
         {
+            _guidanceTimer?.Stop();
+            _guidanceTimer = null;
             _viewModel.ProjectCreatedGoToDistribution -= OnProjectCreatedGoToDistribution;
             _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
             Unloaded -= OnBudgetPageUnloaded;

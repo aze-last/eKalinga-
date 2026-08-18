@@ -136,6 +136,8 @@ namespace AttendanceShiftingManagement.ViewModels
         private AyudaProgramType _selectedProgramType = AyudaProgramType.GeneralPurpose;
         private AssistanceReleaseKind _selectedReleaseKind = AssistanceReleaseKind.Cash;
         private bool _isProjectCreationPanelOpen;
+        private bool _isCreateProjectGuided;
+        private string? _projectCreationErrorMessage;
         private bool _isBusy;
         private bool _hasAutoSyncedGgmsProjects;
         private ICollectionView _ledgerEntriesView;
@@ -358,9 +360,31 @@ namespace AttendanceShiftingManagement.ViewModels
 
         public Visibility ProjectCreationPanelVisibility => IsProjectCreationPanelOpen ? Visibility.Visible : Visibility.Collapsed;
 
+        public string? ProjectCreationErrorMessage
+        {
+            get => _projectCreationErrorMessage;
+            set
+            {
+                if (SetProperty(ref _projectCreationErrorMessage, value))
+                {
+                    OnPropertyChanged(nameof(HasProjectCreationError));
+                }
+            }
+        }
+
+        public bool HasProjectCreationError => !string.IsNullOrWhiteSpace(ProjectCreationErrorMessage);
+
+        public bool IsCreateProjectGuided
+        {
+            get => _isCreateProjectGuided;
+            set => SetProperty(ref _isCreateProjectGuided, value);
+        }
+
         private void OpenProjectCreationPanel(object sourceObj)
         {
             if (IsBusy) return;
+            IsCreateProjectGuided = false;
+            ProjectCreationErrorMessage = null;
 
             if (sourceObj == null)
             {
@@ -431,6 +455,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private void OpenNewDonationProjectPanel()
         {
             if (IsBusy) return;
+            IsCreateProjectGuided = false;
 
             ResetProjectCreationForm();
             ResetDonationForm();
@@ -493,26 +518,43 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             if (IsBusy) return;
 
+            ProjectCreationErrorMessage = null;
             _createdCfwBudgetId = null;
             _createdSeminarBudgetId = null;
 
             decimal? unitAmount = null;
             decimal? quantity = null;
 
+            if (NewProjectStartDate.HasValue && NewProjectEndDate.HasValue && NewProjectEndDate.Value < NewProjectStartDate.Value)
+            {
+                ProjectCreationErrorMessage = "Project end date cannot be earlier than start date.";
+                SetErrorStatus(ProjectCreationErrorMessage);
+                return;
+            }
+
             // Cash-for-work pays a daily cash rate per attendance day; a Goods release
             // kind has no meaning there and its item/quantity inputs would be discarded.
             if (SelectedProgramType == AyudaProgramType.CashForWork &&
                 SelectedReleaseKind == AssistanceReleaseKind.Goods)
             {
-                SetErrorStatus("Cash-for-work projects pay a daily cash rate. Switch the release method to Cash and enter the daily rate.");
+                ProjectCreationErrorMessage = "Cash-for-work projects pay a daily cash rate. Switch the release method to Cash and enter the daily rate.";
+                SetErrorStatus(ProjectCreationErrorMessage);
                 return;
             }
 
             if (SelectedReleaseKind == AssistanceReleaseKind.Goods)
             {
-                if (!TryParseAmount(NewProjectQuantityText, out var qty) || string.IsNullOrWhiteSpace(NewProjectItemName))
+                if (string.IsNullOrWhiteSpace(NewProjectItemName))
                 {
-                    SetErrorStatus("Enter valid item details and quantity.");
+                    ProjectCreationErrorMessage = "Enter an item name for the goods distribution.";
+                    SetErrorStatus(ProjectCreationErrorMessage);
+                    return;
+                }
+
+                if (!TryParseAmount(NewProjectQuantityText, out var qty))
+                {
+                    ProjectCreationErrorMessage = "Enter a valid quantity per beneficiary (greater than 0).";
+                    SetErrorStatus(ProjectCreationErrorMessage);
                     return;
                 }
                 quantity = qty;
@@ -521,7 +563,8 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 if (!TryParseAmount(NewProjectUnitAmountText, out var amt))
                 {
-                    SetErrorStatus("Enter a valid unit amount.");
+                    ProjectCreationErrorMessage = "Enter a valid unit payout amount (greater than 0).";
+                    SetErrorStatus(ProjectCreationErrorMessage);
                     return;
                 }
                 unitAmount = amt;
@@ -534,13 +577,15 @@ namespace AttendanceShiftingManagement.ViewModels
                 && !NewProjectSourceGGMSBudgetId.HasValue
                 && string.IsNullOrWhiteSpace(NewProjectSourceProjectDetailsId))
             {
-                SetErrorStatus("A source fund must be selected to create a project.");
+                ProjectCreationErrorMessage = "A source fund must be selected to create a project.";
+                SetErrorStatus(ProjectCreationErrorMessage);
                 return;
             }
 
             if (!IsNewDonationMode && SelectedBudget != null && SelectedBudget.HasLinkedProject)
             {
-                SetErrorStatus($"Source fund '{SelectedBudget.Name}' already has a linked project ('{SelectedBudget.LinkedProjectName}'). Duplicate project creation is blocked.");
+                ProjectCreationErrorMessage = $"Source fund '{SelectedBudget.Name}' already has a linked project ('{SelectedBudget.LinkedProjectName}'). Duplicate project creation is blocked.";
+                SetErrorStatus(ProjectCreationErrorMessage);
                 return;
             }
 
@@ -550,7 +595,8 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 if (budgetCap.HasValue && budgetCap.Value > NewProjectSourceProjectBudget.Value)
                 {
-                    SetErrorStatus($"Budget cap cannot exceed the GGMS project budget of PHP {NewProjectSourceProjectBudget.Value:N2}.");
+                    ProjectCreationErrorMessage = $"Budget cap cannot exceed the GGMS project budget of PHP {NewProjectSourceProjectBudget.Value:N2}.";
+                    SetErrorStatus(ProjectCreationErrorMessage);
                     return;
                 }
                 budgetCap ??= NewProjectSourceProjectBudget.Value;
@@ -575,6 +621,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
                     if (!donationResult.IsSuccess || !donationResult.DonationId.HasValue)
                     {
+                        ProjectCreationErrorMessage = donationResult.Message;
                         SetErrorStatus(donationResult.Message);
                         return;
                     }
@@ -611,9 +658,10 @@ namespace AttendanceShiftingManagement.ViewModels
                     var cfwResult = await budgetService.CreateCashForWorkProjectAsync(cfwRequest, _currentUser.Id);
                     if (!cfwResult.Success)
                     {
-                        SetErrorStatus(IsNewDonationMode
+                        ProjectCreationErrorMessage = IsNewDonationMode
                             ? $"Donation was recorded, but CFW project creation failed: {cfwResult.Message}"
-                            : cfwResult.Message);
+                            : cfwResult.Message;
+                        SetErrorStatus(ProjectCreationErrorMessage);
                         return;
                     }
 
@@ -652,9 +700,10 @@ namespace AttendanceShiftingManagement.ViewModels
                     var semResult = await budgetService.CreateCashForWorkProjectAsync(semRequest, _currentUser.Id);
                     if (!semResult.Success)
                     {
-                        SetErrorStatus(IsNewDonationMode
+                        ProjectCreationErrorMessage = IsNewDonationMode
                             ? $"Donation was recorded, but seminar project creation failed: {semResult.Message}"
-                            : semResult.Message);
+                            : semResult.Message;
+                        SetErrorStatus(ProjectCreationErrorMessage);
                         return;
                     }
 
@@ -688,9 +737,10 @@ namespace AttendanceShiftingManagement.ViewModels
 
                     if (!result.IsSuccess)
                     {
-                        SetErrorStatus(IsNewDonationMode
+                        ProjectCreationErrorMessage = IsNewDonationMode
                             ? $"Donation was recorded, but project creation failed: {result.Message}"
-                            : result.Message);
+                            : result.Message;
+                        SetErrorStatus(ProjectCreationErrorMessage);
                         return;
                     }
 
@@ -724,7 +774,8 @@ namespace AttendanceShiftingManagement.ViewModels
             }
             catch (Exception ex)
             {
-                SetErrorStatus($"Failed to create project: {ex.Message}");
+                ProjectCreationErrorMessage = $"Failed to create project: {ex.Message}";
+                SetErrorStatus(ProjectCreationErrorMessage);
             }
             finally
             {
@@ -741,11 +792,19 @@ namespace AttendanceShiftingManagement.ViewModels
             string? unitOfMeasure = null;
             DonationType donationType = DonationType.Cash;
 
+            if (string.IsNullOrWhiteSpace(DonorName))
+            {
+                ProjectCreationErrorMessage = "Donor name is required for recording private donations.";
+                SetErrorStatus(ProjectCreationErrorMessage);
+                return null;
+            }
+
             if (IsCashDonation)
             {
                 if (!TryParseAmount(DonationAmountText, out amount))
                 {
-                    SetErrorStatus("Enter a valid donation amount greater than zero.");
+                    ProjectCreationErrorMessage = "Enter a valid donation amount greater than zero.";
+                    SetErrorStatus(ProjectCreationErrorMessage);
                     return null;
                 }
             }
@@ -755,13 +814,15 @@ namespace AttendanceShiftingManagement.ViewModels
                 itemName = NormalizeNullable(DonationItemName);
                 if (string.IsNullOrWhiteSpace(itemName))
                 {
-                    SetErrorStatus("Enter the item name for the goods donation.");
+                    ProjectCreationErrorMessage = "Enter the item name for the goods donation.";
+                    SetErrorStatus(ProjectCreationErrorMessage);
                     return null;
                 }
 
                 if (!TryParseAmount(DonationQuantityText, out var qty))
                 {
-                    SetErrorStatus("Enter a valid quantity greater than zero.");
+                    ProjectCreationErrorMessage = "Enter a valid donation quantity greater than zero.";
+                    SetErrorStatus(ProjectCreationErrorMessage);
                     return null;
                 }
                 quantity = qty;
@@ -769,7 +830,8 @@ namespace AttendanceShiftingManagement.ViewModels
                 unitOfMeasure = NormalizeNullable(DonationUnitOfMeasure);
                 if (string.IsNullOrWhiteSpace(unitOfMeasure))
                 {
-                    SetErrorStatus("Enter the unit of measure (e.g. Sacks, Boxes).");
+                    ProjectCreationErrorMessage = "Enter the unit of measure (e.g. Sacks, Boxes).";
+                    SetErrorStatus(ProjectCreationErrorMessage);
                     return null;
                 }
             }
@@ -794,6 +856,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private void ResetProjectCreationForm()
         {
+            ProjectCreationErrorMessage = null;
             NewProjectName = string.Empty;
             NewProjectCode = string.Empty;
             NewProjectDescription = string.Empty;

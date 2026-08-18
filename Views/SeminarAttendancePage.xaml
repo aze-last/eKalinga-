@@ -57,6 +57,28 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <Style x:Key="SkeletonBlockStyle" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource CardBorderBrush}"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Opacity" Value="0.6"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsBusy}" Value="True">
+                    <DataTrigger.EnterActions>
+                        <BeginStoryboard x:Name="SkeletonPulse">
+                            <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                 From="0.3" To="0.85"
+                                                 Duration="0:0:0.75"/>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </DataTrigger.EnterActions>
+                    <DataTrigger.ExitActions>
+                        <StopStoryboard BeginStoryboardName="SkeletonPulse"/>
+                    </DataTrigger.ExitActions>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
     </UserControl.Resources>
 
     <Grid>
@@ -84,7 +106,7 @@
                             Style="{StaticResource MaterialDesignOutlinedButton}"
                             Foreground="White" BorderBrush="White" Height="40" Margin="0,0,10,0" FontWeight="Bold"/>
 
-                    <Button Content="+ NEW EVENT VIA BUDGET"
+                    <Button Content="Create New Seminar"
                             Command="{Binding OpenCreateSeminarPanelCommand}"
                             Style="{StaticResource GoldActionButton}"
                             Height="40" Margin="0,0,10,0" FontWeight="Bold"/>
@@ -272,11 +294,33 @@
                 <Grid Grid.Column="1" Margin="20,0,0,0">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
+                    <!-- Scan / Operation Error Alert Banner -->
+                    <Border Grid.Row="0" Margin="0,0,0,16" Padding="16,12" CornerRadius="8"
+                            Background="#FEF2F2" BorderBrush="#EF4444" BorderThickness="1" Panel.ZIndex="10"
+                            Visibility="{Binding HasScanError, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <materialDesign:PackIcon Grid.Column="0" Kind="AlertCircleOutline" Width="22" Height="22"
+                                                     Foreground="#DC2626" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                            <TextBlock Grid.Column="1" Text="{Binding ScanErrorMessage}" FontSize="13" FontWeight="SemiBold"
+                                       Foreground="#991B1B" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                            <Button Grid.Column="2" Style="{StaticResource MaterialDesignIconButton}" Width="28" Height="28"
+                                    Command="{Binding ClearScanErrorCommand}" Foreground="#DC2626" Padding="0" Margin="8,0,0,0">
+                                <materialDesign:PackIcon Kind="Close" Width="18" Height="18"/>
+                            </Button>
+                        </Grid>
+                    </Border>
+
                     <!-- Empty State View (When no seminar selected) -->
-                    <Border Grid.Row="0" Grid.RowSpan="2" Style="{StaticResource DetailCardStyle}" Padding="40"
+                    <Border Grid.Row="1" Grid.RowSpan="2" Style="{StaticResource DetailCardStyle}" Padding="40"
                             Visibility="{Binding SelectedEvent, Converter={StaticResource NullToHiddenConverter}, ConverterParameter=Inverse}"
                             VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="500">
                         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
@@ -293,7 +337,7 @@
                     </Border>
 
                     <!-- Active Seminar Operational Workspace -->
-                    <Grid Grid.Row="0" Grid.RowSpan="2" Visibility="{Binding SelectedEvent, Converter={StaticResource NullToHiddenConverter}}">
+                    <Grid Grid.Row="1" Grid.RowSpan="2" Visibility="{Binding SelectedEvent, Converter={StaticResource NullToHiddenConverter}}">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
@@ -339,24 +383,42 @@
                             <!-- 3-Card KPI Stat Strip -->
                             <UniformGrid Columns="3">
                                 <Border Style="{StaticResource MetricCardStyle}">
-                                    <StackPanel>
-                                        <TextBlock Text="TOTAL REGISTERED" FontSize="11" FontWeight="Bold" Foreground="#64748B" Margin="0,0,0,6"/>
-                                        <TextBlock Text="{Binding TotalRegisteredCount}" FontSize="24" FontWeight="ExtraBold" Foreground="#0F172A"/>
-                                    </StackPanel>
+                                    <Grid>
+                                        <StackPanel Visibility="{Binding IsBusy, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                                            <TextBlock Text="TOTAL REGISTERED" FontSize="11" FontWeight="Bold" Foreground="#64748B" Margin="0,0,0,6"/>
+                                            <TextBlock Text="{Binding TotalRegisteredCount}" FontSize="24" FontWeight="ExtraBold" Foreground="#0F172A"/>
+                                        </StackPanel>
+                                        <StackPanel Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            <Border Style="{StaticResource SkeletonBlockStyle}" Height="12" Width="100" HorizontalAlignment="Left" Margin="0,0,0,8"/>
+                                            <Border Style="{StaticResource SkeletonBlockStyle}" Height="28" Width="60" HorizontalAlignment="Left"/>
+                                        </StackPanel>
+                                    </Grid>
                                 </Border>
 
                                 <Border Style="{StaticResource MetricCardStyle}">
-                                    <StackPanel>
-                                        <TextBlock Text="ATTENDEES RECORDED TODAY" FontSize="11" FontWeight="Bold" Foreground="#64748B" Margin="0,0,0,6"/>
-                                        <TextBlock Text="{Binding TodayAttendeeCount}" FontSize="24" FontWeight="ExtraBold" Foreground="{StaticResource ThemePrimaryActionBrush}"/>
-                                    </StackPanel>
+                                    <Grid>
+                                        <StackPanel Visibility="{Binding IsBusy, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                                            <TextBlock Text="ATTENDEES RECORDED TODAY" FontSize="11" FontWeight="Bold" Foreground="#64748B" Margin="0,0,0,6"/>
+                                            <TextBlock Text="{Binding TodayAttendeeCount}" FontSize="24" FontWeight="ExtraBold" Foreground="{StaticResource ThemePrimaryActionBrush}"/>
+                                        </StackPanel>
+                                        <StackPanel Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            <Border Style="{StaticResource SkeletonBlockStyle}" Height="12" Width="140" HorizontalAlignment="Left" Margin="0,0,0,8"/>
+                                            <Border Style="{StaticResource SkeletonBlockStyle}" Height="28" Width="60" HorizontalAlignment="Left"/>
+                                        </StackPanel>
+                                    </Grid>
                                 </Border>
 
                                 <Border Style="{StaticResource MetricCardStyle}" Margin="0">
-                                    <StackPanel>
-                                        <TextBlock Text="REMAINING SEAT CAPACITY" FontSize="11" FontWeight="Bold" Foreground="#64748B" Margin="0,0,0,6"/>
-                                        <TextBlock Text="{Binding RemainingCapacity}" FontSize="24" FontWeight="ExtraBold" Foreground="#0F172A"/>
-                                    </StackPanel>
+                                    <Grid>
+                                        <StackPanel Visibility="{Binding IsBusy, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                                            <TextBlock Text="REMAINING SEAT CAPACITY" FontSize="11" FontWeight="Bold" Foreground="#64748B" Margin="0,0,0,6"/>
+                                            <TextBlock Text="{Binding RemainingCapacity}" FontSize="24" FontWeight="ExtraBold" Foreground="#0F172A"/>
+                                        </StackPanel>
+                                        <StackPanel Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            <Border Style="{StaticResource SkeletonBlockStyle}" Height="12" Width="130" HorizontalAlignment="Left" Margin="0,0,0,8"/>
+                                            <Border Style="{StaticResource SkeletonBlockStyle}" Height="28" Width="100" HorizontalAlignment="Left"/>
+                                        </StackPanel>
+                                    </Grid>
                                 </Border>
                             </UniformGrid>
                         </StackPanel>
@@ -392,8 +454,117 @@
                                     <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
 
+                                <!-- Skeleton Grid Placeholder when IsBusy -->
+                                <Border Grid.Row="0"
+                                        Background="White"
+                                        Padding="16,12"
+                                        Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <StackPanel VerticalAlignment="Top">
+                                        <!-- Header row wireframe -->
+                                        <Grid Margin="0,0,0,12">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="120"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="130"/>
+                                                <ColumnDefinition Width="110"/>
+                                                <ColumnDefinition Width="100"/>
+                                                <ColumnDefinition Width="120"/>
+                                                <ColumnDefinition Width="140"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0" Style="{StaticResource SkeletonBlockStyle}" Height="12" Width="80" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="1" Style="{StaticResource SkeletonBlockStyle}" Height="12" Width="150" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="2" Style="{StaticResource SkeletonBlockStyle}" Height="12" Width="90" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="3" Style="{StaticResource SkeletonBlockStyle}" Height="12" Width="70" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="4" Style="{StaticResource SkeletonBlockStyle}" Height="12" Width="60" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="5" Style="{StaticResource SkeletonBlockStyle}" Height="12" Width="80" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="6" Style="{StaticResource SkeletonBlockStyle}" Height="12" Width="90" HorizontalAlignment="Left"/>
+                                        </Grid>
+                                        <!-- Row 1 -->
+                                        <Border Height="1" Background="#F1F5F9" Margin="0,0,0,10"/>
+                                        <Grid Margin="0,0,0,10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="120"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="130"/>
+                                                <ColumnDefinition Width="110"/>
+                                                <ColumnDefinition Width="100"/>
+                                                <ColumnDefinition Width="120"/>
+                                                <ColumnDefinition Width="140"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="90" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="1" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="200" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="2" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="100" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="3" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="80" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="4" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="70" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="5" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="80" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="6" Style="{StaticResource SkeletonBlockStyle}" Height="24" Width="90" HorizontalAlignment="Left"/>
+                                        </Grid>
+                                        <!-- Row 2 -->
+                                        <Border Height="1" Background="#F1F5F9" Margin="0,0,0,10"/>
+                                        <Grid Margin="0,0,0,10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="120"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="130"/>
+                                                <ColumnDefinition Width="110"/>
+                                                <ColumnDefinition Width="100"/>
+                                                <ColumnDefinition Width="120"/>
+                                                <ColumnDefinition Width="140"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="85" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="1" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="160" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="2" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="95" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="3" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="80" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="4" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="70" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="5" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="80" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="6" Style="{StaticResource SkeletonBlockStyle}" Height="24" Width="90" HorizontalAlignment="Left"/>
+                                        </Grid>
+                                        <!-- Row 3 -->
+                                        <Border Height="1" Background="#F1F5F9" Margin="0,0,0,10"/>
+                                        <Grid Margin="0,0,0,10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="120"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="130"/>
+                                                <ColumnDefinition Width="110"/>
+                                                <ColumnDefinition Width="100"/>
+                                                <ColumnDefinition Width="120"/>
+                                                <ColumnDefinition Width="140"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="95" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="1" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="220" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="2" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="105" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="3" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="80" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="4" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="70" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="5" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="80" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="6" Style="{StaticResource SkeletonBlockStyle}" Height="24" Width="90" HorizontalAlignment="Left"/>
+                                        </Grid>
+                                        <!-- Row 4 -->
+                                        <Border Height="1" Background="#F1F5F9" Margin="0,0,0,10"/>
+                                        <Grid Margin="0,0,0,10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="120"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="130"/>
+                                                <ColumnDefinition Width="110"/>
+                                                <ColumnDefinition Width="100"/>
+                                                <ColumnDefinition Width="120"/>
+                                                <ColumnDefinition Width="140"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="90" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="1" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="180" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="2" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="100" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="3" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="80" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="4" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="70" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="5" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="80" HorizontalAlignment="Left"/>
+                                            <Border Grid.Column="6" Style="{StaticResource SkeletonBlockStyle}" Height="24" Width="90" HorizontalAlignment="Left"/>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+
                                 <DataGrid Grid.Row="0" ItemsSource="{Binding SavedAttendanceRows}"
                                           SelectedItem="{Binding SelectedAttendanceRow}"
+                                          Visibility="{Binding IsBusy, Converter={StaticResource InverseBooleanToVisibilityConverter}}"
                                           AutoGenerateColumns="False" CanUserAddRows="False"
                                           IsReadOnly="True" BorderThickness="0"
                                           GridLinesVisibility="Horizontal"

@@ -70,6 +70,9 @@ namespace AttendanceShiftingManagement.ViewModels
         private int _rejectedCurrentPage = 1;
         private string _addBeneficiarySearchText = string.Empty;
         private string _pendingSearchText = string.Empty;
+        private string _beneficiarySearchText = string.Empty;
+        private string _scanErrorMessage = string.Empty;
+        private bool _hasScanError;
         private string _selectedPendingDigitalIdCardNumber = "No digital ID issued yet.";
         private string _selectedPendingDigitalIdQrPayload = string.Empty;
         private string? _selectedPendingDigitalIdStatusText = "Select a pending beneficiary to review the digital ID.";
@@ -256,6 +259,8 @@ namespace AttendanceShiftingManagement.ViewModels
             _submitPendingReasonCommand = new RelayCommand(async _ => await SubmitPendingReasonAsync(), _ => !IsBusy && !string.IsNullOrWhiteSpace(PendingReasonText));
             _cancelPendingReasonCommand = new RelayCommand(_ => CancelPendingReason());
             _confirmUnreleasedCommand = new RelayCommand(async _ => await ConfirmUnreleasedAsync(), _ => !IsBusy && SelectedProgramBeneficiary != null);
+            ClearBeneficiarySearchCommand = new RelayCommand(_ => BeneficiarySearchText = string.Empty);
+            ClearScanErrorCommand = new RelayCommand(_ => ClearScanError());
 
             ResetCreateProjectForm();
             _ = LoadAsync();
@@ -635,6 +640,26 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             get => _lastScanSummaryBrush;
             private set => SetProperty(ref _lastScanSummaryBrush, value);
+        }
+
+        public string ScanErrorMessage
+        {
+            get => _scanErrorMessage;
+            set => SetProperty(ref _scanErrorMessage, value);
+        }
+
+        public bool HasScanError
+        {
+            get => _hasScanError;
+            set => SetProperty(ref _hasScanError, value);
+        }
+
+        public ICommand ClearScanErrorCommand { get; }
+
+        public void ClearScanError()
+        {
+            ScanErrorMessage = string.Empty;
+            HasScanError = false;
         }
 
         public event Action? RequestScannerFocus;
@@ -1364,6 +1389,29 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand PrevRejectedPageCommand { get; }
         public ICommand NextRejectedPageCommand { get; }
         public ICommand ConfirmReleaseCommand { get; }
+        public ICommand ClearBeneficiarySearchCommand { get; }
+
+        public string BeneficiarySearchText
+        {
+            get => _beneficiarySearchText;
+            set
+            {
+                if (SetProperty(ref _beneficiarySearchText, value))
+                {
+                    _pendingSearchText = value;
+                    OnPropertyChanged(nameof(PendingSearchText));
+                    OnPropertyChanged(nameof(HasBeneficiarySearchText));
+                    PendingCurrentPage = 1;
+                    ReleasedCurrentPage = 1;
+                    RejectedCurrentPage = 1;
+                    _ = GetPendingBeneficiariesPaginatedAsync();
+                    _ = GetReleasedClaimsPaginatedAsync();
+                    _ = GetRejectedBeneficiariesPaginatedAsync();
+                }
+            }
+        }
+
+        public bool HasBeneficiarySearchText => !string.IsNullOrWhiteSpace(_beneficiarySearchText);
 
         public string PendingSearchText
         {
@@ -1372,8 +1420,15 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 if (SetProperty(ref _pendingSearchText, value))
                 {
+                    _beneficiarySearchText = value;
+                    OnPropertyChanged(nameof(BeneficiarySearchText));
+                    OnPropertyChanged(nameof(HasBeneficiarySearchText));
                     PendingCurrentPage = 1;
+                    ReleasedCurrentPage = 1;
+                    RejectedCurrentPage = 1;
                     _ = GetPendingBeneficiariesPaginatedAsync();
+                    _ = GetReleasedClaimsPaginatedAsync();
+                    _ = GetRejectedBeneficiariesPaginatedAsync();
                 }
             }
         }
@@ -2493,7 +2548,17 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private async Task ExecuteProcessPcScan(string? payload)
         {
-            if (string.IsNullOrWhiteSpace(payload) || SelectedProgram == null) return;
+            if (string.IsNullOrWhiteSpace(payload)) return;
+
+            if (SelectedProgram == null)
+            {
+                var msg = "Please select a project before scanning ID cards.";
+                ScanErrorMessage = msg;
+                HasScanError = true;
+                SetErrorStatus(msg);
+                _ = Task.Run(() => { try { Console.Beep(400, 600); } catch { } });
+                return;
+            }
 
             // Queue protection: ignore scans while a dialog is active
             if (IsScannedResultVisible || IsReleaseSuccessState) return;
@@ -2529,6 +2594,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private async Task ExecuteProcessEKardScanAsync(string payload)
         {
             IsBusy = true;
+            ClearScanError();
             SetNeutralStatus("Verifying e-Kard against CRS...");
 
             EKardVerificationResult result;
@@ -2545,7 +2611,10 @@ namespace AttendanceShiftingManagement.ViewModels
             }
             catch (Exception ex)
             {
-                SetErrorStatus($"e-Kard verification error: {ex.Message}");
+                var msg = $"e-Kard verification error: {ex.Message}";
+                ScanErrorMessage = msg;
+                HasScanError = true;
+                SetErrorStatus(msg);
                 return;
             }
             finally
@@ -2559,12 +2628,22 @@ namespace AttendanceShiftingManagement.ViewModels
                     SetSuccessStatus($"e-Kard VALID: {result.BeneficiaryId}. Checking project enrollment...");
                     break;
                 case EKardValidity.Expired:
-                    SetErrorStatus($"e-Kard EXPIRED on {result.ExpiryDate:MMM dd, yyyy}: {result.BeneficiaryId}. Verify identity manually before releasing.");
-                    return;
+                    {
+                        var msg = $"e-Kard EXPIRED on {result.ExpiryDate:MMM dd, yyyy}: {result.BeneficiaryId}. Verify identity manually before releasing.";
+                        ScanErrorMessage = msg;
+                        HasScanError = true;
+                        SetErrorStatus(msg);
+                        return;
+                    }
                 case EKardValidity.Revoked:
-                    SetErrorStatus($"e-Kard REVOKED: {result.BeneficiaryId}. Do not release against this card.");
-                    _ = Task.Run(() => { try { Console.Beep(400, 600); } catch { } });
-                    return;
+                    {
+                        var msg = $"e-Kard REVOKED: {result.BeneficiaryId}. Do not release against this card.";
+                        ScanErrorMessage = msg;
+                        HasScanError = true;
+                        SetErrorStatus(msg);
+                        _ = Task.Run(() => { try { Console.Beep(400, 600); } catch { } });
+                        return;
+                    }
                 case EKardValidity.NotFound:
                 default:
                     await using (var checkContext = new LocalDbContext())
@@ -2580,11 +2659,16 @@ namespace AttendanceShiftingManagement.ViewModels
                         }
                     }
 
-                    SetErrorStatus(result.Validity == EKardValidity.NotFound 
-                        ? $"No e-Kard ID ever issued for {result.BeneficiaryId}."
-                        : $"e-Kard status UNKNOWN (CRS offline, never cached): {result.BeneficiaryId}.");
-                    _ = Task.Run(() => { try { Console.Beep(400, 600); } catch { } });
-                    return;
+                    {
+                        var msg = result.Validity == EKardValidity.NotFound 
+                            ? $"No e-Kard ID ever issued for {result.BeneficiaryId}."
+                            : $"e-Kard status UNKNOWN (CRS offline, never cached): {result.BeneficiaryId}.";
+                        ScanErrorMessage = msg;
+                        HasScanError = true;
+                        SetErrorStatus(msg);
+                        _ = Task.Run(() => { try { Console.Beep(400, 600); } catch { } });
+                        return;
+                    }
             }
 
             // Valid card — continue into the standard release pipeline by local
@@ -2597,7 +2681,16 @@ namespace AttendanceShiftingManagement.ViewModels
         private async Task ExecuteManualKeyIn()
         {
             var beneficiaryId = ManualBeneficiaryIdText?.Trim();
-            if (string.IsNullOrWhiteSpace(beneficiaryId) || SelectedProgram == null) return;
+            if (string.IsNullOrWhiteSpace(beneficiaryId)) return;
+
+            if (SelectedProgram == null)
+            {
+                var msg = "Please select a project before searching beneficiary ID.";
+                ScanErrorMessage = msg;
+                HasScanError = true;
+                SetErrorStatus(msg);
+                return;
+            }
 
             // Queue protection: ignore while a dialog is active
             if (IsScannedResultVisible || IsReleaseSuccessState) return;
@@ -2614,11 +2707,19 @@ namespace AttendanceShiftingManagement.ViewModels
         /// </summary>
         private async Task ResolveAndPresentAsync(BeneficiaryLookupRequest request, string? confirmToken)
         {
-            if (SelectedProgram == null) return;
+            if (SelectedProgram == null)
+            {
+                var msg = "Please select a project before scanning ID cards.";
+                ScanErrorMessage = msg;
+                HasScanError = true;
+                SetErrorStatus(msg);
+                return;
+            }
 
             IsBusy = true;
             IsScannedBeneficiaryEligible = false;
             IsIdentityVerified = false;
+            ClearScanError();
             SetNeutralStatus("Analyzing ID card...");
 
             try
@@ -2627,15 +2728,24 @@ namespace AttendanceShiftingManagement.ViewModels
                 var digitalIdService = new BeneficiaryDigitalIdService(context);
                 var lookup = await digitalIdService.ResolveLookupAsync(request, SelectedProgram?.Id);
 
+                // Fallback: If QrPayload lookup returned nothing, try resolving as BeneficiaryId / CivilRegistryId / CardNumber
+                if (lookup == null && request.Source == BeneficiaryLookupSource.QrPayload && !string.IsNullOrWhiteSpace(request.Value))
+                {
+                    lookup = await digitalIdService.ResolveLookupAsync(
+                        new BeneficiaryLookupRequest(BeneficiaryLookupSource.BeneficiaryId, request.Value),
+                        SelectedProgram?.Id);
+                }
+
                 if (lookup == null)
                 {
                     // Do NOT set cooldown on failed lookup (allows instant retry)
                     _ = Task.Run(() => { try { Console.Beep(400, 600); } catch { } });
                     LastScanSummaryText = "Last Scan: Not Found";
-                    LastScanSummaryBrush = (Brush)Application.Current.Resources["BrandDangerBrush"];
-                    SetErrorStatus(request.Source == BeneficiaryLookupSource.BeneficiaryId
-                        ? "Beneficiary ID not found."
-                        : "Invalid QR code or beneficiary not found.");
+                    LastScanSummaryBrush = (Brush?)Application.Current.TryFindResource("BrandDangerBrush") ?? Brushes.Firebrick;
+                    var msg = $"Scanned ID '{request.Value}' was not found in the beneficiary registry.";
+                    ScanErrorMessage = msg;
+                    HasScanError = true;
+                    SetErrorStatus(msg);
                     return;
                 }
 
@@ -2643,8 +2753,11 @@ namespace AttendanceShiftingManagement.ViewModels
                 {
                     _ = Task.Run(() => { try { Console.Beep(400, 600); } catch { } });
                     LastScanSummaryText = "Last Scan: Offline Error";
-                    LastScanSummaryBrush = (Brush)Application.Current.Resources["BrandWarningBrush"];
-                    SetErrorStatus(lookup.ErrorMessage ?? "OFFLINE — CANNOT VERIFY");
+                    LastScanSummaryBrush = (Brush?)Application.Current.TryFindResource("BrandWarningBrush") ?? Brushes.OrangeRed;
+                    var msg = lookup.ErrorMessage ?? "OFFLINE — Cannot verify scanned ID with server.";
+                    ScanErrorMessage = msg;
+                    HasScanError = true;
+                    SetErrorStatus(msg);
                     return;
                 }
 
@@ -2729,7 +2842,10 @@ namespace AttendanceShiftingManagement.ViewModels
             }
             catch (Exception ex)
             {
-                SetErrorStatus($"Scan analysis error: {ex.Message}");
+                var msg = $"Scan analysis error: {ex.Message}";
+                ScanErrorMessage = msg;
+                HasScanError = true;
+                SetErrorStatus(msg);
             }
             finally
             {
@@ -3560,6 +3676,11 @@ namespace AttendanceShiftingManagement.ViewModels
             OnPropertyChanged(nameof(PendingTotalPages));
             OnPropertyChanged(nameof(ReleasedTotalPages));
             OnPropertyChanged(nameof(RejectedTotalPages));
+            _beneficiarySearchText = string.Empty;
+            _pendingSearchText = string.Empty;
+            OnPropertyChanged(nameof(BeneficiarySearchText));
+            OnPropertyChanged(nameof(PendingSearchText));
+            OnPropertyChanged(nameof(HasBeneficiarySearchText));
             OnPropertyChanged(nameof(PendingPaginationText));
             OnPropertyChanged(nameof(ReleasedPaginationText));
             OnPropertyChanged(nameof(RejectedPaginationText));
@@ -3935,13 +4056,16 @@ namespace AttendanceShiftingManagement.ViewModels
             var query = ProgramBeneficiaries
                 .Where(item => item.Status == DistributionBeneficiaryStatus.Pending);
 
-            if (!string.IsNullOrWhiteSpace(PendingSearchText))
+            var search = !string.IsNullOrWhiteSpace(_beneficiarySearchText)
+                ? _beneficiarySearchText.Trim()
+                : (!string.IsNullOrWhiteSpace(_pendingSearchText) ? _pendingSearchText.Trim() : null);
+
+            if (!string.IsNullOrWhiteSpace(search))
             {
-                var search = PendingSearchText.Trim();
                 query = query.Where(item =>
-                    item.FullName.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                    item.BeneficiaryId.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                    item.CivilRegistryId.Contains(search, StringComparison.OrdinalIgnoreCase));
+                    (item.FullName != null && item.FullName.Contains(search, StringComparison.OrdinalIgnoreCase)) ||
+                    (item.BeneficiaryId != null && item.BeneficiaryId.Contains(search, StringComparison.OrdinalIgnoreCase)) ||
+                    (item.CivilRegistryId != null && item.CivilRegistryId.Contains(search, StringComparison.OrdinalIgnoreCase)));
             }
 
             var pendingItems = query
@@ -3997,8 +4121,22 @@ namespace AttendanceShiftingManagement.ViewModels
         /// <summary>Mirrors <see cref="GetPendingBeneficiariesPaginatedAsync"/> for the Rejected/Not-Eligible bucket.</summary>
         private Task GetRejectedBeneficiariesPaginatedAsync()
         {
-            var rejectedItems = ProgramBeneficiaries
-                .Where(item => item.Status == DistributionBeneficiaryStatus.Rejected)
+            var query = ProgramBeneficiaries
+                .Where(item => item.Status == DistributionBeneficiaryStatus.Rejected);
+
+            var search = !string.IsNullOrWhiteSpace(_beneficiarySearchText)
+                ? _beneficiarySearchText.Trim()
+                : (!string.IsNullOrWhiteSpace(_pendingSearchText) ? _pendingSearchText.Trim() : null);
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                query = query.Where(item =>
+                    (item.FullName != null && item.FullName.Contains(search, StringComparison.OrdinalIgnoreCase)) ||
+                    (item.BeneficiaryId != null && item.BeneficiaryId.Contains(search, StringComparison.OrdinalIgnoreCase)) ||
+                    (item.CivilRegistryId != null && item.CivilRegistryId.Contains(search, StringComparison.OrdinalIgnoreCase)));
+            }
+
+            var rejectedItems = query
                 .OrderBy(item => item.FullName)
                 .ToList();
 
@@ -4040,7 +4178,21 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private Task GetReleasedClaimsPaginatedAsync()
         {
-            var releasedItems = ProgramReleaseHistory
+            var query = ProgramReleaseHistory.AsEnumerable();
+
+            var search = !string.IsNullOrWhiteSpace(_beneficiarySearchText)
+                ? _beneficiarySearchText.Trim()
+                : (!string.IsNullOrWhiteSpace(_pendingSearchText) ? _pendingSearchText.Trim() : null);
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                query = query.Where(item =>
+                    (item.FullName != null && item.FullName.Contains(search, StringComparison.OrdinalIgnoreCase)) ||
+                    (item.IdentityKey != null && item.IdentityKey.Contains(search, StringComparison.OrdinalIgnoreCase)) ||
+                    (item.Remarks != null && item.Remarks.Contains(search, StringComparison.OrdinalIgnoreCase)));
+            }
+
+            var releasedItems = query
                 .OrderByDescending(item => item.ReleasedAt)
                 .ThenBy(item => item.FullName)
                 .ToList();

@@ -206,11 +206,33 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
+                    <!-- Scan / Operation Error Alert Banner -->
+                    <Border Grid.Row="0" Margin="0,0,0,16" Padding="16,12" CornerRadius="8"
+                            Background="#FEF2F2" BorderBrush="#EF4444" BorderThickness="1"
+                            Visibility="{Binding HasScanError, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <materialDesign:PackIcon Grid.Column="0" Kind="AlertCircleOutline" Width="22" Height="22"
+                                                     Foreground="#DC2626" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                            <TextBlock Grid.Column="1" Text="{Binding ScanErrorMessage}" FontSize="13" FontWeight="SemiBold"
+                                       Foreground="#991B1B" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                            <Button Grid.Column="2" Style="{StaticResource MaterialDesignIconButton}" Width="28" Height="28"
+                                    Command="{Binding ClearScanErrorCommand}" Foreground="#DC2626" Padding="0" Margin="8,0,0,0">
+                                <materialDesign:PackIcon Kind="Close" Width="18" Height="18"/>
+                            </Button>
+                        </Grid>
+                    </Border>
+
                     <!-- Empty State (no project selected) -->
-                    <StackPanel Grid.RowSpan="3" VerticalAlignment="Center" HorizontalAlignment="Center"
+                    <StackPanel Grid.Row="1" Grid.RowSpan="3" VerticalAlignment="Center" HorizontalAlignment="Center"
                                 Visibility="{Binding SelectedProgram, Converter={StaticResource NullToHiddenConverter}, ConverterParameter=Inverse}">
                         <materialDesign:PackIcon Kind="HandCoinOutline" Width="80" Height="80"
                                                  Foreground="{DynamicResource BrandBorderBrush}" HorizontalAlignment="Center"/>
@@ -221,8 +243,8 @@
                                    HorizontalAlignment="Center" TextWrapping="Wrap"/>
                     </StackPanel>
 
-                    <!-- Center Banner & Description (Row 0) -->
-                    <StackPanel Grid.Row="0" Margin="0,0,0,24" HorizontalAlignment="Center"
+                    <!-- Center Banner & Description (Row 1) -->
+                    <StackPanel Grid.Row="1" Margin="0,0,0,24" HorizontalAlignment="Center"
                                 Visibility="{Binding SelectedProgram, Converter={StaticResource NullToHiddenConverter}}">
                         <!-- Bordered Banner -->
                         <Border BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="1.5" CornerRadius="8" Padding="30,12" Background="{DynamicResource ThemeCardBrush}">
@@ -235,18 +257,52 @@
                         </StackPanel>
                     </StackPanel>
 
-                    <!-- Centered Swipe ID Card Button (Row 1) -->
-                    <Button Grid.Row="1" Command="{Binding OpenPcScannerCommand}" Style="{StaticResource MaterialDesignRaisedButton}" 
-                            Background="#1E6B65" BorderBrush="#1E6B65" Height="48" Width="260" Margin="0,0,0,30" HorizontalAlignment="Center"
-                            Visibility="{Binding SelectedProgram, Converter={StaticResource NullToHiddenConverter}}">
-                        <StackPanel Orientation="Horizontal">
-                            <materialDesign:PackIcon Kind="BarcodeScan" Width="20" Height="20" Foreground="White" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                            <TextBlock Text="Swipe ID Card/Search ID" FontSize="15" FontWeight="Bold" Foreground="White" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
+                    <!-- Action Bar: Beneficiary Search + Scan Button (Row 2) -->
+                    <Grid Grid.Row="2" Margin="0,0,0,24" HorizontalAlignment="Stretch"
+                          Visibility="{Binding SelectedProgram, Converter={StaticResource NullToHiddenConverter}}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
 
-                    <!-- Lists area (Row 2) — reference 3-column buckets: RELEASED / PENDING / NOT ELIGIBLE -->
-                    <Grid Grid.Row="2"
+                        <!-- Beneficiary Search Bar -->
+                        <Border Grid.Column="0" Background="{DynamicResource ThemeSurfaceBrush}" CornerRadius="8" 
+                                BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="1"
+                                Height="48" Margin="0,0,16,0" Padding="14,0" VerticalAlignment="Center">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <materialDesign:PackIcon Grid.Column="0" Kind="AccountSearch" Width="20" Height="20" 
+                                                         Foreground="{DynamicResource BrandTextSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <TextBox Grid.Column="1" materialDesign:HintAssist.Hint="Search beneficiaries by name, ID, or civil registry number across lists..."
+                                         Text="{Binding BeneficiarySearchText, UpdateSourceTrigger=PropertyChanged}"
+                                         FontSize="13" VerticalAlignment="Center" BorderThickness="0" Background="Transparent"
+                                         materialDesign:TextFieldAssist.DecorationVisibility="Hidden"
+                                         Foreground="{DynamicResource BrandMidnightBrush}"/>
+                                <Button Grid.Column="2" Style="{StaticResource MaterialDesignIconButton}" Width="24" Height="24"
+                                        Command="{Binding ClearBeneficiarySearchCommand}"
+                                        Visibility="{Binding HasBeneficiarySearchText, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                        Foreground="{DynamicResource BrandTextSecondaryBrush}" Padding="0">
+                                    <materialDesign:PackIcon Kind="CloseCircle" Width="16" Height="16"/>
+                                </Button>
+                            </Grid>
+                        </Border>
+
+                        <!-- Swipe ID Card / Search ID Button -->
+                        <Button Grid.Column="1" Command="{Binding OpenPcScannerCommand}" Style="{StaticResource MaterialDesignRaisedButton}" 
+                                Background="#1E6B65" BorderBrush="#1E6B65" Height="48" Padding="20,0" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="BarcodeScan" Width="20" Height="20" Foreground="White" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <TextBlock Text="Swipe ID Card/Search ID" FontSize="14" FontWeight="Bold" Foreground="White" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+
+                    <!-- Lists area (Row 3) — reference 3-column buckets: RELEASED / PENDING / NOT ELIGIBLE -->
+                    <Grid Grid.Row="3"
                           Visibility="{Binding SelectedProgram, Converter={StaticResource NullToHiddenConverter}}">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>

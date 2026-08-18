@@ -123,6 +123,8 @@ namespace AttendanceShiftingManagement.ViewModels
         private bool _isScannedResultVisible;
         private string? _lastScannedPayload;
         private string _scannerActionLabel = "RECORD ATTENDANCE";
+        private string _scanErrorMessage = string.Empty;
+        private bool _hasScanError;
 
         private string _eventSearchText = string.Empty;
         private ICollectionView? _eventsView;
@@ -169,6 +171,7 @@ namespace AttendanceShiftingManagement.ViewModels
             _toggleSidebarCommand = new RelayCommand(_ => ToggleSidebar());
             _confirmScannedClaimCommand = new RelayCommand(async _ => await ExecuteConfirmScannedAttendanceAsync(), _ => !IsBusy && IsScannedBeneficiaryEligible && ScannedBeneficiary != null);
             _cancelScannedClaimCommand = new RelayCommand(_ => ResetScannedResult());
+            ClearScanErrorCommand = new RelayCommand(_ => ClearScanError());
 
             _eventsView = CollectionViewSource.GetDefaultView(Events);
             _eventsView.Filter = FilterEvents;
@@ -184,6 +187,7 @@ namespace AttendanceShiftingManagement.ViewModels
         public ObservableCollection<ReportsMetricItem> HistoryMetrics { get; }
         public ObservableCollection<string> HistoryHighlights { get; }
 
+        public ICommand ClearScanErrorCommand { get; }
         public ICommand SaveEventCommand => _saveEventCommand;
         public ICommand SaveManualAttendanceCommand => _saveManualAttendanceCommand;
         public ICommand ReleaseBudgetCommand => _releaseBudgetCommand;
@@ -448,6 +452,12 @@ namespace AttendanceShiftingManagement.ViewModels
                 return;
             }
 
+            var wasBusy = IsBusy;
+            if (!wasBusy)
+            {
+                IsBusy = true;
+            }
+
             try
             {
                 await LoadParticipantsAsync();
@@ -458,6 +468,13 @@ namespace AttendanceShiftingManagement.ViewModels
             catch (Exception ex)
             {
                 SetErrorStatus($"Error loading event details: {ex.Message}");
+            }
+            finally
+            {
+                if (!wasBusy)
+                {
+                    IsBusy = false;
+                }
             }
         }
 
@@ -781,6 +798,24 @@ namespace AttendanceShiftingManagement.ViewModels
         public Visibility AnnouncementsVisibility => ActivePanel == CashForWorkWorkspacePanel.Announcements ? Visibility.Visible : Visibility.Collapsed;
         public Visibility PayoutRailVisibility => HasSelectedEvent ? Visibility.Visible : Visibility.Collapsed;
         public string SelectedEventLabel => SelectedEvent?.WorkspaceLabel ?? "No event selected";
+
+        public string ScanErrorMessage
+        {
+            get => _scanErrorMessage;
+            set => SetProperty(ref _scanErrorMessage, value);
+        }
+
+        public bool HasScanError
+        {
+            get => _hasScanError;
+            set => SetProperty(ref _hasScanError, value);
+        }
+
+        public void ClearScanError()
+        {
+            ScanErrorMessage = string.Empty;
+            HasScanError = false;
+        }
 
         public ICommand ConfirmScannedClaimCommand => _confirmScannedClaimCommand;
         public ICommand CancelScannedClaimCommand => _cancelScannedClaimCommand;
@@ -1660,22 +1695,48 @@ namespace AttendanceShiftingManagement.ViewModels
 
             if (SelectedEvent == null)
             {
-                SetErrorStatus("Please select a Cash for Work event first before scanning attendance.");
+                var msg = "Please select a Cash for Work event first before scanning attendance.";
+                ScanErrorMessage = msg;
+                HasScanError = true;
+                SetErrorStatus(msg);
+                _ = Task.Run(() => { try { Console.Beep(400, 600); } catch { } });
                 return;
             }
             
             IsBusy = true;
+            ClearScanError();
             SetNeutralStatus("Analyzing ID card...");
 
             try
             {
                 await using var context = new LocalDbContext();
                 var digitalIdService = new BeneficiaryDigitalIdService(context);
-                var lookup = await digitalIdService.LookupByQrPayloadAsync(payload);
+                var lookup = await digitalIdService.ResolveLookupAsync(
+                    new BeneficiaryLookupRequest(BeneficiaryLookupSource.QrPayload, payload));
 
                 if (lookup == null)
                 {
-                    SetErrorStatus("Invalid QR code or beneficiary not found.");
+                    lookup = await digitalIdService.ResolveLookupAsync(
+                        new BeneficiaryLookupRequest(BeneficiaryLookupSource.BeneficiaryId, payload));
+                }
+
+                if (lookup == null)
+                {
+                    _ = Task.Run(() => { try { Console.Beep(400, 600); } catch { } });
+                    var msg = $"Scanned ID '{payload}' was not found in the beneficiary registry.";
+                    ScanErrorMessage = msg;
+                    HasScanError = true;
+                    SetErrorStatus(msg);
+                    return;
+                }
+
+                if (lookup.IsOfflineError)
+                {
+                    _ = Task.Run(() => { try { Console.Beep(400, 600); } catch { } });
+                    var msg = lookup.ErrorMessage ?? "OFFLINE — Cannot verify scanned ID with server.";
+                    ScanErrorMessage = msg;
+                    HasScanError = true;
+                    SetErrorStatus(msg);
                     return;
                 }
 
@@ -1694,6 +1755,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 {
                     ScannedBeneficiaryStatus = "ALREADY RECORDED PRESENT TODAY";
                     IsScannedBeneficiaryEligible = false;
+                    _ = Task.Run(() => { try { Console.Beep(400, 600); } catch { } });
                 }
                 else
                 {
@@ -1709,7 +1771,10 @@ namespace AttendanceShiftingManagement.ViewModels
             }
             catch (Exception ex)
             {
-                SetErrorStatus($"Scan analysis error: {ex.Message}");
+                var msg = $"Scan analysis error: {ex.Message}";
+                ScanErrorMessage = msg;
+                HasScanError = true;
+                SetErrorStatus(msg);
             }
             finally
             {

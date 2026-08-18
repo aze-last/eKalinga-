@@ -56,6 +56,40 @@
                 </DataTrigger>
             </Style.Triggers>
         </Style>
+
+        <Style x:Key="GuidedCreateProjectButtonStyle" TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}">
+            <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+            <Setter Property="RenderTransform">
+                <Setter.Value>
+                    <ScaleTransform ScaleX="1.0" ScaleY="1.0"/>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsCreateProjectGuided}" Value="True">
+                    <DataTrigger.EnterActions>
+                        <BeginStoryboard x:Name="HeartbeatPulse">
+                            <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
+                                                 From="1.0" To="1.06" Duration="0:0:0.6">
+                                    <DoubleAnimation.EasingFunction>
+                                        <SineEase EasingMode="EaseInOut"/>
+                                    </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
+                                                 From="1.0" To="1.06" Duration="0:0:0.6">
+                                    <DoubleAnimation.EasingFunction>
+                                        <SineEase EasingMode="EaseInOut"/>
+                                    </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </DataTrigger.EnterActions>
+                    <DataTrigger.ExitActions>
+                        <StopStoryboard BeginStoryboardName="HeartbeatPulse"/>
+                    </DataTrigger.ExitActions>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
     </UserControl.Resources>
 
     <Grid>
@@ -132,9 +166,23 @@
                                         Background="{StaticResource ActionAccentBrush}"
                                         Foreground="White" HorizontalContentAlignment="Left" Height="45" Margin="0,0,0,8" FontSize="14"/>
 
+                                <!-- Guidance Callout when arriving via budget -->
+                                <Border Background="#FEF3C7"
+                                        BorderBrush="#F59E0B"
+                                        BorderThickness="1"
+                                        CornerRadius="6"
+                                        Padding="10,8"
+                                        Margin="0,0,0,6"
+                                        Visibility="{Binding IsCreateProjectGuided, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <materialDesign:PackIcon Kind="HandPointingDown" Width="18" Height="18" Foreground="#D97706" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                        <TextBlock Text="Click below to create your project" FontSize="11" FontWeight="Bold" Foreground="#92400E" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </Border>
+
                                 <Button Content="CREATE PROJECT"
                                         Command="{Binding OpenNewDonationProjectCommand}"
-                                        Style="{StaticResource MaterialDesignRaisedButton}"
+                                        Style="{StaticResource GuidedCreateProjectButtonStyle}"
                                         Background="{StaticResource ActionAccentBrush}"
                                         Foreground="White" HorizontalContentAlignment="Left" Height="45" Margin="0,0,0,20" FontSize="14"/>
 
@@ -827,14 +875,29 @@
 
                     <ScrollViewer Grid.Row="1" MaxHeight="600" VerticalScrollBarVisibility="Auto">
                         <Border Padding="25">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="25"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="25"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <!-- Inline Error Banner inside Project Creation Modal -->
+                                <Border Background="#FEF2F2" BorderBrush="#EF4444" BorderThickness="1" CornerRadius="6"
+                                        Padding="14,10" Margin="0,0,0,20"
+                                        Visibility="{Binding HasProjectCreationError, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <materialDesign:PackIcon Grid.Column="0" Kind="AlertCircle" Width="20" Height="20" Foreground="#DC2626" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding ProjectCreationErrorMessage}" Foreground="#991B1B" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                    </Grid>
+                                </Border>
+
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="25"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="25"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
 
                                 <!-- Basic Information -->
                                 <StackPanel Grid.Column="0">
@@ -1087,8 +1150,9 @@
                                              </ListBox.ItemTemplate>
                                          </ListBox>
                                      </Grid>
-                                 </Grid>
-                            </Grid>
+                                  </Grid>
+                             </Grid>
+                            </StackPanel>
                         </Border>
                     </ScrollViewer>
 
