@@ -317,6 +317,81 @@ namespace AttendanceShiftingManagement.Services
             return savedCount;
         }
 
+        public async Task<int> SaveManualAttendanceByBeneficiaryStagingIdsAsync(int eventId, int recordedByUserId, IEnumerable<int> stagingIds)
+        {
+            var cashForWorkEvent = await _context.CashForWorkEvents
+                .FirstOrDefaultAsync(e => e.Id == eventId)
+                ?? throw new InvalidOperationException("Cash-for-work event was not found.");
+
+            EnsureEventCanBeModified(cashForWorkEvent);
+
+            var endDate = cashForWorkEvent.FinishDate?.Date ?? cashForWorkEvent.EventDate.Date;
+            if (DateTime.Today < cashForWorkEvent.EventDate.Date || DateTime.Today > endDate)
+            {
+                throw new InvalidOperationException($"Attendance can only be recorded between {cashForWorkEvent.EventDate:MMM dd} and {endDate:MMM dd}.");
+            }
+
+            var distinctStagingIds = stagingIds.Distinct().ToList();
+            if (distinctStagingIds.Count == 0) return 0;
+
+            var existingParticipants = await _context.CashForWorkParticipants
+                .Where(p => !p.IsDeleted && p.EventId == eventId && p.BeneficiaryStagingId.HasValue && distinctStagingIds.Contains(p.BeneficiaryStagingId.Value))
+                .ToDictionaryAsync(p => p.BeneficiaryStagingId!.Value);
+
+            var savedCount = 0;
+            var today = DateTime.Today;
+
+            foreach (var stagingId in distinctStagingIds)
+            {
+                if (!existingParticipants.TryGetValue(stagingId, out var participant))
+                {
+                    participant = new CashForWorkParticipant
+                    {
+                        EventId = eventId,
+                        BeneficiaryStagingId = stagingId,
+                        AddedByUserId = recordedByUserId,
+                        AddedAt = DateTime.Now
+                    };
+                    _context.CashForWorkParticipants.Add(participant);
+                    await _context.SaveChangesAsync();
+                    existingParticipants[stagingId] = participant;
+                }
+
+                var alreadyRecorded = await _context.CashForWorkAttendances
+                    .AnyAsync(a => !a.IsDeleted && a.ParticipantId == participant.Id && a.AttendanceDate == today);
+
+                if (!alreadyRecorded)
+                {
+                    _context.CashForWorkAttendances.Add(new CashForWorkAttendance
+                    {
+                        ParticipantId = participant.Id,
+                        AttendanceDate = today,
+                        Status = CashForWorkAttendanceStatus.Present,
+                        Source = AttendanceCaptureSource.Manual,
+                        RecordedByUserId = recordedByUserId,
+                        RecordedAt = DateTime.Now
+                    });
+                    savedCount++;
+                }
+            }
+
+            if (savedCount > 0)
+            {
+                await _context.SaveChangesAsync();
+                if (_auditService != null)
+                {
+                    await _auditService.LogActivityAsync(
+                        recordedByUserId,
+                        "CashForWorkManualAttendanceSaved",
+                        "CashForWorkEvent",
+                        eventId,
+                        $"Saved {savedCount} manual attendance record(s) for event '{cashForWorkEvent.Title}'.");
+                }
+            }
+
+            return savedCount;
+        }
+
         public async Task<bool> SaveScannerAttendanceAsync(int eventId, int recordedByUserId, int? participantId, string qrPayload, AttendanceCaptureSource source = AttendanceCaptureSource.ScannerSession)
         {
             var cashForWorkEvent = await _context.CashForWorkEvents

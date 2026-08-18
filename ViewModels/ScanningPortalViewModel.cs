@@ -22,11 +22,24 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _validityBadgeText = string.Empty;
         private Brush _validityBadgeBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#475569"));
         private string _eKardDetailLine = string.Empty;
+        private string _scanErrorMessage = string.Empty;
+        private bool _hasScanError;
 
         public ScanningPortalViewModel(User currentUser)
         {
             _currentUser = currentUser;
             CloseOverlayCommand = new RelayCommand(_ => IsOverlayVisible = false);
+            ClearScanErrorCommand = new RelayCommand(_ => ClearScanError());
+
+            // Wire shared diagnostics → error banner.
+            ScannerDiagnostics.ErrorRaised += (kind, message) =>
+            {
+                if (!HasScanError)
+                {
+                    ScanErrorMessage = message;
+                    HasScanError = true;
+                }
+            };
         }
 
         public bool IsBusy
@@ -89,7 +102,33 @@ namespace AttendanceShiftingManagement.ViewModels
             private set => SetProperty(ref _eKardDetailLine, value);
         }
 
+        public string ScanErrorMessage
+        {
+            get => _scanErrorMessage;
+            private set => SetProperty(ref _scanErrorMessage, value);
+        }
+
+        public bool HasScanError
+        {
+            get => _hasScanError;
+            private set => SetProperty(ref _hasScanError, value);
+        }
+
         public RelayCommand CloseOverlayCommand { get; }
+        public RelayCommand ClearScanErrorCommand { get; }
+
+        /// <summary>Called from the code-behind when the keystroke buffer hits an unrecoverable error.</summary>
+        public void SetScanError(string message)
+        {
+            ScanErrorMessage = message;
+            HasScanError = true;
+        }
+
+        public void ClearScanError()
+        {
+            ScanErrorMessage = string.Empty;
+            HasScanError = false;
+        }
 
         public async Task ProcessScanAsync(string barcode)
         {
@@ -116,6 +155,8 @@ namespace AttendanceShiftingManagement.ViewModels
 
                 if (lookup == null)
                 {
+                    ScannerDiagnostics.Report(ScanErrorKind.PayloadNotFound,
+                        $"No match for barcode: {barcode}");
                     SetErrorStatus("UNRECOGNIZED BARCODE");
                     return;
                 }

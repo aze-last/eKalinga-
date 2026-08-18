@@ -176,6 +176,52 @@
                      HorizontalAlignment="Left" VerticalAlignment="Top"
                      KeyDown="HiddenScannerTextBox_KeyDown"/>
 
+            <!-- Scanner Armed Status Chip — top-right corner, above all content -->
+            <Border x:Name="ScannerStatusChip" HorizontalAlignment="Right" VerticalAlignment="Top"
+                    Margin="0,8,8,0" Padding="10,4" CornerRadius="10" Panel.ZIndex="20"
+                    BorderThickness="1">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Background" Value="#F0FDF4"/>
+                        <Setter Property="BorderBrush" Value="#86EFAC"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsScannerActive}" Value="False">
+                                <Setter Property="Background" Value="#F8FAFC"/>
+                                <Setter Property="BorderBrush" Value="#CBD5E1"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Ellipse Width="7" Height="7" VerticalAlignment="Center" Margin="0,0,6,0">
+                        <Ellipse.Style>
+                            <Style TargetType="Ellipse">
+                                <Setter Property="Fill" Value="#15803D"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsScannerActive}" Value="False">
+                                        <Setter Property="Fill" Value="#94A3B8"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Ellipse.Style>
+                    </Ellipse>
+                    <TextBlock VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Text" Value="Scanner Ready"/>
+                                <Setter Property="Foreground" Value="#15803D"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsScannerActive}" Value="False">
+                                        <Setter Property="Text" Value="Scanner Not Focused"/>
+                                        <Setter Property="Foreground" Value="#64748B"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </StackPanel>
+            </Border>
+
             <Grid>
                 <Grid.ColumnDefinitions>
                     <!-- Sidebar collapsed to 0 width to match Image 2 mockup -->

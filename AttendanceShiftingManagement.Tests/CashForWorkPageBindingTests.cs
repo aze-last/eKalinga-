@@ -38,6 +38,8 @@ public sealed class CashForWorkPageBindingTests
         Assert.Contains("Command=\"{Binding SaveAttendanceSheetPdfCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding PrintAttendanceSheetCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("ItemsSource=\"{Binding Participants}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("ItemsSource=\"{Binding ManualAttendanceParticipants}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding ManualAttendanceSearchText, UpdateSourceTrigger=PropertyChanged}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("ItemsSource=\"{Binding OpenAnnouncements}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"{Binding ReleaseAmountText, UpdateSourceTrigger=PropertyChanged}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"{Binding AttendanceScannerSessionUrl, Mode=OneWay}\"", xaml, StringComparison.Ordinal);

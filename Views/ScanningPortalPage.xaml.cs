@@ -1,3 +1,4 @@
+using AttendanceShiftingManagement.Helpers;
 using AttendanceShiftingManagement.Models;
 using AttendanceShiftingManagement.ViewModels;
 using System.Text;
@@ -40,7 +41,7 @@ namespace AttendanceShiftingManagement.Views
             if (_viewModel.IsOverlayVisible) return;
 
             var now = DateTime.Now;
-            var interval = (now - _lastKeyTime).TotalMilliseconds;
+            var intervalMs = (now - _lastKeyTime).TotalMilliseconds;
             _lastKeyTime = now;
 
             // Scanners usually send 'Enter' (Return) as a terminator
@@ -56,33 +57,97 @@ namespace AttendanceShiftingManagement.Views
                 return;
             }
 
-            // Capture alphanumeric keys (standard for Code 128)
-            var keyChar = GetCharFromKey(e.Key);
-            if (keyChar != null)
+            // Stale-buffer timeout: if more than 200ms passed between characters while
+            // a buffer was accumulating, the previous partial scan is stale — reset before
+            // appending so it doesn't corrupt the new scan.
+            if (_barcodeBuffer.Length > 0 && intervalMs > 200)
             {
-                // Optional: If the interval is too long, it might be a human typing
-                // For a dedicated portal, we can be more lenient or strict.
-                // For now, we just buffer everything until Enter.
-                _barcodeBuffer.Append(keyChar);
-                
-                // If this was a fast burst, we can mark it as handled to prevent
-                // it from triggering other UI elements or textboxes.
-                if (interval < MaxKeyIntervalMs)
+                var stale = _barcodeBuffer.ToString();
+                _barcodeBuffer.Clear();
+                ScannerDiagnostics.Report(ScanErrorKind.StaleBufferReset,
+                    $"Buffer cleared after {intervalMs:F0}ms gap (stale partial: \"{stale}\").");
+            }
+
+            // Attempt to map the key to a character
+            var keyChar = GetCharFromKey(e.Key);
+
+            if (keyChar == null)
+            {
+                // An unmapped key during an active scan means the scanner emitted a character
+                // this mapper cannot decode. Reset the buffer with a visible error rather than
+                // silently building a corrupted payload.
+                if (_barcodeBuffer.Length > 0 && intervalMs < MaxKeyIntervalMs)
                 {
-                    // e.Handled = true; // Uncomment if we want to swallow the keys
+                    var partial = _barcodeBuffer.ToString();
+                    _barcodeBuffer.Clear();
+                    ScannerDiagnostics.Report(ScanErrorKind.UnmappedCharacter,
+                        $"Unmapped key '{e.Key}' during scan; buffer reset. Partial was: \"{partial}\".");
+                    _viewModel.SetScanError("Unsupported character in scan — check scanner keyboard layout.");
+                    e.Handled = true;
                 }
+                return;
+            }
+
+            _barcodeBuffer.Append(keyChar);
+
+            // Max buffer length guard: catches a stuck key or runaway input loop.
+            if (_barcodeBuffer.Length > 250)
+            {
+                _barcodeBuffer.Clear();
+                ScannerDiagnostics.Report(ScanErrorKind.StaleBufferReset,
+                    "Buffer exceeded 250 characters; reset. Possible stuck key or scanner malfunction.");
+                _viewModel.SetScanError("Scanner buffer overflow — scan timed out or a key is stuck.");
+            }
+
+            // Mark as handled when the interval is clearly scanner-speed to prevent
+            // stray characters from triggering other UI elements.
+            if (intervalMs < MaxKeyIntervalMs)
+            {
+                e.Handled = true;
             }
         }
 
         private char? GetCharFromKey(Key key)
         {
-            // Simple mapping for common barcode characters
-            if (key >= Key.D0 && key <= Key.D9) return (char)('0' + (key - Key.D0));
-            if (key >= Key.NumPad0 && key <= Key.NumPad9) return (char)('0' + (key - Key.NumPad0));
-            if (key >= Key.A && key <= Key.Z) return (char)('A' + (key - Key.A));
-            if (key == Key.OemMinus || key == Key.Subtract) return '-';
-            
-            return null;
+            bool shift = (Keyboard.Modifiers & ModifierKeys.Shift) != 0;
+
+            // Digits (top row): respect Shift for symbols
+            if (key >= Key.D0 && key <= Key.D9)
+            {
+                if (shift)
+                {
+                    const string shiftDigits = ")!@#$%^&*(";
+                    return shiftDigits[key - Key.D0];
+                }
+                return (char)('0' + (key - Key.D0));
+            }
+
+            // Numpad digits (always unshifted)
+            if (key >= Key.NumPad0 && key <= Key.NumPad9)
+                return (char)('0' + (key - Key.NumPad0));
+
+            // Letters: uppercase when Shift, lowercase otherwise
+            if (key >= Key.A && key <= Key.Z)
+                return shift ? (char)('A' + (key - Key.A)) : (char)('a' + (key - Key.A));
+
+            // Symbols needed for GUID / base64 / JSON payloads and common barcode formats
+            return key switch
+            {
+                Key.OemMinus or Key.Subtract   => shift ? '_' : '-',
+                Key.OemPeriod                   => shift ? '>' : '.',
+                Key.OemPlus or Key.Add          => shift ? '+' : '=',
+                Key.OemQuestion                 => shift ? '?' : '/',
+                Key.OemOpenBrackets             => shift ? '{' : '[',
+                Key.OemCloseBrackets            => shift ? '}' : ']',
+                Key.OemSemicolon                => shift ? ':' : ';',
+                Key.OemComma                    => shift ? '<' : ',',
+                Key.OemQuotes                   => shift ? '"' : '\'',
+                Key.OemBackslash or Key.Oem5    => shift ? '|' : '\\',
+                Key.Space                       => ' ',
+                Key.Multiply                    => '*',
+                Key.Divide                      => '/',
+                _                               => null
+            };
         }
 
         private void ManualEntry_Click(object sender, RoutedEventArgs e)

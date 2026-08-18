@@ -109,6 +109,8 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _scannedAllocatedAmountText = string.Empty;
         private bool _isScannedResultVisible;
         private string? _lastScannedPayload;
+        /// <summary>Single-slot buffer: a scan that arrived while the result dialog was open; fired on dialog close.</summary>
+        private string? _pendingScanPayload;
         private DateTime _lastScannedTime = DateTime.MinValue;
         private string _scannerActionLabel = "CONFIRM CLAIM";
         private string _scannerCancelLabel = "DECLINE";
@@ -261,6 +263,23 @@ namespace AttendanceShiftingManagement.ViewModels
             _confirmUnreleasedCommand = new RelayCommand(async _ => await ConfirmUnreleasedAsync(), _ => !IsBusy && SelectedProgramBeneficiary != null);
             ClearBeneficiarySearchCommand = new RelayCommand(_ => BeneficiarySearchText = string.Empty);
             ClearScanErrorCommand = new RelayCommand(_ => ClearScanError());
+
+            // Wire shared diagnostics channel → existing error banner bindings.
+            ScannerDiagnostics.ErrorRaised += (kind, message) =>
+            {
+                // Only surface non-queue events that don't already have a dedicated message path.
+                if (kind == ScanErrorKind.ScannerNotFocused)
+                {
+                    // Focus events are informational; don't overwrite an existing error banner.
+                    System.Diagnostics.Debug.WriteLine($"[ProjectDistributionVM] {message}");
+                    return;
+                }
+                if (!HasScanError)
+                {
+                    ScanErrorMessage = message;
+                    HasScanError = true;
+                }
+            };
 
             ResetCreateProjectForm();
             _ = LoadAsync();
@@ -2560,8 +2579,18 @@ namespace AttendanceShiftingManagement.ViewModels
                 return;
             }
 
-            // Queue protection: ignore scans while a dialog is active
-            if (IsScannedResultVisible || IsReleaseSuccessState) return;
+            // Queue protection: if a dialog is active, hold the scan in a single-slot buffer
+            // and auto-process it as soon as ResetScannedResult() is called (dialog close).
+            if (IsScannedResultVisible || IsReleaseSuccessState)
+            {
+                _pendingScanPayload = payload.Trim();
+                var queueMsg = "Scan queued — resolving after current dialog closes...";
+                ScanErrorMessage = queueMsg;
+                HasScanError = true;
+                ScannerDiagnostics.Report(ScanErrorKind.ScanSwallowedBusy,
+                    $"Scan queued while dialog active. Payload: {payload}");
+                return;
+            }
 
             payload = payload.Trim();
 
@@ -3357,6 +3386,15 @@ namespace AttendanceShiftingManagement.ViewModels
             _lastScannedPayload = null;
             IsScannedResultVisible = false;
             RequestScannerFocus?.Invoke();
+
+            // Auto-fire any scan that was queued while the dialog was open.
+            if (_pendingScanPayload != null)
+            {
+                var queued = _pendingScanPayload;
+                _pendingScanPayload = null;
+                ClearScanError();
+                _ = ExecuteProcessPcScan(queued);
+            }
         }
 
         /// <summary>Allocated release per beneficiary for the profile modal: unit amount (Cash) or item + quantity (Goods).</summary>

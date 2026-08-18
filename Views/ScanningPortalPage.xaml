@@ -81,20 +81,49 @@
                     <BlurEffect Radius="{Binding IsOverlayVisible, Converter={StaticResource BooleanToBlurRadiusConverter}}" />
                 </Grid.Effect>
 
-                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                    <materialDesign:PackIcon Kind="BarcodeScanner" Width="120" Height="120" Foreground="{DynamicResource BrandBrush}" HorizontalAlignment="Center" Opacity="0.1"/>
-                    <TextBlock Text="SCANNER GATEWAY ACTIVE" 
-                             FontSize="24" 
-                             FontWeight="Bold" 
-                             Foreground="{DynamicResource BrandMidnightBrush}" 
-                             HorizontalAlignment="Center" 
-                             Margin="0,20,0,0"/>
-                    <TextBlock Text="Waiting for incoming barcode signal..." 
-                             FontSize="14" 
-                             Foreground="{DynamicResource BrandTextSecondaryBrush}" 
-                             HorizontalAlignment="Center" 
-                             Margin="0,8,0,0"/>
-                </StackPanel>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Scan Error Banner -->
+                    <Border Grid.Row="0" Margin="24,16,24,0" Padding="16,12" CornerRadius="8"
+                            Background="#FEF2F2" BorderBrush="#EF4444" BorderThickness="1"
+                            Visibility="{Binding HasScanError, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <materialDesign:PackIcon Grid.Column="0" Kind="AlertCircleOutline" Width="22" Height="22"
+                                                     Foreground="#DC2626" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                            <TextBlock Grid.Column="1" Text="{Binding ScanErrorMessage}" FontSize="13" FontWeight="SemiBold"
+                                       Foreground="#991B1B" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                            <Button Grid.Column="2" Style="{StaticResource MaterialDesignIconButton}" Width="28" Height="28"
+                                    Command="{Binding ClearScanErrorCommand}" Foreground="#DC2626" Padding="0" Margin="8,0,0,0">
+                                <materialDesign:PackIcon Kind="Close" Width="18" Height="18"/>
+                            </Button>
+                        </Grid>
+                    </Border>
+
+                    <!-- Center Content -->
+                    <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center">
+                        <materialDesign:PackIcon Kind="BarcodeScanner" Width="120" Height="120" Foreground="{DynamicResource BrandBrush}" HorizontalAlignment="Center" Opacity="0.1"/>
+                        <TextBlock Text="SCANNER GATEWAY ACTIVE" 
+                                 FontSize="24" 
+                                 FontWeight="Bold" 
+                                 Foreground="{DynamicResource BrandMidnightBrush}" 
+                                 HorizontalAlignment="Center" 
+                                 Margin="0,20,0,0"/>
+                        <TextBlock Text="Waiting for incoming barcode signal..." 
+                                 FontSize="14" 
+                                 Foreground="{DynamicResource BrandTextSecondaryBrush}" 
+                                 HorizontalAlignment="Center" 
+                                 Margin="0,8,0,0"/>
+                    </StackPanel>
+                </Grid>
             </Grid>
         </Grid>
 

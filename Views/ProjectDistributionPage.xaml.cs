@@ -75,6 +75,9 @@ namespace AttendanceShiftingManagement.Views
 
             if (HiddenScannerTextBox != null && !HiddenScannerTextBox.IsFocused)
             {
+                Helpers.ScannerDiagnostics.Report(
+                    Helpers.ScanErrorKind.ScannerNotFocused,
+                    $"Focus was not on HiddenScannerTextBox (focused: {System.Windows.Input.Keyboard.FocusedElement?.GetType().Name ?? "none"}); auto-refocusing.");
                 HiddenScannerTextBox.Focus();
                 System.Windows.Input.Keyboard.Focus(HiddenScannerTextBox);
             }

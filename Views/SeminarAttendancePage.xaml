@@ -82,84 +82,63 @@
     </UserControl.Resources>
 
     <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
-
-        <!-- ==================================================================================== -->
-        <!-- HEADER BANNER: Background #15803D | Padding 20,15                                    -->
-        <!-- ==================================================================================== -->
-        <Border Grid.Row="0" Background="{StaticResource ThemePrimaryActionBrush}" Padding="20,15" Panel.ZIndex="10">
-            <Grid>
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <materialDesign:PackIcon Kind="Presentation" Width="32" Height="32" Foreground="White" VerticalAlignment="Center"/>
-                    <StackPanel Margin="15,0,0,0">
-                        <TextBlock Text="SEMINARS &amp; TRAININGS" FontSize="24" FontWeight="Bold" Foreground="White"/>
-                        <TextBlock Text="Track attendance, manage shifts, and monitor participant turnout" FontSize="12" Foreground="#CCFFFFFF"/>
-                    </StackPanel>
-                </StackPanel>
-
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                    <Button Content="DASHBOARD"
-                            Command="{Binding DataContext.ShowDashboardCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                            Style="{StaticResource MaterialDesignOutlinedButton}"
-                            Foreground="White" BorderBrush="White" Height="40" Margin="0,0,10,0" FontWeight="Bold"/>
-
-                    <Button Content="Create New Seminar"
-                            Command="{Binding OpenCreateSeminarPanelCommand}"
-                            Style="{StaticResource GoldActionButton}"
-                            Height="40" Margin="0,0,10,0" FontWeight="Bold"/>
-
-                    <Button Content="REFRESH WORKSPACE"
-                            Command="{Binding RefreshWorkspaceCommand}"
-                            Style="{StaticResource MaterialDesignOutlinedButton}"
-                            Foreground="White" BorderBrush="White" Height="40" Margin="0,0,10,0"/>
-
-                    <Button Command="{Binding DataContext.ShowHistoryCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                            Style="{StaticResource MaterialDesignFlatButton}"
-                            Foreground="White" Width="40" Height="40" Padding="0"
-                            ToolTip="View Event History">
-                        <materialDesign:PackIcon Kind="History" Width="22" Height="22"/>
-                    </Button>
-                </StackPanel>
-            </Grid>
-        </Border>
-
-        <!-- ==================================================================================== -->
-        <!-- WORKSPACE CANVAS: Background #F1F5F9 | Padding 24                                    -->
-        <!-- ==================================================================================== -->
-        <Grid Grid.Row="1" Background="#F1F5F9">
+        <!-- Background / Main Content (Blurs when any modal/overlay is open) -->
+        <Grid>
             <Grid.Effect>
-                <BlurEffect Radius="0" x:Name="BackgroundBlur"/>
+                <BlurEffect Radius="{Binding IsAnyOverlayOpen, Converter={StaticResource BooleanToBlurRadiusConverter}, FallbackValue=0}"/>
             </Grid.Effect>
-            <Grid.Style>
-                <Style TargetType="Grid">
-                    <Style.Triggers>
-                        <DataTrigger Binding="{Binding IsAnyOverlayOpen}" Value="True">
-                            <DataTrigger.EnterActions>
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetProperty="(Grid.Effect).(BlurEffect.Radius)" To="15" Duration="0:0:0.25"/>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </DataTrigger.EnterActions>
-                            <DataTrigger.ExitActions>
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetProperty="(Grid.Effect).(BlurEffect.Radius)" To="0" Duration="0:0:0.25"/>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </DataTrigger.ExitActions>
-                        </DataTrigger>
-                    </Style.Triggers>
-                </Style>
-            </Grid.Style>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
 
-            <!-- Hidden scanner textbox for physical USB barcode/QR scanner capture -->
-            <TextBox x:Name="HiddenScannerTextBox" Text="{Binding ScannerInputText, UpdateSourceTrigger=PropertyChanged}" 
-                     Opacity="0" Width="1" Height="1" Focusable="True"
-                     HorizontalAlignment="Left" VerticalAlignment="Top"/>
+            <!-- ==================================================================================== -->
+            <!-- HEADER BANNER: Background #15803D | Padding 20,15                                    -->
+            <!-- ==================================================================================== -->
+            <Border Grid.Row="0" Background="{StaticResource ThemePrimaryActionBrush}" Padding="20,15" Panel.ZIndex="10">
+                <Grid>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <materialDesign:PackIcon Kind="Presentation" Width="32" Height="32" Foreground="White" VerticalAlignment="Center"/>
+                        <StackPanel Margin="15,0,0,0">
+                            <TextBlock Text="SEMINARS &amp; TRAININGS" FontSize="24" FontWeight="Bold" Foreground="White"/>
+                            <TextBlock Text="Track attendance, manage shifts, and monitor participant turnout" FontSize="12" Foreground="#CCFFFFFF"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                        <Button Content="DASHBOARD"
+                                Command="{Binding DataContext.ShowDashboardCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                Style="{StaticResource MaterialDesignOutlinedButton}"
+                                Foreground="White" BorderBrush="White" Height="40" Margin="0,0,10,0" FontWeight="Bold"/>
+
+                        <Button Content="Create New Seminar"
+                                Command="{Binding OpenCreateSeminarPanelCommand}"
+                                Style="{StaticResource GoldActionButton}"
+                                Height="40" Margin="0,0,10,0" FontWeight="Bold"/>
+
+                        <Button Content="REFRESH WORKSPACE"
+                                Command="{Binding RefreshWorkspaceCommand}"
+                                Style="{StaticResource MaterialDesignOutlinedButton}"
+                                Foreground="White" BorderBrush="White" Height="40" Margin="0,0,10,0"/>
+
+                        <Button Command="{Binding DataContext.ShowHistoryCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                Style="{StaticResource MaterialDesignFlatButton}"
+                                Foreground="White" Width="40" Height="40" Padding="0"
+                                ToolTip="View Event History">
+                            <materialDesign:PackIcon Kind="History" Width="22" Height="22"/>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- ==================================================================================== -->
+            <!-- WORKSPACE CANVAS: Background #F1F5F9 | Padding 24                                    -->
+            <!-- ==================================================================================== -->
+            <Grid Grid.Row="1" Background="#F1F5F9">
+                <!-- Hidden scanner textbox for physical USB barcode/QR scanner capture -->
+                <TextBox x:Name="HiddenScannerTextBox" Text="{Binding ScannerInputText, UpdateSourceTrigger=PropertyChanged}" 
+                         Opacity="0" Width="1" Height="1" Focusable="True"
+                         HorizontalAlignment="Left" VerticalAlignment="Top"/>
 
             <Grid Margin="24">
                 <Grid.ColumnDefinitions>
@@ -623,13 +602,14 @@
                 </Grid>
             </Grid>
         </Grid>
+        </Grid>
 
         <!-- ==================================================================================== -->
-        <!-- MODAL OVERLAYS (BlurRadius="15.0" | Backdrop #CC0F172A)                              -->
+        <!-- MODAL OVERLAYS (on top of blur)                                                      -->
         <!-- ==================================================================================== -->
 
         <!-- Seminar Editor Modal -->
-        <Grid Grid.RowSpan="2" Panel.ZIndex="100" Visibility="{Binding SeminarEditorVisibility}">
+        <Grid Panel.ZIndex="100" Visibility="{Binding SeminarEditorVisibility}">
             <Border Background="#CC0F172A"/>
             <Border Style="{StaticResource PanelCardStyle}" HorizontalAlignment="Center" VerticalAlignment="Center" Width="680" MaxHeight="750">
                 <Grid>
@@ -677,7 +657,7 @@
         </Grid>
 
         <!-- Scan Attendance Gateway (Mobile QR & PIN) Modal -->
-        <Grid Grid.RowSpan="2" Panel.ZIndex="105" Visibility="{Binding ScanAttendanceVisibility}">
+        <Grid Panel.ZIndex="105" Visibility="{Binding ScanAttendanceVisibility}">
             <Border Background="#CC0F172A"/>
             <Border Style="{StaticResource PanelCardStyle}" HorizontalAlignment="Center" VerticalAlignment="Center" Width="550">
                 <Grid>
@@ -717,7 +697,7 @@
         </Grid>
 
         <!-- Active Announcements Modal -->
-        <Grid Grid.RowSpan="2" Panel.ZIndex="115" Visibility="{Binding AnnouncementsVisibility}">
+        <Grid Panel.ZIndex="115" Visibility="{Binding AnnouncementsVisibility}">
             <Border Background="#CC0F172A"/>
             <Border Style="{StaticResource PanelCardStyle}" HorizontalAlignment="Center" VerticalAlignment="Center" Width="720" MaxHeight="700">
                 <Grid>
@@ -770,12 +750,12 @@
         </Grid>
 
         <!-- PC Scanner Camera Overlay -->
-        <Grid Grid.RowSpan="2" Panel.ZIndex="120" Visibility="{Binding IsPcScannerOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+        <Grid Panel.ZIndex="120" Visibility="{Binding IsPcScannerOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
             <local:DesktopScannerOverlay QrCodeScanned="Scanner_QrCodeScanned" Closed="Scanner_Closed"/>
         </Grid>
 
         <!-- Scanned ID Confirmation Modal Overlay -->
-        <Grid Grid.RowSpan="2" Panel.ZIndex="130"
+        <Grid Panel.ZIndex="130"
               Visibility="{Binding IsScannedResultVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
             <Border Background="#CC0F172A"/>
             <Border Style="{StaticResource PanelCardStyle}" HorizontalAlignment="Center" VerticalAlignment="Center" Width="600" CornerRadius="16">
