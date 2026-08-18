@@ -34,6 +34,28 @@
             <Setter Property="BorderBrush" Value="{StaticResource CardBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
         </Style>
+
+        <Style x:Key="SkeletonBlockStyle" TargetType="Border">
+            <Setter Property="Background" Value="#E2E8F0"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Opacity" Value="0.6"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsBusy}" Value="True">
+                    <DataTrigger.EnterActions>
+                        <BeginStoryboard x:Name="SkeletonPulse">
+                            <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                 From="0.3" To="0.85"
+                                                 Duration="0:0:0.75"/>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </DataTrigger.EnterActions>
+                    <DataTrigger.ExitActions>
+                        <StopStoryboard BeginStoryboardName="SkeletonPulse"/>
+                    </DataTrigger.ExitActions>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
     </UserControl.Resources>
 
     <Grid>
@@ -154,54 +176,81 @@
 
                             <materialDesign:Card Grid.Column="0" Style="{StaticResource SummaryCardStyle}">
                                 <Border Padding="20,15" Height="90">
-                                    <StackPanel>
-                                        <TextBlock Text="GGMS ALLOCATION" FontSize="10" FontWeight="Bold" Foreground="#64748B" Margin="0,0,0,8"/>
-                                        <TextBlock Text="{Binding GovernmentAllocated, StringFormat='PHP {0:N2}'}" FontSize="18" FontWeight="Bold" Foreground="{StaticResource PrimaryBrandBrush}"/>
-                                    </StackPanel>
+                                    <Grid>
+                                        <StackPanel Visibility="{Binding IsBusy, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                                            <TextBlock Text="GGMS ALLOCATION" FontSize="10" FontWeight="Bold" Foreground="#64748B" Margin="0,0,0,8"/>
+                                            <TextBlock Text="{Binding GovernmentAllocated, StringFormat='PHP {0:N2}'}" FontSize="18" FontWeight="Bold" Foreground="{StaticResource PrimaryBrandBrush}"/>
+                                        </StackPanel>
+                                        <StackPanel Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}" VerticalAlignment="Center">
+                                            <Border Style="{StaticResource SkeletonBlockStyle}" Height="12" Width="100" HorizontalAlignment="Left" Margin="0,0,0,10"/>
+                                            <Border Style="{StaticResource SkeletonBlockStyle}" Height="22" Width="140" HorizontalAlignment="Left"/>
+                                        </StackPanel>
+                                    </Grid>
                                 </Border>
                             </materialDesign:Card>
 
                             <materialDesign:Card Grid.Column="2" Style="{StaticResource SummaryCardStyle}">
                                 <Border Padding="20,15" Height="90">
-                                    <StackPanel>
-                                        <TextBlock Text="PRIVATE DONATIONS" FontSize="10" FontWeight="Bold" Foreground="#64748B" Margin="0,0,0,8"/>
-                                        <TextBlock Text="{Binding PrivateAvailable, StringFormat='PHP {0:N2}'}" FontSize="18" FontWeight="Bold" Foreground="{StaticResource PrimaryBrandBrush}"/>
-                                    </StackPanel>
+                                    <Grid>
+                                        <StackPanel Visibility="{Binding IsBusy, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                                            <TextBlock Text="PRIVATE DONATIONS" FontSize="10" FontWeight="Bold" Foreground="#64748B" Margin="0,0,0,8"/>
+                                            <TextBlock Text="{Binding PrivateAvailable, StringFormat='PHP {0:N2}'}" FontSize="18" FontWeight="Bold" Foreground="{StaticResource PrimaryBrandBrush}"/>
+                                        </StackPanel>
+                                        <StackPanel Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}" VerticalAlignment="Center">
+                                            <Border Style="{StaticResource SkeletonBlockStyle}" Height="12" Width="110" HorizontalAlignment="Left" Margin="0,0,0,10"/>
+                                            <Border Style="{StaticResource SkeletonBlockStyle}" Height="22" Width="130" HorizontalAlignment="Left"/>
+                                        </StackPanel>
+                                    </Grid>
                                 </Border>
                             </materialDesign:Card>
 
                             <materialDesign:Card Grid.Column="4" Style="{StaticResource SummaryCardStyle}">
                                 <Border Padding="15,10" Height="90">
-                                    <StackPanel VerticalAlignment="Center">
-                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
-                                            <TextBlock Text="COMBINED AVAILABLE: " FontSize="9" FontWeight="Bold" Foreground="#64748B"/>
-                                            <TextBlock Text="{Binding CombinedAvailable, StringFormat='PHP {0:N2}'}" FontSize="9" FontWeight="Bold" Foreground="{StaticResource PrimaryBrandBrush}"/>
+                                    <Grid>
+                                        <StackPanel VerticalAlignment="Center" Visibility="{Binding IsBusy, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                                                <TextBlock Text="COMBINED AVAILABLE: " FontSize="9" FontWeight="Bold" Foreground="#64748B"/>
+                                                <TextBlock Text="{Binding CombinedAvailable, StringFormat='PHP {0:N2}'}" FontSize="9" FontWeight="Bold" Foreground="{StaticResource PrimaryBrandBrush}"/>
+                                            </StackPanel>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="15"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0">
+                                                    <TextBlock Text="General Use" FontSize="9" FontWeight="Bold" Foreground="#64748B"/>
+                                                    <TextBlock Text="{Binding UnrestrictedAvailable, StringFormat='PHP {0:N2}'}" FontSize="14" FontWeight="Bold" Foreground="#15803D"/>
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="2">
+                                                    <TextBlock Text="Locked/Earmarked" FontSize="9" FontWeight="Bold" Foreground="#64748B"/>
+                                                    <TextBlock Text="{Binding LockedAvailable, StringFormat='PHP {0:N2}'}" FontSize="14" FontWeight="Bold" Foreground="{StaticResource ActionAccentBrush}"/>
+                                                </StackPanel>
+                                            </Grid>
                                         </StackPanel>
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto"/>
-                                                <ColumnDefinition Width="15"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                            </Grid.ColumnDefinitions>
-                                            <StackPanel Grid.Column="0">
-                                                <TextBlock Text="General Use" FontSize="9" FontWeight="Bold" Foreground="#64748B"/>
-                                                <TextBlock Text="{Binding UnrestrictedAvailable, StringFormat='PHP {0:N2}'}" FontSize="14" FontWeight="Bold" Foreground="#15803D"/>
+                                        <StackPanel Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}" VerticalAlignment="Center">
+                                            <Border Style="{StaticResource SkeletonBlockStyle}" Height="10" Width="160" HorizontalAlignment="Left" Margin="0,0,10,0"/>
+                                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                                <Border Style="{StaticResource SkeletonBlockStyle}" Height="18" Width="70" Margin="0,0,15,0"/>
+                                                <Border Style="{StaticResource SkeletonBlockStyle}" Height="18" Width="70"/>
                                             </StackPanel>
-                                            <StackPanel Grid.Column="2">
-                                                <TextBlock Text="Locked/Earmarked" FontSize="9" FontWeight="Bold" Foreground="#64748B"/>
-                                                <TextBlock Text="{Binding LockedAvailable, StringFormat='PHP {0:N2}'}" FontSize="14" FontWeight="Bold" Foreground="{StaticResource ActionAccentBrush}"/>
-                                            </StackPanel>
-                                        </Grid>
-                                    </StackPanel>
+                                        </StackPanel>
+                                    </Grid>
                                 </Border>
                             </materialDesign:Card>
 
                             <materialDesign:Card Grid.Column="6" Style="{StaticResource SummaryCardStyle}">
                                 <Border Padding="20,15" Height="90">
-                                    <StackPanel>
-                                        <TextBlock Text="TOTAL RELEASED" FontSize="10" FontWeight="Bold" Foreground="#64748B" Margin="0,0,0,8"/>
-                                        <TextBlock Text="{Binding ReleasedTotal, StringFormat='PHP {0:N2}'}" FontSize="18" FontWeight="Bold" Foreground="#15803D"/>
-                                    </StackPanel>
+                                    <Grid>
+                                        <StackPanel Visibility="{Binding IsBusy, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                                            <TextBlock Text="TOTAL RELEASED" FontSize="10" FontWeight="Bold" Foreground="#64748B" Margin="0,0,0,8"/>
+                                            <TextBlock Text="{Binding ReleasedTotal, StringFormat='PHP {0:N2}'}" FontSize="18" FontWeight="Bold" Foreground="#15803D"/>
+                                        </StackPanel>
+                                        <StackPanel Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}" VerticalAlignment="Center">
+                                            <Border Style="{StaticResource SkeletonBlockStyle}" Height="12" Width="95" HorizontalAlignment="Left" Margin="0,0,0,10"/>
+                                            <Border Style="{StaticResource SkeletonBlockStyle}" Height="22" Width="135" HorizontalAlignment="Left"/>
+                                        </StackPanel>
+                                    </Grid>
                                 </Border>
                             </materialDesign:Card>
                         </Grid>
@@ -217,11 +266,17 @@
                             <materialDesign:Card Grid.Column="0" Style="{StaticResource SummaryCardStyle}">
                                 <Border Padding="20,15" Height="75">
                                     <Grid>
-                                        <StackPanel VerticalAlignment="Center">
-                                            <TextBlock Text="SPENT THIS WEEK" FontSize="9" FontWeight="Bold" Foreground="#64748B" Margin="0,0,0,4"/>
-                                            <TextBlock Text="{Binding WeeklySpent, StringFormat='PHP {0:N2}'}" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrandBrush}"/>
+                                        <Grid Visibility="{Binding IsBusy, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                                            <StackPanel VerticalAlignment="Center">
+                                                <TextBlock Text="SPENT THIS WEEK" FontSize="9" FontWeight="Bold" Foreground="#64748B" Margin="0,0,0,4"/>
+                                                <TextBlock Text="{Binding WeeklySpent, StringFormat='PHP {0:N2}'}" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrandBrush}"/>
+                                            </StackPanel>
+                                            <materialDesign:PackIcon Kind="TrendingDown" Foreground="#64748B" Opacity="0.3" Width="24" Height="24" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                        </Grid>
+                                        <StackPanel Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}" VerticalAlignment="Center">
+                                            <Border Style="{StaticResource SkeletonBlockStyle}" Height="10" Width="90" HorizontalAlignment="Left" Margin="0,0,0,8"/>
+                                            <Border Style="{StaticResource SkeletonBlockStyle}" Height="18" Width="120" HorizontalAlignment="Left"/>
                                         </StackPanel>
-                                        <materialDesign:PackIcon Kind="TrendingDown" Foreground="#64748B" Opacity="0.3" Width="24" Height="24" HorizontalAlignment="Right" VerticalAlignment="Center"/>
                                     </Grid>
                                 </Border>
                             </materialDesign:Card>
@@ -229,11 +284,17 @@
                             <materialDesign:Card Grid.Column="2" Style="{StaticResource SummaryCardStyle}">
                                 <Border Padding="20,15" Height="75">
                                     <Grid>
-                                        <StackPanel VerticalAlignment="Center">
-                                            <TextBlock Text="SPENT THIS MONTH" FontSize="9" FontWeight="Bold" Foreground="#64748B" Margin="0,0,0,4"/>
-                                            <TextBlock Text="{Binding MonthlySpent, StringFormat='PHP {0:N2}'}" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrandBrush}"/>
+                                        <Grid Visibility="{Binding IsBusy, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                                            <StackPanel VerticalAlignment="Center">
+                                                <TextBlock Text="SPENT THIS MONTH" FontSize="9" FontWeight="Bold" Foreground="#64748B" Margin="0,0,0,4"/>
+                                                <TextBlock Text="{Binding MonthlySpent, StringFormat='PHP {0:N2}'}" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrandBrush}"/>
+                                            </StackPanel>
+                                            <materialDesign:PackIcon Kind="CalendarMonth" Foreground="#64748B" Opacity="0.3" Width="24" Height="24" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                        </Grid>
+                                        <StackPanel Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}" VerticalAlignment="Center">
+                                            <Border Style="{StaticResource SkeletonBlockStyle}" Height="10" Width="100" HorizontalAlignment="Left" Margin="0,0,0,8"/>
+                                            <Border Style="{StaticResource SkeletonBlockStyle}" Height="18" Width="120" HorizontalAlignment="Left"/>
                                         </StackPanel>
-                                        <materialDesign:PackIcon Kind="CalendarMonth" Foreground="#64748B" Opacity="0.3" Width="24" Height="24" HorizontalAlignment="Right" VerticalAlignment="Center"/>
                                     </Grid>
                                 </Border>
                             </materialDesign:Card>
@@ -277,76 +338,171 @@
                                         </Button>
                                     </Grid>
 
-                                    <DataGrid ItemsSource="{Binding BudgetsView}"
-                                              SelectedItem="{Binding SelectedBudget}"
-                                              AutoGenerateColumns="False"
-                                              IsReadOnly="True"
-                                              Height="400"
-                                              SelectionMode="Single"
-                                              Background="Transparent"
-                                              BorderThickness="0">
-                                        <DataGrid.Columns>
-                                            <DataGridTextColumn Header="CODE" Binding="{Binding Code}" Width="120"/>
-                                            <DataGridTextColumn Header="NAME" Binding="{Binding Name}" Width="*"/>
-                                            <DataGridTextColumn Header="CATEGORY" Binding="{Binding Category}" Width="150"/>
-                                            <DataGridTextColumn Header="CAP / BUDGET" Binding="{Binding BudgetCap, StringFormat='N2'}" Width="130"/>
-                                            <DataGridTextColumn Header="STATUS" Binding="{Binding Status}" Width="100"/>
-                                            <DataGridTemplateColumn Header="ACTION" Width="180">
-                                                <DataGridTemplateColumn.CellTemplate>
-                                                    <DataTemplate>
-                                                        <Grid>
-                                                            <!-- Button for funds without a project -->
-                                                            <Button Content="CREATE PROJECT" 
-                                                                    Command="{Binding DataContext.OpenProjectCreationPanelCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                                                    CommandParameter="{Binding}"
-                                                                    Height="30" FontSize="11"
-                                                                    Background="{StaticResource ActionAccentBrush}"
-                                                                    Foreground="White"
-                                                                    HorizontalAlignment="Center">
-                                                                <Button.Style>
-                                                                    <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignFlatDarkBgButton}">
-                                                                        <Setter Property="Visibility" Value="Visible"/>
-                                                                        <Style.Triggers>
-                                                                            <DataTrigger Binding="{Binding IsFundSource}" Value="False">
-                                                                                <Setter Property="Visibility" Value="Collapsed"/>
-                                                                            </DataTrigger>
-                                                                            <DataTrigger Binding="{Binding HasLinkedProject}" Value="True">
-                                                                                <Setter Property="Visibility" Value="Collapsed"/>
-                                                                            </DataTrigger>
-                                                                        </Style.Triggers>
-                                                                    </Style>
-                                                                </Button.Style>
-                                                            </Button>
+                                    <Grid Height="400">
+                                        <DataGrid ItemsSource="{Binding BudgetsView}"
+                                                  SelectedItem="{Binding SelectedBudget}"
+                                                  AutoGenerateColumns="False"
+                                                  IsReadOnly="True"
+                                                  SelectionMode="Single"
+                                                  Background="Transparent"
+                                                  BorderThickness="0"
+                                                  Visibility="{Binding IsBusy, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                                            <DataGrid.Columns>
+                                                <DataGridTextColumn Header="CODE" Binding="{Binding Code}" Width="120"/>
+                                                <DataGridTextColumn Header="NAME" Binding="{Binding Name}" Width="*"/>
+                                                <DataGridTextColumn Header="CATEGORY" Binding="{Binding Category}" Width="150"/>
+                                                <DataGridTextColumn Header="CAP / BUDGET" Binding="{Binding BudgetCap, StringFormat='N2'}" Width="130"/>
+                                                <DataGridTextColumn Header="STATUS" Binding="{Binding Status}" Width="100"/>
+                                                <DataGridTemplateColumn Header="ACTION" Width="180">
+                                                    <DataGridTemplateColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <Grid>
+                                                                <!-- Button for funds without a project -->
+                                                                <Button Content="CREATE PROJECT" 
+                                                                        Command="{Binding DataContext.OpenProjectCreationPanelCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                                        CommandParameter="{Binding}"
+                                                                        Height="30" FontSize="11"
+                                                                        Background="{StaticResource ActionAccentBrush}"
+                                                                        Foreground="White"
+                                                                        HorizontalAlignment="Center">
+                                                                    <Button.Style>
+                                                                        <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignFlatDarkBgButton}">
+                                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                                            <Style.Triggers>
+                                                                                <DataTrigger Binding="{Binding IsFundSource}" Value="False">
+                                                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                                                </DataTrigger>
+                                                                                <DataTrigger Binding="{Binding HasLinkedProject}" Value="True">
+                                                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                                                </DataTrigger>
+                                                                            </Style.Triggers>
+                                                                        </Style>
+                                                                    </Button.Style>
+                                                                </Button>
 
-                                                            <!-- Badge for funds with a linked project -->
-                                                            <Border Background="#15803D" 
-                                                                    CornerRadius="12" Padding="8,4" 
-                                                                    HorizontalAlignment="Center" VerticalAlignment="Center">
-                                                                <Border.Style>
-                                                                    <Style TargetType="Border">
-                                                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                                                        <Style.Triggers>
-                                                                            <MultiDataTrigger>
-                                                                                <MultiDataTrigger.Conditions>
-                                                                                    <Condition Binding="{Binding IsFundSource}" Value="True"/>
-                                                                                    <Condition Binding="{Binding HasLinkedProject}" Value="True"/>
-                                                                                </MultiDataTrigger.Conditions>
-                                                                                <Setter Property="Visibility" Value="Visible"/>
-                                                                            </MultiDataTrigger>
-                                                                        </Style.Triggers>
-                                                                    </Style>
-                                                                </Border.Style>
-                                                                <StackPanel Orientation="Horizontal">
-                                                                    <materialDesign:PackIcon Kind="CheckCircle" Foreground="White" Width="12" Height="12" Margin="0,0,4,0"/>
-                                                                    <TextBlock Text="{Binding LinkedProjectName}" Foreground="White" FontSize="11" FontWeight="Bold"/>
-                                                                </StackPanel>
-                                                            </Border>
-                                                        </Grid>
-                                                    </DataTemplate>
-                                                </DataGridTemplateColumn.CellTemplate>
-                                            </DataGridTemplateColumn>
-                                        </DataGrid.Columns>
-                                    </DataGrid>
+                                                                <!-- Badge for funds with a linked project -->
+                                                                <Border Background="#15803D" 
+                                                                        CornerRadius="12" Padding="8,4" 
+                                                                        HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                                    <Border.Style>
+                                                                        <Style TargetType="Border">
+                                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                                            <Style.Triggers>
+                                                                                <MultiDataTrigger>
+                                                                                    <MultiDataTrigger.Conditions>
+                                                                                        <Condition Binding="{Binding IsFundSource}" Value="True"/>
+                                                                                        <Condition Binding="{Binding HasLinkedProject}" Value="True"/>
+                                                                                    </MultiDataTrigger.Conditions>
+                                                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                                                </MultiDataTrigger>
+                                                                            </Style.Triggers>
+                                                                        </Style>
+                                                                    </Border.Style>
+                                                                    <StackPanel Orientation="Horizontal">
+                                                                        <materialDesign:PackIcon Kind="CheckCircle" Foreground="White" Width="12" Height="12" Margin="0,0,4,0"/>
+                                                                        <TextBlock Text="{Binding LinkedProjectName}" Foreground="White" FontSize="11" FontWeight="Bold"/>
+                                                                    </StackPanel>
+                                                                </Border>
+                                                            </Grid>
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellTemplate>
+                                                </DataGridTemplateColumn>
+                                            </DataGrid.Columns>
+                                        </DataGrid>
+
+                                        <!-- Skeleton Table Rows Placeholder -->
+                                        <StackPanel Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}" Margin="0,10,0,0">
+                                            <!-- Skeleton Table Header -->
+                                            <Grid Margin="0,0,0,16">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="120"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="150"/>
+                                                    <ColumnDefinition Width="130"/>
+                                                    <ColumnDefinition Width="100"/>
+                                                    <ColumnDefinition Width="180"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Border Grid.Column="0" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="60" HorizontalAlignment="Left"/>
+                                                <Border Grid.Column="1" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="100" HorizontalAlignment="Left"/>
+                                                <Border Grid.Column="2" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="80" HorizontalAlignment="Left"/>
+                                                <Border Grid.Column="3" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="90" HorizontalAlignment="Left"/>
+                                                <Border Grid.Column="4" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="60" HorizontalAlignment="Left"/>
+                                                <Border Grid.Column="5" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="70" HorizontalAlignment="Center"/>
+                                            </Grid>
+                                            <!-- Row 1 -->
+                                            <Border Height="1" Background="#E2E8F0" Margin="0,0,0,12"/>
+                                            <Grid Margin="0,0,0,16">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="120"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="150"/>
+                                                    <ColumnDefinition Width="130"/>
+                                                    <ColumnDefinition Width="100"/>
+                                                    <ColumnDefinition Width="180"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Border Grid.Column="0" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="85" HorizontalAlignment="Left"/>
+                                                <Border Grid.Column="1" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="200" HorizontalAlignment="Left"/>
+                                                <Border Grid.Column="2" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="110" HorizontalAlignment="Left"/>
+                                                <Border Grid.Column="3" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="95" HorizontalAlignment="Left"/>
+                                                <Border Grid.Column="4" Style="{StaticResource SkeletonBlockStyle}" Height="18" Width="55" CornerRadius="9" HorizontalAlignment="Left"/>
+                                                <Border Grid.Column="5" Style="{StaticResource SkeletonBlockStyle}" Height="28" Width="130" CornerRadius="4" HorizontalAlignment="Center"/>
+                                            </Grid>
+                                            <!-- Row 2 -->
+                                            <Border Height="1" Background="#E2E8F0" Margin="0,0,0,12"/>
+                                            <Grid Margin="0,0,0,16">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="120"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="150"/>
+                                                    <ColumnDefinition Width="130"/>
+                                                    <ColumnDefinition Width="100"/>
+                                                    <ColumnDefinition Width="180"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Border Grid.Column="0" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="95" HorizontalAlignment="Left"/>
+                                                <Border Grid.Column="1" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="160" HorizontalAlignment="Left"/>
+                                                <Border Grid.Column="2" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="120" HorizontalAlignment="Left"/>
+                                                <Border Grid.Column="3" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="85" HorizontalAlignment="Left"/>
+                                                <Border Grid.Column="4" Style="{StaticResource SkeletonBlockStyle}" Height="18" Width="55" CornerRadius="9" HorizontalAlignment="Left"/>
+                                                <Border Grid.Column="5" Style="{StaticResource SkeletonBlockStyle}" Height="28" Width="130" CornerRadius="4" HorizontalAlignment="Center"/>
+                                            </Grid>
+                                            <!-- Row 3 -->
+                                            <Border Height="1" Background="#E2E8F0" Margin="0,0,0,12"/>
+                                            <Grid Margin="0,0,0,16">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="120"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="150"/>
+                                                    <ColumnDefinition Width="130"/>
+                                                    <ColumnDefinition Width="100"/>
+                                                    <ColumnDefinition Width="180"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Border Grid.Column="0" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="80" HorizontalAlignment="Left"/>
+                                                <Border Grid.Column="1" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="240" HorizontalAlignment="Left"/>
+                                                <Border Grid.Column="2" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="105" HorizontalAlignment="Left"/>
+                                                <Border Grid.Column="3" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="100" HorizontalAlignment="Left"/>
+                                                <Border Grid.Column="4" Style="{StaticResource SkeletonBlockStyle}" Height="18" Width="55" CornerRadius="9" HorizontalAlignment="Left"/>
+                                                <Border Grid.Column="5" Style="{StaticResource SkeletonBlockStyle}" Height="28" Width="130" CornerRadius="4" HorizontalAlignment="Center"/>
+                                            </Grid>
+                                            <!-- Row 4 -->
+                                            <Border Height="1" Background="#E2E8F0" Margin="0,0,0,12"/>
+                                            <Grid Margin="0,0,0,16">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="120"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="150"/>
+                                                    <ColumnDefinition Width="130"/>
+                                                    <ColumnDefinition Width="100"/>
+                                                    <ColumnDefinition Width="180"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Border Grid.Column="0" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="90" HorizontalAlignment="Left"/>
+                                                <Border Grid.Column="1" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="180" HorizontalAlignment="Left"/>
+                                                <Border Grid.Column="2" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="115" HorizontalAlignment="Left"/>
+                                                <Border Grid.Column="3" Style="{StaticResource SkeletonBlockStyle}" Height="14" Width="90" HorizontalAlignment="Left"/>
+                                                <Border Grid.Column="4" Style="{StaticResource SkeletonBlockStyle}" Height="18" Width="55" CornerRadius="9" HorizontalAlignment="Left"/>
+                                                <Border Grid.Column="5" Style="{StaticResource SkeletonBlockStyle}" Height="28" Width="130" CornerRadius="4" HorizontalAlignment="Center"/>
+                                            </Grid>
+                                        </StackPanel>
+                                    </Grid>
                                 </StackPanel>
                             </Border>
                         </materialDesign:Card>

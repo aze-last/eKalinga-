@@ -30,6 +30,9 @@
             <SolidColorBrush x:Key="BrandGoldTextBrush" Color="#35270B" />
             <SolidColorBrush x:Key="BrandSuccessBrush" Color="#217650" />
             <SolidColorBrush x:Key="BrandRedBrush" Color="#B24A4A" />
+            <SolidColorBrush x:Key="BrandWarningBrush" Color="#D97706" />
+            <SolidColorBrush x:Key="BrandDangerBrush" Color="#DC2626" />
+            <SolidColorBrush x:Key="BrandInfoBrush" Color="#2563EB" />
             <SolidColorBrush x:Key="BrandSurfaceBrush" Color="#F3F6FA" />
             <SolidColorBrush x:Key="BrandBorderBrush" Color="#D4DCE8" />
             <SolidColorBrush x:Key="BrandTextSecondaryBrush" Color="#5F6B7A" />

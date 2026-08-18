@@ -4,41 +4,52 @@
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:helpers="clr-namespace:AttendanceShiftingManagement.Helpers"
              xmlns:local="clr-namespace:AttendanceShiftingManagement.Views"
              mc:Ignorable="d"
              d:DesignHeight="900"
              d:DesignWidth="1440"
              Background="{DynamicResource BrandSurfaceBrush}">
     <UserControl.Resources>
-        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
-        <!-- eKalinga+ brand theme (Forest Green headers, gold actions) -->
         <SolidColorBrush x:Key="ThemePrimaryActionBrush" Color="#15803D" />
         <SolidColorBrush x:Key="ThemeAccentSoftBrush" Color="#F0FDF4" />
         <SolidColorBrush x:Key="ThemeAccentBorderBrush" Color="#BBF7D0" />
         <SolidColorBrush x:Key="BrandRedBrush" Color="#BE123C" />
+        <SolidColorBrush x:Key="CardBorderBrush" Color="#E2E8F0" />
+        <SolidColorBrush x:Key="CardBackgroundBrush" Color="#FFFFFF" />
+        <SolidColorBrush x:Key="SidebarBackgroundBrush" Color="#F8FAFC" />
 
         <Style x:Key="SidebarHeaderStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontSize" Value="12" />
             <Setter Property="FontWeight" Value="Bold" />
             <Setter Property="Foreground" Value="{DynamicResource ThemePrimaryActionBrush}" />
-            <Setter Property="Margin" Value="0,0,0,12" />
+            <Setter Property="Margin" Value="0,0,0,10" />
             <Setter Property="Typography.Capitals" Value="AllSmallCaps"/>
         </Style>
 
         <Style x:Key="DetailCardStyle" TargetType="Border">
-            <Setter Property="Background" Value="{DynamicResource ThemeCardBrush}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource BrandBorderBrush}" />
+            <Setter Property="Background" Value="{StaticResource CardBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource CardBorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="CornerRadius" Value="12" />
-            <Setter Property="Padding" Value="24" />
+            <Setter Property="Padding" Value="20" />
             <Setter Property="Margin" Value="0,0,0,16" />
+        </Style>
+
+        <Style x:Key="MetricCardStyle" TargetType="Border">
+            <Setter Property="Padding" Value="16" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="Background" Value="{StaticResource CardBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource CardBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Margin" Value="0,0,12,0" />
         </Style>
 
         <Style x:Key="PanelCardStyle" TargetType="Border">
             <Setter Property="Padding" Value="0" />
             <Setter Property="CornerRadius" Value="16" />
-            <Setter Property="Background" Value="{DynamicResource ThemeCardBrush}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource BrandBorderBrush}" />
+            <Setter Property="Background" Value="{StaticResource CardBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource CardBorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Effect">
                 <Setter.Value>
@@ -54,57 +65,49 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- Header -->
-        <Border Grid.Row="0" Background="{DynamicResource ThemePrimaryActionBrush}" Padding="20,15" Panel.ZIndex="10">
+        <!-- ==================================================================================== -->
+        <!-- HEADER BANNER: Background #15803D | Padding 20,15                                    -->
+        <!-- ==================================================================================== -->
+        <Border Grid.Row="0" Background="{StaticResource ThemePrimaryActionBrush}" Padding="20,15" Panel.ZIndex="10">
             <Grid>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <materialDesign:PackIcon Kind="Presentation" Width="32" Height="32" Foreground="White" VerticalAlignment="Center"/>
                     <StackPanel Margin="15,0,0,0">
-                        <TextBlock Text="SEMINAR ATTENDANCE" FontSize="24" FontWeight="Bold" Foreground="White"/>
-                        <TextBlock Text="Create seminars and capture scan-based attendance. Attendees register as they scan." FontSize="12" Foreground="#CCFFFFFF"/>
+                        <TextBlock Text="SEMINARS &amp; TRAININGS" FontSize="24" FontWeight="Bold" Foreground="White"/>
+                        <TextBlock Text="Track attendance, manage shifts, and monitor participant turnout" FontSize="12" Foreground="#CCFFFFFF"/>
                     </StackPanel>
                 </StackPanel>
 
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                    <!-- Noticeable Sidebar Toggle -->
-                    <Button Command="{Binding ToggleSidebarCommand}"
+                    <Button Content="DASHBOARD"
+                            Command="{Binding DataContext.ShowDashboardCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                            Style="{StaticResource MaterialDesignOutlinedButton}"
+                            Foreground="White" BorderBrush="White" Height="40" Margin="0,0,10,0" FontWeight="Bold"/>
+
+                    <Button Content="+ NEW EVENT VIA BUDGET"
+                            Command="{Binding OpenCreateSeminarPanelCommand}"
+                            Style="{StaticResource GoldActionButton}"
+                            Height="40" Margin="0,0,10,0" FontWeight="Bold"/>
+
+                    <Button Content="REFRESH WORKSPACE"
+                            Command="{Binding RefreshWorkspaceCommand}"
+                            Style="{StaticResource MaterialDesignOutlinedButton}"
+                            Foreground="White" BorderBrush="White" Height="40" Margin="0,0,10,0"/>
+
+                    <Button Command="{Binding DataContext.ShowHistoryCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                             Style="{StaticResource MaterialDesignFlatButton}"
-                            Foreground="White"
-                            Width="150" Height="40" Padding="10,0"
-                            ToolTip="Toggle Sidebar View">
-                        <StackPanel Orientation="Horizontal">
-                            <materialDesign:PackIcon Width="20" Height="20" VerticalAlignment="Center" Margin="0,0,8,0">
-                                <materialDesign:PackIcon.Style>
-                                    <Style TargetType="materialDesign:PackIcon">
-                                        <Setter Property="Kind" Value="MenuOpen"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding IsSidebarCollapsed}" Value="True">
-                                                <Setter Property="Kind" Value="Menu"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </materialDesign:PackIcon.Style>
-                            </materialDesign:PackIcon>
-                            <TextBlock VerticalAlignment="Center" FontWeight="Bold">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="Text" Value="HIDE SIDEBAR"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding IsSidebarCollapsed}" Value="True">
-                                                <Setter Property="Text" Value="SHOW SIDEBAR"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
-                        </StackPanel>
+                            Foreground="White" Width="40" Height="40" Padding="0"
+                            ToolTip="View Event History">
+                        <materialDesign:PackIcon Kind="History" Width="22" Height="22"/>
                     </Button>
                 </StackPanel>
             </Grid>
         </Border>
 
-        <!-- Main Content Area -->
-        <Grid Grid.Row="1">
+        <!-- ==================================================================================== -->
+        <!-- WORKSPACE CANVAS: Background #F1F5F9 | Padding 24                                    -->
+        <!-- ==================================================================================== -->
+        <Grid Grid.Row="1" Background="#F1F5F9">
             <Grid.Effect>
                 <BlurEffect Radius="0" x:Name="BackgroundBlur"/>
             </Grid.Effect>
@@ -115,14 +118,14 @@
                             <DataTrigger.EnterActions>
                                 <BeginStoryboard>
                                     <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetProperty="(Grid.Effect).(BlurEffect.Radius)" To="15" Duration="0:0:0.3"/>
+                                        <DoubleAnimation Storyboard.TargetProperty="(Grid.Effect).(BlurEffect.Radius)" To="15" Duration="0:0:0.25"/>
                                     </Storyboard>
                                 </BeginStoryboard>
                             </DataTrigger.EnterActions>
                             <DataTrigger.ExitActions>
                                 <BeginStoryboard>
                                     <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetProperty="(Grid.Effect).(BlurEffect.Radius)" To="0" Duration="0:0:0.3"/>
+                                        <DoubleAnimation Storyboard.TargetProperty="(Grid.Effect).(BlurEffect.Radius)" To="0" Duration="0:0:0.25"/>
                                     </Storyboard>
                                 </BeginStoryboard>
                             </DataTrigger.ExitActions>
@@ -136,255 +139,328 @@
                      Opacity="0" Width="1" Height="1" Focusable="True"
                      HorizontalAlignment="Left" VerticalAlignment="Top"/>
 
-            <Grid>
+            <Grid Margin="24">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="{Binding SidebarWidth, FallbackValue=320}" />
-                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="320"/>
+                    <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- Sidebar Navigation -->
-                <Border Grid.Column="0" Background="{DynamicResource ThemeCardSubtleBrush}" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="0,0,1,0" x:Name="SidebarContainer">
+                <!-- ================================================================================ -->
+                <!-- FIXED SIDEBAR RAIL (Width 320px) | Background #F8FAFC, Radius 14px               -->
+                <!-- ================================================================================ -->
+                <Border Grid.Column="0" Background="{StaticResource SidebarBackgroundBrush}"
+                        BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1"
+                        CornerRadius="14" x:Name="SidebarContainer">
                     <Grid>
                         <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="*" />
-                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
-                        <!-- Dashboard Navigation -->
-                        <Grid Grid.Row="0" Margin="20,20,20,10">
-                            <Button Content="DASHBOARD"
+                        <!-- Dashboard Navigation Button -->
+                        <Border Grid.Row="0" Padding="16,16,16,8">
+                            <Button Content="DASHBOARD" 
                                     Command="{Binding DataContext.ShowDashboardCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                     Style="{StaticResource MaterialDesignOutlinedButton}"
-                                    Height="45" Margin="0,0,0,0"/>
-                        </Grid>
+                                    Foreground="{StaticResource ThemePrimaryActionBrush}"
+                                    BorderBrush="{StaticResource ThemePrimaryActionBrush}"
+                                    Height="42" FontWeight="Bold"/>
+                        </Border>
 
-                        <!-- Sidebar Actions -->
-                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                            <Border Padding="20,0,20,20">
-                                <StackPanel>
-                                    <TextBlock Text="OPERATIONS" Style="{StaticResource SidebarHeaderStyle}"/>
+                        <!-- Scrollable Action Rail -->
+                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="16,8,16,16">
+                            <StackPanel>
+                                <!-- 1. ACTIVE EVENT SELECTOR -->
+                                <TextBlock Text="ACTIVE SEMINAR SELECTOR" Style="{StaticResource SidebarHeaderStyle}"/>
+                                <Border Background="White" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="10" Padding="12" Margin="0,0,0,14">
+                                    <StackPanel>
+                                        <ComboBox ItemsSource="{Binding Events}" SelectedItem="{Binding SelectedEvent}"
+                                                  DisplayMemberPath="Title"
+                                                  Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                                  materialDesign:HintAssist.Hint="Select Seminar Event"
+                                                  Margin="0,0,0,10" Height="44"/>
 
-                                    <Button Content="+ NEW EVENT VIA BUDGET"
-                                            Command="{Binding OpenCreateSeminarPanelCommand}"
-                                            Style="{StaticResource GoldActionButton}"
-                                            ToolTip="Allocate funds and create a new Seminar event in the Budget module"
-                                            HorizontalContentAlignment="Left" Height="45" Margin="0,0,0,8" FontSize="13" FontWeight="Bold"/>
+                                        <UniformGrid Columns="2">
+                                            <Button Content="BROWSE SEMINARS" Click="Browse_Click"
+                                                    Style="{StaticResource MaterialDesignOutlinedButton}"
+                                                    Height="36" FontSize="10" FontWeight="Bold" Margin="0,0,4,0"/>
+                                            <Button Content="+ NEW SEMINAR"
+                                                    Command="{Binding OpenCreateSeminarPanelCommand}"
+                                                    Style="{StaticResource GoldActionButton}"
+                                                    Height="36" FontSize="10" FontWeight="Bold" Margin="4,0,0,0"/>
+                                        </UniformGrid>
+                                    </StackPanel>
+                                </Border>
 
-                                    <Button Content="BROWSE SEMINARS"
-                                            Click="Browse_Click"
-                                            Style="{StaticResource MaterialDesignOutlinedButton}"
-                                            HorizontalContentAlignment="Left" Height="45" Margin="0,0,0,12" FontSize="14"/>
-
-                                    <!-- Educational Tip Card for Budget Waterfall Alignment -->
-                                    <Border Background="#F0FDF4" BorderBrush="#BBF7D0" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,20">
-                                        <StackPanel>
-                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                                                <materialDesign:PackIcon Kind="LightbulbOutline" Width="16" Height="16" Foreground="#15803D" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                                <TextBlock Text="Earmarked Funding" FontSize="11" FontWeight="Bold" Foreground="#15803D" VerticalAlignment="Center"/>
+                                <!-- 2. LIVE SCANNER DOCK -->
+                                <TextBlock Text="LIVE SCANNER DOCK" Style="{StaticResource SidebarHeaderStyle}"/>
+                                <Border Background="White" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="10" Padding="12" Margin="0,0,0,14">
+                                    <StackPanel>
+                                        <Border Background="{StaticResource ThemeAccentSoftBrush}" BorderBrush="{StaticResource ThemeAccentBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,0,0,10">
+                                            <StackPanel Orientation="Horizontal">
+                                                <materialDesign:PackIcon Kind="BarcodeScan" Width="20" Height="20" Foreground="{StaticResource ThemePrimaryActionBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <TextBlock Text="USB Scanner Ready" FontSize="12" FontWeight="Bold" Foreground="{StaticResource ThemePrimaryActionBrush}" VerticalAlignment="Center"/>
                                             </StackPanel>
-                                            <TextBlock Text="All seminars are funded and spawned in the Budget module from Government (GGMS) or Private Donations."
-                                                       FontSize="11" Foreground="#166534" TextWrapping="Wrap" LineHeight="15"/>
-                                        </StackPanel>
-                                    </Border>
+                                        </Border>
 
-                                    <TextBlock Text="SEMINAR WORKFLOW" Style="{StaticResource SidebarHeaderStyle}"/>
+                                        <!-- Last Scanned Preview Card -->
+                                        <Border Background="#F8FAFC" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="10"
+                                                Visibility="{Binding HasScannedBeneficiary, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="48"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Border Grid.Column="0" Width="44" Height="44" CornerRadius="6" Background="#E2E8F0">
+                                                    <Grid>
+                                                        <materialDesign:PackIcon Kind="Account" Width="28" Height="28" Foreground="#94A3B8" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        <Border CornerRadius="6" Visibility="{Binding ScannedBeneficiaryPhoto, Converter={StaticResource NullToHiddenConverter}}">
+                                                            <Border.Background>
+                                                                <ImageBrush ImageSource="{Binding ScannedBeneficiaryPhoto}" Stretch="UniformToFill"/>
+                                                            </Border.Background>
+                                                        </Border>
+                                                    </Grid>
+                                                </Border>
+                                                <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding ScannedBeneficiary.FullName}" FontSize="12" FontWeight="Bold" Foreground="#0F172A" TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Text="{Binding ScannedBeneficiary.BeneficiaryId}" FontSize="10" Foreground="#64748B"/>
+                                                    <TextBlock Text="{Binding ScannedBeneficiaryStatus}" FontSize="10" FontWeight="Bold" Foreground="{StaticResource ThemePrimaryActionBrush}"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </Border>
+                                    </StackPanel>
+                                </Border>
 
-                                    <Button Content="SCAN ATTENDANCE"
-                                            Command="{Binding OpenScanAttendancePanelCommand}"
-                                            Style="{StaticResource MaterialDesignOutlinedButton}"
-                                            HorizontalContentAlignment="Left" Height="45" Margin="0,0,0,8" FontSize="14"/>
+                                <!-- 3. PRIMARY ACTION CTAs -->
+                                <TextBlock Text="WORKFLOW ACTIONS" Style="{StaticResource SidebarHeaderStyle}"/>
+                                <Button Content="SCAN ATTENDANCE (GATEWAY)"
+                                        Command="{Binding OpenScanAttendancePanelCommand}"
+                                        Style="{StaticResource MaterialDesignOutlinedButton}"
+                                        HorizontalContentAlignment="Left" Height="42" Margin="0,0,0,8" FontSize="12" FontWeight="Bold"/>
 
-                                    <Button Content="SCAN VIA PC CAMERA"
-                                            Command="{Binding OpenPcScannerCommand}"
-                                            Style="{StaticResource GoldActionButton}"
-                                            HorizontalContentAlignment="Left" Height="45" Margin="0,0,0,20" FontSize="14"/>
+                                <Button Content="START PC CAMERA SCANNER"
+                                        Command="{Binding OpenPcScannerCommand}"
+                                        Style="{StaticResource GoldActionButton}"
+                                        HorizontalContentAlignment="Left" Height="42" Margin="0,0,0,8" FontSize="12" FontWeight="Bold"/>
 
-                                    <TextBlock Text="COMMUNICATION" Style="{StaticResource SidebarHeaderStyle}"/>
-                                    <Button Content="ANNOUNCEMENTS"
-                                            Command="{Binding OpenAnnouncementsPanelCommand}"
-                                            Style="{StaticResource MaterialDesignOutlinedButton}"
-                                            HorizontalContentAlignment="Left" Height="45" Margin="0,0,0,20" FontSize="14"/>
+                                <Button Content="ACTIVE ANNOUNCEMENTS"
+                                        Command="{Binding OpenAnnouncementsPanelCommand}"
+                                        Style="{StaticResource MaterialDesignOutlinedButton}"
+                                        HorizontalContentAlignment="Left" Height="42" Margin="0,0,0,8" FontSize="12"/>
 
-                                    <TextBlock Text="PERSISTENCE" Style="{StaticResource SidebarHeaderStyle}"/>
-                                    <Button Content="REFRESH WORKSPACE"
-                                            Command="{Binding RefreshWorkspaceCommand}"
-                                            Margin="0,0,0,8" Height="44"
-                                            Style="{StaticResource MaterialDesignOutlinedButton}" FontWeight="Bold"/>
-
-                                    <Button Content="DELETE SEMINAR"
-                                            Command="{Binding DeleteSeminarCommand}"
-                                            Height="40" Style="{StaticResource MaterialDesignFlatButton}" Foreground="{DynamicResource BrandRedBrush}"/>
-                                </StackPanel>
-                            </Border>
+                                <Button Content="DELETE SEMINAR"
+                                        Command="{Binding DeleteSeminarCommand}"
+                                        Height="36" Style="{StaticResource MaterialDesignFlatButton}" Foreground="{StaticResource BrandRedBrush}"
+                                        HorizontalContentAlignment="Left" Margin="0,8,0,0"/>
+                            </StackPanel>
                         </ScrollViewer>
 
-                        <!-- Status Area -->
-                        <Border Grid.Row="2" Padding="20" Background="{DynamicResource ThemeCardBrush}" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="0,1,0,0">
+                        <!-- Module Status Footer -->
+                        <Border Grid.Row="2" Padding="16,12" Background="White" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="0,1,0,0" CornerRadius="0,0,14,14">
                             <StackPanel>
-                                <TextBlock Text="MODULE STATUS" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,4"/>
-                                <TextBlock Text="{Binding StatusMessage}" Foreground="{Binding StatusBrush}" FontSize="12" TextWrapping="Wrap" FontWeight="SemiBold"/>
+                                <TextBlock Text="MODULE STATUS" FontSize="10" FontWeight="Bold" Foreground="#64748B" Margin="0,0,0,2"/>
+                                <TextBlock Text="{Binding StatusMessage}" Foreground="{Binding StatusBrush}" FontSize="11" TextWrapping="Wrap" FontWeight="SemiBold"/>
                             </StackPanel>
                         </Border>
                     </Grid>
                 </Border>
 
-                <!-- Center Content -->
-                <Grid Grid.Column="1" Background="Transparent" Margin="30">
+                <!-- ================================================================================ -->
+                <!-- MAIN OPERATIONAL STAGE (Grid.Column="1" Margin="20,0,0,0")                       -->
+                <!-- ================================================================================ -->
+                <Grid Grid.Column="1" Margin="20,0,0,0">
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <!-- Empty State -->
-                    <StackPanel Grid.RowSpan="2" VerticalAlignment="Center" HorizontalAlignment="Center"
-                                Visibility="{Binding HasSelectedEvent, Converter={StaticResource NullToHiddenConverter}, ConverterParameter=Inverse}">
-                        <materialDesign:PackIcon Kind="Presentation" Width="80" Height="80" Foreground="{DynamicResource BrandBorderBrush}" HorizontalAlignment="Center"/>
-                        <TextBlock Text="No Seminar Selected" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,16,0,8" HorizontalAlignment="Center"/>
-                        <TextBlock Text="Select a seminar to review its scan-based attendance." FontSize="14" Foreground="{DynamicResource BrandTextSecondaryBrush}" HorizontalAlignment="Center"/>
-                        <Button Content="BROWSE SEMINARS" Style="{StaticResource SecondaryActionButton}" Margin="0,24,0,0" Height="44" Click="Browse_Click"/>
-                    </StackPanel>
+                    <!-- Empty State View (When no seminar selected) -->
+                    <Border Grid.Row="0" Grid.RowSpan="2" Style="{StaticResource DetailCardStyle}" Padding="40"
+                            Visibility="{Binding SelectedEvent, Converter={StaticResource NullToHiddenConverter}, ConverterParameter=Inverse}"
+                            VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="500">
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <materialDesign:PackIcon Kind="PresentationPlay" Width="64" Height="64" Foreground="{StaticResource CardBorderBrush}" HorizontalAlignment="Center"/>
+                            <TextBlock Text="No Seminar Selected" FontSize="20" FontWeight="Bold" Foreground="#0F172A" Margin="0,16,0,8" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Select an existing seminar session or spawn a new community training session."
+                                       FontSize="13" Foreground="#64748B" TextWrapping="Wrap" TextAlignment="Center" Margin="0,0,0,24"/>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <Button Content="BROWSE SEMINARS" Style="{StaticResource MaterialDesignOutlinedButton}" Height="44" Padding="20,0" Click="Browse_Click" Margin="0,0,12,0"/>
+                                <Button Content="+ CREATE SEMINAR" Style="{StaticResource GoldActionButton}" Height="44" Padding="20,0"
+                                        Command="{Binding OpenCreateSeminarPanelCommand}"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
 
-                    <!-- Page Content (When Seminar Selected) -->
-                    <ScrollViewer Grid.RowSpan="2" Visibility="{Binding HasSelectedEvent, Converter={StaticResource NullToHiddenConverter}}"
-                                  VerticalScrollBarVisibility="Auto">
-                        <StackPanel>
-                            <!-- Seminar Detail Header Card -->
-                            <Border Style="{StaticResource DetailCardStyle}" Padding="40,30">
+                    <!-- Active Seminar Operational Workspace -->
+                    <Grid Grid.Row="0" Grid.RowSpan="2" Visibility="{Binding SelectedEvent, Converter={StaticResource NullToHiddenConverter}}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- 1. EVENT HEADER & COMPACT KPI STAT STRIP -->
+                        <StackPanel Grid.Row="0" Margin="0,0,0,16">
+                            <!-- Event Title Bar -->
+                            <Border Background="White" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="20,16" Margin="0,0,0,14">
                                 <Grid>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="30"/>
-                                        <RowDefinition Height="Auto"/>
-                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
 
-                                    <!-- Header Info -->
-                                    <Grid Grid.Row="0" Margin="0,0,0,30">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-
-                                        <StackPanel Grid.Column="0">
-                                            <TextBlock Text="SEMINAR TITLE" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,4"/>
-                                            <TextBlock Text="{Binding SelectedEvent.Title}" FontSize="28" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}" TextWrapping="Wrap"/>
-                                            <TextBlock Text="{Binding SelectedEvent.Location}" FontSize="16" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,4,0,0"/>
+                                    <StackPanel Grid.Column="0">
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                            <TextBlock Text="{Binding SelectedEvent.Title}" FontSize="20" FontWeight="Bold" Foreground="#0F172A"/>
+                                            <Border Background="{StaticResource ThemeAccentSoftBrush}" BorderBrush="{StaticResource ThemeAccentBorderBrush}" BorderThickness="1" CornerRadius="6" Padding="8,2" Margin="12,0,0,0" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding SelectedEvent.StatusText}" FontSize="11" FontWeight="Bold" Foreground="{StaticResource ThemePrimaryActionBrush}"/>
+                                            </Border>
                                         </StackPanel>
+                                        <TextBlock Text="{Binding SelectedEvent.DateRangeFormatted}" FontSize="12" Foreground="#64748B"/>
+                                    </StackPanel>
 
-                                        <Border Grid.Column="1" VerticalAlignment="Top" Padding="12,6" CornerRadius="20" Background="{Binding StatusBrush}">
-                                            <TextBlock Text="{Binding SelectedEvent.Status}"
-                                                       Foreground="White" FontSize="12" FontWeight="Bold" Typography.Capitals="AllSmallCaps"/>
-                                        </Border>
-                                    </Grid>
+                                    <!-- Quick Actions -->
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Button Content="EDIT SEMINAR" Command="{Binding OpenEditSeminarPanelCommand}" Style="{StaticResource MaterialDesignOutlinedButton}" Height="38" Margin="0,0,8,0"/>
+                                        <Button Content="SAVE PDF SHEET" Command="{Binding SaveAttendanceSheetPdfCommand}" Style="{StaticResource GoldActionButton}" Height="38" Margin="0,0,8,0"/>
+                                        <Button Content="PRINT" Command="{Binding PrintAttendanceSheetCommand}" Style="{StaticResource MaterialDesignFlatButton}" Height="38" Margin="0,0,12,0"/>
 
-                                    <!-- Primary Details UniformGrid -->
-                                    <UniformGrid Grid.Row="1" Columns="3">
-                                        <StackPanel>
-                                            <TextBlock Text="SEMINAR DATE" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,8"/>
-                                            <TextBlock Text="{Binding SelectedEvent.EventDate, StringFormat='MMMM dd, yyyy'}" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource BrandMidnightBrush}"/>
-                                        </StackPanel>
-
-                                        <StackPanel>
-                                            <TextBlock Text="TIME WINDOW" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,8"/>
-                                            <TextBlock FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource BrandMidnightBrush}">
-                                                <Run Text="{Binding SelectedEvent.StartTime, StringFormat='hh\\:mm'}"/>
-                                                <Run Text=" - "/>
-                                                <Run Text="{Binding SelectedEvent.EndTime, StringFormat='hh\\:mm'}"/>
-                                            </TextBlock>
-                                        </StackPanel>
-
-                                        <StackPanel>
-                                            <TextBlock Text="ATTENDANCE MODE" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,8"/>
-                                            <TextBlock Text="Scan-based (self-register)" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource BrandMidnightBrush}"/>
-                                        </StackPanel>
-                                    </UniformGrid>
-
-                                    <!-- Actions -->
-                                    <StackPanel Grid.Row="3" Margin="0,30,0,0" Orientation="Horizontal">
-                                        <Button Content="EDIT SEMINAR" Command="{Binding OpenEditSeminarPanelCommand}" Style="{StaticResource MaterialDesignOutlinedButton}" Height="45" Padding="20,0" Margin="0,0,12,0"/>
-                                        <Button Content="SAVE PDF SHEET" Command="{Binding SaveAttendanceSheetPdfCommand}" Style="{StaticResource GoldActionButton}" Height="45" Padding="20,0" Margin="0,0,12,0"/>
-                                        <Button Content="PRINT PREVIEW" Command="{Binding PrintAttendanceSheetCommand}" Style="{StaticResource MaterialDesignFlatButton}" Height="45" Foreground="{DynamicResource ThemePrimaryActionBrush}"/>
+                                        <Button Command="{Binding NavigatePreviousCommand}" Style="{StaticResource MaterialDesignFlatButton}" Width="36" Height="36" Padding="0" Margin="0,0,4,0">
+                                            <materialDesign:PackIcon Kind="ChevronLeft" Width="20" Height="20"/>
+                                        </Button>
+                                        <Button Command="{Binding NavigateNextCommand}" Style="{StaticResource MaterialDesignFlatButton}" Width="36" Height="36" Padding="0">
+                                            <materialDesign:PackIcon Kind="ChevronRight" Width="20" Height="20"/>
+                                        </Button>
                                     </StackPanel>
                                 </Grid>
                             </Border>
 
-                            <!-- Attendance Log (paginated) -->
-                            <materialDesign:Card Padding="24" Margin="0,0,0,30">
-                                <StackPanel>
-                                    <DockPanel LastChildFill="False" Margin="0,0,0,20">
-                                        <StackPanel DockPanel.Dock="Left">
-                                            <TextBlock Text="ATTENDANCE LOG" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource ThemePrimaryActionBrush}" Typography.Capitals="AllSmallCaps" Margin="0,0,0,4"/>
-                                            <TextBlock Text="{Binding AttendanceSummary}" Foreground="{DynamicResource BrandTextSecondaryBrush}" FontSize="12"/>
-                                        </StackPanel>
+                            <!-- 3-Card KPI Stat Strip -->
+                            <UniformGrid Columns="3">
+                                <Border Style="{StaticResource MetricCardStyle}">
+                                    <StackPanel>
+                                        <TextBlock Text="TOTAL REGISTERED" FontSize="11" FontWeight="Bold" Foreground="#64748B" Margin="0,0,0,6"/>
+                                        <TextBlock Text="{Binding TotalRegisteredCount}" FontSize="24" FontWeight="ExtraBold" Foreground="#0F172A"/>
+                                    </StackPanel>
+                                </Border>
 
-                                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                                            <Button Content="EDIT LOG" Command="{Binding EditAttendanceCommand}" Style="{StaticResource MaterialDesignFlatButton}" Foreground="{DynamicResource ThemePrimaryActionBrush}" Margin="0,0,8,0"/>
-                                            <Button Content="DELETE" Command="{Binding DeleteAttendanceCommand}" Style="{StaticResource MaterialDesignFlatButton}" Foreground="{DynamicResource BrandRedBrush}"/>
-                                        </StackPanel>
-                                    </DockPanel>
+                                <Border Style="{StaticResource MetricCardStyle}">
+                                    <StackPanel>
+                                        <TextBlock Text="ATTENDEES RECORDED TODAY" FontSize="11" FontWeight="Bold" Foreground="#64748B" Margin="0,0,0,6"/>
+                                        <TextBlock Text="{Binding TodayAttendeeCount}" FontSize="24" FontWeight="ExtraBold" Foreground="{StaticResource ThemePrimaryActionBrush}"/>
+                                    </StackPanel>
+                                </Border>
 
-                                    <DataGrid ItemsSource="{Binding SavedAttendanceRows}"
-                                              SelectedItem="{Binding SelectedAttendanceRow}"
-                                              AutoGenerateColumns="False"
-                                              CanUserAddRows="False"
-                                              IsReadOnly="True"
-                                              MinHeight="400"
-                                              Background="Transparent"
-                                              BorderThickness="0"
-                                              HeadersVisibility="Column"
-                                              materialDesign:DataGridAssist.CellPadding="12,8">
-                                        <DataGrid.Columns>
-                                            <DataGridTextColumn Header="NAME" Binding="{Binding FullName}" Width="*" FontWeight="SemiBold"/>
-                                            <DataGridTextColumn Header="BENEFICIARY ID" Binding="{Binding BeneficiaryId}" Width="130"/>
-                                            <DataGridTextColumn Header="STATUS" Binding="{Binding Status}" Width="110"/>
-                                            <DataGridTextColumn Header="SOURCE" Binding="{Binding Source}" Width="130"/>
-                                            <DataGridTextColumn Header="RECORDED" Binding="{Binding RecordedAt, StringFormat='{}{0:MMM dd, hh:mm tt}'}" Width="150"/>
-                                        </DataGrid.Columns>
-                                    </DataGrid>
-
-                                    <!-- Pagination -->
-                                    <Border Margin="0,20,0,0" Padding="0,15,0,0" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="0,1,0,0">
-                                        <Grid>
-                                            <TextBlock Text="{Binding AttendancePageSummary}" VerticalAlignment="Center" Foreground="{DynamicResource BrandTextSecondaryBrush}" FontSize="12"/>
-
-                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                                <Button Command="{Binding PreviousAttendancePageCommand}" Style="{StaticResource MaterialDesignFlatButton}" Width="40" Height="40" Padding="0">
-                                                    <materialDesign:PackIcon Kind="ChevronLeft" Width="24" Height="24"/>
-                                                </Button>
-                                                <TextBlock Text="{Binding AttendanceCurrentPage}" VerticalAlignment="Center" Margin="15,0" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}"/>
-                                                <Button Command="{Binding NextAttendancePageCommand}" Style="{StaticResource MaterialDesignFlatButton}" Width="40" Height="40" Padding="0">
-                                                    <materialDesign:PackIcon Kind="ChevronRight" Width="24" Height="24"/>
-                                                </Button>
-                                            </StackPanel>
-                                        </Grid>
-                                    </Border>
-                                </StackPanel>
-                            </materialDesign:Card>
+                                <Border Style="{StaticResource MetricCardStyle}" Margin="0">
+                                    <StackPanel>
+                                        <TextBlock Text="REMAINING SEAT CAPACITY" FontSize="11" FontWeight="Bold" Foreground="#64748B" Margin="0,0,0,6"/>
+                                        <TextBlock Text="{Binding RemainingCapacity}" FontSize="24" FontWeight="ExtraBold" Foreground="#0F172A"/>
+                                    </StackPanel>
+                                </Border>
+                            </UniformGrid>
                         </StackPanel>
-                    </ScrollViewer>
+
+                        <!-- 2. SCANNER STATUS BAR & REALTIME FILTER -->
+                        <Border Grid.Row="1" Background="White" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1,1,1,0" CornerRadius="12,12,0,0" Padding="16,12">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBox Grid.Column="0" Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="Search attendees by name, civil ID, or scan code..."
+                                         Height="40" Margin="0,0,16,0"/>
+
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Button Content="EDIT ATTENDANCE" Command="{Binding EditAttendanceCommand}" Style="{StaticResource MaterialDesignOutlinedButton}" Height="36" Margin="0,0,8,0"/>
+                                    <Button Content="DELETE" Command="{Binding DeleteAttendanceCommand}" Style="{StaticResource MaterialDesignFlatButton}" Foreground="{StaticResource BrandRedBrush}" Height="36" Margin="0,0,8,0"/>
+
+                                    <Button Content="REFRESH DATA" Command="{Binding RefreshWorkspaceCommand}"
+                                            Style="{StaticResource MaterialDesignOutlinedButton}" Height="36"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <!-- 3. ATTENDANCE DATAGRID (Paginated) -->
+                        <Border Grid.Row="2" Background="White" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1,0,1,1" CornerRadius="0,0,12,12" Padding="0">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <DataGrid Grid.Row="0" ItemsSource="{Binding SavedAttendanceRows}"
+                                          SelectedItem="{Binding SelectedAttendanceRow}"
+                                          AutoGenerateColumns="False" CanUserAddRows="False"
+                                          IsReadOnly="True" BorderThickness="0"
+                                          GridLinesVisibility="Horizontal"
+                                          HorizontalGridLinesBrush="#F1F5F9"
+                                          AlternatingRowBackground="#F8FAFC"
+                                          RowHeight="46" FontSize="12">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="CIVIL ID" Binding="{Binding CivilRegistryId}" Width="120"/>
+                                        <DataGridTextColumn Header="ATTENDEE NAME" Binding="{Binding FullName}" Width="*" FontWeight="SemiBold"/>
+                                        <DataGridTextColumn Header="CONTACT" Binding="{Binding ContactNumber}" Width="130"/>
+                                        <DataGridTextColumn Header="DATE" Binding="{Binding AttendanceDateText}" Width="110"/>
+                                        <DataGridTextColumn Header="TIME IN" Binding="{Binding TimeInText}" Width="100"/>
+                                        <DataGridTextColumn Header="STATUS" Binding="{Binding StatusText}" Width="120"/>
+                                        <DataGridTemplateColumn Header="ACTIONS" Width="140">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <Button Content="EDIT" Command="{Binding DataContext.EditAttendanceCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                                Style="{StaticResource MaterialDesignFlatButton}" Height="28" Padding="6,0" FontSize="11" Margin="0,0,4,0"/>
+                                                        <Button Content="DEL" Command="{Binding DataContext.DeleteAttendanceCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                                Style="{StaticResource MaterialDesignFlatButton}" Foreground="{StaticResource BrandRedBrush}" Height="28" Padding="6,0" FontSize="11"/>
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+
+                                <!-- 4. PAGINATION FOOTER (Fixed Bottom) -->
+                                <Border Grid.Row="1" Background="#F8FAFC" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="0,1,0,0" Padding="16,10" CornerRadius="0,0,12,12">
+                                    <Grid>
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                            <TextBlock Text="Page display: " FontSize="12" Foreground="#64748B" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding CurrentAttendancePageDisplay, FallbackValue='Page 1'}" FontSize="12" FontWeight="Bold" Foreground="#0F172A" VerticalAlignment="Center"/>
+                                        </StackPanel>
+
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                            <Button Command="{Binding PreviousAttendancePageCommand}" Style="{StaticResource MaterialDesignOutlinedButton}" Height="32" Padding="12,0" Margin="0,0,8,0">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <materialDesign:PackIcon Kind="ChevronLeft" Width="16" Height="16" VerticalAlignment="Center"/>
+                                                    <TextBlock Text=" PREV" FontSize="11" FontWeight="Bold" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Button>
+                                            <Button Command="{Binding NextAttendancePageCommand}" Style="{StaticResource MaterialDesignOutlinedButton}" Height="32" Padding="12,0" Margin="0,0,4,0">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="NEXT " FontSize="11" FontWeight="Bold" VerticalAlignment="Center"/>
+                                                    <materialDesign:PackIcon Kind="ChevronRight" Width="16" Height="16" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Button>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </Grid>
+                        </Border>
+                    </Grid>
                 </Grid>
             </Grid>
         </Grid>
 
-        <!-- Backdrop for Overlays -->
-        <Border Grid.RowSpan="2" Background="#CC0F172A" Visibility="{Binding IsAnyOverlayOpen, Converter={StaticResource BooleanToVisibilityConverter}}" Panel.ZIndex="100"/>
+        <!-- ==================================================================================== -->
+        <!-- MODAL OVERLAYS (BlurRadius="15.0" | Backdrop #CC0F172A)                              -->
+        <!-- ==================================================================================== -->
 
-        <!-- Operational Overlays -->
-        <Grid Grid.RowSpan="2" Panel.ZIndex="110" Visibility="{Binding IsDrawerOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <Grid.Style>
-                <Style TargetType="Grid">
-                    <Setter Property="Margin" Value="100,60" />
-                    <Style.Triggers>
-                        <!-- Larger margin for announcements panel -->
-                        <DataTrigger Binding="{Binding AnnouncementsVisibility}" Value="Visible">
-                            <Setter Property="Margin" Value="60,40" />
-                        </DataTrigger>
-                    </Style.Triggers>
-                </Style>
-            </Grid.Style>
-
-            <Border Style="{StaticResource PanelCardStyle}">
+        <!-- Seminar Editor Modal -->
+        <Grid Grid.RowSpan="2" Panel.ZIndex="100" Visibility="{Binding SeminarEditorVisibility}">
+            <Border Background="#CC0F172A"/>
+            <Border Style="{StaticResource PanelCardStyle}" HorizontalAlignment="Center" VerticalAlignment="Center" Width="680" MaxHeight="750">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -392,238 +468,233 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <!-- Panel Header -->
-                    <Border Grid.Row="0" Padding="30,20" Background="{DynamicResource ThemeCardSubtleBrush}" CornerRadius="16,16,0,0" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="0,0,0,1">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-
-                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                <TextBlock Text="{Binding DrawerTitle}" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,4" Typography.Capitals="AllSmallCaps"/>
-                                <TextBlock Text="{Binding DrawerSubtitle}" FontSize="14" Foreground="{DynamicResource BrandTextSecondaryBrush}" TextWrapping="Wrap"/>
-                            </StackPanel>
-
-                            <Button Grid.Column="1" Command="{Binding ClosePanelCommand}" Style="{StaticResource MaterialDesignFlatButton}" Width="40" Height="40" Padding="0">
-                                <materialDesign:PackIcon Kind="Close" Width="24" Height="24"/>
+                    <Border Grid.Row="0" Background="{StaticResource ThemePrimaryActionBrush}" Padding="20,16" CornerRadius="16,16,0,0">
+                        <DockPanel>
+                            <TextBlock Text="{Binding SeminarEditorSubmitLabel, FallbackValue='SEMINAR CONFIGURATION'}" FontSize="16" FontWeight="Bold" Foreground="White" VerticalAlignment="Center"/>
+                            <Button Command="{Binding ClosePanelCommand}" Style="{StaticResource MaterialDesignFlatButton}" Foreground="White" DockPanel.Dock="Right" Padding="4" Height="32" Width="32">
+                                <materialDesign:PackIcon Kind="Close" Width="20" Height="20"/>
                             </Button>
-                        </Grid>
+                        </DockPanel>
                     </Border>
 
-                    <!-- Panel Content Area -->
-                    <Grid Grid.Row="1">
-                        <!-- Seminar Editor Panel -->
-                        <ScrollViewer Visibility="{Binding SeminarEditorVisibility}" VerticalScrollBarVisibility="Auto" Padding="30">
-                            <StackPanel>
-                                <TextBlock Text="SEMINAR DETAILS" Style="{StaticResource SidebarHeaderStyle}" Margin="0,0,0,20"/>
+                    <ScrollViewer Grid.Row="1" Padding="24" VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <TextBlock Text="SEMINAR DETAILS" Style="{StaticResource SidebarHeaderStyle}"/>
+                            <TextBox Text="{Binding SeminarEditorTitle, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource MaterialDesignOutlinedTextBox}" materialDesign:HintAssist.Hint="Seminar / Training Title" Margin="0,0,0,16"/>
+                            <TextBox Text="{Binding SeminarEditorLocation, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource MaterialDesignOutlinedTextBox}" materialDesign:HintAssist.Hint="Training Venue / Hall" Margin="0,0,0,16"/>
 
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="24"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
+                            <UniformGrid Columns="2" Margin="0,0,0,16">
+                                <DatePicker SelectedDate="{Binding SeminarEditorStartDate}" materialDesign:HintAssist.Hint="Start Date" Margin="0,0,8,0"/>
+                                <DatePicker SelectedDate="{Binding SeminarEditorEndDate}" materialDesign:HintAssist.Hint="End Date" Margin="8,0,0,0"/>
+                            </UniformGrid>
 
-                                    <StackPanel Grid.Column="0">
-                                        <TextBlock Text="Seminar Title" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="4,0,0,8"/>
-                                        <TextBox Text="{Binding EventTitle, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource MaterialDesignOutlinedTextBox}" materialDesign:HintAssist.Hint="e.g. Financial Literacy Seminar"/>
+                            <ComboBox ItemsSource="{Binding BenefitTypes}" SelectedItem="{Binding SeminarEditorBenefitType}"
+                                      Style="{StaticResource MaterialDesignOutlinedComboBox}" materialDesign:HintAssist.Hint="Benefit / Allowance Type" Margin="0,0,0,16"/>
 
-                                        <TextBlock Text="Location" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="4,8,0,8"/>
-                                        <TextBox Text="{Binding EventLocation, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource MaterialDesignOutlinedTextBox}" materialDesign:HintAssist.Hint="e.g. Barangay Hall Plaza"/>
-                                    </StackPanel>
+                            <TextBox Text="{Binding SeminarEditorDescription, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource MaterialDesignOutlinedTextBox}" materialDesign:HintAssist.Hint="Training Overview / Agenda" Height="80" TextWrapping="Wrap" AcceptsReturn="True" Margin="0,0,0,16"/>
+                        </StackPanel>
+                    </ScrollViewer>
 
-                                    <StackPanel Grid.Column="2">
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="12"/>
-                                                <ColumnDefinition Width="*"/>
-                                            </Grid.ColumnDefinitions>
-                                            <StackPanel Grid.Column="0">
-                                                <TextBlock Text="Start Date" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="4,0,0,8"/>
-                                                <DatePicker SelectedDate="{Binding EventDate}" Style="{StaticResource MaterialDesignOutlinedDatePicker}"/>
-                                            </StackPanel>
-                                            <StackPanel Grid.Column="2">
-                                                <TextBlock Text="Finish Date" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="4,0,0,8"/>
-                                                <DatePicker SelectedDate="{Binding FinishDate}" Style="{StaticResource MaterialDesignOutlinedDatePicker}"/>
-                                            </StackPanel>
-                                        </Grid>
-                                    </StackPanel>
-                                </Grid>
-
-                                <Grid Margin="0,24,0,0">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="24"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-
-                                    <StackPanel Grid.Column="0">
-                                        <TextBlock Text="Start Time" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="4,0,0,8"/>
-                                        <materialDesign:TimePicker SelectedTime="{Binding EventStartTime, UpdateSourceTrigger=PropertyChanged}"
-                                                                  Style="{StaticResource MaterialDesignOutlinedTimePicker}"
-                                                                  Height="45"/>
-                                    </StackPanel>
-
-                                    <StackPanel Grid.Column="2">
-                                        <TextBlock Text="End Time" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="4,0,0,8"/>
-                                        <materialDesign:TimePicker SelectedTime="{Binding EventEndTime, UpdateSourceTrigger=PropertyChanged}"
-                                                                  Style="{StaticResource MaterialDesignOutlinedTimePicker}"
-                                                                  Height="45"/>
-                                    </StackPanel>
-                                </Grid>
-
-                                <StackPanel Margin="0,24,0,0">
-                                    <TextBlock Text="Internal Notes" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="4,0,0,8"/>
-                                    <TextBox Text="{Binding EventNotes, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource MaterialDesignOutlinedTextBox}" AcceptsReturn="True" MinHeight="100" VerticalContentAlignment="Top" materialDesign:HintAssist.Hint="Optional remarks..."/>
-                                </StackPanel>
-
-                                <TextBlock Text="BENEFIT CONFIGURATION" Style="{StaticResource SidebarHeaderStyle}" Margin="0,28,0,10"/>
-
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="24"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-
-                                    <StackPanel Grid.Column="0">
-                                        <TextBlock Text="Benefit Type" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="4,0,0,8"/>
-                                        <ComboBox ItemsSource="{Binding BenefitTypes}" SelectedItem="{Binding SelectedBenefitType}" FontSize="12" Height="45" VerticalContentAlignment="Center"/>
-                                    </StackPanel>
-
-                                    <StackPanel Grid.Column="2" Visibility="{Binding IsBenefitEarmarked, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                        <TextBlock Text="Earmarked Budget" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="4,0,0,8"/>
-                                        <ComboBox ItemsSource="{Binding AvailableBudgets}" SelectedValue="{Binding SelectedBudgetId}" SelectedValuePath="Id" DisplayMemberPath="BudgetName" FontSize="12" Height="45" VerticalContentAlignment="Center"/>
-                                    </StackPanel>
-                                </Grid>
-
-                                <StackPanel Margin="0,16,0,0" Visibility="{Binding IsCashBenefit, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                    <TextBlock Text="Unit Amount / Payout" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="4,0,0,8"/>
-                                    <TextBox Text="{Binding UnitAmountText, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource MaterialDesignOutlinedTextBox}" materialDesign:HintAssist.Hint="e.g. 500.00"/>
-                                </StackPanel>
-
-                                <StackPanel Margin="0,16,0,0" Visibility="{Binding IsGoodsBenefit, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                    <TextBlock Text="Benefit Description" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="4,0,0,8"/>
-                                    <TextBox Text="{Binding BenefitDescriptionText, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource MaterialDesignOutlinedTextBox}" materialDesign:HintAssist.Hint="e.g. 1 Bag of Groceries"/>
-                                </StackPanel>
-                            </StackPanel>
-                        </ScrollViewer>
-
-                        <!-- Scan Attendance Panel -->
-                        <Grid Visibility="{Binding ScanAttendanceVisibility}" Margin="30">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="400" />
-                                <ColumnDefinition Width="40" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-
-                            <!-- Scanner Controls -->
-                            <StackPanel Grid.Column="0">
-                                <TextBlock Text="MOBILE GATEWAY" Style="{StaticResource SidebarHeaderStyle}" Margin="0,0,0,20"/>
-
-                                <Border Style="{StaticResource DetailCardStyle}" Padding="20">
-                                    <StackPanel>
-                                        <Button Content="CREATE SCANNER SESSION" Command="{Binding CreateAttendanceScannerSessionCommand}" Style="{StaticResource GoldActionButton}" Height="45" Margin="0,0,0,20"/>
-
-                                        <materialDesign:Card Visibility="{Binding AttendanceScannerSessionUrl, Converter={StaticResource NullToHiddenConverter}}" Padding="16" Background="{DynamicResource BrandMidnightBrush}" UniformCornerRadius="12">
-                                            <StackPanel>
-                                                <Border Background="White" Padding="8" CornerRadius="8" HorizontalAlignment="Center">
-                                                    <Image Source="{Binding AttendanceScannerQrImage}" Height="180" Width="180" Stretch="Uniform"/>
-                                                </Border>
-
-                                                <StackPanel Margin="0,16,0,0" HorizontalAlignment="Center">
-                                                    <TextBlock Text="PIN CODE" FontSize="10" Foreground="#94A3B8" FontWeight="Bold" HorizontalAlignment="Center"/>
-                                                    <TextBlock Text="{Binding AttendanceScannerSessionPin}" FontSize="32" Foreground="White" FontWeight="ExtraBold" HorizontalAlignment="Center"/>
-                                                    <TextBlock Text="{Binding AttendanceScannerSessionExpiresAtText}" FontSize="11" Foreground="#94A3B8" HorizontalAlignment="Center" Margin="0,4,0,0"/>
-                                                    <TextBlock Text="{Binding AttendanceScannerSessionUrl, Mode=OneWay}" FontSize="10" Foreground="#94A3B8" HorizontalAlignment="Center" Margin="0,8,0,0" TextWrapping="Wrap" MaxWidth="350"/>
-                                                </StackPanel>
-                                            </StackPanel>
-                                        </materialDesign:Card>
-
-                                        <TextBlock Text="Scan the QR above using the staff phone app or navigate to the session URL. Seminar attendees register themselves as they scan." Foreground="{DynamicResource BrandTextSecondaryBrush}" FontSize="12" Margin="0,16,0,0" TextWrapping="Wrap" TextAlignment="Center"/>
-                                    </StackPanel>
-                                </Border>
-                            </StackPanel>
-
-                            <!-- Attendee summary -->
-                            <Border Grid.Column="2" Style="{StaticResource DetailCardStyle}" Padding="24">
-                                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                                    <materialDesign:PackIcon Kind="AccountMultipleCheckOutline" Width="64" Height="64" Foreground="{DynamicResource BrandBorderBrush}" HorizontalAlignment="Center"/>
-                                    <TextBlock Text="Scan-based registration" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource BrandMidnightBrush}" Margin="0,16,0,8" HorizontalAlignment="Center"/>
-                                    <TextBlock Text="Attendees are auto-registered on their first scan. Review captures in the Attendance Log after closing this panel." FontSize="13" Foreground="{DynamicResource BrandTextSecondaryBrush}" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="420"/>
-                                </StackPanel>
-                            </Border>
-                        </Grid>
-
-                        <!-- Announcements Panel -->
-                        <Grid Visibility="{Binding AnnouncementsVisibility}" Margin="30">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="*"/>
-                            </Grid.RowDefinitions>
-
-                            <DockPanel Grid.Row="0" Margin="0,0,0,24">
-                                <TextBlock Text="ACTIVE ANNOUNCEMENTS" Style="{StaticResource SidebarHeaderStyle}" DockPanel.Dock="Left" VerticalAlignment="Center" Margin="0"/>
-                                <Button Content="REFRESH WORKSPACE" Command="{Binding RefreshWorkspaceCommand}" Style="{StaticResource MaterialDesignOutlinedButton}" Height="36" DockPanel.Dock="Right"/>
-                            </DockPanel>
-
-                            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                                <ItemsControl ItemsSource="{Binding OpenAnnouncements}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Border Style="{StaticResource DetailCardStyle}" Padding="24">
-                                                <Grid>
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                    </Grid.ColumnDefinitions>
-
-                                                    <StackPanel Grid.Column="0">
-                                                        <TextBlock Text="{Binding Title}" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}"/>
-                                                        <TextBlock Text="{Binding Summary}" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,4,0,12" TextWrapping="Wrap"/>
-
-                                                        <StackPanel Orientation="Horizontal">
-                                                            <Border Background="{DynamicResource ThemeCardSubtleBrush}" Padding="10,4" CornerRadius="4" Margin="0,0,8,0">
-                                                                <TextBlock Text="{Binding Kind}" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource ThemePrimaryActionBrush}"/>
-                                                            </Border>
-                                                            <TextBlock Text="{Binding DateLabel}" FontSize="12" Foreground="{DynamicResource BrandTextSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                                                            <TextBlock Text="{Binding Location}" FontSize="12" Foreground="{DynamicResource BrandTextSecondaryBrush}" VerticalAlignment="Center"/>
-                                                        </StackPanel>
-                                                    </StackPanel>
-
-                                                    <Button Grid.Column="1" Content="LOAD SEMINAR"
-                                                            Command="{Binding DataContext.SelectAnnouncementEventCommand, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
-                                                            CommandParameter="{Binding EventId}"
-                                                            Style="{StaticResource GoldActionButton}" Height="40" Padding="20,0" VerticalAlignment="Center"/>
-                                                </Grid>
-                                            </Border>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </ScrollViewer>
-                        </Grid>
-                    </Grid>
-
-                    <!-- Panel Footer -->
-                    <Border Grid.Row="2" Padding="30,20" Background="{DynamicResource ThemeCardSubtleBrush}" CornerRadius="0,0,16,16" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="0,1,0,0">
-                        <Grid>
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                <Button Content="CLOSE" Command="{Binding ClosePanelCommand}" Style="{StaticResource MaterialDesignFlatButton}" Margin="0,0,12,0"/>
-
-                                <Button Content="{Binding SeminarEditorSubmitLabel}" Command="{Binding SaveSeminarCommand}" Style="{StaticResource GoldActionButton}" Width="200" Height="45" Visibility="{Binding SeminarEditorVisibility}"/>
-                            </StackPanel>
-                        </Grid>
+                    <Border Grid.Row="2" Background="#F8FAFC" Padding="20,16" CornerRadius="0,0,16,16" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="0,1,0,0">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button Content="CANCEL" Command="{Binding ClosePanelCommand}" Style="{StaticResource MaterialDesignFlatButton}" Margin="0,0,10,0"/>
+                            <Button Content="{Binding SeminarEditorSubmitLabel}" Command="{Binding SaveSeminarCommand}" Style="{StaticResource GoldActionButton}" Width="160" Height="42"/>
+                        </StackPanel>
                     </Border>
                 </Grid>
             </Border>
         </Grid>
 
-        <!-- PC Scanner Overlay -->
+        <!-- Scan Attendance Gateway (Mobile QR & PIN) Modal -->
+        <Grid Grid.RowSpan="2" Panel.ZIndex="105" Visibility="{Binding ScanAttendanceVisibility}">
+            <Border Background="#CC0F172A"/>
+            <Border Style="{StaticResource PanelCardStyle}" HorizontalAlignment="Center" VerticalAlignment="Center" Width="550">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0" Background="{StaticResource ThemePrimaryActionBrush}" Padding="20,16" CornerRadius="16,16,0,0">
+                        <DockPanel>
+                            <TextBlock Text="MOBILE SCANNER GATEWAY" FontSize="16" FontWeight="Bold" Foreground="White" VerticalAlignment="Center"/>
+                            <Button Command="{Binding ClosePanelCommand}" Style="{StaticResource MaterialDesignFlatButton}" Foreground="White" DockPanel.Dock="Right" Padding="4" Height="32" Width="32">
+                                <materialDesign:PackIcon Kind="Close" Width="20" Height="20"/>
+                            </Button>
+                        </DockPanel>
+                    </Border>
+
+                    <StackPanel Grid.Row="1" Margin="24" HorizontalAlignment="Center">
+                        <Button Content="CREATE SCANNER SESSION" Command="{Binding CreateAttendanceScannerSessionCommand}" Style="{StaticResource GoldActionButton}" Height="42" Margin="0,0,0,16"/>
+
+                        <Border Background="#0F172A" CornerRadius="12" Padding="20" HorizontalAlignment="Center">
+                            <StackPanel HorizontalAlignment="Center">
+                                <Image Source="{Binding AttendanceScannerQrImage}" Width="180" Height="180" Stretch="Uniform"/>
+                                <TextBlock Text="SCANNER PIN" FontSize="10" FontWeight="Bold" Foreground="#94A3B8" HorizontalAlignment="Center" Margin="0,12,0,2"/>
+                                <TextBlock Text="{Binding AttendanceScannerSessionPin}" FontSize="28" FontWeight="ExtraBold" Foreground="White" HorizontalAlignment="Center"/>
+                                <TextBlock Text="{Binding AttendanceScannerSessionUrl, Mode=OneWay}" FontSize="10" Foreground="#94A3B8" HorizontalAlignment="Center" TextWrapping="Wrap" MaxWidth="320" Margin="0,6,0,0"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <Border Grid.Row="2" Background="#F8FAFC" Padding="20,14" CornerRadius="0,0,16,16" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="0,1,0,0">
+                        <Button Content="CLOSE GATEWAY" Command="{Binding ClosePanelCommand}" Style="{StaticResource MaterialDesignFlatButton}" HorizontalAlignment="Right"/>
+                    </Border>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- Active Announcements Modal -->
+        <Grid Grid.RowSpan="2" Panel.ZIndex="115" Visibility="{Binding AnnouncementsVisibility}">
+            <Border Background="#CC0F172A"/>
+            <Border Style="{StaticResource PanelCardStyle}" HorizontalAlignment="Center" VerticalAlignment="Center" Width="720" MaxHeight="700">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0" Background="{StaticResource ThemePrimaryActionBrush}" Padding="20,16" CornerRadius="16,16,0,0">
+                        <DockPanel>
+                            <TextBlock Text="ACTIVE SEMINAR ANNOUNCEMENTS" FontSize="16" FontWeight="Bold" Foreground="White" VerticalAlignment="Center"/>
+                            <Button Command="{Binding ClosePanelCommand}" Style="{StaticResource MaterialDesignFlatButton}" Foreground="White" DockPanel.Dock="Right" Padding="4" Height="32" Width="32">
+                                <materialDesign:PackIcon Kind="Close" Width="20" Height="20"/>
+                            </Button>
+                        </DockPanel>
+                    </Border>
+
+                    <ScrollViewer Grid.Row="1" Padding="24" VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding OpenAnnouncements}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Style="{StaticResource DetailCardStyle}" Padding="16" Margin="0,0,0,12">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0">
+                                                <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="Bold" Foreground="#0F172A"/>
+                                                <TextBlock Text="{Binding Summary}" FontSize="12" Foreground="#64748B" Margin="0,4,0,8" TextWrapping="Wrap"/>
+                                                <TextBlock Text="{Binding DateLabel}" FontSize="11" Foreground="#94A3B8"/>
+                                            </StackPanel>
+                                            <Button Grid.Column="1" Content="LOAD SEMINAR"
+                                                    Command="{Binding DataContext.SelectAnnouncementEventCommand, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
+                                                    CommandParameter="{Binding EventId}"
+                                                    Style="{StaticResource GoldActionButton}" Height="36" Padding="16,0" VerticalAlignment="Center"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+
+                    <Border Grid.Row="2" Background="#F8FAFC" Padding="20,14" CornerRadius="0,0,16,16" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="0,1,0,0">
+                        <Button Content="CLOSE" Command="{Binding ClosePanelCommand}" Style="{StaticResource MaterialDesignFlatButton}" HorizontalAlignment="Right"/>
+                    </Border>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- PC Scanner Camera Overlay -->
         <Grid Grid.RowSpan="2" Panel.ZIndex="120" Visibility="{Binding IsPcScannerOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <local:DesktopScannerOverlay QrCodeScanned="Scanner_QrCodeScanned"
-                                       Closed="Scanner_Closed"/>
+            <local:DesktopScannerOverlay QrCodeScanned="Scanner_QrCodeScanned" Closed="Scanner_Closed"/>
+        </Grid>
+
+        <!-- Scanned ID Confirmation Modal Overlay -->
+        <Grid Grid.RowSpan="2" Panel.ZIndex="130"
+              Visibility="{Binding IsScannedResultVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Border Background="#CC0F172A"/>
+            <Border Style="{StaticResource PanelCardStyle}" HorizontalAlignment="Center" VerticalAlignment="Center" Width="600" CornerRadius="16">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0" Background="{StaticResource ThemePrimaryActionBrush}" Padding="20,16" CornerRadius="16,16,0,0">
+                        <DockPanel>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <materialDesign:PackIcon Kind="AccountCheck" Width="24" Height="24" Foreground="White" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <TextBlock Text="ID SCAN ATTENDANCE CAPTURE" FontSize="16" FontWeight="Bold" Foreground="White" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <Button Command="{Binding CancelScannedClaimCommand}" Style="{StaticResource MaterialDesignFlatButton}"
+                                    Foreground="White" DockPanel.Dock="Right" Padding="4" Height="32" Width="32">
+                                <materialDesign:PackIcon Kind="Close" Width="20" Height="20"/>
+                            </Button>
+                        </DockPanel>
+                    </Border>
+
+                    <Grid Grid.Row="1" Margin="24">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="130"/>
+                            <ColumnDefinition Width="16"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <Border Width="120" Height="120" CornerRadius="12" Background="#F8FAFC" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1">
+                                <Grid>
+                                    <materialDesign:PackIcon Kind="AccountCircle" Width="72" Height="72" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{StaticResource CardBorderBrush}"/>
+                                    <Border CornerRadius="12" Visibility="{Binding ScannedBeneficiaryPhoto, Converter={StaticResource NullToHiddenConverter}}">
+                                        <Border.Background>
+                                            <ImageBrush ImageSource="{Binding ScannedBeneficiaryPhoto}" Stretch="UniformToFill"/>
+                                        </Border.Background>
+                                    </Border>
+                                </Grid>
+                            </Border>
+                            <TextBlock Text="{Binding ScannedBeneficiary.BeneficiaryId}" FontSize="11" FontWeight="Bold" Foreground="#0F172A" TextAlignment="Center" Margin="0,8,0,0"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding ScannedBeneficiary.FullName}" FontSize="20" FontWeight="Bold" Foreground="#0F172A" TextWrapping="Wrap"/>
+                            <TextBlock Text="{Binding ScannedBeneficiaryStatus}" FontSize="13" Foreground="{StaticResource ThemePrimaryActionBrush}" FontWeight="SemiBold" Margin="0,4,0,12"/>
+
+                            <Border Margin="0,0,0,14" Padding="12,8" CornerRadius="8" Background="#FEF2F2" BorderBrush="#FECACA" BorderThickness="1"
+                                    Visibility="{Binding IsScannedBeneficiaryEligible, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon Kind="AlertCircle" Width="18" Height="18" VerticalAlignment="Center" Foreground="#DC2626" Margin="0,0,8,0"/>
+                                    <TextBlock Text="Attendee has already been recorded present for today's session." FontSize="11" FontWeight="SemiBold" Foreground="#991B1B" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Background="#F8FAFC" Padding="16,12" CornerRadius="8" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Civil Registry ID:" FontSize="12" Foreground="#64748B" Margin="0,0,12,6"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding ScannedBeneficiary.CivilRegistryId, TargetNullValue='N/A'}" FontSize="12" FontWeight="SemiBold" Foreground="#0F172A" Margin="0,0,0,6"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Seminar Assignment:" FontSize="12" Foreground="#64748B" Margin="0,0,12,0"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SelectedEvent.Title}" FontSize="12" FontWeight="SemiBold" Foreground="#0F172A" TextTrimming="CharacterEllipsis"/>
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+                    </Grid>
+
+                    <Border Grid.Row="2" Background="#F8FAFC" Padding="20,16" CornerRadius="0,0,16,16" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="0,1,0,0">
+                        <DockPanel LastChildFill="False">
+                            <Button Content="CANCEL" Command="{Binding CancelScannedClaimCommand}" Style="{StaticResource MaterialDesignFlatButton}" Height="40" Padding="20,0" DockPanel.Dock="Left" Foreground="#64748B"/>
+                            <Button Content="CONFIRM ATTENDANCE" Command="{Binding ConfirmScannedClaimCommand}" Visibility="{Binding IsScannedBeneficiaryEligible, Converter={StaticResource BooleanToVisibilityConverter}}" Style="{StaticResource GoldActionButton}" Height="44" Padding="24,0" DockPanel.Dock="Right"/>
+                            <Border Visibility="{Binding IsScannedBeneficiaryEligible, Converter={StaticResource InverseBooleanToVisibilityConverter}}"
+                                    Background="#FEE2E2" BorderBrush="#FCA5A5" BorderThickness="1" CornerRadius="8" Padding="14,8" DockPanel.Dock="Right" VerticalAlignment="Center">
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon Kind="Cancel" Width="16" Height="16" Foreground="#DC2626" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                    <TextBlock Text="ALREADY RECORDED TODAY" FontSize="12" FontWeight="Bold" Foreground="#991B1B" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+                        </DockPanel>
+                    </Border>
+                </Grid>
+            </Border>
         </Grid>
     </Grid>
 </UserControl>

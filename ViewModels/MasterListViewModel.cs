@@ -32,6 +32,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly ObservableCollection<MasterListFilterOption> _filterOptions = new();
         private readonly ObservableCollection<BeneficiaryAssistanceLedgerEntry> _selectedBeneficiaryHistory = new();
         private readonly RelayCommand _refreshCommand;
+        private readonly RelayCommand _clearSearchCommand;
         
         private readonly RelayCommand _previousPendingPageCommand;
         private readonly RelayCommand _nextPendingPageCommand;
@@ -158,6 +159,7 @@ namespace AttendanceShiftingManagement.ViewModels
             PageSizeOptions = new ObservableCollection<int> { 50, 100, 250, 500 };
             
             _refreshCommand = new RelayCommand(async _ => await RefreshAsync(), _ => !IsBusy);
+            _clearSearchCommand = new RelayCommand(_ => SearchText = string.Empty, _ => !string.IsNullOrEmpty(SearchText));
             
             _previousPendingPageCommand = new RelayCommand(async _ => await GoToPreviousPendingPageAsync(), _ => !IsBusy && PendingCurrentPage > 1);
             _nextPendingPageCommand = new RelayCommand(async _ => await GoToNextPendingPageAsync(), _ => !IsBusy && PendingCurrentPage < PendingTotalPages);
@@ -762,6 +764,7 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand ConfirmScannedClaimCommand => _confirmScannedClaimCommand;
         public ICommand CancelScannedClaimCommand => _cancelScannedClaimCommand;
 
+        public ICommand ClearSearchCommand => _clearSearchCommand;
         public ICommand SaveCorrectionsCommand => _saveCorrectionsCommand;
         public ICommand ReturnToPendingCommand => _returnToPendingCommand;
         public ICommand ApproveCommand => _approveCommand;
@@ -1642,6 +1645,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 var val = value ?? string.Empty;
                 if (SetProperty(ref _searchText, val))
                 {
+                    _clearSearchCommand?.RaiseCanExecuteChanged();
                     QueueReloadFromFirstPage();
                 }
             }

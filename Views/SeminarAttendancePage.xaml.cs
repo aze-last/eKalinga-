@@ -30,6 +30,12 @@ namespace AttendanceShiftingManagement.Views
 
         private void SeminarAttendancePage_Loaded(object sender, RoutedEventArgs e)
         {
+            var viewModel = DataContext as SeminarAttendanceViewModel;
+            if (viewModel?.SelectedEvent == null)
+            {
+                Browse_Click(sender, e);
+            }
+
             if (HiddenScannerTextBox != null)
             {
                 HiddenScannerTextBox.TextChanged += HiddenScannerTextBox_TextChanged;

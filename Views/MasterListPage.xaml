@@ -244,17 +244,34 @@
                         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                             <Border Padding="20,0,20,20">
                                 <StackPanel>
+                                    <!-- Search Registry -->
+                                    <TextBlock Text="SEARCH REGISTRY" Style="{StaticResource SidebarHeaderStyle}"/>
+                                    <Border Background="{DynamicResource ThemeCardBrush}" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="10,6" Margin="0,0,0,18">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <materialDesign:PackIcon Grid.Column="0" Kind="Magnify" Foreground="{DynamicResource BrandTextSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,8,0" Width="18" Height="18"/>
+                                            <TextBox Grid.Column="1" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                                     materialDesign:HintAssist.Hint="Search name, ID, address..."
+                                                     BorderThickness="0" Background="Transparent" VerticalAlignment="Center" FontSize="12"/>
+                                            <Button Grid.Column="2" Style="{StaticResource MaterialDesignFlatButton}"
+                                                    Padding="0" Width="20" Height="20"
+                                                    Visibility="{Binding SearchText, Converter={StaticResource NullToHiddenConverter}}"
+                                                    Command="{Binding ClearSearchCommand}"
+                                                    ToolTip="Clear Search">
+                                                <materialDesign:PackIcon Kind="Close" Width="14" Height="14" Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
+                                            </Button>
+                                        </Grid>
+                                    </Border>
+
                                     <TextBlock Text="DIGITAL ID &amp; TOOLS" Style="{StaticResource SidebarHeaderStyle}"/>
                                     <Button Command="{Binding OpenPcScannerCommand}" Style="{StaticResource RailBrandButton}">
                                         <StackPanel Orientation="Horizontal">
                                             <materialDesign:PackIcon Kind="Cctv" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,10,0"/>
                                             <TextBlock Text="SCAN VIA PC CAMERA" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                    </Button>
-                                    <Button Command="{Binding UploadDigitalIdPhotoCommand}" Style="{StaticResource RailButton}">
-                                        <StackPanel Orientation="Horizontal">
-                                            <materialDesign:PackIcon Kind="ImagePlusOutline" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                            <TextBlock Text="UPLOAD PHOTO" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </Button>
                                 </StackPanel>
@@ -333,7 +350,14 @@
                                             <Border Background="{DynamicResource ThemeCardSubtleBrush}" CornerRadius="8" Padding="12,4" VerticalAlignment="Center">
                                                 <StackPanel Orientation="Horizontal">
                                                     <materialDesign:PackIcon Kind="Magnify" Foreground="{DynamicResource BrandTextSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                                    <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" materialDesign:HintAssist.Hint="Search registry..." Width="250" BorderThickness="0" Background="Transparent"/>
+                                                    <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" materialDesign:HintAssist.Hint="Search registry..." Width="220" BorderThickness="0" Background="Transparent"/>
+                                                    <Button Style="{StaticResource MaterialDesignFlatButton}"
+                                                            Padding="0" Width="20" Height="20"
+                                                            Visibility="{Binding SearchText, Converter={StaticResource NullToHiddenConverter}}"
+                                                            Command="{Binding ClearSearchCommand}"
+                                                            ToolTip="Clear Search">
+                                                        <materialDesign:PackIcon Kind="Close" Width="14" Height="14" Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
+                                                    </Button>
                                                 </StackPanel>
                                             </Border>
                                         </StackPanel>

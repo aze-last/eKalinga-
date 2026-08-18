@@ -3,6 +3,7 @@ using AttendanceShiftingManagement.Helpers;
 using AttendanceShiftingManagement.Models;
 using AttendanceShiftingManagement.Services;
 using AttendanceShiftingManagement.Views;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Win32;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -140,7 +141,7 @@ namespace AttendanceShiftingManagement.ViewModels
             _openPcScannerCommand = new RelayCommand(_ => IsPcScannerOpen = true, _ => !IsBusy && HasSelectedEvent);
             _processPcScanCommand = new RelayCommand(payload => _ = ExecuteProcessPcScan(payload as string));
             _toggleSidebarCommand = new RelayCommand(_ => ToggleSidebar());
-            _confirmScannedClaimCommand = new RelayCommand(async _ => await ExecuteConfirmScannedAttendanceAsync(), _ => !IsBusy && ScannedBeneficiary != null);
+            _confirmScannedClaimCommand = new RelayCommand(async _ => await ExecuteConfirmScannedAttendanceAsync(), _ => !IsBusy && IsScannedBeneficiaryEligible && ScannedBeneficiary != null);
             _cancelScannedClaimCommand = new RelayCommand(_ => ResetScannedResult());
 
             _eventsView = CollectionViewSource.GetDefaultView(Events);
@@ -625,7 +626,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 }
             }
         }
-        public bool IsAnyOverlayOpen => IsDrawerOpen || IsPcScannerOpen;
+        public bool IsAnyOverlayOpen => IsDrawerOpen || IsPcScannerOpen || IsScannedResultVisible;
         public Visibility DrawerVisibility => IsDrawerOpen ? Visibility.Visible : Visibility.Collapsed;
         public Visibility SeminarEditorVisibility => ActivePanel == SeminarWorkspacePanel.SeminarEditor ? Visibility.Visible : Visibility.Collapsed;
         public Visibility ScanAttendanceVisibility => ActivePanel == SeminarWorkspacePanel.ScanAttendance ? Visibility.Visible : Visibility.Collapsed;
@@ -658,10 +659,29 @@ namespace AttendanceShiftingManagement.ViewModels
             private set => SetProperty(ref _scannedBeneficiaryPhoto, value);
         }
 
+        private bool _isScannedBeneficiaryEligible = true;
+        public bool IsScannedBeneficiaryEligible
+        {
+            get => _isScannedBeneficiaryEligible;
+            private set
+            {
+                if (SetProperty(ref _isScannedBeneficiaryEligible, value))
+                {
+                    _confirmScannedClaimCommand.RaiseCanExecuteChanged();
+                }
+            }
+        }
+
         public bool IsScannedResultVisible
         {
             get => _isScannedResultVisible;
-            private set => SetProperty(ref _isScannedResultVisible, value);
+            private set
+            {
+                if (SetProperty(ref _isScannedResultVisible, value))
+                {
+                    OnPropertyChanged(nameof(IsAnyOverlayOpen));
+                }
+            }
         }
 
         public string ScannerHeader => "Seminar Attendance Capture";
@@ -987,6 +1007,7 @@ namespace AttendanceShiftingManagement.ViewModels
             ActivePanel = SeminarWorkspacePanel.None;
             DrawerTitle = "Workspace";
             DrawerSubtitle = "Select an action from the left rail.";
+            RefreshDrawerVisibilityFlags();
         }
 
         private void RefreshDrawerCopy()
@@ -1372,12 +1393,25 @@ namespace AttendanceShiftingManagement.ViewModels
                     BeneficiaryStagingId = lookup.BeneficiaryStagingId
                 };
 
-                ScannedBeneficiaryStatus = "Confirm attendance for this attendee.";
+                var alreadyAttended = await context.CashForWorkAttendances
+                    .AnyAsync(a => !a.IsDeleted && a.Participant.EventId == SelectedEvent.Id && a.Participant.BeneficiaryStagingId == lookup.BeneficiaryStagingId && a.AttendanceDate == DateTime.Today);
+
+                if (alreadyAttended)
+                {
+                    ScannedBeneficiaryStatus = "ALREADY RECORDED ATTENDEE TODAY";
+                    IsScannedBeneficiaryEligible = false;
+                }
+                else
+                {
+                    ScannedBeneficiaryStatus = "ELIGIBLE - READY TO RECORD ATTENDANCE";
+                    IsScannedBeneficiaryEligible = true;
+                }
+
                 ScannedBeneficiaryPhoto = string.IsNullOrWhiteSpace(lookup.PhotoPath) ? null : LocalImageLoader.Load(lookup.PhotoPath) as BitmapSource;
 
                 _lastScannedPayload = payload;
                 IsScannedResultVisible = true;
-                SetNeutralStatus($"ID analyzed: {lookup.FullName}. Please review and confirm attendance.");
+                SetNeutralStatus($"ID analyzed: {lookup.FullName}. Status: {ScannedBeneficiaryStatus}.");
             }
             catch (Exception ex)
             {
@@ -1438,6 +1472,7 @@ namespace AttendanceShiftingManagement.ViewModels
             ScannedBeneficiary = null;
             ScannedBeneficiaryStatus = null;
             ScannedBeneficiaryPhoto = null;
+            IsScannedBeneficiaryEligible = false;
             _lastScannedPayload = null;
             IsScannedResultVisible = false;
         }

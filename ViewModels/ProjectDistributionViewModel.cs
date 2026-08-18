@@ -2658,7 +2658,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 if (qualification.BeneficiaryStatus == DistributionBeneficiaryStatus.Released)
                 {
                     ScannedBeneficiaryStatus = "ALREADY CLAIMED";
-                    ScannedBeneficiaryStatusColor = (Brush)Application.Current.Resources["BrandDangerBrush"];
+                    ScannedBeneficiaryStatusColor = (Brush?)Application.Current.TryFindResource("BrandDangerBrush") ?? new SolidColorBrush(Color.FromRgb(220, 38, 38));
                     IsScannedBeneficiaryEligible = false;
                     ScannerActionLabel = "ALREADY CLAIMED";
                     ScannerCancelLabel = "CLOSE";
@@ -2667,7 +2667,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 else if (qualification.BeneficiaryStatus == DistributionBeneficiaryStatus.Pending)
                 {
                     ScannedBeneficiaryStatus = "READY FOR RELEASE";
-                    ScannedBeneficiaryStatusColor = (Brush)Application.Current.Resources["BrandSuccessBrush"];
+                    ScannedBeneficiaryStatusColor = (Brush?)Application.Current.TryFindResource("BrandSuccessBrush") ?? new SolidColorBrush(Color.FromRgb(33, 118, 80));
                     IsScannedBeneficiaryEligible = true;
                     ScannerActionLabel = "CONFIRM CLAIM";
                     ScannerCancelLabel = "DECLINE";
@@ -2675,9 +2675,9 @@ namespace AttendanceShiftingManagement.ViewModels
                 else
                 {
                     ScannedBeneficiaryStatus = "NOT ENROLLED IN THIS PROJECT";
-                    ScannedBeneficiaryStatusColor = (Brush)Application.Current.Resources["BrandWarningBrush"];
+                    ScannedBeneficiaryStatusColor = (Brush?)Application.Current.TryFindResource("BrandWarningBrush") ?? new SolidColorBrush(Color.FromRgb(217, 119, 6));
                     IsScannedBeneficiaryEligible = false;
-                    ScannerActionLabel = "NOT QUALIFIED";
+                    ScannerActionLabel = "NOT ENROLLED";
                     ScannerCancelLabel = "CLOSE";
                     _ = Task.Run(() => { try { Console.Beep(400, 600); } catch { } });
                 }
@@ -2785,10 +2785,10 @@ namespace AttendanceShiftingManagement.ViewModels
                         };
                         ScannedBeneficiaryStatus = qualification.Message;
                         ScannedBeneficiaryStatusColor = qualification.BeneficiaryStatus == DistributionBeneficiaryStatus.Released
-                            ? (Brush)Application.Current.Resources["BrandDangerBrush"]
+                            ? ((Brush?)Application.Current.TryFindResource("BrandDangerBrush") ?? new SolidColorBrush(Color.FromRgb(220, 38, 38)))
                             : (qualification.BeneficiaryStatus == DistributionBeneficiaryStatus.Pending
-                                ? (Brush)Application.Current.Resources["BrandSuccessBrush"]
-                                : (Brush)Application.Current.Resources["BrandWarningBrush"]);
+                                ? ((Brush?)Application.Current.TryFindResource("BrandSuccessBrush") ?? new SolidColorBrush(Color.FromRgb(33, 118, 80)))
+                                : ((Brush?)Application.Current.TryFindResource("BrandWarningBrush") ?? new SolidColorBrush(Color.FromRgb(217, 119, 6))));
                     }
 
                     if (!string.IsNullOrWhiteSpace(staging.PhotoPath))

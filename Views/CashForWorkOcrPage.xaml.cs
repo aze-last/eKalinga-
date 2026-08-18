@@ -30,6 +30,12 @@ namespace AttendanceShiftingManagement.Views
 
         private void CashForWorkOcrPage_Loaded(object sender, RoutedEventArgs e)
         {
+            var viewModel = DataContext as CashForWorkOcrViewModel;
+            if (viewModel?.SelectedEvent == null)
+            {
+                Browse_Click(sender, e);
+            }
+
             if (HiddenScannerTextBox != null)
             {
                 HiddenScannerTextBox.TextChanged += HiddenScannerTextBox_TextChanged;
