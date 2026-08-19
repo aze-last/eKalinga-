@@ -307,4 +307,96 @@ public sealed class BudgetManagementServiceTests
 
         context.SaveChanges();
     }
+
+    [Fact]
+    public async Task UpdateCashForWorkProjectAsync_UpdatesBudgetAndLinkedEvent()
+    {
+        using var context = TestDbContextFactory.CreateContext();
+        var admin = SeedAdmin(context);
+        var service = new BudgetManagementService(context);
+
+        var createResult = await service.CreateCashForWorkProjectAsync(
+            new CashForWorkProjectRequest(
+                "SEM-001",
+                "Original Seminar",
+                "Original Notes",
+                500m,
+                50000m,
+                new DateTime(2026, 6, 1),
+                new DateTime(2026, 6, 2),
+                EventKind: CashForWorkEventKind.Seminar,
+                BenefitType: CashForWorkBenefitType.Goods,
+                BenefitDescription: "5kg Rice"),
+            admin.Id);
+
+        Assert.True(createResult.Success);
+        var budgetId = createResult.BudgetId;
+
+        var updateResult = await service.UpdateCashForWorkProjectAsync(
+            budgetId,
+            new CashForWorkProjectRequest(
+                "SEM-001",
+                "Updated Seminar Title",
+                "Updated Objectives",
+                600m,
+                65000m,
+                new DateTime(2026, 6, 5),
+                new DateTime(2026, 6, 6),
+                EventKind: CashForWorkEventKind.Seminar,
+                BenefitType: CashForWorkBenefitType.Cash,
+                BenefitDescription: "Daily allowance"),
+            admin.Id);
+
+        Assert.True(updateResult.Success);
+
+        var updatedBudget = Assert.Single(context.CashForWorkBudgets);
+        Assert.Equal("Updated Seminar Title", updatedBudget.BudgetName);
+        Assert.Equal(65000m, updatedBudget.BudgetCap);
+        Assert.Equal("Updated Objectives", updatedBudget.Description);
+
+        var linkedEvent = Assert.Single(context.CashForWorkEvents);
+        Assert.Equal("Updated Seminar Title", linkedEvent.Title);
+        Assert.Equal(600m, linkedEvent.UnitAmount);
+        Assert.Equal(CashForWorkBenefitType.Cash, linkedEvent.BenefitType);
+    }
+
+    [Fact]
+    public async Task UpdateProgramAsync_UpdatesAyudaProgramFields()
+    {
+        using var context = TestDbContextFactory.CreateContext();
+        var admin = SeedAdmin(context);
+        var program = SeedProgram(context, admin.Id);
+        var service = new BudgetManagementService(context);
+
+        var updateResult = await service.UpdateProgramAsync(
+            program.Id,
+            new AyudaProgramRequest(
+                program.ProgramCode,
+                "Updated Medical Mission",
+                AyudaProgramType.GeneralPurpose,
+                "Updated medical description",
+                "Medicine Pack",
+                AssistanceReleaseKind.Goods,
+                0m,
+                "Paracetamol & Vitamins",
+                "Health Kit",
+                2m,
+                "kits",
+                new DateTime(2026, 7, 1),
+                new DateTime(2026, 7, 10),
+                80000m,
+                AyudaProgramDistributionStatus.Open),
+            admin.Id);
+
+        Assert.True(updateResult.IsSuccess);
+
+        var updated = context.AyudaPrograms.Find(program.Id);
+        Assert.NotNull(updated);
+        Assert.Equal("Updated Medical Mission", updated.ProgramName);
+        Assert.Equal(AssistanceReleaseKind.Goods, updated.ReleaseKind);
+        Assert.Equal(80000m, updated.BudgetCap);
+        Assert.Equal("Health Kit", updated.ItemName);
+        Assert.Equal(2m, updated.QuantityPerBeneficiary);
+        Assert.Equal("kits", updated.UnitOfMeasure);
+    }
 }

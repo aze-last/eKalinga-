@@ -85,6 +85,90 @@ public sealed class CashForWorkServiceTests
     }
 
     [Fact]
+    public async Task GetReleaseReadySummary_SupportsHouseholdMemberAndVerifiedBeneficiaries()
+    {
+        using var context = TestDbContextFactory.CreateContext();
+        var admin = SeedAdmin(context);
+        var verifiedBeneficiary = SeedApprovedBeneficiary(context, 4001, "Maria Clara", VerificationStatus.Verified);
+        
+        var household = new Household
+        {
+            HouseholdCode = "HH-9001",
+            HeadName = "Juan Dela Cruz",
+            AddressLine = "Purok 1",
+            ContactNumber = "09123456789"
+        };
+        context.Households.Add(household);
+        context.SaveChanges();
+
+        var householdMember = new HouseholdMember
+        {
+            HouseholdId = household.Id,
+            FullName = "Crisostomo Ibarra",
+            RelationshipToHead = "Son"
+        };
+        context.HouseholdMembers.Add(householdMember);
+        context.SaveChanges();
+
+        var service = new CashForWorkService(context);
+        var cashForWorkEvent = await service.CreateEventAsync(
+            "Community Gardening",
+            "Plaza",
+            DateTime.Today,
+            new TimeSpan(8, 0, 0),
+            new TimeSpan(12, 0, 0),
+            null,
+            admin.Id);
+
+        var participant1 = new CashForWorkParticipant
+        {
+            EventId = cashForWorkEvent.Id,
+            BeneficiaryStagingId = verifiedBeneficiary.StagingID,
+            AddedByUserId = admin.Id,
+            AddedAt = DateTime.Now
+        };
+        var participant2 = new CashForWorkParticipant
+        {
+            EventId = cashForWorkEvent.Id,
+            HouseholdMemberId = householdMember.Id,
+            AddedByUserId = admin.Id,
+            AddedAt = DateTime.Now
+        };
+        context.CashForWorkParticipants.AddRange(participant1, participant2);
+        context.SaveChanges();
+
+        context.CashForWorkAttendances.AddRange(
+            new CashForWorkAttendance
+            {
+                ParticipantId = participant1.Id,
+                AttendanceDate = DateTime.Today,
+                Status = CashForWorkAttendanceStatus.Present,
+                Source = AttendanceCaptureSource.Manual,
+                RecordedByUserId = admin.Id,
+                RecordedAt = DateTime.Now
+            },
+            new CashForWorkAttendance
+            {
+                ParticipantId = participant2.Id,
+                AttendanceDate = DateTime.Today,
+                Status = CashForWorkAttendanceStatus.Present,
+                Source = AttendanceCaptureSource.Manual,
+                RecordedByUserId = admin.Id,
+                RecordedAt = DateTime.Now
+            }
+        );
+        context.SaveChanges();
+
+        var summary = service.GetReleaseReadySummary(cashForWorkEvent.Id);
+
+        Assert.Equal(2, summary.ApprovedParticipantCount);
+        Assert.Equal(2, summary.PresentParticipantCount);
+        Assert.Equal(2, summary.ReleaseReadyParticipantCount);
+        Assert.Contains(summary.ReleaseReadyParticipants, p => p.FullName == "Maria Clara" && p.BeneficiaryId == verifiedBeneficiary.BeneficiaryId);
+        Assert.Contains(summary.ReleaseReadyParticipants, p => p.FullName == "Crisostomo Ibarra" && p.BeneficiaryId == "HH-9001");
+    }
+
+    [Fact]
     public async Task SaveScannerAttendance_UsesScannerSource_AndPreventsDuplicateAttendance()
     {
         using var context = TestDbContextFactory.CreateContext();

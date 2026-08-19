@@ -1307,8 +1307,8 @@
                                           IsChecked="{Binding HouseholdOverrideAcknowledged}"
                                           Visibility="{Binding RequiresHouseholdOverride, Converter={StaticResource BooleanToVisibilityConverter}}"
                                           FontSize="12" Foreground="White"/>
-                                <Button Content="DECLINE" Command="{Binding CancelHouseholdConfirmCommand}" Style="{StaticResource MaterialDesignOutlinedButton}" Foreground="#FCA5A5" BorderBrush="#EF4444" FontWeight="Bold" Margin="0,0,12,0"/>
-                                <Button Content="MARK AS PENDING" Command="{Binding PromptPendingReasonCommand}" Style="{StaticResource MaterialDesignOutlinedButton}" Foreground="#FEF08A" BorderBrush="#F59E0B" FontWeight="Bold" Height="45" Padding="18,0" Margin="0,0,12,0"/>
+                                <Button Content="DECLINE" Command="{Binding CancelHouseholdConfirmCommand}" Background="#BE123C" Foreground="White" FontWeight="Bold" Height="45" Padding="20,0" Margin="0,0,12,0" BorderThickness="0"/>
+                                <Button Content="MARK AS PENDING" Command="{Binding PromptPendingReasonCommand}" Background="#F59E0B" Foreground="#0F172A" FontWeight="Bold" Height="45" Padding="18,0" Margin="0,0,12,0" BorderThickness="0"/>
                                 <Button Content="CONFIRM RELEASE" Command="{Binding ConfirmHouseholdReleaseCommand}" Style="{StaticResource OperationalActionButton}" Height="45" Padding="30,0" FontSize="16" FontWeight="Bold"/>
                             </StackPanel>
                         </Grid>

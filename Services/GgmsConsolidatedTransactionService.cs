@@ -48,6 +48,7 @@ namespace AttendanceShiftingManagement.Services
         private const string AidRequestProjectName = "Aid Request";
         private const string ProjectDistributionProjectName = "Project Distribution";
         private const string CashForWorkProjectName = "Cash For Work";
+        private const string SeminarProjectName = "Seminar";
 
         private static readonly DatabaseConnectionPreset DefaultConnection = new()
         {
@@ -311,20 +312,24 @@ namespace AttendanceShiftingManagement.Services
                         .FirstOrDefaultAsync();
                 }
 
+                var isSeminar = cashForWorkEvent.EventKind == CashForWorkEventKind.Seminar;
                 var transactionType = NormalizeAndLimit(
-                    cashForWorkEvent.EventKind == CashForWorkEventKind.Seminar
-                        ? "Seminar Release"
+                    isSeminar
+                        ? "Seminar"
                         : budgetLabel
                             ?? cashForWorkEvent.AyudaProgram?.ProgramName
                             ?? "Cash-for-Work Payout",
-                    SharedColumnMaxLength) ?? "Cash-for-Work Payout";
+                    SharedColumnMaxLength) ?? (isSeminar ? "Seminar" : "Cash-for-Work Payout");
                 var releaseDate = (cashForWorkEvent.ReleasedAt ?? DateTime.Now).Date;
 
-                // One stable project_code per CFW event (the project/batch), not per participant.
+                // One stable project_code per CFW/Seminar event (the project/batch), not per participant.
                 var cfwProgram = cashForWorkEvent.AyudaProgram
                     ?? await ResolveProgramAsync(context, cashForWorkEvent.AyudaProgramId);
-                var projectCode = BuildProjectCode(cfwProgram, $"AMS-CFW-{cashForWorkEvent.Id:D6}");
+                var projectCode = isSeminar
+                    ? BuildProjectCode(cfwProgram, $"AMS-SEM-{cashForWorkEvent.Id:D6}")
+                    : BuildProjectCode(cfwProgram, $"AMS-CFW-{cashForWorkEvent.Id:D6}");
                 var projectDetailsId = NormalizeAndLimit(cfwProgram?.SourceProjectDetailsId, SharedColumnMaxLength);
+                var projectName = isSeminar ? SeminarProjectName : CashForWorkProjectName;
 
                 var entries = new List<GgmsConsolidatedTransactionEntry>();
                 foreach (var participant in participants)
@@ -343,7 +348,7 @@ namespace AttendanceShiftingManagement.Services
                         beneficiary.CivilRegistryId,
                         projectCode,
                         projectDetailsId,
-                        CashForWorkProjectName,
+                        projectName,
                         _officeId,
                         beneficiary.FullName,
                         beneficiary.FirstName,

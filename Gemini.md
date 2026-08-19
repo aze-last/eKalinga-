@@ -28,6 +28,10 @@ The app uses:
 
 Base all help on the actual repo structure and current implementation.
 
+## Developer Note:
+
+Cash for work and seminars got the same UI, same features, and same logic. they're basically the same module just different name.
+
 ## Repo Safety
 
 There are 2 related repos:

@@ -57,7 +57,7 @@ namespace AttendanceShiftingManagement.Views
                     Window.GetWindow(this) is MainWindow cfwMainWindow &&
                     cfwMainWindow.DataContext is BarangayMainViewModel cfwMainVm)
                 {
-                    cfwMainVm.ShowCashForWorkPayoutCommand.Execute(null);
+                    cfwMainVm.ShowCashForWorkCommand.Execute(null);
                 }
                 return;
             }

@@ -36,6 +36,35 @@ namespace AttendanceShiftingManagement.ViewModels
         public bool HasLinkedProject { get; init; }
         public string LinkedProjectName { get; init; } = string.Empty;
         public bool IsFundSource => Category == "Private Donation" || Category == "Government Fund" || Category == "GGMS Project";
+        public bool IsProject => Category is "Cash for Work Project" or "Seminar Project" or "Distribution Project";
+        public bool IsCashForWorkOrSeminar => Category is "Cash for Work Project" or "Seminar Project";
+        public bool IsDistributionProject => Category == "Distribution Project";
+
+        // Donor & Funding Source Details
+        public string FundingSourceSummary { get; init; } = string.Empty;
+        public string? DonorName { get; init; }
+        public string? DonorType { get; init; }
+        public DateTime? DonationDate { get; init; }
+        public string? DonationReferenceNumber { get; init; }
+        public string? DonationProofType { get; init; }
+        public string? DonationProofReference { get; init; }
+        public decimal? DonationAmount { get; init; }
+        public string? DonationRemarks { get; init; }
+        public string? DonationGoodsSummary { get; init; }
+
+        // Operational & Event Details
+        public string? ReleaseKind { get; init; }
+        public decimal? DailyRate { get; init; }
+        public string? ItemName { get; init; }
+        public decimal? QuantityPerBeneficiary { get; init; }
+        public string? UnitOfMeasure { get; init; }
+        public string? BenefitDescription { get; init; }
+        public DateTime? StartDate { get; init; }
+        public DateTime? EndDate { get; init; }
+        public string? Location { get; init; }
+        public int? LinkedEventId { get; init; }
+        public string? LinkedEventTitle { get; init; }
+        public string? Description { get; init; }
     }
 
     public class EnrollmentBeneficiaryOption : ObservableObject
@@ -188,6 +217,30 @@ namespace AttendanceShiftingManagement.ViewModels
         private int _totalLedgerPages = 1;
         private int _totalLedgerEntries = 0;
         private const int LedgerPageSize = 25;
+
+        private bool _isEditProjectPanelOpen;
+        private string _editProjectCode = string.Empty;
+        private string _editProjectName = string.Empty;
+        private string _editProjectDescription = string.Empty;
+        private string _editProjectCapText = string.Empty;
+        private string _editDailyRateText = string.Empty;
+        private string _editItemName = string.Empty;
+        private string _editQuantityText = string.Empty;
+        private string _editUnitOfMeasure = string.Empty;
+        private string _editBenefitDescription = string.Empty;
+        private DateTime? _editStartDate = DateTime.Today;
+        private DateTime? _editEndDate = DateTime.Today.AddMonths(1);
+        private bool _isEditCash = true;
+        private bool _isEditCfwOrSeminar;
+        private bool _isEditDistribution;
+        private bool _hasEditProjectError;
+        private string? _editProjectErrorMessage;
+        private decimal _selectedBudgetDisbursed;
+        private int _selectedBudgetBeneficiariesCount;
+
+        private readonly RelayCommand _openEditProjectCommand;
+        private readonly RelayCommand _closeEditProjectCommand;
+        private readonly RelayCommand _saveEditProjectCommand;
 
         public int CurrentLedgerPage
         {
@@ -880,7 +933,7 @@ namespace AttendanceShiftingManagement.ViewModels
             _ledgerEntriesView = CollectionViewSource.GetDefaultView(LedgerEntries);
 
             AllBudgets = new ObservableCollection<BudgetRecordListItem>();
-            TypeFilters = new ObservableCollection<string> { AllTypeFilter, "Global Aid Cap", "Global CFW Cap", "Private Donation", "Government Fund", "GGMS Project" };
+            TypeFilters = new ObservableCollection<string> { AllTypeFilter, "All Projects", "Cash for Work Projects", "Seminar Projects", "Distribution Projects", "Private Donations", "Government Funds", "GGMS Projects", "Global Aid Cap" };
             _budgetsView = CollectionViewSource.GetDefaultView(AllBudgets);
             _budgetsView.Filter = FilterBudgetRecord;
 
@@ -910,6 +963,10 @@ namespace AttendanceShiftingManagement.ViewModels
             _openNewDonationProjectCommand = new RelayCommand(_ => OpenNewDonationProjectPanel(), _ => !IsBusy && !IsProjectCreationPanelOpen);
             _closeProjectCreationPanelCommand = new RelayCommand(_ => CloseProjectCreationPanel());
             _confirmCreateProjectCommand = new RelayCommand(async _ => await ConfirmCreateProjectAsync(), _ => !IsBusy && CanConfirmCreateProject());
+
+            _openEditProjectCommand = new RelayCommand(param => OpenEditProject(param as BudgetRecordListItem ?? SelectedBudget), _ => !IsBusy && (SelectedBudget?.IsProject == true || _isEditProjectPanelOpen));
+            _closeEditProjectCommand = new RelayCommand(_ => CloseEditProjectPanel());
+            _saveEditProjectCommand = new RelayCommand(async _ => await SaveEditProjectAsync(), _ => !IsBusy);
 
             _selectAllFilteredEnrollmentCommand = new RelayCommand(async _ => await SelectAllFilteredEnrollmentAsync());
             _deselectAllEnrollmentCommand = new RelayCommand(_ => DeselectAllEnrollment());
@@ -955,6 +1012,9 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand BrowseProofCommand => _browseProofCommand;
         public ICommand ExportLedgerCommand => _exportLedgerCommand;
         public ICommand UnlockFundsCommand => _unlockFundsCommand;
+        public ICommand OpenEditProjectCommand => _openEditProjectCommand;
+        public ICommand CloseEditProjectCommand => _closeEditProjectCommand;
+        public ICommand SaveEditProjectCommand => _saveEditProjectCommand;
         public ICommand SelectAllFilteredEnrollmentCommand => _selectAllFilteredEnrollmentCommand;
         public ICommand DeselectAllEnrollmentCommand => _deselectAllEnrollmentCommand;
         public ICommand PreviousEnrollmentPageCommand => _previousEnrollmentPageCommand;
@@ -1244,7 +1304,7 @@ namespace AttendanceShiftingManagement.ViewModels
             set => SetProperty(ref _unlockRemarks, value);
         }
 
-        public bool IsAnyOverlayOpen => _activePanel == BudgetWorkspacePanel.Ledger || IsProjectCreationPanelOpen;
+        public bool IsAnyOverlayOpen => _activePanel == BudgetWorkspacePanel.Ledger || IsProjectCreationPanelOpen || IsEditProjectPanelOpen;
 
         private async void SyncWithSelectedBudget()
         {
@@ -1252,6 +1312,9 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 _currentIndex = -1;
                 IsGlobalCapSelected = false;
+                SelectedBudgetDisbursed = 0m;
+                SelectedBudgetRemaining = 0m;
+                SelectedBudgetBeneficiariesCount = 0;
                 return;
             }
 
@@ -1259,51 +1322,120 @@ namespace AttendanceShiftingManagement.ViewModels
             _currentIndex = viewList.IndexOf(SelectedBudget);
             IsGlobalCapSelected = SelectedBudget.Category is "Global Aid Cap" or "Global CFW Cap";
 
-            // Calculate Remaining
             try
             {
                 await using var context = new LocalDbContext();
-                decimal spend;
+                decimal spend = 0m;
+                int beneficiaries = 0;
 
-                if (SelectedBudget.Category == "GGMS Project" && SelectedBudget.OriginalItem is GgmsProjectCache ggmsProject)
+                if (SelectedBudget.Category is "Cash for Work Project" or "Seminar Project")
                 {
-                    // Releases attributed to this GGMS envelope via the linked local program.
+                    var releaseEntries = await context.BudgetLedgerEntries
+                        .AsNoTracking()
+                        .Where(entry => entry.EntryType == BudgetLedgerEntryType.Release &&
+                                        entry.CashForWorkBudgetId == SelectedBudget.Id)
+                        .ToListAsync();
+
+                    spend = releaseEntries.Sum(e => e.TotalAmount);
+                    beneficiaries = releaseEntries.Sum(e => e.RecipientCount);
+
+                    if (beneficiaries == 0 && SelectedBudget.LinkedEventId.HasValue)
+                    {
+                        beneficiaries = await context.CashForWorkParticipants
+                            .AsNoTracking()
+                            .CountAsync(p => !p.IsDeleted && p.EventId == SelectedBudget.LinkedEventId.Value);
+                    }
+                }
+                else if (SelectedBudget.Category == "Distribution Project")
+                {
+                    var releaseEntries = await context.BudgetLedgerEntries
+                        .AsNoTracking()
+                        .Where(entry => entry.EntryType == BudgetLedgerEntryType.Release &&
+                                        entry.ProgramId == SelectedBudget.Id)
+                        .ToListAsync();
+
+                    spend = releaseEntries.Sum(e => e.TotalAmount);
+                    beneficiaries = releaseEntries.Sum(e => e.RecipientCount);
+
+                    if (beneficiaries == 0)
+                    {
+                        beneficiaries = await context.AyudaProjectBeneficiaries
+                            .AsNoTracking()
+                            .CountAsync(b => b.AyudaProgramId == SelectedBudget.Id);
+                    }
+                }
+                else if (SelectedBudget.Category == "GGMS Project" && SelectedBudget.OriginalItem is GgmsProjectCache ggmsProject)
+                {
                     var linkedProgramIds = await context.AyudaPrograms
                         .AsNoTracking()
                         .Where(p => p.SourceProjectDetailsId == ggmsProject.ProjectDetailsId)
                         .Select(p => p.Id)
                         .ToListAsync();
 
-                    spend = linkedProgramIds.Count == 0
-                        ? 0m
+                    var releaseEntries = linkedProgramIds.Count == 0
+                        ? new List<BudgetLedgerEntry>()
                         : await context.BudgetLedgerEntries
                             .AsNoTracking()
                             .Where(entry => entry.EntryType == BudgetLedgerEntryType.Release &&
                                             entry.ProgramId != null &&
                                             linkedProgramIds.Contains(entry.ProgramId.Value))
-                            .SumAsync(entry => (decimal?)entry.TotalAmount) ?? 0m;
+                            .ToListAsync();
+
+                    spend = releaseEntries.Sum(e => e.TotalAmount);
+                    beneficiaries = releaseEntries.Sum(e => e.RecipientCount);
+                }
+                else if (SelectedBudget.Category == "Private Donation")
+                {
+                    var linkedProgramIds = await context.AyudaPrograms
+                        .AsNoTracking()
+                        .Where(p => p.SourceDonationId == SelectedBudget.Id)
+                        .Select(p => p.Id)
+                        .ToListAsync();
+
+                    var linkedCfwIds = await context.CashForWorkBudgets
+                        .AsNoTracking()
+                        .Where(p => p.SourceDonationId == SelectedBudget.Id)
+                        .Select(p => p.Id)
+                        .ToListAsync();
+
+                    var releaseEntries = await context.BudgetLedgerEntries
+                        .AsNoTracking()
+                        .Where(entry => entry.EntryType == BudgetLedgerEntryType.Release &&
+                                       ((entry.ProgramId != null && linkedProgramIds.Contains(entry.ProgramId.Value)) ||
+                                        (entry.CashForWorkBudgetId != null && linkedCfwIds.Contains(entry.CashForWorkBudgetId.Value))))
+                        .ToListAsync();
+
+                    spend = releaseEntries.Sum(e => e.TotalAmount);
+                    beneficiaries = releaseEntries.Sum(e => e.RecipientCount);
                 }
                 else
                 {
-                    spend = await context.BudgetLedgerEntries
+                    var releaseEntries = await context.BudgetLedgerEntries
                         .AsNoTracking()
                         .Where(entry => entry.EntryType == BudgetLedgerEntryType.Release &&
-                                       (entry.AssistanceCaseBudgetId == SelectedBudget.Id && SelectedBudget.Category == "Global Aid Cap" ||
-                                        entry.CashForWorkBudgetId == SelectedBudget.Id && SelectedBudget.Category == "Global CFW Cap"))
-                        .SumAsync(entry => (decimal?)entry.TotalAmount) ?? 0m;
+                                       (entry.AssistanceCaseBudgetId == SelectedBudget.Id && SelectedBudget.Category == "Global Aid Cap"))
+                        .ToListAsync();
+
+                    spend = releaseEntries.Sum(e => e.TotalAmount);
+                    beneficiaries = releaseEntries.Sum(e => e.RecipientCount);
                 }
 
+                SelectedBudgetDisbursed = spend;
                 SelectedBudgetRemaining = (SelectedBudget.BudgetCap ?? 0m) - spend;
+                SelectedBudgetBeneficiariesCount = beneficiaries;
             }
             catch
             {
-                SelectedBudgetRemaining = 0m;
+                SelectedBudgetDisbursed = 0m;
+                SelectedBudgetRemaining = SelectedBudget.BudgetCap ?? 0m;
+                SelectedBudgetBeneficiariesCount = 0;
             }
 
             OnPropertyChanged(nameof(CurrentPosition));
             OnPropertyChanged(nameof(EmptyStateVisibility));
             OnPropertyChanged(nameof(DetailVisibility));
             _unlockFundsCommand.RaiseCanExecuteChanged();
+            _openEditProjectCommand.RaiseCanExecuteChanged();
         }
 
         private void UpdateNavigationState()
@@ -1343,15 +1475,54 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             if (item is not BudgetRecordListItem record) return false;
 
-            if (!string.Equals(SelectedTypeFilter, AllTypeFilter) && !string.Equals(record.Category, SelectedTypeFilter))
-                return false;
+            if (!string.Equals(SelectedTypeFilter, AllTypeFilter))
+            {
+                if (SelectedTypeFilter == "All Projects")
+                {
+                    if (!record.IsProject) return false;
+                }
+                else if (SelectedTypeFilter == "Cash for Work Projects")
+                {
+                    if (record.Category != "Cash for Work Project") return false;
+                }
+                else if (SelectedTypeFilter == "Seminar Projects")
+                {
+                    if (record.Category != "Seminar Project") return false;
+                }
+                else if (SelectedTypeFilter == "Distribution Projects")
+                {
+                    if (record.Category != "Distribution Project") return false;
+                }
+                else if (SelectedTypeFilter == "Private Donations")
+                {
+                    if (record.Category != "Private Donation") return false;
+                }
+                else if (SelectedTypeFilter == "Government Funds")
+                {
+                    if (record.Category != "Government Fund") return false;
+                }
+                else if (SelectedTypeFilter == "GGMS Projects")
+                {
+                    if (record.Category != "GGMS Project") return false;
+                }
+                else if (SelectedTypeFilter == "Global Aid Cap")
+                {
+                    if (record.Category != "Global Aid Cap") return false;
+                }
+                else if (!string.Equals(record.Category, SelectedTypeFilter, StringComparison.OrdinalIgnoreCase))
+                {
+                    return false;
+                }
+            }
 
             if (string.IsNullOrWhiteSpace(SearchText)) return true;
 
             var search = SearchText.Trim();
             return record.Code.Contains(search, StringComparison.OrdinalIgnoreCase) ||
                    record.Name.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                   record.Category.Contains(search, StringComparison.OrdinalIgnoreCase);
+                   record.Category.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                   (!string.IsNullOrWhiteSpace(record.DonorName) && record.DonorName.Contains(search, StringComparison.OrdinalIgnoreCase)) ||
+                   (!string.IsNullOrWhiteSpace(record.FundingSourceSummary) && record.FundingSourceSummary.Contains(search, StringComparison.OrdinalIgnoreCase));
         }
 
         private async Task LoadBudgetsViewAsync()
@@ -1361,12 +1532,17 @@ namespace AttendanceShiftingManagement.ViewModels
             
             var acBudgets = await budgetService.GetAssistanceCaseBudgetsAsync();
             var cfwBudgets = await budgetService.GetCashForWorkBudgetsAsync();
+            var ayudaPrograms = await context.AyudaPrograms.AsNoTracking().ToListAsync();
+            var donations = await budgetService.GetPrivateDonationsAsync(take: 200);
+            var snapshots = await context.GovernmentBudgetSnapshots.AsNoTracking().ToListAsync();
+            var cfwEvents = await context.CashForWorkEvents.AsNoTracking().Where(e => !e.IsDeleted).ToListAsync();
 
             var currentSelectedId = SelectedBudget?.Id;
             var currentCategory = SelectedBudget?.Category;
 
             AllBudgets.Clear();
 
+            // Global Aid Cap
             foreach (var b in acBudgets)
             {
                 AllBudgets.Add(new BudgetRecordListItem
@@ -1377,31 +1553,111 @@ namespace AttendanceShiftingManagement.ViewModels
                     Category = "Global Aid Cap",
                     BudgetCap = b.BudgetCap,
                     Status = b.IsActive ? "Active" : "Inactive",
+                    Description = b.Description,
+                    FundingSourceSummary = "General Assistance Pool",
                     OriginalItem = b
                 });
             }
 
+            // Cash for Work & Seminar Projects
             foreach (var b in cfwBudgets)
             {
+                var isSeminar = b.BudgetCode.StartsWith("SEM-", StringComparison.OrdinalIgnoreCase);
+                var category = isSeminar ? "Seminar Project" : "Cash for Work Project";
+
+                var donor = b.SourceDonationId.HasValue ? donations.FirstOrDefault(d => d.Id == b.SourceDonationId.Value) : null;
+                var linkedEvent = cfwEvents.FirstOrDefault(e => e.CashForWorkBudgetId == b.Id);
+
+                var fundingSummary = donor != null
+                    ? $"Private Donation ({donor.DonorName})"
+                    : (!string.IsNullOrEmpty(b.SourceProjectDetailsId)
+                        ? $"GGMS Project ({b.SourceProjectDetailsId})"
+                        : (b.SourceGGMSBudgetId.HasValue ? "Government Budget Snapshot" : "General Municipality Fund"));
+
+                var releaseKindStr = linkedEvent != null
+                    ? (linkedEvent.BenefitType == CashForWorkBenefitType.Goods ? "Goods" : "Cash")
+                    : (b.DailyRate.HasValue ? "Cash" : "Goods");
+
                 AllBudgets.Add(new BudgetRecordListItem
                 {
                     Id = b.Id,
                     Code = b.BudgetCode,
                     Name = b.BudgetName,
-                    Category = "Cash for Work Project",
-                    BudgetCap = b.BudgetCap,
+                    Category = category,
+                    BudgetCap = b.BudgetCap ?? donor?.Amount,
                     Status = b.IsActive ? "Active" : "Inactive",
-                    OriginalItem = b
+                    Description = b.Description,
+                    OriginalItem = b,
+                    FundingSourceSummary = fundingSummary,
+                    DonorName = donor?.DonorName,
+                    DonorType = donor?.DonorType.ToString(),
+                    DonationDate = donor?.DateReceived,
+                    DonationReferenceNumber = donor?.ReferenceNumber,
+                    DonationProofType = donor?.ProofType.ToString(),
+                    DonationProofReference = donor?.ProofReferenceNumber,
+                    DonationAmount = donor?.Amount,
+                    DonationRemarks = donor?.Remarks,
+                    DonationGoodsSummary = donor != null && donor.DonationType == DonationType.Goods ? $"{donor.Quantity} {donor.UnitOfMeasure} of {donor.ItemName}" : null,
+                    ReleaseKind = releaseKindStr,
+                    DailyRate = b.DailyRate,
+                    ItemName = donor?.ItemName,
+                    QuantityPerBeneficiary = donor?.Quantity,
+                    UnitOfMeasure = donor?.UnitOfMeasure,
+                    BenefitDescription = linkedEvent?.BenefitDescription,
+                    StartDate = b.StartDate ?? linkedEvent?.EventDate,
+                    EndDate = b.EndDate ?? linkedEvent?.FinishDate,
+                    Location = linkedEvent?.Location,
+                    LinkedEventId = linkedEvent?.Id,
+                    LinkedEventTitle = linkedEvent?.Title
                 });
             }
 
-            var donations = await budgetService.GetPrivateDonationsAsync();
-            await using var ggmsContext = new LocalDbContext();
-            var allProjects = await ggmsContext.AyudaPrograms.AsNoTracking().ToListAsync();
+            // Distribution Projects (Ayuda Programs)
+            foreach (var p in ayudaPrograms)
+            {
+                var donor = p.SourceDonationId.HasValue ? donations.FirstOrDefault(d => d.Id == p.SourceDonationId.Value) : null;
+                var fundingSummary = donor != null
+                    ? $"Private Donation ({donor.DonorName})"
+                    : (!string.IsNullOrEmpty(p.SourceProjectDetailsId)
+                        ? $"GGMS Project ({p.SourceProjectDetailsId})"
+                        : (p.SourceGGMSBudgetId.HasValue ? "Government Budget Snapshot" : "General Municipality Fund"));
 
+                AllBudgets.Add(new BudgetRecordListItem
+                {
+                    Id = p.Id,
+                    Code = p.ProgramCode,
+                    Name = p.ProgramName,
+                    Category = "Distribution Project",
+                    BudgetCap = p.BudgetCap ?? donor?.Amount,
+                    Status = p.IsActive ? p.DistributionStatus.ToString() : "Inactive",
+                    Description = p.Description,
+                    OriginalItem = p,
+                    FundingSourceSummary = fundingSummary,
+                    DonorName = donor?.DonorName,
+                    DonorType = donor?.DonorType.ToString(),
+                    DonationDate = donor?.DateReceived,
+                    DonationReferenceNumber = donor?.ReferenceNumber,
+                    DonationProofType = donor?.ProofType.ToString(),
+                    DonationProofReference = donor?.ProofReferenceNumber,
+                    DonationAmount = donor?.Amount,
+                    DonationRemarks = donor?.Remarks,
+                    DonationGoodsSummary = donor != null && donor.DonationType == DonationType.Goods ? $"{donor.Quantity} {donor.UnitOfMeasure} of {donor.ItemName}" : null,
+                    ReleaseKind = p.ReleaseKind.ToString(),
+                    DailyRate = p.UnitAmount,
+                    ItemName = p.ItemName ?? donor?.ItemName,
+                    QuantityPerBeneficiary = p.QuantityPerBeneficiary ?? donor?.Quantity,
+                    UnitOfMeasure = p.UnitOfMeasure ?? donor?.UnitOfMeasure,
+                    BenefitDescription = p.ItemDescription,
+                    StartDate = p.StartDate,
+                    EndDate = p.EndDate,
+                    Location = p.ProgramName
+                });
+            }
+
+            // Private Donations (Fund Sources)
             foreach (var b in donations)
             {
-                var linkedProject = allProjects.FirstOrDefault(p => p.SourceDonationId == b.Id);
+                var linkedProject = ayudaPrograms.FirstOrDefault(p => p.SourceDonationId == b.Id);
                 var linkedCfwProject = cfwBudgets.FirstOrDefault(p => p.SourceDonationId == b.Id);
                 var linkedName = linkedProject?.ProgramName ?? linkedCfwProject?.BudgetName ?? string.Empty;
                 var isLinked = linkedProject != null || linkedCfwProject != null;
@@ -1416,14 +1672,27 @@ namespace AttendanceShiftingManagement.ViewModels
                     Status = "Active",
                     OriginalItem = b,
                     HasLinkedProject = isLinked,
-                    LinkedProjectName = linkedName
+                    LinkedProjectName = linkedName,
+                    DonorName = b.DonorName,
+                    DonorType = b.DonorType.ToString(),
+                    DonationDate = b.DateReceived,
+                    DonationReferenceNumber = b.ReferenceNumber,
+                    DonationProofType = b.ProofType.ToString(),
+                    DonationProofReference = b.ProofReferenceNumber,
+                    DonationAmount = b.Amount,
+                    DonationRemarks = b.Remarks,
+                    DonationGoodsSummary = b.DonationType == DonationType.Goods ? $"{b.Quantity} {b.UnitOfMeasure} of {b.ItemName}" : null,
+                    ReleaseKind = b.DonationType == DonationType.Goods ? "Goods" : "Cash",
+                    ItemName = b.ItemName,
+                    QuantityPerBeneficiary = b.Quantity,
+                    UnitOfMeasure = b.UnitOfMeasure
                 });
             }
 
-            var snapshots = await ggmsContext.GovernmentBudgetSnapshots.AsNoTracking().ToListAsync();
+            // Government Budget Snapshots
             foreach (var b in snapshots)
             {
-                var linkedProject = allProjects.FirstOrDefault(p => p.SourceGGMSBudgetId == b.Id);
+                var linkedProject = ayudaPrograms.FirstOrDefault(p => p.SourceGGMSBudgetId == b.Id);
                 var linkedCfwProject = cfwBudgets.FirstOrDefault(p => p.SourceGGMSBudgetId == b.Id);
                 var linkedName = linkedProject?.ProgramName ?? linkedCfwProject?.BudgetName ?? string.Empty;
                 var isLinked = linkedProject != null || linkedCfwProject != null;
@@ -1442,22 +1711,19 @@ namespace AttendanceShiftingManagement.ViewModels
                 });
             }
 
-            // Mirrored GGMS project sub-allocations (refreshed by Sync GGMS / module open).
-            var ggmsProjects = await ggmsContext.GgmsProjectCache
+            // GGMS Projects
+            var ggmsProjects = await context.GgmsProjectCache
                 .AsNoTracking()
                 .OrderByDescending(p => p.SourceCreatedAt)
                 .ToListAsync();
 
-            // Self-heal: IsLinked can go stale when the linked local program is removed
-            // (developer purge) — a stale flag shows a phantom project badge and blocks
-            // CREATE PROJECT on that GGMS row.
             var staleLinkIds = ggmsProjects
-                .Where(p => p.IsLinked && allProjects.All(a => a.SourceProjectDetailsId != p.ProjectDetailsId) && cfwBudgets.All(c => c.SourceProjectDetailsId != p.ProjectDetailsId))
+                .Where(p => p.IsLinked && ayudaPrograms.All(a => a.SourceProjectDetailsId != p.ProjectDetailsId) && cfwBudgets.All(c => c.SourceProjectDetailsId != p.ProjectDetailsId))
                 .Select(p => p.GgmsProjectCacheId)
                 .ToList();
             if (staleLinkIds.Count > 0)
             {
-                await ggmsContext.GgmsProjectCache
+                await context.GgmsProjectCache
                     .Where(p => staleLinkIds.Contains(p.GgmsProjectCacheId))
                     .ExecuteUpdateAsync(s => s.SetProperty(p => p.IsLinked, false));
                 foreach (var p in ggmsProjects)
@@ -1471,7 +1737,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
             foreach (var b in ggmsProjects)
             {
-                var linkedProject = allProjects.FirstOrDefault(p => p.SourceProjectDetailsId == b.ProjectDetailsId);
+                var linkedProject = ayudaPrograms.FirstOrDefault(p => p.SourceProjectDetailsId == b.ProjectDetailsId);
                 var linkedCfwProject = cfwBudgets.FirstOrDefault(p => p.SourceProjectDetailsId == b.ProjectDetailsId);
                 var linkedName = linkedProject?.ProgramName ?? linkedCfwProject?.BudgetName ?? string.Empty;
                 var isLinked = linkedProject != null || linkedCfwProject != null || b.IsLinked;
@@ -1494,6 +1760,328 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 SelectedBudget = AllBudgets.FirstOrDefault(b => b.Id == currentSelectedId && b.Category == currentCategory);
             }
+        }
+
+        public void OpenEditProject(BudgetRecordListItem? item)
+        {
+            item ??= SelectedBudget;
+            if (item == null || !item.IsProject) return;
+
+            HasEditProjectError = false;
+            EditProjectErrorMessage = null;
+
+            EditProjectCode = item.Code;
+            EditProjectName = item.Name;
+            EditProjectDescription = item.Description ?? string.Empty;
+            EditProjectCapText = item.BudgetCap.HasValue ? item.BudgetCap.Value.ToString("0.00", CultureInfo.InvariantCulture) : string.Empty;
+            EditDailyRateText = item.DailyRate.HasValue ? item.DailyRate.Value.ToString("0.00", CultureInfo.InvariantCulture) : string.Empty;
+            EditItemName = item.ItemName ?? string.Empty;
+            EditQuantityText = item.QuantityPerBeneficiary.HasValue ? item.QuantityPerBeneficiary.Value.ToString("0.00", CultureInfo.InvariantCulture) : string.Empty;
+            EditUnitOfMeasure = item.UnitOfMeasure ?? string.Empty;
+            EditBenefitDescription = item.BenefitDescription ?? string.Empty;
+            EditStartDate = item.StartDate ?? DateTime.Today;
+            EditEndDate = item.EndDate ?? DateTime.Today.AddMonths(1);
+
+            IsEditCash = string.Equals(item.ReleaseKind, "Cash", StringComparison.OrdinalIgnoreCase) || item.DailyRate.HasValue;
+            IsEditCfwOrSeminar = item.IsCashForWorkOrSeminar;
+            IsEditDistribution = item.IsDistributionProject;
+
+            IsEditProjectPanelOpen = true;
+        }
+
+        public void CloseEditProjectPanel()
+        {
+            IsEditProjectPanelOpen = false;
+            HasEditProjectError = false;
+            EditProjectErrorMessage = null;
+        }
+
+        public async Task SaveEditProjectAsync()
+        {
+            if (SelectedBudget == null || !SelectedBudget.IsProject) return;
+
+            if (string.IsNullOrWhiteSpace(EditProjectName))
+            {
+                HasEditProjectError = true;
+                EditProjectErrorMessage = "Project name is required.";
+                return;
+            }
+
+            if (EditStartDate.HasValue && EditEndDate.HasValue && EditStartDate > EditEndDate)
+            {
+                HasEditProjectError = true;
+                EditProjectErrorMessage = "Start date cannot be after end date.";
+                return;
+            }
+
+            decimal? budgetCap = null;
+            if (!string.IsNullOrWhiteSpace(EditProjectCapText))
+            {
+                if (!TryParseAmount(EditProjectCapText, out var cap))
+                {
+                    HasEditProjectError = true;
+                    EditProjectErrorMessage = "Budget cap must be a valid positive amount.";
+                    return;
+                }
+                budgetCap = cap;
+            }
+
+            decimal? dailyRate = null;
+            if (IsEditCash && !string.IsNullOrWhiteSpace(EditDailyRateText))
+            {
+                if (!TryParseAmount(EditDailyRateText, out var rate))
+                {
+                    HasEditProjectError = true;
+                    EditProjectErrorMessage = "Daily rate / unit amount must be a valid positive number.";
+                    return;
+                }
+                dailyRate = rate;
+            }
+
+            decimal? quantity = null;
+            if (!IsEditCash)
+            {
+                if (string.IsNullOrWhiteSpace(EditItemName))
+                {
+                    HasEditProjectError = true;
+                    EditProjectErrorMessage = "Goods item name is required.";
+                    return;
+                }
+
+                if (IsEditDistribution)
+                {
+                    if (string.IsNullOrWhiteSpace(EditQuantityText) || !decimal.TryParse(EditQuantityText, NumberStyles.Number, CultureInfo.InvariantCulture, out var qty) || qty <= 0)
+                    {
+                        HasEditProjectError = true;
+                        EditProjectErrorMessage = "Goods quantity must be greater than zero.";
+                        return;
+                    }
+                    quantity = qty;
+
+                    if (string.IsNullOrWhiteSpace(EditUnitOfMeasure))
+                    {
+                        HasEditProjectError = true;
+                        EditProjectErrorMessage = "Unit of measure is required.";
+                        return;
+                    }
+                }
+            }
+
+            IsBusy = true;
+            SetNeutralStatus($"Saving changes to project '{EditProjectName}'...");
+
+            try
+            {
+                await using var context = new LocalDbContext();
+                var budgetService = new BudgetManagementService(context);
+
+                if (SelectedBudget.IsCashForWorkOrSeminar)
+                {
+                    var benefitType = IsEditCash ? CashForWorkBenefitType.Cash : CashForWorkBenefitType.Goods;
+                    var benefitDesc = !IsEditCash
+                        ? (!string.IsNullOrWhiteSpace(EditBenefitDescription) ? EditBenefitDescription : $"{EditQuantityText} {EditUnitOfMeasure} of {EditItemName}".Trim())
+                        : null;
+
+                    var request = new CashForWorkProjectRequest(
+                        BudgetCode: SelectedBudget.Code,
+                        BudgetName: EditProjectName.Trim(),
+                        Description: NormalizeNullable(EditProjectDescription),
+                        DailyRate: dailyRate,
+                        BudgetCap: budgetCap,
+                        StartDate: EditStartDate ?? DateTime.Today,
+                        EndDate: EditEndDate ?? DateTime.Today.AddMonths(1),
+                        BenefitType: benefitType,
+                        BenefitDescription: benefitDesc);
+
+                    var result = await budgetService.UpdateCashForWorkProjectAsync(SelectedBudget.Id, request, _currentUser.Id);
+                    if (!result.Success)
+                    {
+                        HasEditProjectError = true;
+                        EditProjectErrorMessage = result.Message;
+                        SetErrorStatus(result.Message);
+                        return;
+                    }
+                }
+                else if (SelectedBudget.IsDistributionProject)
+                {
+                    var releaseKind = IsEditCash ? AssistanceReleaseKind.Cash : AssistanceReleaseKind.Goods;
+                    var request = new AyudaProgramRequest(
+                        ProgramCode: SelectedBudget.Code,
+                        ProgramName: EditProjectName.Trim(),
+                        ProgramType: (SelectedBudget.OriginalItem as AyudaProgram)?.ProgramType ?? AyudaProgramType.GeneralPurpose,
+                        Description: NormalizeNullable(EditProjectDescription),
+                        AssistanceType: NormalizeNullable(EditProjectName),
+                        ReleaseKind: releaseKind,
+                        UnitAmount: dailyRate,
+                        ItemDescription: NormalizeNullable(EditBenefitDescription),
+                        ItemName: EditItemName,
+                        QuantityPerBeneficiary: quantity,
+                        UnitOfMeasure: EditUnitOfMeasure,
+                        StartDate: EditStartDate,
+                        EndDate: EditEndDate,
+                        BudgetCap: budgetCap,
+                        DistributionStatus: (SelectedBudget.OriginalItem as AyudaProgram)?.DistributionStatus ?? AyudaProgramDistributionStatus.Open);
+
+                    var result = await budgetService.UpdateProgramAsync(SelectedBudget.Id, request, _currentUser.Id);
+                    if (!result.IsSuccess)
+                    {
+                        HasEditProjectError = true;
+                        EditProjectErrorMessage = result.Message;
+                        SetErrorStatus(result.Message);
+                        return;
+                    }
+                }
+
+                CloseEditProjectPanel();
+                await LoadBudgetsViewAsync();
+                await LoadOverviewAsync();
+                SetSuccessStatus($"Project '{EditProjectName}' updated successfully.");
+            }
+            catch (Exception ex)
+            {
+                HasEditProjectError = true;
+                EditProjectErrorMessage = $"Failed to save project: {ex.Message}";
+                SetErrorStatus(EditProjectErrorMessage);
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
+        public bool IsEditProjectPanelOpen
+        {
+            get => _isEditProjectPanelOpen;
+            set
+            {
+                if (SetProperty(ref _isEditProjectPanelOpen, value))
+                {
+                    OnPropertyChanged(nameof(EditProjectPanelVisibility));
+                    OnPropertyChanged(nameof(IsAnyOverlayOpen));
+                }
+            }
+        }
+
+        public Visibility EditProjectPanelVisibility => IsEditProjectPanelOpen ? Visibility.Visible : Visibility.Collapsed;
+
+        public string EditProjectCode
+        {
+            get => _editProjectCode;
+            set => SetProperty(ref _editProjectCode, value);
+        }
+
+        public string EditProjectName
+        {
+            get => _editProjectName;
+            set => SetProperty(ref _editProjectName, value);
+        }
+
+        public string EditProjectDescription
+        {
+            get => _editProjectDescription;
+            set => SetProperty(ref _editProjectDescription, value);
+        }
+
+        public string EditProjectCapText
+        {
+            get => _editProjectCapText;
+            set => SetProperty(ref _editProjectCapText, value);
+        }
+
+        public string EditDailyRateText
+        {
+            get => _editDailyRateText;
+            set => SetProperty(ref _editDailyRateText, value);
+        }
+
+        public string EditItemName
+        {
+            get => _editItemName;
+            set => SetProperty(ref _editItemName, value);
+        }
+
+        public string EditQuantityText
+        {
+            get => _editQuantityText;
+            set => SetProperty(ref _editQuantityText, value);
+        }
+
+        public string EditUnitOfMeasure
+        {
+            get => _editUnitOfMeasure;
+            set => SetProperty(ref _editUnitOfMeasure, value);
+        }
+
+        public string EditBenefitDescription
+        {
+            get => _editBenefitDescription;
+            set => SetProperty(ref _editBenefitDescription, value);
+        }
+
+        public DateTime? EditStartDate
+        {
+            get => _editStartDate;
+            set => SetProperty(ref _editStartDate, value);
+        }
+
+        public DateTime? EditEndDate
+        {
+            get => _editEndDate;
+            set => SetProperty(ref _editEndDate, value);
+        }
+
+        public bool IsEditCash
+        {
+            get => _isEditCash;
+            set
+            {
+                if (SetProperty(ref _isEditCash, value))
+                {
+                    OnPropertyChanged(nameof(IsEditGoods));
+                }
+            }
+        }
+
+        public bool IsEditGoods
+        {
+            get => !_isEditCash;
+            set => IsEditCash = !value;
+        }
+
+        public bool IsEditCfwOrSeminar
+        {
+            get => _isEditCfwOrSeminar;
+            set => SetProperty(ref _isEditCfwOrSeminar, value);
+        }
+
+        public bool IsEditDistribution
+        {
+            get => _isEditDistribution;
+            set => SetProperty(ref _isEditDistribution, value);
+        }
+
+        public bool HasEditProjectError
+        {
+            get => _hasEditProjectError;
+            set => SetProperty(ref _hasEditProjectError, value);
+        }
+
+        public string? EditProjectErrorMessage
+        {
+            get => _editProjectErrorMessage;
+            set => SetProperty(ref _editProjectErrorMessage, value);
+        }
+
+        public decimal SelectedBudgetDisbursed
+        {
+            get => _selectedBudgetDisbursed;
+            private set => SetProperty(ref _selectedBudgetDisbursed, value);
+        }
+
+        public int SelectedBudgetBeneficiariesCount
+        {
+            get => _selectedBudgetBeneficiariesCount;
+            private set => SetProperty(ref _selectedBudgetBeneficiariesCount, value);
         }
 
         public PrivateDonationDonorType SelectedDonorType

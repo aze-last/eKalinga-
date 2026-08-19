@@ -34,7 +34,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
             ShowDashboardCommand = new RelayCommand(_ => SwitchSection("Dashboard"));
             ShowCashForWorkCommand = new RelayCommand(_ => SwitchSection("CashForWork"));
-            ShowCashForWorkPayoutCommand = new RelayCommand(_ => SwitchSection("CashForWorkPayout"));
+            ShowCashForWorkPayoutCommand = new RelayCommand(_ => SwitchSection("CashForWork"));
             ShowBudgetCommand = new RelayCommand(_ => SwitchSection("Budget"));
             ShowBudgetForSeminarCommand = new RelayCommand(_ => NavigateToBudgetWithPurpose(AyudaProgramType.Seminar));
             ShowBudgetForCashForWorkCommand = new RelayCommand(_ => NavigateToBudgetWithPurpose(AyudaProgramType.CashForWork));
@@ -307,9 +307,7 @@ namespace AttendanceShiftingManagement.ViewModels
                     CurrentSectionSubtitle = "Create seminars and capture scan-based attendance. Attendees register as they scan.";
                     return new SeminarAttendancePage(_currentUser);
                 case "CashForWorkPayout":
-                    CurrentSectionTitle = "Cash-for-Work Payout";
-                    CurrentSectionSubtitle = "Scan workers for daily attendance, then release attendance-based payouts.";
-                    return new CashForWorkPayoutPage(_currentUser);
+                case "CashForWork":
                 default:
                     CurrentSectionTitle = "Attendance & Payouts";
                     CurrentSectionSubtitle = "Create work events, assign participants, and save attendance to release payouts.";

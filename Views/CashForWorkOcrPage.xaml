@@ -106,26 +106,24 @@
                     </StackPanel>
 
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                        <Button Content="DASHBOARD"
-                                Command="{Binding DataContext.ShowDashboardCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                Style="{StaticResource MaterialDesignOutlinedButton}"
-                                Foreground="White" BorderBrush="White" Height="40" Margin="0,0,10,0" FontWeight="Bold"/>
-
                         <Button Content="+ NEW EVENT VIA BUDGET"
                                 Command="{Binding DataContext.ShowBudgetForCashForWorkCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                 Style="{StaticResource GoldActionButton}"
                                 Height="40" Margin="0,0,10,0" FontWeight="Bold"/>
 
-                        <Button Content="REFRESH WORKSPACE"
-                                Command="{Binding RefreshWorkspaceCommand}"
-                                Style="{StaticResource MaterialDesignOutlinedButton}"
-                                Foreground="White" BorderBrush="White" Height="40" Margin="0,0,10,0"/>
+                        <Button Command="{Binding RefreshWorkspaceCommand}"
+                                Background="White" Foreground="#15803D" Height="40" Padding="14,0" Margin="0,0,10,0"
+                                FontWeight="Bold" BorderThickness="0" BorderBrush="Transparent" ToolTip="Refresh Workspace">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="Refresh" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                <TextBlock Text="REFRESH WORKSPACE" FontSize="12" FontWeight="Bold" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
 
                         <Button Command="{Binding DataContext.ShowHistoryCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                Style="{StaticResource MaterialDesignFlatButton}"
-                                Foreground="White" Width="40" Height="40" Padding="0"
-                                ToolTip="View Event History">
-                            <materialDesign:PackIcon Kind="History" Width="22" Height="22"/>
+                                Background="White" Width="40" Height="40" Padding="0"
+                                ToolTip="View Event History" BorderThickness="0" BorderBrush="Transparent">
+                            <materialDesign:PackIcon Kind="History" Width="22" Height="22" Foreground="#15803D"/>
                         </Button>
                     </StackPanel>
                 </Grid>
@@ -247,12 +245,11 @@
 
                                 <Button Content="START PC CAMERA SCANNER"
                                         Command="{Binding OpenPcScannerCommand}"
-                                        Style="{StaticResource GoldActionButton}"
+                                        Style="{StaticResource MaterialDesignOutlinedButton}"
                                         HorizontalContentAlignment="Left" Height="42" Margin="0,0,0,8" FontSize="12" FontWeight="Bold"/>
 
                                 <Button Content="RELEASE PAYOUT"
                                         Command="{Binding OpenPayoutPanelCommand}"
-                                        Visibility="{Binding PayoutRailVisibility}"
                                         Style="{StaticResource GoldActionButton}"
                                         HorizontalContentAlignment="Left" Height="42" Margin="0,0,0,8" FontSize="12" FontWeight="Bold"/>
 
@@ -345,19 +342,30 @@
                                     </Grid.ColumnDefinitions>
 
                                     <StackPanel Grid.Column="0">
-                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
                                             <TextBlock Text="{Binding SelectedEvent.Title}" FontSize="20" FontWeight="Bold" Foreground="#0F172A"/>
                                             <Border Background="{StaticResource ThemeAccentSoftBrush}" BorderBrush="{StaticResource ThemeAccentBorderBrush}" BorderThickness="1" CornerRadius="6" Padding="8,2" Margin="12,0,0,0" VerticalAlignment="Center">
                                                 <TextBlock Text="{Binding SelectedEvent.StatusText}" FontSize="11" FontWeight="Bold" Foreground="{StaticResource ThemePrimaryActionBrush}"/>
                                             </Border>
                                         </StackPanel>
-                                        <TextBlock Text="{Binding SelectedEvent.DateRangeFormatted}" FontSize="12" Foreground="#64748B"/>
+                                        <WrapPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Border Background="#F1F5F9" CornerRadius="4" Padding="6,2" Margin="0,0,8,0">
+                                                <TextBlock Text="{Binding SelectedEvent.CreatedDateFormatted, StringFormat='Created: {0}'}" FontSize="11" FontWeight="SemiBold" Foreground="#475569"/>
+                                            </Border>
+                                            <Border Background="#ECFDF5" BorderBrush="#A7F3D0" BorderThickness="1" CornerRadius="4" Padding="6,2" Margin="0,0,8,0">
+                                                <TextBlock Text="{Binding SelectedEvent.DateRangeFormatted}" FontSize="11" FontWeight="SemiBold" Foreground="#047857"/>
+                                            </Border>
+                                            <Border Background="#F8FAFC" CornerRadius="4" Padding="6,2">
+                                                <TextBlock Text="{Binding SelectedEvent.Location, StringFormat='📍 {0}'}" FontSize="11" Foreground="#64748B"/>
+                                            </Border>
+                                        </WrapPanel>
                                     </StackPanel>
 
                                     <!-- Quick Actions -->
                                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Button Content="RELEASE PAYOUT" Command="{Binding OpenPayoutPanelCommand}" Style="{StaticResource GoldActionButton}" Height="38" Margin="0,0,8,0" FontWeight="Bold"/>
                                         <Button Content="EDIT EVENT" Command="{Binding OpenEditEventPanelCommand}" Style="{StaticResource MaterialDesignOutlinedButton}" Height="38" Margin="0,0,8,0"/>
-                                        <Button Content="SAVE PDF SHEET" Command="{Binding SaveAttendanceSheetPdfCommand}" Style="{StaticResource GoldActionButton}" Height="38" Margin="0,0,8,0"/>
+                                        <Button Content="SAVE PDF SHEET" Command="{Binding SaveAttendanceSheetPdfCommand}" Style="{StaticResource MaterialDesignOutlinedButton}" Height="38" Margin="0,0,8,0"/>
                                         <Button Content="PRINT" Command="{Binding PrintAttendanceSheetCommand}" Style="{StaticResource MaterialDesignFlatButton}" Height="38" Margin="0,0,12,0"/>
 
                                         <Button Command="{Binding NavigatePreviousCommand}" Style="{StaticResource MaterialDesignFlatButton}" Width="36" Height="36" Padding="0" Margin="0,0,4,0">
@@ -643,26 +651,30 @@
                     </Grid.RowDefinitions>
 
                     <Border Grid.Row="0" Background="{StaticResource ThemePrimaryActionBrush}" Padding="20,16" CornerRadius="16,16,0,0">
-                        <DockPanel>
-                            <TextBlock Text="{Binding EventEditorSubmitLabel, FallbackValue='WORK EVENT CONFIGURATION'}" FontSize="16" FontWeight="Bold" Foreground="White" VerticalAlignment="Center"/>
-                            <Button Command="{Binding ClosePanelCommand}" Style="{StaticResource MaterialDesignFlatButton}" Foreground="White" DockPanel.Dock="Right" Padding="4" Height="32" Width="32">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="{Binding EventEditorSubmitLabel, FallbackValue='WORK EVENT CONFIGURATION'}" FontSize="16" FontWeight="Bold" Foreground="White" VerticalAlignment="Center"/>
+                            <Button Grid.Column="1" Command="{Binding ClosePanelCommand}" VerticalAlignment="Center" Foreground="White" Padding="0" Height="32" Width="32" Background="Transparent" BorderThickness="0" Margin="20,0,0,0">
                                 <materialDesign:PackIcon Kind="Close" Width="20" Height="20"/>
                             </Button>
-                        </DockPanel>
+                        </Grid>
                     </Border>
 
                     <ScrollViewer Grid.Row="1" Padding="24" VerticalScrollBarVisibility="Auto">
                         <StackPanel>
                             <TextBlock Text="EVENT DETAILS" Style="{StaticResource SidebarHeaderStyle}"/>
-                            <TextBox Text="{Binding EventEditorTitle, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource MaterialDesignOutlinedTextBox}" materialDesign:HintAssist.Hint="Project / Event Title" Margin="0,0,0,16"/>
-                            <TextBox Text="{Binding EventEditorLocation, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource MaterialDesignOutlinedTextBox}" materialDesign:HintAssist.Hint="Site / Barangay Location" Margin="0,0,0,16"/>
+                            <TextBox Text="{Binding EventTitle, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource MaterialDesignOutlinedTextBox}" materialDesign:HintAssist.Hint="Project / Event Title" Margin="0,0,0,16"/>
+                            <TextBox Text="{Binding EventLocation, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource MaterialDesignOutlinedTextBox}" materialDesign:HintAssist.Hint="Site / Barangay Location" Margin="0,0,0,16"/>
 
                             <UniformGrid Columns="2" Margin="0,0,0,16">
-                                <DatePicker SelectedDate="{Binding EventEditorStartDate}" materialDesign:HintAssist.Hint="Start Date" Margin="0,0,8,0"/>
-                                <DatePicker SelectedDate="{Binding EventEditorEndDate}" materialDesign:HintAssist.Hint="End Date" Margin="8,0,0,0"/>
+                                <DatePicker SelectedDate="{Binding EventDate}" materialDesign:HintAssist.Hint="Start / Event Date" Margin="0,0,8,0"/>
+                                <DatePicker SelectedDate="{Binding FinishDate}" materialDesign:HintAssist.Hint="End Date" Margin="8,0,0,0"/>
                             </UniformGrid>
 
-                            <TextBox Text="{Binding EventEditorDescription, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource MaterialDesignOutlinedTextBox}" materialDesign:HintAssist.Hint="Scope of Work / Description" Height="80" TextWrapping="Wrap" AcceptsReturn="True" Margin="0,0,0,16"/>
+                            <TextBox Text="{Binding EventNotes, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource MaterialDesignOutlinedTextBox}" materialDesign:HintAssist.Hint="Scope of Work / Description / Notes" Height="80" TextWrapping="Wrap" AcceptsReturn="True" Margin="0,0,0,16"/>
                         </StackPanel>
                     </ScrollViewer>
 
@@ -871,7 +883,7 @@
 
                     <Border Grid.Row="0" Background="{StaticResource ThemePrimaryActionBrush}" Padding="20,16" CornerRadius="16,16,0,0">
                         <DockPanel>
-                            <TextBlock Text="RELEASE DISBURSEMENT PAYOUT" FontSize="16" FontWeight="Bold" Foreground="White" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding ReleaseModalTitle}" FontSize="16" FontWeight="Bold" Foreground="White" VerticalAlignment="Center"/>
                             <Button Command="{Binding ClosePanelCommand}" Style="{StaticResource MaterialDesignFlatButton}" Foreground="White" DockPanel.Dock="Right" Padding="4" Height="32" Width="32">
                                 <materialDesign:PackIcon Kind="Close" Width="20" Height="20"/>
                             </Button>
@@ -879,16 +891,39 @@
                     </Border>
 
                     <StackPanel Grid.Row="1" Margin="24">
-                        <TextBlock Text="Amount per Verified Attendee (PHP)" FontSize="12" FontWeight="SemiBold" Foreground="#64748B" Margin="0,0,0,6"/>
-                        <TextBox Text="{Binding ReleaseAmountText, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource MaterialDesignOutlinedTextBox}" materialDesign:HintAssist.Hint="PHP 0.00" Height="45" Margin="0,0,0,16"/>
-                        <TextBlock Text="Releasing payout will record cash disbursement for all present attendees and deduct from the global Cash-for-Work program allocation."
-                                   FontSize="12" Foreground="#64748B" TextWrapping="Wrap"/>
+                        <!-- Attendance Summary Box -->
+                        <Border Background="#F8FAFC" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="14,10" Margin="0,0,0,16">
+                            <StackPanel>
+                                <DockPanel Margin="0,0,0,4">
+                                    <TextBlock Text="Present Attendees:" FontSize="12" FontWeight="SemiBold" Foreground="#64748B"/>
+                                    <TextBlock Text="{Binding PresentParticipantCount, StringFormat='{}{0} attendee(s)'}" FontSize="13" FontWeight="Bold" Foreground="#1E293B" HorizontalAlignment="Right"/>
+                                </DockPanel>
+                                <TextBlock Text="{Binding ReleaseSummaryDetail}" FontSize="11" Foreground="{Binding ReleaseSummaryStatusBrush}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Goods Info Display -->
+                        <Border Background="#F0FDF4" BorderBrush="#BBF7D0" BorderThickness="1" CornerRadius="8" Padding="14,10" Margin="0,0,0,14"
+                                Visibility="{Binding IsSelectedEventGoods, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <StackPanel>
+                                <TextBlock Text="Item / Goods to Distribute:" FontSize="11" FontWeight="Bold" Foreground="#15803D" Margin="0,0,0,2"/>
+                                <TextBlock Text="{Binding ReleaseItemDescription}" FontSize="13" FontWeight="SemiBold" Foreground="#166534" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Cash Amount Input -->
+                        <StackPanel Visibility="{Binding IsSelectedEventCash, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <TextBlock Text="Amount per Verified Attendee (PHP)" FontSize="12" FontWeight="SemiBold" Foreground="#64748B" Margin="0,0,0,6"/>
+                            <TextBox Text="{Binding ReleaseAmountText, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource MaterialDesignOutlinedTextBox}" materialDesign:HintAssist.Hint="PHP 0.00" Height="45" Margin="0,0,0,12"/>
+                            <TextBlock Text="Releasing payout will disburse funds to all present attendees and deduct the total from the Cash-for-Work budget."
+                                       FontSize="12" Foreground="#64748B" TextWrapping="Wrap"/>
+                        </StackPanel>
                     </StackPanel>
 
                     <Border Grid.Row="2" Background="#F8FAFC" Padding="20,16" CornerRadius="0,0,16,16" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="0,1,0,0">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                             <Button Content="CANCEL" Command="{Binding ClosePanelCommand}" Style="{StaticResource MaterialDesignFlatButton}" Margin="0,0,10,0"/>
-                            <Button Content="RELEASE BUDGET" Command="{Binding ReleaseBudgetCommand}" Style="{StaticResource GoldActionButton}" Height="42" Padding="24,0"/>
+                            <Button Content="{Binding ReleaseActionLabel}" Command="{Binding ReleaseBudgetCommand}" Style="{StaticResource GoldActionButton}" Height="42" Padding="24,0"/>
                         </StackPanel>
                     </Border>
                 </Grid>

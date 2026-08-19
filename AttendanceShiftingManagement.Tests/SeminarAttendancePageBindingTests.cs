@@ -43,13 +43,11 @@ public sealed class SeminarAttendancePageBindingTests
         Assert.Contains("Click=\"Browse_Click\"", xaml, StringComparison.Ordinal);
 
         Assert.Contains("ItemsSource=\"{Binding BenefitTypes}\"", xaml, StringComparison.Ordinal);
-
-        // Seminars are attendance-only: no payout, manual-attendance, enrollment, or event-kind UI.
-        Assert.DoesNotContain("ReleaseBudgetCommand", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("SaveManualAttendanceCommand", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("OpenPayoutPanelCommand", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("PayoutRailVisibility", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("ManualAttendanceVisibility", xaml, StringComparison.Ordinal);
+        Assert.Contains("ReleaseBudgetCommand", xaml, StringComparison.Ordinal);
+        Assert.Contains("SaveManualAttendanceCommand", xaml, StringComparison.Ordinal);
+        Assert.Contains("OpenPayoutPanelCommand", xaml, StringComparison.Ordinal);
+        Assert.Contains("PayoutRailVisibility", xaml, StringComparison.Ordinal);
+        Assert.Contains("ManualAttendanceVisibility", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("EventEditorKind", xaml, StringComparison.Ordinal);
     }
 

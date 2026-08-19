@@ -103,6 +103,37 @@ namespace AttendanceShiftingManagement.Models
         public ICollection<CashForWorkParticipant> Participants { get; set; } = new List<CashForWorkParticipant>();
 
         [NotMapped]
+        public string StatusText => Status.ToString();
+
+        [NotMapped]
+        public string StartDateFormatted => EventDate.ToString("MMM dd, yyyy");
+
+        [NotMapped]
+        public string EndDateFormatted => (FinishDate ?? EventDate).ToString("MMM dd, yyyy");
+
+        [NotMapped]
+        public string CreatedDateFormatted => CreatedAt.ToString("MMM dd, yyyy");
+
+        [NotMapped]
+        public string DateRangeFormatted
+        {
+            get
+            {
+                var start = EventDate.ToString("MMM dd, yyyy");
+                var end = (FinishDate.HasValue && FinishDate.Value.Date != EventDate.Date)
+                    ? FinishDate.Value.ToString("MMM dd, yyyy")
+                    : null;
+                var times = $"{StartTime:hh\\:mm} - {EndTime:hh\\:mm}";
+
+                if (end != null)
+                {
+                    return $"Period: {start} → {end} ({times})";
+                }
+                return $"Date: {start} ({times})";
+            }
+        }
+
+        [NotMapped]
         public string WorkspaceLabel =>
             $"{(EventKind == CashForWorkEventKind.Seminar ? "Seminar" : "Cash-for-Work")} | {Title} | {EventDate:MMM dd, yyyy}";
 

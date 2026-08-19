@@ -139,6 +139,7 @@ namespace AttendanceShiftingManagement.ViewModels
                         Transactions.Add(tx);
                     }
 
+                    UpdateKpiMetrics();
                     ApplyFilters();
                 });
 
@@ -152,6 +153,57 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 IsBusy = false;
             }
+        }
+
+        private void UpdateKpiMetrics()
+        {
+            TotalTransactionsCount = Transactions.Count;
+            TotalDisbursedAmount = Transactions.Sum(t => t.Amount ?? 0);
+            CfwTransactionsCount = Transactions.Count(t => 
+                string.Equals(t.ProjectName, "Cash For Work", StringComparison.OrdinalIgnoreCase) ||
+                (t.ProjectCode?.StartsWith("CFW", StringComparison.OrdinalIgnoreCase) ?? false));
+            SeminarTransactionsCount = Transactions.Count(t =>
+                string.Equals(t.ProjectName, "Seminar", StringComparison.OrdinalIgnoreCase) ||
+                (t.ProjectCode?.StartsWith("SEM", StringComparison.OrdinalIgnoreCase) ?? false));
+            DistributionTransactionsCount = Transactions.Count(t => 
+                string.Equals(t.ProjectName, "Project Distribution", StringComparison.OrdinalIgnoreCase) ||
+                (t.ProjectCode?.StartsWith("PRJ", StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (t.ProjectCode?.StartsWith("DIST", StringComparison.OrdinalIgnoreCase) ?? false));
+        }
+
+        private int _totalTransactionsCount;
+        public int TotalTransactionsCount
+        {
+            get => _totalTransactionsCount;
+            private set => SetProperty(ref _totalTransactionsCount, value);
+        }
+
+        private decimal _totalDisbursedAmount;
+        public decimal TotalDisbursedAmount
+        {
+            get => _totalDisbursedAmount;
+            private set => SetProperty(ref _totalDisbursedAmount, value);
+        }
+
+        private int _cfwTransactionsCount;
+        public int CfwTransactionsCount
+        {
+            get => _cfwTransactionsCount;
+            private set => SetProperty(ref _cfwTransactionsCount, value);
+        }
+
+        private int _seminarTransactionsCount;
+        public int SeminarTransactionsCount
+        {
+            get => _seminarTransactionsCount;
+            private set => SetProperty(ref _seminarTransactionsCount, value);
+        }
+
+        private int _distributionTransactionsCount;
+        public int DistributionTransactionsCount
+        {
+            get => _distributionTransactionsCount;
+            private set => SetProperty(ref _distributionTransactionsCount, value);
         }
 
         public ObservableCollection<GgmsConsolidatedTransaction> Transactions
@@ -257,7 +309,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
             if (SelectedProjectFilter != "All Transactions")
             {
-                filtered = filtered.Where(t => t.ProjectName == SelectedProjectFilter);
+                filtered = filtered.Where(t => string.Equals(t.ProjectName, SelectedProjectFilter, StringComparison.OrdinalIgnoreCase));
             }
 
             var finalResults = filtered.ToList();
@@ -274,7 +326,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 (string.IsNullOrWhiteSpace(SearchText) || 
                  (t.FullName?.ToLowerInvariant().Contains(SearchText.ToLower()) ?? false) ||
                  (t.ProjectCode?.ToLowerInvariant().Contains(SearchText.ToLower()) ?? false)) &&
-                (SelectedProjectFilter == "All Transactions" || t.ProjectName == SelectedProjectFilter)
+                (SelectedProjectFilter == "All Transactions" || string.Equals(t.ProjectName, SelectedProjectFilter, StringComparison.OrdinalIgnoreCase))
             ).ToList();
 
             System.Windows.Application.Current.Dispatcher.Invoke(() =>

@@ -30,12 +30,12 @@
             <Button Grid.Row="0"
                     HorizontalAlignment="Right"
                     VerticalAlignment="Top"
-                    Margin="0,-8,-8,0"
+                    Margin="0,-8,0,0"
                     Width="36" Height="36"
                     Style="{StaticResource MaterialDesignFlatButton}"
                     shell:WindowChrome.IsHitTestVisibleInChrome="True"
                     Click="Cancel_Click">
-                <materialDesign:PackIcon Kind="Close" Width="18" Height="18" Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
+                <materialDesign:PackIcon Kind="Close" Width="18" Height="18" Foreground="#15803D"/>
             </Button>
 
             <!-- Header -->
@@ -75,10 +75,12 @@
                           Background="Transparent"
                           MouseDoubleClick="EventsDataGrid_MouseDoubleClick">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Date" Binding="{Binding Date, StringFormat='MMM dd, yyyy'}" Width="120"/>
-                        <DataGridTextColumn Header="Title" Binding="{Binding Title}" Width="*"/>
-                        <DataGridTextColumn Header="Location" Binding="{Binding Location}" Width="200"/>
-                        <DataGridTextColumn Header="Schedule" Binding="{Binding WorkspaceLabel}" Width="180"/>
+                        <DataGridTextColumn Header="CREATED" Binding="{Binding CreatedDateFormatted}" Width="105"/>
+                        <DataGridTextColumn Header="START DATE" Binding="{Binding StartDateFormatted}" Width="110" FontWeight="SemiBold"/>
+                        <DataGridTextColumn Header="END DATE" Binding="{Binding EndDateFormatted}" Width="110"/>
+                        <DataGridTextColumn Header="EVENT TITLE" Binding="{Binding Title}" Width="*" FontWeight="Bold"/>
+                        <DataGridTextColumn Header="LOCATION" Binding="{Binding Location}" Width="160"/>
+                        <DataGridTextColumn Header="STATUS" Binding="{Binding StatusText}" Width="100"/>
                     </DataGrid.Columns>
                 </DataGrid>
             </materialDesign:Card>

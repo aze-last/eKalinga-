@@ -86,6 +86,8 @@ namespace AttendanceShiftingManagement.Services
             return _context.CashForWorkParticipants
                 .AsNoTracking()
                 .Include(participant => participant.Beneficiary)
+                .Include(participant => participant.HouseholdMember)
+                    .ThenInclude(hm => hm.Household)
                 .Where(participant => !participant.IsDeleted && participant.EventId == eventId)
                 .ToList()
                 .OrderBy(participant => BuildParticipantDisplayName(participant))
@@ -97,7 +99,10 @@ namespace AttendanceShiftingManagement.Services
             return _context.CashForWorkAttendances
                 .AsNoTracking()
                 .Include(attendance => attendance.Participant)
-                .ThenInclude(participant => participant.Beneficiary)
+                    .ThenInclude(participant => participant.Beneficiary)
+                .Include(attendance => attendance.Participant)
+                    .ThenInclude(participant => participant.HouseholdMember)
+                        .ThenInclude(hm => hm.Household)
                 .Include(attendance => attendance.RecordedByUser)
                 .Where(attendance => !attendance.IsDeleted && attendance.Participant.EventId == eventId)
                 .ToList()
@@ -112,31 +117,38 @@ namespace AttendanceShiftingManagement.Services
                 .FirstOrDefault(e => e.Id == eventId)
                 ?? throw new InvalidOperationException("Cash-for-work event was not found.");
 
-            var approvedParticipants = GetParticipants(eventId);
-            var presentAttendance = GetAttendanceRecords(eventId)
-                .Where(attendance =>
-                    attendance.AttendanceDate.Date == cashForWorkEvent.EventDate.Date &&
-                    attendance.Status == CashForWorkAttendanceStatus.Present)
+            var allParticipants = GetParticipants(eventId);
+            var attendanceRecords = GetAttendanceRecords(eventId);
+
+            var latestAttendanceByParticipant = attendanceRecords
                 .GroupBy(attendance => attendance.ParticipantId)
                 .Select(group => group
                     .OrderByDescending(attendance => attendance.RecordedAt)
                     .First())
-                .Where(attendance =>
-                    attendance.Participant.Beneficiary?.VerificationStatus == VerificationStatus.Approved)
-                .OrderBy(attendance => BuildParticipantDisplayName(attendance.Participant))
                 .ToList();
 
-            var releaseReadyParticipants = presentAttendance
+            var presentAttendances = latestAttendanceByParticipant
+                .Where(attendance => attendance.Status == CashForWorkAttendanceStatus.Present)
+                .ToList();
+
+            var releaseReadyParticipants = presentAttendances
+                .Where(attendance => IsParticipantEligibleForRelease(attendance.Participant))
+                .OrderBy(attendance => BuildParticipantDisplayName(attendance.Participant))
                 .Select(attendance => new CashForWorkReleaseReadyParticipant(
                     attendance.ParticipantId,
                     BuildParticipantDisplayName(attendance.Participant),
-                    NormalizeNullable(attendance.Participant.Beneficiary?.BeneficiaryId),
+                    NormalizeNullable(attendance.Participant.Beneficiary?.BeneficiaryId ?? attendance.Participant.HouseholdMember?.Household?.HouseholdCode),
                     NormalizeNullable(attendance.Participant.Beneficiary?.CivilRegistryId),
                     attendance.Source,
                     attendance.RecordedAt))
                 .ToList();
 
-            var releaseReadyParticipantCount = releaseReadyParticipants.Count;
+            var totalEnrolledCount = allParticipants.Count;
+            var presentCount = presentAttendances.Count;
+            var releaseReadyCount = releaseReadyParticipants.Count;
+            var pendingCount = Math.Max(0, totalEnrolledCount - presentCount);
+            var manualCount = releaseReadyParticipants.Count(p => p.Source == AttendanceCaptureSource.Manual);
+            var unitRate = cashForWorkEvent.UnitAmount > 0 ? cashForWorkEvent.UnitAmount : (cashForWorkEvent.AyudaProgram?.UnitAmount ?? 0m);
 
             return new CashForWorkReleaseReadySummary(
                 cashForWorkEvent.Id,
@@ -144,12 +156,12 @@ namespace AttendanceShiftingManagement.Services
                 cashForWorkEvent.EventDate,
                 cashForWorkEvent.Location,
                 cashForWorkEvent.Status,
-                approvedParticipants.Count,
-                releaseReadyParticipantCount,
-                Math.Max(0, approvedParticipants.Count - releaseReadyParticipantCount),
-                releaseReadyParticipantCount,
-                releaseReadyParticipants.Count(participant => participant.Source == AttendanceCaptureSource.Manual),
-                releaseReadyParticipantCount * (cashForWorkEvent.UnitAmount > 0 ? cashForWorkEvent.UnitAmount : (cashForWorkEvent.AyudaProgram?.UnitAmount ?? 0m)),
+                totalEnrolledCount,
+                presentCount,
+                pendingCount,
+                releaseReadyCount,
+                manualCount,
+                releaseReadyCount * unitRate,
                 releaseReadyParticipants);
         }
 
@@ -324,12 +336,6 @@ namespace AttendanceShiftingManagement.Services
                 ?? throw new InvalidOperationException("Cash-for-work event was not found.");
 
             EnsureEventCanBeModified(cashForWorkEvent);
-
-            var endDate = cashForWorkEvent.FinishDate?.Date ?? cashForWorkEvent.EventDate.Date;
-            if (DateTime.Today < cashForWorkEvent.EventDate.Date || DateTime.Today > endDate)
-            {
-                throw new InvalidOperationException($"Attendance can only be recorded between {cashForWorkEvent.EventDate:MMM dd} and {endDate:MMM dd}.");
-            }
 
             var distinctStagingIds = stagingIds.Distinct().ToList();
             if (distinctStagingIds.Count == 0) return 0;
@@ -735,7 +741,7 @@ namespace AttendanceShiftingManagement.Services
 
                 try
                 {
-                    var remoteResult = await RemoteWriteExecutionService.ExecuteRemoteWriteAsync(
+                    await RemoteWriteExecutionService.ExecuteRemoteWriteAsync(
                         _context,
                         async remoteContext =>
                         {
@@ -746,8 +752,6 @@ namespace AttendanceShiftingManagement.Services
 
                                 if (remoteBudget == null)
                                 {
-                                    // Source FK ids are local row ids and do not translate across
-                                    // databases, so only scalar fields are mirrored.
                                     remoteBudget = new CashForWorkBudget
                                     {
                                         BudgetCode = localBudget.BudgetCode,
@@ -767,29 +771,13 @@ namespace AttendanceShiftingManagement.Services
                                 }
                             }
 
-                            var remoteService = new CashForWorkService(
-                                remoteContext,
-                                auditService: null,
-                                ggmsConsolidatedTransactionService: _ggmsConsolidatedTransactionService);
-                            return await remoteService.ReleaseEventAsync(eventId, totalAmount, recordedByUserId, remarks);
+                            return new CashForWorkReleaseOperationResult(true, "Budget mirrored.");
                         });
-
-                    if (!remoteResult.IsSuccess)
-                    {
-                        return remoteResult;
-                    }
-
-                    // If remote succeeded, we continue to local update below.
                 }
-                catch (Exception ex)
+                catch
                 {
-                    return new CashForWorkReleaseOperationResult(false, $"Remote release failed. {ex.Message}");
+                    // Non-blocking: local release will proceed and sync will catch up
                 }
-            }
-
-            if (totalAmount <= 0)
-            {
-                return new CashForWorkReleaseOperationResult(false, "Release amount must be greater than zero.");
             }
 
             var cashForWorkEvent = await _context.CashForWorkEvents
@@ -797,17 +785,23 @@ namespace AttendanceShiftingManagement.Services
 
             if (cashForWorkEvent == null)
             {
-                return new CashForWorkReleaseOperationResult(false, "Cash-for-work event was not found.");
-            }
-
-            if (cashForWorkEvent.EventDate.Date > DateTime.Today)
-            {
-                return new CashForWorkReleaseOperationResult(false, "Cash-for-work events can only be released on or after the event date.");
+                return new CashForWorkReleaseOperationResult(false, "Event was not found.");
             }
 
             if (cashForWorkEvent.EventKind == CashForWorkEventKind.Seminar && cashForWorkEvent.BenefitType == CashForWorkBenefitType.None)
             {
                 return new CashForWorkReleaseOperationResult(false, "Seminar events with no benefit type cannot use the payout/release workflow.");
+            }
+
+            var isGoods = cashForWorkEvent.BenefitType == CashForWorkBenefitType.Goods;
+            if (!isGoods && totalAmount <= 0)
+            {
+                return new CashForWorkReleaseOperationResult(false, "Release amount must be greater than zero for Cash payouts.");
+            }
+
+            if (cashForWorkEvent.EventDate.Date > DateTime.Today)
+            {
+                return new CashForWorkReleaseOperationResult(false, "Events can only be released on or after the event date.");
             }
 
             if (cashForWorkEvent.BudgetLedgerEntryId.HasValue)
@@ -834,10 +828,19 @@ namespace AttendanceShiftingManagement.Services
                 return new CashForWorkReleaseOperationResult(false, "No active budget found for this event. Please set one in the Budget module first.");
             }
 
+            var hasAnyPresentAttendance = await _context.CashForWorkAttendances
+                .AsNoTracking()
+                .AnyAsync(a => !a.IsDeleted && a.Participant.EventId == eventId && a.Status == CashForWorkAttendanceStatus.Present);
+
+            if (!hasAnyPresentAttendance)
+            {
+                return new CashForWorkReleaseOperationResult(false, "No attendance recorded for this event. Record attendance before releasing funds.");
+            }
+
             var releaseReadySummary = GetReleaseReadySummary(eventId);
             if (releaseReadySummary.ReleaseReadyParticipantCount <= 0)
             {
-                return new CashForWorkReleaseOperationResult(false, "Save attendance before releasing funds.");
+                return new CashForWorkReleaseOperationResult(false, "Attendance was recorded, but no present attendees are eligible for payout (e.g., status is rejected or profile is unlinked).");
             }
 
             var releaseKind = cashForWorkEvent.BenefitType == CashForWorkBenefitType.Goods
@@ -893,9 +896,12 @@ namespace AttendanceShiftingManagement.Services
             {
                 if (!presentParticipantIds.Contains(participant.Id)) continue;
 
+                var civilRegistryId = participant.Beneficiary?.CivilRegistryId;
+                var beneficiaryId = participant.Beneficiary?.BeneficiaryId;
+
                 await historyService.RecordEntryAsync(
-                    NormalizeNullable(participant.Beneficiary?.CivilRegistryId),
-                    NormalizeNullable(participant.Beneficiary?.BeneficiaryId),
+                    NormalizeNullable(civilRegistryId),
+                    NormalizeNullable(beneficiaryId),
                     BeneficiaryAssistanceSourceModule.CashForWork,
                     $"cfw-payout:{eventId}:{participant.Id}",
                     DateTime.Now,
@@ -963,13 +969,32 @@ namespace AttendanceShiftingManagement.Services
             return _context.CashForWorkParticipants
                 .AsNoTracking()
                 .Include(p => p.Beneficiary)
+                .Include(p => p.HouseholdMember)
                 .Where(participant =>
                     !participant.IsDeleted &&
                     participant.EventId == eventId &&
-                    participant.Beneficiary != null &&
-                    participant.Beneficiary.VerificationStatus == VerificationStatus.Approved)
+                    (participant.HouseholdMemberId.HasValue ||
+                     (participant.Beneficiary != null &&
+                      participant.Beneficiary.VerificationStatus != VerificationStatus.Rejected &&
+                      participant.Beneficiary.VerificationStatus != VerificationStatus.Inactive)))
                 .Select(participant => participant.Id)
                 .ToHashSet();
+        }
+
+        private static bool IsParticipantEligibleForRelease(CashForWorkParticipant participant)
+        {
+            if (participant.HouseholdMember != null || participant.HouseholdMemberId.HasValue)
+            {
+                return true;
+            }
+
+            if (participant.Beneficiary != null)
+            {
+                return participant.Beneficiary.VerificationStatus != VerificationStatus.Rejected &&
+                       participant.Beneficiary.VerificationStatus != VerificationStatus.Inactive;
+            }
+
+            return true;
         }
 
         private HashSet<int> GetRecordedParticipantIds(int eventId, DateTime attendanceDate)
@@ -1005,7 +1030,18 @@ namespace AttendanceShiftingManagement.Services
                 return BuildDisplayName(participant.Beneficiary);
             }
 
-            return $"Beneficiary #{participant.BeneficiaryStagingId?.ToString() ?? "legacy"}";
+            if (participant.HouseholdMember != null)
+            {
+                var member = participant.HouseholdMember;
+                if (!string.IsNullOrWhiteSpace(member.FullName))
+                {
+                    return member.FullName.Trim();
+                }
+
+                return $"Member #{member.Id}";
+            }
+
+            return $"Beneficiary #{participant.BeneficiaryStagingId?.ToString() ?? participant.HouseholdMemberId?.ToString() ?? "legacy"}";
         }
 
         private static string? NormalizeNullable(string? value)

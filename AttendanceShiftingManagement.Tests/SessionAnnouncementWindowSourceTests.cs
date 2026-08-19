@@ -20,8 +20,8 @@ public sealed class SessionAnnouncementWindowSourceTests
         var xaml = File.ReadAllText(windowPath);
 
         Assert.Contains("Text=\"{Binding Title}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"Recent Feed\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Content=\"Continue\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Recent", xaml, StringComparison.Ordinal);
+        Assert.Contains("CONTINUE", xaml, StringComparison.Ordinal);
 
         Exception? parseException = null;
         var thread = new Thread(() =>

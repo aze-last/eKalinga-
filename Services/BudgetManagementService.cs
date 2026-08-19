@@ -492,6 +492,110 @@ namespace AttendanceShiftingManagement.Services
             return new(true, "Project created successfully", cfwBudget.Id, cfwBudget.BudgetName, cfwEvent.Id);
         }
 
+        public async Task<CashForWorkProjectOperationResult> UpdateCashForWorkProjectAsync(int budgetId, CashForWorkProjectRequest request, int updatedByUserId)
+        {
+            var cfwBudget = await _context.CashForWorkBudgets
+                .FirstOrDefaultAsync(b => b.Id == budgetId);
+
+            if (cfwBudget == null)
+            {
+                return new(false, "Project was not found.");
+            }
+
+            var budgetName = NormalizeRequired(request.BudgetName);
+            if (string.IsNullOrWhiteSpace(budgetName))
+                return new(false, "Project name is required");
+            if (request.BudgetCap.HasValue && request.BudgetCap < 0)
+                return new(false, "Budget cap cannot be negative");
+            if (request.DailyRate.HasValue && request.DailyRate <= 0)
+                return new(false, "Daily rate must be positive");
+            if (request.StartDate > request.EndDate)
+                return new(false, "Start date cannot be after end date");
+
+            cfwBudget.BudgetName = budgetName;
+            cfwBudget.Description = NormalizeNullable(request.Description);
+            cfwBudget.BudgetCap = request.BudgetCap;
+            cfwBudget.DailyRate = request.DailyRate;
+            cfwBudget.StartDate = request.StartDate;
+            cfwBudget.EndDate = request.EndDate;
+            cfwBudget.UpdatedAt = DateTime.Now;
+
+            // Update auto-linked event if exists
+            var cfwEvent = await _context.CashForWorkEvents
+                .FirstOrDefaultAsync(e => !e.IsDeleted && e.CashForWorkBudgetId == budgetId);
+
+            if (cfwEvent != null)
+            {
+                cfwEvent.Title = budgetName;
+                cfwEvent.Location = budgetName;
+                cfwEvent.EventDate = request.StartDate.Date;
+                cfwEvent.FinishDate = request.EndDate.Date;
+                cfwEvent.UnitAmount = request.DailyRate ?? 0m;
+                cfwEvent.BenefitType = request.BenefitType;
+                cfwEvent.BenefitDescription = request.BenefitDescription;
+                cfwEvent.UpdatedAt = DateTime.Now;
+            }
+
+            await _context.SaveChangesAsync();
+
+            await _auditService.LogActivityAsync(
+                updatedByUserId,
+                "CashForWorkProjectUpdated",
+                nameof(CashForWorkBudget),
+                cfwBudget.Id,
+                $"Updated project '{budgetName}'.");
+
+            return new(true, "Project updated successfully", cfwBudget.Id, cfwBudget.BudgetName, cfwEvent?.Id ?? 0);
+        }
+
+        public async Task<AyudaProgramOperationResult> UpdateProgramAsync(int programId, AyudaProgramRequest request, int updatedByUserId)
+        {
+            var program = await _context.AyudaPrograms.FirstOrDefaultAsync(p => p.Id == programId);
+            if (program == null)
+            {
+                return new(false, "Distribution project was not found.");
+            }
+
+            var programName = NormalizeRequired(request.ProgramName);
+            if (string.IsNullOrWhiteSpace(programName))
+                return new(false, "Project name is required");
+
+            if (request.ReleaseKind == AssistanceReleaseKind.Goods && string.IsNullOrWhiteSpace(request.ItemName))
+                return new(false, "Goods distribution projects require an item name.");
+
+            if (request.ReleaseKind == AssistanceReleaseKind.Goods && (request.QuantityPerBeneficiary is null or <= 0))
+                return new(false, "Goods distribution projects require a quantity greater than zero.");
+
+            if (request.ReleaseKind == AssistanceReleaseKind.Goods && string.IsNullOrWhiteSpace(request.UnitOfMeasure))
+                return new(false, "Goods distribution projects require a unit of measure.");
+
+            program.ProgramName = programName;
+            program.ProgramType = request.ProgramType;
+            program.Description = NormalizeNullable(request.Description);
+            program.AssistanceType = NormalizeNullable(request.AssistanceType);
+            program.ReleaseKind = request.ReleaseKind;
+            program.UnitAmount = request.ReleaseKind == AssistanceReleaseKind.Goods ? null : request.UnitAmount;
+            program.ItemName = request.ReleaseKind == AssistanceReleaseKind.Goods ? NormalizeRequired(request.ItemName) : NormalizeNullable(request.ItemName);
+            program.QuantityPerBeneficiary = request.ReleaseKind == AssistanceReleaseKind.Goods ? request.QuantityPerBeneficiary : null;
+            program.UnitOfMeasure = request.ReleaseKind == AssistanceReleaseKind.Goods ? NormalizeRequired(request.UnitOfMeasure) : NormalizeNullable(request.UnitOfMeasure);
+            program.StartDate = request.StartDate?.Date;
+            program.EndDate = request.EndDate?.Date;
+            program.BudgetCap = request.BudgetCap;
+            program.DistributionStatus = request.DistributionStatus;
+            program.UpdatedAt = DateTime.Now;
+
+            await _context.SaveChangesAsync();
+
+            await _auditService.LogActivityAsync(
+                updatedByUserId,
+                "AyudaProgramUpdated",
+                nameof(AyudaProgram),
+                program.Id,
+                $"Updated distribution project '{programName}'.");
+
+            return new(true, "Distribution project updated successfully", program.Id);
+        }
+
         public async Task<IReadOnlyList<PrivateDonation>> GetPrivateDonationsAsync(int take = 50)
         {
             return await _context.PrivateDonations

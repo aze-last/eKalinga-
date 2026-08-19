@@ -665,6 +665,11 @@ namespace AttendanceShiftingManagement.ViewModels
 
         public bool IsCashBenefit => BenefitType == CashForWorkBenefitType.Cash;
         public bool IsGoodsBenefit => BenefitType == CashForWorkBenefitType.Goods;
+        public bool IsSelectedEventGoods => SelectedEvent?.BenefitType == CashForWorkBenefitType.Goods;
+        public bool IsSelectedEventCash => SelectedEvent?.BenefitType != CashForWorkBenefitType.Goods;
+        public string ReleaseModalTitle => IsSelectedEventGoods ? "RELEASE GOODS DISTRIBUTION" : "RELEASE DISBURSEMENT PAYOUT";
+        public string ReleaseActionLabel => IsSelectedEventGoods ? "RELEASE GOODS" : "RELEASE BUDGET";
+        public string ReleaseItemDescription => !string.IsNullOrWhiteSpace(SelectedEvent?.BenefitDescription) ? SelectedEvent.BenefitDescription : "In-Kind Goods / Supplies";
 
         public string EventAmountText
         {
@@ -1102,6 +1107,7 @@ namespace AttendanceShiftingManagement.ViewModels
                     FullName = BuildParticipantName(record.Participant),
                     BeneficiaryId = NormalizeNullable(record.Participant.Beneficiary?.BeneficiaryId) ?? "--",
                     CivilRegistryId = NormalizeNullable(record.Participant.Beneficiary?.CivilRegistryId) ?? "--",
+                    ContactNumber = NormalizeNullable(record.Participant.HouseholdMember?.Household?.ContactNumber) ?? "--",
                     StatusValue = record.Status,
                     Status = record.Status.ToString(),
                     SourceValue = record.Source,
@@ -1505,12 +1511,16 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private void OpenPayoutPanel()
         {
+            if (SelectedEvent == null)
+            {
+                MessageBox.Show("Select an event first to release payouts.", "No Event Selected", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
             OpenPanel(
                 CashForWorkWorkspacePanel.Payout,
                 "Release Budget",
-                HasSelectedEvent
-                    ? $"Review the release-ready summary and record the budget release for {SelectedEvent!.Title}."
-                    : "Select an event from the dropdown first.");
+                $"Review the release-ready summary and record the budget release for {SelectedEvent.Title}.");
         }
 
         private void OpenAnnouncementsPanel()
@@ -2089,14 +2099,23 @@ namespace AttendanceShiftingManagement.ViewModels
                 return;
             }
 
-            if (!TryParseAmount(ReleaseAmountText, out var releaseAmount))
+            var isGoods = SelectedEvent.BenefitType == CashForWorkBenefitType.Goods;
+            decimal releaseAmount = 0m;
+            if (!isGoods)
             {
-                MessageBox.Show("Enter a valid release amount greater than zero.", "Invalid Release Amount", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
+                if (!TryParseAmount(ReleaseAmountText, out releaseAmount) || releaseAmount <= 0)
+                {
+                    MessageBox.Show("Enter a valid release amount greater than zero.", "Invalid Release Amount", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+            }
+            else
+            {
+                _ = TryParseAmount(ReleaseAmountText, out releaseAmount);
             }
 
             IsBusy = true;
-            SetNeutralStatus("Releasing event budget...");
+            SetNeutralStatus(isGoods ? "Releasing goods distribution..." : "Releasing event budget...");
 
             try
             {
@@ -2110,7 +2129,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
                 if (!result.IsSuccess)
                 {
-                    MessageBox.Show(result.Message, "Unable to Release Budget", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageBox.Show(result.Message, "Unable to Release", MessageBoxButton.OK, MessageBoxImage.Warning);
                     SetErrorStatus(result.Message);
                     return;
                 }
@@ -2122,8 +2141,8 @@ namespace AttendanceShiftingManagement.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Unable to Release Budget", MessageBoxButton.OK, MessageBoxImage.Warning);
-                SetErrorStatus($"Unable to release the budget: {ex.Message}");
+                MessageBox.Show(ex.Message, "Unable to Release", MessageBoxButton.OK, MessageBoxImage.Warning);
+                SetErrorStatus($"Unable to release: {ex.Message}");
             }
             finally
             {
@@ -2278,6 +2297,12 @@ namespace AttendanceShiftingManagement.ViewModels
             OnPropertyChanged(nameof(SelectedEventVisibility));
             OnPropertyChanged(nameof(NoSelectedEventVisibility));
             OnPropertyChanged(nameof(SelectedEventLabel));
+            OnPropertyChanged(nameof(PayoutRailVisibility));
+            OnPropertyChanged(nameof(IsSelectedEventGoods));
+            OnPropertyChanged(nameof(IsSelectedEventCash));
+            OnPropertyChanged(nameof(ReleaseModalTitle));
+            OnPropertyChanged(nameof(ReleaseActionLabel));
+            OnPropertyChanged(nameof(ReleaseItemDescription));
         }
 
         private void RefreshDrawerVisibilityFlags()
@@ -2330,33 +2355,50 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private static ReleaseSummaryPresentation BuildReleaseSummaryPresentation(CashForWorkEvent selectedEvent, CashForWorkReleaseReadySummary summary)
         {
-            if (selectedEvent.BudgetLedgerEntryId.HasValue && selectedEvent.ReleaseAmount.HasValue)
+            var isGoods = selectedEvent.BenefitType == CashForWorkBenefitType.Goods;
+
+            if (selectedEvent.BudgetLedgerEntryId.HasValue)
             {
+                var label = isGoods
+                    ? $"{summary.ReleaseReadyParticipantCount} participant(s) were recorded for goods distribution ({selectedEvent.BenefitDescription ?? "In-kind goods"})."
+                    : $"{summary.ReleaseReadyParticipantCount} participant(s) were included in the payout. Total release amount: {selectedEvent.ReleaseAmount ?? 0m:N2}.";
                 return new ReleaseSummaryPresentation(
                     "Released",
-                    $"{summary.ReleaseReadyParticipantCount} participant(s) were included in the payout. Total release amount: {selectedEvent.ReleaseAmount.Value:N2}.",
+                    label,
                     SuccessBrush);
+            }
+
+            if (summary.PresentParticipantCount == 0)
+            {
+                return new ReleaseSummaryPresentation(
+                    "No attendance recorded yet",
+                    "Click 'LOG MANUAL ATTENDANCE' or start the scanner to record attendance before releasing.",
+                    NeutralBrush);
             }
 
             if (summary.ReleaseReadyParticipantCount == 0)
             {
                 return new ReleaseSummaryPresentation(
-                    "No payout-ready attendance yet",
-                    "Create a scanner session or save manual attendance before releasing the budget.",
-                    NeutralBrush);
+                    "No eligible attendees",
+                    "Attendance was recorded, but attendees are currently ineligible (e.g., status is rejected).",
+                    WarningBrush);
             }
 
             if (summary.PendingParticipantCount == 0)
             {
                 return new ReleaseSummaryPresentation(
-                    "Ready for payout",
-                    $"{summary.ReleaseReadyParticipantCount} participant(s) are included in the release-ready summary.",
+                    isGoods ? "Ready for goods distribution" : "Ready for payout",
+                    isGoods
+                        ? $"{summary.ReleaseReadyParticipantCount} participant(s) will receive goods: {selectedEvent.BenefitDescription ?? "In-kind goods"}."
+                        : $"{summary.ReleaseReadyParticipantCount} participant(s) are included in the release-ready summary.",
                     SuccessBrush);
             }
 
             return new ReleaseSummaryPresentation(
-                "Partial payout ready",
-                $"{summary.ReleaseReadyParticipantCount} participant(s) can be released now. {summary.PendingParticipantCount} assigned participant(s) still have no attendance record and will be excluded from the release until attendance is saved.",
+                isGoods ? "Partial distribution ready" : "Partial payout ready",
+                isGoods
+                    ? $"{summary.ReleaseReadyParticipantCount} participant(s) can receive goods now. {summary.PendingParticipantCount} assigned participant(s) still have no attendance record."
+                    : $"{summary.ReleaseReadyParticipantCount} participant(s) can be released now. {summary.PendingParticipantCount} assigned participant(s) still have no attendance record and will be excluded from the release until attendance is saved.",
                 WarningBrush);
         }
 
@@ -2396,7 +2438,18 @@ namespace AttendanceShiftingManagement.ViewModels
                     participant.Beneficiary.LastName);
             }
 
-            return $"Beneficiary #{participant.BeneficiaryStagingId?.ToString(CultureInfo.InvariantCulture) ?? "legacy"}";
+            if (participant.HouseholdMember != null)
+            {
+                var member = participant.HouseholdMember;
+                if (!string.IsNullOrWhiteSpace(member.FullName))
+                {
+                    return member.FullName.Trim();
+                }
+
+                return $"Member #{member.Id}";
+            }
+
+            return $"Beneficiary #{participant.BeneficiaryStagingId?.ToString(CultureInfo.InvariantCulture) ?? participant.HouseholdMemberId?.ToString(CultureInfo.InvariantCulture) ?? "legacy"}";
         }
 
         private sealed record ReleaseSummaryPresentation(
@@ -2482,11 +2535,16 @@ namespace AttendanceShiftingManagement.ViewModels
         public string FullName { get; set; } = string.Empty;
         public string BeneficiaryId { get; set; } = string.Empty;
         public string CivilRegistryId { get; set; } = string.Empty;
+        public string ContactNumber { get; set; } = "--";
         public CashForWorkAttendanceStatus StatusValue { get; set; }
         public string Status { get; set; } = string.Empty;
         public AttendanceCaptureSource SourceValue { get; set; }
         public string Source { get; set; } = string.Empty;
         public DateTime RecordedAt { get; set; }
+
+        public string AttendanceDateText => AttendanceDate != default ? AttendanceDate.ToString("MMM dd, yyyy") : RecordedAt.ToString("MMM dd, yyyy");
+        public string TimeInText => RecordedAt != default ? RecordedAt.ToString("hh:mm tt") : "--";
+        public string StatusText => string.IsNullOrWhiteSpace(Status) ? StatusValue.ToString() : Status;
     }
 
     public sealed class CashForWorkAnnouncementItem
