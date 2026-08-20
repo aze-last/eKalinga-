@@ -46,6 +46,7 @@ namespace AttendanceShiftingManagement.ViewModels
             ShowReportsCommand = new RelayCommand(_ => SwitchSection("Reports"));
             ShowScanningPortalCommand = new RelayCommand(_ => SwitchSection("ScanningPortal"));
             ShowSeminarAttendanceCommand = new RelayCommand(_ => SwitchSection("SeminarAttendance"));
+            ToggleSidebarCommand = new RelayCommand(_ => IsSidebarCollapsed = !IsSidebarCollapsed);
             RefreshBranding();
             RefreshConnectionSummary();
             LoadUserSummary();
@@ -157,6 +158,25 @@ namespace AttendanceShiftingManagement.ViewModels
             private set => SetProperty(ref _userDisplayName, value);
         }
 
+        private bool _isSidebarCollapsed = false;
+
+        public bool IsSidebarCollapsed
+        {
+            get => _isSidebarCollapsed;
+            set
+            {
+                if (SetProperty(ref _isSidebarCollapsed, value))
+                {
+                    OnPropertyChanged(nameof(SidebarWidth));
+                    OnPropertyChanged(nameof(SidebarToggleTooltip));
+                }
+            }
+        }
+
+        public double SidebarWidth => _isSidebarCollapsed ? 68.0 : 240.0;
+        public string SidebarToggleTooltip => _isSidebarCollapsed ? "Expand Sidebar (Ctrl+B)" : "Collapse Sidebar (Ctrl+B)";
+        public string UserRoleLabel => _currentUser.Role.ToString();
+
         public bool IsDashboardSelected => _currentSection == "Dashboard";
         public bool IsCashForWorkSelected => _currentSection == "CashForWork";
         public bool IsBudgetSelected => _currentSection == "Budget";
@@ -181,6 +201,7 @@ namespace AttendanceShiftingManagement.ViewModels
         public Visibility UserManagementVisibility => UserPermissionService.CanManageUsers ? Visibility.Visible : Visibility.Collapsed;
         public Visibility ScanningPortalVisibility => Visibility.Collapsed; // Launch pad tile hidden per request
 
+        public RelayCommand ToggleSidebarCommand { get; }
         public RelayCommand ShowDashboardCommand { get; }
         public RelayCommand ShowCashForWorkCommand { get; }
         public RelayCommand ShowCashForWorkPayoutCommand { get; }

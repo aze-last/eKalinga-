@@ -118,6 +118,25 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly RelayCommand _selectAllFilteredEnrollmentCommand;
         private readonly RelayCommand _deselectAllEnrollmentCommand;
         private readonly RelayCommand _openNewDonationProjectCommand;
+
+        // Walkthrough Tour Commands & Fields
+        private readonly RelayCommand _openOnboardingCommand;
+        private readonly RelayCommand _closeOnboardingCommand;
+        private readonly RelayCommand _nextOnboardingStepCommand;
+        private readonly RelayCommand _previousOnboardingStepCommand;
+        private readonly RelayCommand _setOnboardingStepCommand;
+        private bool _isOnboardingOpen;
+        private int _onboardingStep = 1;
+
+        // Create Project Modal Walkthrough Tour Commands & Fields
+        private readonly RelayCommand _openCreateProjectTourCommand;
+        private readonly RelayCommand _closeCreateProjectTourCommand;
+        private readonly RelayCommand _nextCreateProjectTourStepCommand;
+        private readonly RelayCommand _previousCreateProjectTourStepCommand;
+        private readonly RelayCommand _setCreateProjectTourStepCommand;
+        private bool _isCreateProjectTourOpen;
+        private int _createProjectTourStep = 1;
+
         private BudgetWorkspacePanel _activePanel = BudgetWorkspacePanel.Dashboard;
         private string _currentPanelTitle = "Budget Management";
         private string _currentPanelSubtitle = "Select a budget project or global cap to view and manage financial details.";
@@ -500,15 +519,32 @@ namespace AttendanceShiftingManagement.ViewModels
                 return;
             }
 
+            var shouldOpenTour = IsOnboardingOpen && OnboardingStep == 4;
+            if (shouldOpenTour)
+            {
+                CloseOnboarding();
+            }
+
             SetActivePanel(BudgetWorkspacePanel.ProjectCreation);
             IsProjectCreationPanelOpen = true;
             _ = LoadEnrollmentBeneficiariesAsync();
+
+            if (shouldOpenTour)
+            {
+                OpenCreateProjectTour();
+            }
         }
 
         private void OpenNewDonationProjectPanel()
         {
             if (IsBusy) return;
             IsCreateProjectGuided = false;
+
+            var shouldOpenTour = IsOnboardingOpen && OnboardingStep == 4;
+            if (shouldOpenTour)
+            {
+                CloseOnboarding();
+            }
 
             ResetProjectCreationForm();
             ResetDonationForm();
@@ -522,10 +558,16 @@ namespace AttendanceShiftingManagement.ViewModels
             SetActivePanel(BudgetWorkspacePanel.ProjectCreation);
             IsProjectCreationPanelOpen = true;
             _ = LoadEnrollmentBeneficiariesAsync();
+
+            if (shouldOpenTour)
+            {
+                OpenCreateProjectTour();
+            }
         }
 
         private void CloseProjectCreationPanel()
         {
+            CloseCreateProjectTour();
             IsProjectCreationPanelOpen = false;
             IsNewDonationMode = false;
             ClearEnrollmentSelection();
@@ -987,8 +1029,293 @@ namespace AttendanceShiftingManagement.ViewModels
             _nextLedgerPageCommand = new RelayCommand(async _ => await NextLedgerPageAsync(), _ => !IsBusy && CurrentLedgerPage < TotalLedgerPages);
             _previousLedgerPageCommand = new RelayCommand(async _ => await PreviousLedgerPageAsync(), _ => !IsBusy && CurrentLedgerPage > 1);
 
+            _openOnboardingCommand = new RelayCommand(_ => OpenOnboarding());
+            _closeOnboardingCommand = new RelayCommand(_ => CloseOnboarding());
+            _nextOnboardingStepCommand = new RelayCommand(_ => NextOnboardingStep());
+            _previousOnboardingStepCommand = new RelayCommand(_ => PreviousOnboardingStep());
+            _setOnboardingStepCommand = new RelayCommand(param => SetOnboardingStep(param));
+
+            _openCreateProjectTourCommand = new RelayCommand(_ => OpenCreateProjectTour());
+            _closeCreateProjectTourCommand = new RelayCommand(_ => CloseCreateProjectTour());
+            _nextCreateProjectTourStepCommand = new RelayCommand(_ => NextCreateProjectTourStep());
+            _previousCreateProjectTourStepCommand = new RelayCommand(_ => PreviousCreateProjectTourStep());
+            _setCreateProjectTourStepCommand = new RelayCommand(param => SetCreateProjectTourStep(param));
+
             _ = LoadAsync();
         }
+
+        public ICommand OpenOnboardingCommand => _openOnboardingCommand;
+        public ICommand CloseOnboardingCommand => _closeOnboardingCommand;
+        public ICommand NextOnboardingStepCommand => _nextOnboardingStepCommand;
+        public ICommand PreviousOnboardingStepCommand => _previousOnboardingStepCommand;
+        public ICommand SetOnboardingStepCommand => _setOnboardingStepCommand;
+
+        public ICommand OpenCreateProjectTourCommand => _openCreateProjectTourCommand;
+        public ICommand CloseCreateProjectTourCommand => _closeCreateProjectTourCommand;
+        public ICommand NextCreateProjectTourStepCommand => _nextCreateProjectTourStepCommand;
+        public ICommand PreviousCreateProjectTourStepCommand => _previousCreateProjectTourStepCommand;
+        public ICommand SetCreateProjectTourStepCommand => _setCreateProjectTourStepCommand;
+
+        // Unified Tour Commands
+        public ICommand CloseActiveTourCommand => new RelayCommand(_ => { if (IsCreateProjectTourOpen) CloseCreateProjectTour(); else CloseOnboarding(); });
+        public ICommand NextActiveTourStepCommand => new RelayCommand(_ => { if (IsCreateProjectTourOpen) NextCreateProjectTourStep(); else NextOnboardingStep(); });
+        public ICommand PreviousActiveTourStepCommand => new RelayCommand(_ => { if (IsCreateProjectTourOpen) PreviousCreateProjectTourStep(); else PreviousOnboardingStep(); });
+        public ICommand SetActiveTourStepCommand => new RelayCommand(param => { if (IsCreateProjectTourOpen) SetCreateProjectTourStep(param); else SetOnboardingStep(param); });
+
+        public bool IsOnboardingOpen
+        {
+            get => _isOnboardingOpen;
+            set
+            {
+                if (SetProperty(ref _isOnboardingOpen, value))
+                {
+                    if (value)
+                    {
+                        _isCreateProjectTourOpen = false;
+                        OnPropertyChanged(nameof(IsCreateProjectTourOpen));
+                    }
+                    OnPropertyChanged(nameof(IsAnyTourOpen));
+                    OnPropertyChanged(nameof(IsAnyOverlayOpen));
+                    NotifyActiveTourChanged();
+                }
+            }
+        }
+
+        public int OnboardingStep
+        {
+            get => _onboardingStep;
+            set
+            {
+                if (SetProperty(ref _onboardingStep, Math.Clamp(value, 1, 4)))
+                {
+                    NotifyActiveTourChanged();
+                }
+            }
+        }
+
+        public bool IsCreateProjectTourOpen
+        {
+            get => _isCreateProjectTourOpen;
+            set
+            {
+                if (SetProperty(ref _isCreateProjectTourOpen, value))
+                {
+                    if (value)
+                    {
+                        _isOnboardingOpen = false;
+                        OnPropertyChanged(nameof(IsOnboardingOpen));
+                    }
+                    OnPropertyChanged(nameof(IsAnyTourOpen));
+                    OnPropertyChanged(nameof(IsAnyOverlayOpen));
+                    NotifyActiveTourChanged();
+                }
+            }
+        }
+
+        public int CreateProjectTourStep
+        {
+            get => _createProjectTourStep;
+            set
+            {
+                if (SetProperty(ref _createProjectTourStep, Math.Clamp(value, 1, 5)))
+                {
+                    NotifyActiveTourChanged();
+                }
+            }
+        }
+
+        public bool IsAnyTourOpen => _isOnboardingOpen || _isCreateProjectTourOpen;
+
+        public int ActiveTourStep => _isCreateProjectTourOpen ? _createProjectTourStep : _onboardingStep;
+        public int ActiveTourTotalSteps => _isCreateProjectTourOpen ? 5 : 4;
+        public string ActiveTourHeaderTitle => _isCreateProjectTourOpen ? "PROJECT CREATION TOUR" : "BUDGET & FINANCE TOUR";
+
+        public string ActiveTourTitle => _isCreateProjectTourOpen
+            ? CreateProjectTourStep switch
+            {
+                1 => "Project Identity & Purpose",
+                2 => "Release Method & Amounts",
+                3 => "Funding Source & Donor",
+                4 => "Beneficiary Enrollment",
+                5 => "Finalize & Launch",
+                _ => "Create Project Guide"
+            }
+            : OnboardingStep switch
+            {
+                1 => "Financial Overview & Balances",
+                2 => "Sync Government Funds (GGMS)",
+                3 => "Budget & Funding Registry",
+                4 => "Spawn Community Project",
+                _ => "Budget Management Tour"
+            };
+
+        public string ActiveTourInstruction => _isCreateProjectTourOpen
+            ? CreateProjectTourStep switch
+            {
+                1 => "Specify the official project name, unique project code, and select its operational purpose (Cash for Work, Seminar, or Assistance Distribution).",
+                2 => "Configure how benefits are disbursed: as Cash (with daily wage rate / unit payout) or physical Goods (specifying item name, quantity, and unit of measure).",
+                3 => "Verify the allocated government budget or record a new private donation in-place with donor type, proof type, and receipt reference.",
+                4 => "For distribution projects, pre-enroll approved municipal residents via ADD BENEFICIARIES. For Cash-for-Work and Seminars, participants register dynamically via QR scanning on-site.",
+                5 => "Review all configured parameters and click CREATE PROJECT to lock the budget allocation and spawn the project across the system.",
+                _ => string.Empty
+            }
+            : OnboardingStep switch
+            {
+                1 => "Monitor overall budget allocations, active private donations, and available operational balances. Track general vs. earmarked amounts and velocity metrics.",
+                2 => "Synchronize certified municipal and national allocations directly from the Government Grants Management System (GGMS).",
+                3 => "Browse all registered funding sources and active community projects. Filter by category, search by fund code, and select items for allocation.",
+                4 => "Allocate funds to create Cash for Work, Seminar Training, or In-Kind Distribution projects with defined worker rates or goods allocations.",
+                _ => string.Empty
+            };
+
+        public string ActiveTourActionHint => _isCreateProjectTourOpen
+            ? CreateProjectTourStep switch
+            {
+                1 => "Fill in Project Name and Code in the first column, then click NEXT STEP.",
+                2 => "Select Release Method (Cash or Goods) and set unit amounts.",
+                3 => "Review the linked funding source in the middle column.",
+                4 => "Optionally click ADD BENEFICIARIES to select validated residents.",
+                5 => "Click CREATE PROJECT in the bottom right to finalize or click FINISH TOUR.",
+                _ => string.Empty
+            }
+            : OnboardingStep switch
+            {
+                1 => "Review the financial metric cards above. Click NEXT STEP to continue.",
+                2 => "Click SYNC GGMS to pull updated allocations or click NEXT STEP.",
+                3 => SelectedBudget != null
+                    ? $"Selected: {SelectedBudget.Code} - {SelectedBudget.Name}. Click NEXT STEP to continue."
+                    : "Click any fund row in the table to inspect details or click NEXT STEP.",
+                4 => "Click CREATE PROJECT to spawn an event or click FINISH.",
+                _ => string.Empty
+            };
+
+        public string ActiveTourTargetName => _isCreateProjectTourOpen
+            ? CreateProjectTourStep switch
+            {
+                1 => "ProjectBasicInfoSection",
+                2 => "ReleaseSettingsSection",
+                3 => "FundingSourceSection",
+                4 => "BeneficiariesEnrollmentSection",
+                5 => "ConfirmCreateProjectButton",
+                _ => string.Empty
+            }
+            : OnboardingStep switch
+            {
+                1 => "FinancialSummaryGrid",
+                2 => "SyncGgmsButton",
+                3 => "BudgetBrowserCard",
+                4 => "CreateProjectButton",
+                _ => string.Empty
+            };
+
+        // Backward-compatible properties
+        public string OnboardingTitle => ActiveTourTitle;
+        public string OnboardingInstruction => ActiveTourInstruction;
+        public string OnboardingActionHint => ActiveTourActionHint;
+        public string OnboardingTargetName => ActiveTourTargetName;
+
+        private void NotifyActiveTourChanged()
+        {
+            OnPropertyChanged(nameof(ActiveTourStep));
+            OnPropertyChanged(nameof(ActiveTourTotalSteps));
+            OnPropertyChanged(nameof(ActiveTourHeaderTitle));
+            OnPropertyChanged(nameof(ActiveTourTitle));
+            OnPropertyChanged(nameof(ActiveTourInstruction));
+            OnPropertyChanged(nameof(ActiveTourActionHint));
+            OnPropertyChanged(nameof(ActiveTourTargetName));
+            OnPropertyChanged(nameof(OnboardingTitle));
+            OnPropertyChanged(nameof(OnboardingInstruction));
+            OnPropertyChanged(nameof(OnboardingActionHint));
+            OnPropertyChanged(nameof(OnboardingTargetName));
+        }
+
+        public void OpenOnboarding()
+        {
+            OnboardingStep = 1;
+            IsOnboardingOpen = true;
+        }
+
+        public void CloseOnboarding()
+        {
+            IsOnboardingOpen = false;
+        }
+
+        public void NextOnboardingStep()
+        {
+            if (OnboardingStep < 4)
+            {
+                OnboardingStep++;
+            }
+            else
+            {
+                CloseOnboarding();
+            }
+        }
+
+        public void PreviousOnboardingStep()
+        {
+            if (OnboardingStep > 1)
+            {
+                OnboardingStep--;
+            }
+        }
+
+        public void SetOnboardingStep(object? stepParam)
+        {
+            if (stepParam is int step)
+            {
+                OnboardingStep = step;
+            }
+            else if (stepParam is string s && int.TryParse(s, out var parsedStep))
+            {
+                OnboardingStep = parsedStep;
+            }
+        }
+
+        public void OpenCreateProjectTour()
+        {
+            CreateProjectTourStep = 1;
+            IsCreateProjectTourOpen = true;
+        }
+
+        public void CloseCreateProjectTour()
+        {
+            IsCreateProjectTourOpen = false;
+        }
+
+        public void NextCreateProjectTourStep()
+        {
+            if (CreateProjectTourStep < 5)
+            {
+                CreateProjectTourStep++;
+            }
+            else
+            {
+                CloseCreateProjectTour();
+            }
+        }
+
+        public void PreviousCreateProjectTourStep()
+        {
+            if (CreateProjectTourStep > 1)
+            {
+                CreateProjectTourStep--;
+            }
+        }
+
+        public void SetCreateProjectTourStep(object? stepParam)
+        {
+            if (stepParam is int step)
+            {
+                CreateProjectTourStep = step;
+            }
+            else if (stepParam is string s && int.TryParse(s, out var parsedStep))
+            {
+                CreateProjectTourStep = parsedStep;
+            }
+        }
+
+        public bool IsStandardModalOpen => _activePanel == BudgetWorkspacePanel.Ledger || IsProjectCreationPanelOpen || IsEditProjectPanelOpen || IsBeneficiaryPickerOpen || IsHouseholdRecordsOpen;
 
         public ObservableCollection<PrivateDonationDonorType> DonorTypes { get; }
         public ObservableCollection<DonationProofType> ProofTypes { get; }
@@ -1240,6 +1567,11 @@ namespace AttendanceShiftingManagement.ViewModels
                     OnPropertyChanged(nameof(EmptyStateVisibility));
                     OnPropertyChanged(nameof(DetailVisibility));
                     OnPropertyChanged(nameof(SearchText));
+
+                    if (IsOnboardingOpen && OnboardingStep == 3 && value != null)
+                    {
+                        OnboardingStep = 4;
+                    }
                 }
             }
         }
@@ -1304,7 +1636,7 @@ namespace AttendanceShiftingManagement.ViewModels
             set => SetProperty(ref _unlockRemarks, value);
         }
 
-        public bool IsAnyOverlayOpen => _activePanel == BudgetWorkspacePanel.Ledger || IsProjectCreationPanelOpen || IsEditProjectPanelOpen;
+        public bool IsAnyOverlayOpen => IsStandardModalOpen || _isOnboardingOpen;
 
         private async void SyncWithSelectedBudget()
         {
@@ -2873,6 +3205,11 @@ namespace AttendanceShiftingManagement.ViewModels
                 }
 
                 SetSuccessStatus($"Government budget sync completed. {projectResult.Message}");
+
+                if (IsOnboardingOpen && OnboardingStep == 2)
+                {
+                    OnboardingStep = 3;
+                }
             }
             catch (Exception ex)
             {

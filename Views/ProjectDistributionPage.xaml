@@ -89,8 +89,18 @@
             <!-- Green Header Bar -->
             <Border Grid.Row="0" Background="#15803D" Padding="20,10">
                 <Grid>
-                    <TextBlock Text="DESTRIBUTION FORM" FontSize="18" FontWeight="Bold" Foreground="White" VerticalAlignment="Center"/>
+                    <TextBlock Text="DISTRIBUTION FORM" FontSize="18" FontWeight="Bold" Foreground="White" VerticalAlignment="Center"/>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                        <Button Command="{Binding OpenOnboardingCommand}"
+                                Style="{StaticResource MaterialDesignOutlinedButton}"
+                                Background="White" BorderBrush="#15803D" Foreground="#15803D"
+                                Height="32" Padding="12,0" Margin="0,0,12,0"
+                                ToolTip="Interactive Distribution Walkthrough">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="SchoolOutline" Width="16" Height="16" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="WALKTHROUGH" FontWeight="Bold" FontSize="11" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
                         <Button Command="{Binding RefreshCommand}" Style="{StaticResource MaterialDesignFlatButton}" Foreground="White" Height="32" Padding="8,0" Margin="0,0,12,0">
                             <materialDesign:PackIcon Kind="Refresh" Width="18" Height="18"/>
                         </Button>
@@ -101,7 +111,7 @@
             </Border>
 
             <!-- Fields Row -->
-            <Border Grid.Row="1" Padding="20,15" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="0,0,0,1" Background="White">
+            <Border x:Name="ProjectContextBar" Grid.Row="1" Padding="20,15" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="0,0,0,1" Background="White">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
@@ -152,7 +162,7 @@
             <Grid.Style>
                 <Style TargetType="Grid">
                     <Style.Triggers>
-                        <DataTrigger Binding="{Binding IsAnyOverlayOpen}" Value="True">
+                        <DataTrigger Binding="{Binding IsStandardModalOpen}" Value="True">
                             <DataTrigger.EnterActions>
                                 <BeginStoryboard>
                                     <Storyboard>
@@ -304,7 +314,7 @@
                     </StackPanel>
 
                     <!-- Action Bar: Beneficiary Search + Scan Button (Row 2) -->
-                    <Grid Grid.Row="2" Margin="0,0,0,24" HorizontalAlignment="Stretch"
+                    <Grid x:Name="ScannerSearchBarSection" Grid.Row="2" Margin="0,0,0,24" HorizontalAlignment="Stretch"
                           Visibility="{Binding SelectedProgram, Converter={StaticResource NullToHiddenConverter}}">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
@@ -329,16 +339,16 @@
                                          materialDesign:TextFieldAssist.DecorationVisibility="Hidden"
                                          Foreground="{DynamicResource BrandMidnightBrush}"/>
                                 <Button Grid.Column="2" Style="{StaticResource MaterialDesignIconButton}" Width="24" Height="24"
-                                        Command="{Binding ClearBeneficiarySearchCommand}"
-                                        Visibility="{Binding HasBeneficiarySearchText, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                        Foreground="{DynamicResource BrandTextSecondaryBrush}" Padding="0">
+                                         Command="{Binding ClearBeneficiarySearchCommand}"
+                                         Visibility="{Binding HasBeneficiarySearchText, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                         Foreground="{DynamicResource BrandTextSecondaryBrush}" Padding="0">
                                     <materialDesign:PackIcon Kind="CloseCircle" Width="16" Height="16"/>
                                 </Button>
                             </Grid>
                         </Border>
 
                         <!-- Swipe ID Card / Search ID Button -->
-                        <Button Grid.Column="1" Command="{Binding OpenPcScannerCommand}" Style="{StaticResource MaterialDesignRaisedButton}" 
+                        <Button x:Name="SwipeIdCardButton" Grid.Column="1" Command="{Binding OpenPcScannerCommand}" Style="{StaticResource MaterialDesignRaisedButton}" 
                                 Background="#1E6B65" BorderBrush="#1E6B65" Height="48" Padding="20,0" VerticalAlignment="Center">
                             <StackPanel Orientation="Horizontal">
                                 <materialDesign:PackIcon Kind="BarcodeScan" Width="20" Height="20" Foreground="White" VerticalAlignment="Center" Margin="0,0,10,0"/>
@@ -348,7 +358,7 @@
                     </Grid>
 
                     <!-- Lists area (Row 3) — reference 3-column buckets: RELEASED / PENDING / NOT ELIGIBLE -->
-                    <Grid Grid.Row="3"
+                    <Grid x:Name="DistributionColumnsGrid" Grid.Row="3"
                           Visibility="{Binding SelectedProgram, Converter={StaticResource NullToHiddenConverter}}">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
@@ -359,7 +369,7 @@
                         </Grid.ColumnDefinitions>
 
                         <!-- ===== Column 1: RELEASED / CLAIMED (Col 0) ===== -->
-                        <materialDesign:Card Grid.Column="0" Padding="20">
+                        <materialDesign:Card x:Name="ReleasedClaimsCard" Grid.Column="0" Padding="20">
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto"/>
@@ -486,7 +496,7 @@
                         </materialDesign:Card>
 
                         <!-- ===== Column 2: PENDING (awaiting release) (Col 2) ===== -->
-                        <materialDesign:Card Grid.Column="2" Padding="20">
+                        <materialDesign:Card x:Name="PendingClaimsCard" Grid.Column="2" Padding="20">
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto"/>
@@ -613,7 +623,7 @@
                         </materialDesign:Card>
 
                         <!-- ===== Column 3: UNRELEASED / UNCLAIMED (not eligible) (Col 4) ===== -->
-                        <materialDesign:Card Grid.Column="4" Padding="20">
+                        <materialDesign:Card x:Name="UnreleasedClaimsCard" Grid.Column="4" Padding="20">
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto"/>
@@ -1347,6 +1357,345 @@
                     </StackPanel>
                 </Grid>
             </Border>
+        </Grid>
+
+        <!-- ========================================================================= -->
+        <!-- SCAN DIAGNOSTIC & ERROR MODAL                                             -->
+        <!-- ========================================================================= -->
+        <Grid x:Name="ScanDiagnosticErrorModalGrid"
+              Grid.RowSpan="2"
+              Panel.ZIndex="160"
+              Visibility="{Binding IsScanErrorModalVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <!-- Semi-transparent Dark Backdrop -->
+            <Border Background="#CC0F172A"/>
+
+            <materialDesign:Card Width="520"
+                                 HorizontalAlignment="Center"
+                                 VerticalAlignment="Center"
+                                 UniformCornerRadius="16"
+                                 Background="White"
+                                 materialDesign:ElevationAssist.Elevation="Dp16">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Header -->
+                    <Border Grid.Row="0" Background="#DC2626" Padding="20,16" CornerRadius="16,16,0,0">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <Border Grid.Column="0" Background="#33FFFFFF" CornerRadius="10" Width="40" Height="40" Margin="0,0,14,0" VerticalAlignment="Center">
+                                <materialDesign:PackIcon Kind="BarcodeOff" Width="24" Height="24" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="USB SCANNER DIAGNOSTIC" Foreground="#FEF2F2" FontSize="10" FontWeight="Bold" Margin="0,0,0,2"/>
+                                <TextBlock Text="{Binding ScanErrorModalTitle, FallbackValue='Scan Verification Issue'}" Foreground="White" FontSize="16" FontWeight="Bold" TextWrapping="Wrap"/>
+                            </StackPanel>
+
+                            <Button Grid.Column="2" Command="{Binding CloseScanErrorModalCommand}"
+                                    Style="{StaticResource MaterialDesignIconButton}"
+                                    Foreground="White" Width="32" Height="32" VerticalAlignment="Center">
+                                <materialDesign:PackIcon Kind="Close" Width="18" Height="18"/>
+                            </Button>
+                        </Grid>
+                    </Border>
+
+                    <!-- Body Content -->
+                    <StackPanel Grid.Row="1" Margin="24,20,24,16">
+                        <!-- Primary Error Text -->
+                        <TextBlock Text="{Binding ScanErrorModalMessage}"
+                                   FontSize="13" FontWeight="SemiBold" Foreground="#0F172A"
+                                   TextWrapping="Wrap" Margin="0,0,0,16" LineHeight="18"/>
+
+                        <!-- Raw Scanned Input Display Box -->
+                        <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="14,10" Margin="0,0,0,14">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                    <materialDesign:PackIcon Kind="BarcodeScan" Width="14" Height="14" Foreground="#64748B" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                    <TextBlock Text="CAPTURED SCANNER PAYLOAD:" FontSize="10" FontWeight="Bold" Foreground="#64748B"/>
+                                </StackPanel>
+                                <TextBlock Text="{Binding ScanErrorModalRawPayload, TargetNullValue='(No input captured / focus interrupted)'}"
+                                           FontFamily="Consolas, Courier New" FontSize="13" FontWeight="Bold" Foreground="#0F172A"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Diagnostic Assessment Box -->
+                        <Border Background="#FEF2F2" BorderBrush="#FECACA" BorderThickness="1" CornerRadius="8" Padding="14,10" Margin="0,0,0,12">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                    <materialDesign:PackIcon Kind="HelpCircleOutline" Width="14" Height="14" Foreground="#DC2626" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                    <TextBlock Text="POSSIBLE CAUSE:" FontSize="10" FontWeight="Bold" Foreground="#DC2626"/>
+                                </StackPanel>
+                                <TextBlock Text="{Binding ScanErrorModalReason}"
+                                           FontSize="12" Foreground="#7F1D1D" TextWrapping="Wrap" LineHeight="16"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Recommended Action Box -->
+                        <Border Background="#F0FDF4" BorderBrush="#BBF7D0" BorderThickness="1" CornerRadius="8" Padding="14,10">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                    <materialDesign:PackIcon Kind="LightbulbOutline" Width="14" Height="14" Foreground="#15803D" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                    <TextBlock Text="RECOMMENDED ACTION:" FontSize="10" FontWeight="Bold" Foreground="#15803D"/>
+                                </StackPanel>
+                                <TextBlock Text="{Binding ScanErrorModalSuggestedAction}"
+                                           FontSize="12" Foreground="#14532D" TextWrapping="Wrap" LineHeight="16"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- Footer Action Buttons -->
+                    <Border Grid.Row="2" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0" Padding="20,14" CornerRadius="0,0,16,16">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <Button Grid.Column="0" Content="DISMISS" Command="{Binding CloseScanErrorModalCommand}"
+                                    Style="{StaticResource MaterialDesignOutlinedButton}"
+                                    BorderBrush="#94A3B8" Foreground="#475569"
+                                    Height="36" Padding="14,0" FontSize="11" FontWeight="SemiBold"/>
+
+                            <StackPanel Grid.Column="2" Orientation="Horizontal">
+                                <Button Command="{Binding SearchManuallyFromErrorCommand}"
+                                        Style="{StaticResource MaterialDesignRaisedButton}"
+                                        Background="#1E6B65" BorderBrush="#1E6B65" Foreground="White"
+                                        Height="36" Padding="14,0" FontSize="11" FontWeight="Bold" Margin="0,0,8,0">
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="Magnify" Width="14" Height="14" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                        <TextBlock Text="SEARCH MANUALLY" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+
+                                <Button Command="{Binding RetryScanCommand}"
+                                        Style="{StaticResource MaterialDesignRaisedButton}"
+                                        Background="#15803D" BorderBrush="#15803D" Foreground="White"
+                                        Height="36" Padding="16,0" FontSize="11" FontWeight="Bold">
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="BarcodeScan" Width="14" Height="14" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                        <TextBlock Text="TRY SCAN AGAIN" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </materialDesign:Card>
+        </Grid>
+
+        <!-- ========================================================================= -->
+        <!-- SPOTLIGHT / INTERACTIVE WALKTHROUGH OVERLAY LAYER                         -->
+        <!-- ========================================================================= -->
+        <Grid x:Name="SpotlightOverlayGrid"
+              Grid.RowSpan="2"
+              Panel.ZIndex="150"
+              Visibility="{Binding IsOnboardingOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+
+            <!-- Dark Translucent Backdrop with Dynamic Cutout Hole -->
+            <Path x:Name="SpotlightMaskPath"
+                  Fill="#CC0F172A"
+                  IsHitTestVisible="False"/>
+
+            <!-- Pulsing Golden Spotlight Focus Border around target element -->
+            <Border x:Name="SpotlightBorder"
+                    BorderBrush="{StaticResource ActionAccentBrush}"
+                    BorderThickness="2.5"
+                    CornerRadius="10"
+                    IsHitTestVisible="False"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Top">
+                <Border.Effect>
+                    <DropShadowEffect Color="#F59E0B" BlurRadius="22" ShadowDepth="0" Opacity="0.9"/>
+                </Border.Effect>
+            </Border>
+
+            <!-- Floating Instructional Popover Card -->
+            <Canvas x:Name="SpotlightCanvas" IsHitTestVisible="True" ClipToBounds="False">
+                <materialDesign:Card x:Name="InstructionCard" Width="430"
+                                     UniformCornerRadius="16" Background="White"
+                                     IsHitTestVisible="True"
+                                     materialDesign:ElevationAssist.Elevation="Dp16">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Header -->
+                        <Border Grid.Row="0" Background="#15803D" Padding="20,14" CornerRadius="16,16,0,0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
+                                        <materialDesign:PackIcon Kind="SchoolOutline" Width="18" Height="18" Foreground="White" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                        <TextBlock Text="DISTRIBUTION WORKFLOW TOUR" Foreground="White" FontSize="11" FontWeight="Bold" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                    <TextBlock Text="{Binding OnboardingTitle}" Foreground="White" FontSize="16" FontWeight="Bold" TextWrapping="Wrap"/>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Border Background="#33FFFFFF" CornerRadius="10" Padding="8,3" Margin="0,0,8,0">
+                                        <TextBlock Foreground="White" FontSize="11" FontWeight="Bold">
+                                            <TextBlock.Text>
+                                                <MultiBinding StringFormat="Step {0} of 4">
+                                                    <Binding Path="OnboardingStep"/>
+                                                </MultiBinding>
+                                            </TextBlock.Text>
+                                        </TextBlock>
+                                    </Border>
+                                    <Button Style="{StaticResource MaterialDesignIconButton}" Foreground="White"
+                                            Command="{Binding CloseOnboardingCommand}" Width="26" Height="26" Padding="0">
+                                        <materialDesign:PackIcon Kind="Close" Width="16" Height="16"/>
+                                    </Button>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <!-- Body -->
+                        <StackPanel Grid.Row="1" Margin="20,16">
+                            <TextBlock Text="{Binding OnboardingInstruction}"
+                                       Foreground="#334155" FontSize="13" TextWrapping="Wrap" LineHeight="19" Margin="0,0,0,14"/>
+
+                            <!-- Dynamic Action Prompt Box -->
+                            <Border Background="#FEF3C7" BorderBrush="#FDE68A" BorderThickness="1" CornerRadius="8" Padding="12,10">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <materialDesign:PackIcon Grid.Column="0" Kind="CursorDefaultClickOutline" Foreground="#B45309" Width="18" Height="18" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding OnboardingActionHint}" Foreground="#92400E" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+
+                        <!-- Footer Navigation -->
+                        <Border Grid.Row="2" Background="#F8FAFC" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="0,1,0,0" Padding="18,12" CornerRadius="0,0,16,16">
+                            <Grid>
+                                <!-- Step Indicator Dots -->
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                    <Button Command="{Binding SetOnboardingStepCommand}" CommandParameter="1" Style="{StaticResource MaterialDesignIconButton}" Width="16" Height="16" Padding="0" Margin="0,0,4,0">
+                                        <Ellipse Width="8" Height="8">
+                                            <Ellipse.Style>
+                                                <Style TargetType="Ellipse">
+                                                    <Setter Property="Fill" Value="#CBD5E1"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding OnboardingStep}" Value="1">
+                                                            <Setter Property="Fill" Value="#15803D"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Ellipse.Style>
+                                        </Ellipse>
+                                    </Button>
+
+                                    <Button Command="{Binding SetOnboardingStepCommand}" CommandParameter="2" Style="{StaticResource MaterialDesignIconButton}" Width="16" Height="16" Padding="0" Margin="0,0,4,0">
+                                        <Ellipse Width="8" Height="8">
+                                            <Ellipse.Style>
+                                                <Style TargetType="Ellipse">
+                                                    <Setter Property="Fill" Value="#CBD5E1"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding OnboardingStep}" Value="2">
+                                                            <Setter Property="Fill" Value="#15803D"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Ellipse.Style>
+                                        </Ellipse>
+                                    </Button>
+
+                                    <Button Command="{Binding SetOnboardingStepCommand}" CommandParameter="3" Style="{StaticResource MaterialDesignIconButton}" Width="16" Height="16" Padding="0" Margin="0,0,4,0">
+                                        <Ellipse Width="8" Height="8">
+                                            <Ellipse.Style>
+                                                <Style TargetType="Ellipse">
+                                                    <Setter Property="Fill" Value="#CBD5E1"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding OnboardingStep}" Value="3">
+                                                            <Setter Property="Fill" Value="#15803D"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Ellipse.Style>
+                                        </Ellipse>
+                                    </Button>
+
+                                    <Button Command="{Binding SetOnboardingStepCommand}" CommandParameter="4" Style="{StaticResource MaterialDesignIconButton}" Width="16" Height="16" Padding="0">
+                                        <Ellipse Width="8" Height="8">
+                                            <Ellipse.Style>
+                                                <Style TargetType="Ellipse">
+                                                    <Setter Property="Fill" Value="#CBD5E1"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding OnboardingStep}" Value="4">
+                                                            <Setter Property="Fill" Value="#15803D"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Ellipse.Style>
+                                        </Ellipse>
+                                    </Button>
+                                </StackPanel>
+
+                                <!-- Action Buttons -->
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                    <Button Content="SKIP" Command="{Binding CloseOnboardingCommand}"
+                                            Style="{StaticResource MaterialDesignFlatButton}"
+                                            Foreground="#64748B"
+                                            Margin="0,0,6,0" Padding="8,0" Height="32" FontSize="11"/>
+
+                                    <Button Content="BACK" Command="{Binding PreviousOnboardingStepCommand}"
+                                            BorderBrush="{DynamicResource BrandBorderBrush}"
+                                            Foreground="#0F172A"
+                                            Height="32" Padding="12,0" Margin="0,0,6,0" FontSize="11">
+                                        <Button.Style>
+                                            <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignOutlinedButton}">
+                                                <Setter Property="IsEnabled" Value="True"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding OnboardingStep}" Value="1">
+                                                        <Setter Property="IsEnabled" Value="False"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+
+                                    <Button Command="{Binding NextOnboardingStepCommand}"
+                                            Background="#15803D"
+                                            BorderBrush="#15803D"
+                                            Foreground="White" Height="32" Padding="14,0" FontSize="11" FontWeight="Bold">
+                                        <Button.Style>
+                                            <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}">
+                                                <Setter Property="Content" Value="NEXT STEP"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding OnboardingStep}" Value="4">
+                                                        <Setter Property="Content" Value="FINISH TOUR"/>
+                                                        <Setter Property="Background" Value="{StaticResource ActionAccentBrush}"/>
+                                                        <Setter Property="BorderBrush" Value="{StaticResource ActionAccentBrush}"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </materialDesign:Card>
+            </Canvas>
         </Grid>
 
     </Grid>

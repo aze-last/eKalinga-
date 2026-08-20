@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        xmlns:helpers="clr-namespace:AttendanceShiftingManagement.Helpers"
         mc:Ignorable="d"
         Title="eKalinga+"
         Width="1400"
@@ -26,6 +27,8 @@
     </WindowChrome.WindowChrome>
 
     <Window.Resources>
+        <helpers:InverseBooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter" />
+
         <Style x:Key="WindowControlButtonStyle"
                TargetType="Button"
                BasedOn="{StaticResource MaterialDesignFlatButton}">
@@ -48,6 +51,36 @@
                     <Setter Property="Foreground" Value="White" />
                 </Trigger>
             </Style.Triggers>
+        </Style>
+
+        <!-- Sidebar Navigation Button Base Style -->
+        <Style x:Key="SidebarNavButtonStyle" TargetType="Button">
+            <Setter Property="Height" Value="42"/>
+            <Setter Property="Margin" Value="6,2"/>
+            <Setter Property="Padding" Value="10,0"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="#94A3B8"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="ButtonBorder"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="8"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="#1E293B"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
     </Window.Resources>
 
@@ -78,14 +111,19 @@
                                 VerticalAlignment="Center"
                                 Margin="12,0,0,0">
                         <materialDesign:PackIcon Kind="HandHeart" 
-                                               Foreground="White" 
+                                               Foreground="#10B981" 
                                                Width="16" Height="16" 
                                                VerticalAlignment="Center" />
                         <TextBlock Text="eKalinga+" 
                                  Foreground="White" 
-                                 FontWeight="SemiBold" 
+                                 FontWeight="Bold" 
                                  FontSize="12"
                                  Margin="8,0,0,0" 
+                                 VerticalAlignment="Center" />
+                        <TextBlock Text="• Ayuda Operations Platform" 
+                                 Foreground="#64748B" 
+                                 FontSize="11"
+                                 Margin="6,0,0,0" 
                                  VerticalAlignment="Center" />
                     </StackPanel>
 
@@ -122,9 +160,571 @@
                 </Grid>
             </Border>
 
-            <!-- Main Content Area -->
-            <ContentControl Grid.Row="1"
-                            Content="{Binding CurrentView}" />
+            <!-- Row 1: Workspace Grid with Left Sidebar & Main Content -->
+            <Grid Grid.Row="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <!-- ========================================== -->
+                <!-- PERSISTENT COLLAPSIBLE SIDEBAR DOCK        -->
+                <!-- ========================================== -->
+                <Border Grid.Column="0"
+                        Width="{Binding SidebarWidth}"
+                        Background="#0F172A"
+                        BorderBrush="#1E293B"
+                        BorderThickness="0,0,1,0"
+                        Panel.ZIndex="10">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <!-- Top: Brand & Toggle Button -->
+                            <RowDefinition Height="Auto"/>
+                            <!-- Middle: Scrollable Navigation Links -->
+                            <RowDefinition Height="*"/>
+                            <!-- Bottom: User Profile & Actions -->
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- 1. Header & Collapse Toggle -->
+                        <Border Grid.Row="0" BorderBrush="#1E293B" BorderThickness="0,0,0,1" Padding="10,12">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Logo / Office Title (Hidden when collapsed) -->
+                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center"
+                                            Visibility="{Binding IsSidebarCollapsed, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                                    <Border Width="28" Height="28" Background="#15803D" CornerRadius="6" Margin="0,0,8,0">
+                                        <materialDesign:PackIcon Kind="ViewDashboardOutline" Foreground="White" Width="16" Height="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="MODULES" Foreground="White" FontSize="12" FontWeight="Bold" Typography.Capitals="AllSmallCaps"/>
+                                        <TextBlock Text="Operations Nav" Foreground="#64748B" FontSize="10"/>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <!-- Toggle Button -->
+                                <Button Grid.Column="1"
+                                        Command="{Binding ToggleSidebarCommand}"
+                                        ToolTip="{Binding SidebarToggleTooltip}"
+                                        Style="{StaticResource MaterialDesignIconButton}"
+                                        Foreground="#94A3B8" Width="32" Height="32" Padding="0"
+                                        HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <materialDesign:PackIcon Width="20" Height="20">
+                                        <materialDesign:PackIcon.Style>
+                                            <Style TargetType="materialDesign:PackIcon">
+                                                <Setter Property="Kind" Value="MenuOpen"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsSidebarCollapsed}" Value="True">
+                                                        <Setter Property="Kind" Value="Menu"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </materialDesign:PackIcon.Style>
+                                    </materialDesign:PackIcon>
+                                </Button>
+                            </Grid>
+                        </Border>
+
+                        <!-- 2. Scrollable Module Links -->
+                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="0,8">
+                            <StackPanel>
+                                <!-- Dashboard -->
+                                <Button Command="{Binding ShowDashboardCommand}"
+                                        ToolTip="Dashboard Overview"
+                                        Visibility="{Binding DashboardVisibility}">
+                                    <Button.Style>
+                                        <Style TargetType="Button" BasedOn="{StaticResource SidebarNavButtonStyle}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsDashboardSelected}" Value="True">
+                                                    <Setter Property="Background" Value="#1E293B"/>
+                                                    <Setter Property="Foreground" Value="White"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <!-- Active Pill -->
+                                        <Border Grid.Column="0" Width="3" Height="20" Background="#10B981" CornerRadius="1.5" Margin="-8,0,5,0">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsDashboardSelected}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                        </Border>
+                                        <materialDesign:PackIcon Grid.Column="0" Kind="ViewDashboardOutline" Width="20" Height="20" Margin="4,0,10,0" VerticalAlignment="Center">
+                                            <materialDesign:PackIcon.Style>
+                                                <Style TargetType="materialDesign:PackIcon">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsDashboardSelected}" Value="True">
+                                                            <Setter Property="Foreground" Value="#10B981"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </materialDesign:PackIcon.Style>
+                                        </materialDesign:PackIcon>
+                                        <TextBlock Grid.Column="1" Text="Dashboard" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"
+                                                   Visibility="{Binding IsSidebarCollapsed, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
+                                    </Grid>
+                                </Button>
+
+                                <!-- Master List -->
+                                <Button Command="{Binding ShowMasterListCommand}"
+                                        ToolTip="Master List &amp; Beneficiaries"
+                                        Visibility="{Binding MasterListVisibility}">
+                                    <Button.Style>
+                                        <Style TargetType="Button" BasedOn="{StaticResource SidebarNavButtonStyle}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsMasterListSelected}" Value="True">
+                                                    <Setter Property="Background" Value="#1E293B"/>
+                                                    <Setter Property="Foreground" Value="White"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Border Grid.Column="0" Width="3" Height="20" Background="#0EA5E9" CornerRadius="1.5" Margin="-8,0,5,0">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsMasterListSelected}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                        </Border>
+                                        <materialDesign:PackIcon Grid.Column="0" Kind="AccountGroupOutline" Width="20" Height="20" Margin="4,0,10,0" VerticalAlignment="Center">
+                                            <materialDesign:PackIcon.Style>
+                                                <Style TargetType="materialDesign:PackIcon">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsMasterListSelected}" Value="True">
+                                                            <Setter Property="Foreground" Value="#0EA5E9"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </materialDesign:PackIcon.Style>
+                                        </materialDesign:PackIcon>
+                                        <TextBlock Grid.Column="1" Text="Master List" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"
+                                                   Visibility="{Binding IsSidebarCollapsed, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
+                                    </Grid>
+                                </Button>
+
+                                <!-- Budget & Allocations -->
+                                <Button Command="{Binding ShowBudgetCommand}"
+                                        ToolTip="Budget &amp; Allocations"
+                                        Visibility="{Binding BudgetVisibility}">
+                                    <Button.Style>
+                                        <Style TargetType="Button" BasedOn="{StaticResource SidebarNavButtonStyle}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsBudgetSelected}" Value="True">
+                                                    <Setter Property="Background" Value="#1E293B"/>
+                                                    <Setter Property="Foreground" Value="White"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Border Grid.Column="0" Width="3" Height="20" Background="#10B981" CornerRadius="1.5" Margin="-8,0,5,0">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsBudgetSelected}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                        </Border>
+                                        <materialDesign:PackIcon Grid.Column="0" Kind="CashMultiple" Width="20" Height="20" Margin="4,0,10,0" VerticalAlignment="Center">
+                                            <materialDesign:PackIcon.Style>
+                                                <Style TargetType="materialDesign:PackIcon">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsBudgetSelected}" Value="True">
+                                                            <Setter Property="Foreground" Value="#10B981"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </materialDesign:PackIcon.Style>
+                                        </materialDesign:PackIcon>
+                                        <TextBlock Grid.Column="1" Text="Budget" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"
+                                                   Visibility="{Binding IsSidebarCollapsed, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
+                                    </Grid>
+                                </Button>
+
+                                <!-- Distribution & Claiming -->
+                                <Button Command="{Binding ShowDistributionCommand}"
+                                        ToolTip="Distribution &amp; Claiming"
+                                        Visibility="{Binding DistributionVisibility}">
+                                    <Button.Style>
+                                        <Style TargetType="Button" BasedOn="{StaticResource SidebarNavButtonStyle}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsDistributionSelected}" Value="True">
+                                                    <Setter Property="Background" Value="#1E293B"/>
+                                                    <Setter Property="Foreground" Value="White"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Border Grid.Column="0" Width="3" Height="20" Background="#F59E0B" CornerRadius="1.5" Margin="-8,0,5,0">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsDistributionSelected}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                        </Border>
+                                        <materialDesign:PackIcon Grid.Column="0" Kind="HandHeartOutline" Width="20" Height="20" Margin="4,0,10,0" VerticalAlignment="Center">
+                                            <materialDesign:PackIcon.Style>
+                                                <Style TargetType="materialDesign:PackIcon">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsDistributionSelected}" Value="True">
+                                                            <Setter Property="Foreground" Value="#F59E0B"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </materialDesign:PackIcon.Style>
+                                        </materialDesign:PackIcon>
+                                        <TextBlock Grid.Column="1" Text="Distribution" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"
+                                                   Visibility="{Binding IsSidebarCollapsed, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
+                                    </Grid>
+                                </Button>
+
+                                <!-- Cash-For-Work -->
+                                <Button Command="{Binding ShowCashForWorkCommand}"
+                                        ToolTip="Cash-For-Work Attendance &amp; Payroll"
+                                        Visibility="{Binding CashForWorkVisibility}">
+                                    <Button.Style>
+                                        <Style TargetType="Button" BasedOn="{StaticResource SidebarNavButtonStyle}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsCashForWorkSelected}" Value="True">
+                                                    <Setter Property="Background" Value="#1E293B"/>
+                                                    <Setter Property="Foreground" Value="White"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Border Grid.Column="0" Width="3" Height="20" Background="#8B5CF6" CornerRadius="1.5" Margin="-8,0,5,0">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsCashForWorkSelected}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                        </Border>
+                                        <materialDesign:PackIcon Grid.Column="0" Kind="BriefcaseOutline" Width="20" Height="20" Margin="4,0,10,0" VerticalAlignment="Center">
+                                            <materialDesign:PackIcon.Style>
+                                                <Style TargetType="materialDesign:PackIcon">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsCashForWorkSelected}" Value="True">
+                                                            <Setter Property="Foreground" Value="#8B5CF6"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </materialDesign:PackIcon.Style>
+                                        </materialDesign:PackIcon>
+                                        <TextBlock Grid.Column="1" Text="Cash-For-Work" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"
+                                                   Visibility="{Binding IsSidebarCollapsed, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
+                                    </Grid>
+                                </Button>
+
+                                <!-- Seminar & Training -->
+                                <Button Command="{Binding ShowSeminarAttendanceCommand}"
+                                        ToolTip="Seminar &amp; Training Attendance"
+                                        Visibility="{Binding SeminarAttendanceVisibility}">
+                                    <Button.Style>
+                                        <Style TargetType="Button" BasedOn="{StaticResource SidebarNavButtonStyle}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsSeminarAttendanceSelected}" Value="True">
+                                                    <Setter Property="Background" Value="#1E293B"/>
+                                                    <Setter Property="Foreground" Value="White"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Border Grid.Column="0" Width="3" Height="20" Background="#06B6D4" CornerRadius="1.5" Margin="-8,0,5,0">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsSeminarAttendanceSelected}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                        </Border>
+                                        <materialDesign:PackIcon Grid.Column="0" Kind="SchoolOutline" Width="20" Height="20" Margin="4,0,10,0" VerticalAlignment="Center">
+                                            <materialDesign:PackIcon.Style>
+                                                <Style TargetType="materialDesign:PackIcon">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsSeminarAttendanceSelected}" Value="True">
+                                                            <Setter Property="Foreground" Value="#06B6D4"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </materialDesign:PackIcon.Style>
+                                        </materialDesign:PackIcon>
+                                        <TextBlock Grid.Column="1" Text="Seminar &amp; Training" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"
+                                                   Visibility="{Binding IsSidebarCollapsed, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
+                                    </Grid>
+                                </Button>
+
+                                <!-- Assistance Case Management -->
+                                <Button Command="{Binding ShowAssistanceCasesCommand}"
+                                        ToolTip="Assistance Case Management"
+                                        Visibility="{Binding AssistanceCasesVisibility}">
+                                    <Button.Style>
+                                        <Style TargetType="Button" BasedOn="{StaticResource SidebarNavButtonStyle}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsAssistanceCasesSelected}" Value="True">
+                                                    <Setter Property="Background" Value="#1E293B"/>
+                                                    <Setter Property="Foreground" Value="White"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Border Grid.Column="0" Width="3" Height="20" Background="#6366F1" CornerRadius="1.5" Margin="-8,0,5,0">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsAssistanceCasesSelected}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                        </Border>
+                                        <materialDesign:PackIcon Grid.Column="0" Kind="FileDocumentEditOutline" Width="20" Height="20" Margin="4,0,10,0" VerticalAlignment="Center">
+                                            <materialDesign:PackIcon.Style>
+                                                <Style TargetType="materialDesign:PackIcon">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsAssistanceCasesSelected}" Value="True">
+                                                            <Setter Property="Foreground" Value="#6366F1"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </materialDesign:PackIcon.Style>
+                                        </materialDesign:PackIcon>
+                                        <TextBlock Grid.Column="1" Text="Assistance Cases" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"
+                                                   Visibility="{Binding IsSidebarCollapsed, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
+                                    </Grid>
+                                </Button>
+
+                                <!-- GGMS Consolidated Transactions -->
+                                <Button Command="{Binding ShowGgmsTransactionsCommand}"
+                                        ToolTip="GGMS Transactions"
+                                        Visibility="{Binding GgmsTransactionsVisibility}">
+                                    <Button.Style>
+                                        <Style TargetType="Button" BasedOn="{StaticResource SidebarNavButtonStyle}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsGgmsTransactionsSelected}" Value="True">
+                                                    <Setter Property="Background" Value="#1E293B"/>
+                                                    <Setter Property="Foreground" Value="White"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Border Grid.Column="0" Width="3" Height="20" Background="#14B8A6" CornerRadius="1.5" Margin="-8,0,5,0">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsGgmsTransactionsSelected}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                        </Border>
+                                        <materialDesign:PackIcon Grid.Column="0" Kind="BankTransfer" Width="20" Height="20" Margin="4,0,10,0" VerticalAlignment="Center">
+                                            <materialDesign:PackIcon.Style>
+                                                <Style TargetType="materialDesign:PackIcon">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsGgmsTransactionsSelected}" Value="True">
+                                                            <Setter Property="Foreground" Value="#14B8A6"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </materialDesign:PackIcon.Style>
+                                        </materialDesign:PackIcon>
+                                        <TextBlock Grid.Column="1" Text="GGMS Transactions" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"
+                                                   Visibility="{Binding IsSidebarCollapsed, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
+                                    </Grid>
+                                </Button>
+
+                                <!-- Reports & Analytics -->
+                                <Button Command="{Binding ShowReportsCommand}"
+                                        ToolTip="Reports &amp; Analytics"
+                                        Visibility="{Binding ReportsVisibility}">
+                                    <Button.Style>
+                                        <Style TargetType="Button" BasedOn="{StaticResource SidebarNavButtonStyle}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsReportsSelected}" Value="True">
+                                                    <Setter Property="Background" Value="#1E293B"/>
+                                                    <Setter Property="Foreground" Value="White"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Border Grid.Column="0" Width="3" Height="20" Background="#3B82F6" CornerRadius="1.5" Margin="-8,0,5,0">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsReportsSelected}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                        </Border>
+                                        <materialDesign:PackIcon Grid.Column="0" Kind="ChartLine" Width="20" Height="20" Margin="4,0,10,0" VerticalAlignment="Center">
+                                            <materialDesign:PackIcon.Style>
+                                                <Style TargetType="materialDesign:PackIcon">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsReportsSelected}" Value="True">
+                                                            <Setter Property="Foreground" Value="#3B82F6"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </materialDesign:PackIcon.Style>
+                                        </materialDesign:PackIcon>
+                                        <TextBlock Grid.Column="1" Text="Reports" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"
+                                                   Visibility="{Binding IsSidebarCollapsed, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
+                                    </Grid>
+                                </Button>
+                            </StackPanel>
+                        </ScrollViewer>
+
+                        <!-- 3. Bottom User Profile & Settings/Logout Footer -->
+                        <Border Grid.Row="2" BorderBrush="#1E293B" BorderThickness="0,1,0,0" Padding="8,10">
+                            <StackPanel>
+                                <!-- Profile Chip -->
+                                <Border Background="#1E293B" CornerRadius="8" Padding="8,6" Margin="0,0,0,6">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- Avatar -->
+                                        <Border Grid.Column="0" Width="32" Height="32" Background="#15803D" CornerRadius="16" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding OfficeInitials}" Foreground="White" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+
+                                        <!-- User details (Hidden when collapsed) -->
+                                        <StackPanel Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Center"
+                                                    Visibility="{Binding IsSidebarCollapsed, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                                            <TextBlock Text="{Binding UserDisplayName}" Foreground="White" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding UserRoleLabel}" Foreground="#94A3B8" FontSize="10" TextTrimming="CharacterEllipsis"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Settings & Logout Quick Actions -->
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <Button Grid.Column="0"
+                                            Click="Settings_Click"
+                                            ToolTip="System Settings"
+                                            Style="{StaticResource MaterialDesignFlatButton}"
+                                            Foreground="#94A3B8" Height="32" Padding="4,0" Margin="2,0">
+                                        <StackPanel Orientation="Horizontal">
+                                            <materialDesign:PackIcon Kind="CogOutline" Width="16" Height="16" VerticalAlignment="Center"/>
+                                            <TextBlock Text=" Settings" FontSize="11" VerticalAlignment="Center"
+                                                       Visibility="{Binding IsSidebarCollapsed, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
+                                        </StackPanel>
+                                    </Button>
+
+                                    <Button Grid.Column="1"
+                                            Click="Logout_Click"
+                                            ToolTip="Logout"
+                                            Style="{StaticResource MaterialDesignFlatButton}"
+                                            Foreground="#EF4444" Height="32" Padding="4,0" Margin="2,0">
+                                        <StackPanel Orientation="Horizontal">
+                                            <materialDesign:PackIcon Kind="Logout" Width="16" Height="16" VerticalAlignment="Center"/>
+                                            <TextBlock Text=" Exit" FontSize="11" VerticalAlignment="Center"
+                                                       Visibility="{Binding IsSidebarCollapsed, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
+                                        </StackPanel>
+                                    </Button>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </Border>
+
+                <!-- ========================================== -->
+                <!-- MAIN WORKSPACE CONTENT AREA                -->
+                <!-- ========================================== -->
+                <ContentControl Grid.Column="1"
+                                Content="{Binding CurrentView}" />
+            </Grid>
 
             <!-- Bottom Status Bar -->
             <Border Grid.Row="2" Background="#1E293B">
@@ -132,7 +732,7 @@
                     <Ellipse Width="10" Height="10" Fill="{Binding ConnectionStatusBrush}" Margin="0,0,8,0" />
                     <TextBlock Text="{Binding ConnectionStatusText}" Foreground="White" FontSize="11" />
                     
-                    <!-- Optional GGMS Indicator (Could bind this separately if needed) -->
+                    <!-- Optional GGMS Indicator -->
                     <TextBlock Text="{Binding GgmsStatusText}" Foreground="#94A3B8" FontSize="11" Margin="20,0,0,0" />
                 </StackPanel>
             </Border>

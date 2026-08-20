@@ -106,6 +106,16 @@
                     </StackPanel>
 
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                        <Button Command="{Binding OpenOnboardingCommand}"
+                                Style="{StaticResource MaterialDesignOutlinedButton}"
+                                Background="White" BorderBrush="#15803D" Foreground="#15803D"
+                                Height="40" Padding="14,0" Margin="0,0,10,0"
+                                ToolTip="Interactive Seminar &amp; Training Walkthrough">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="SchoolOutline" Width="18" Height="18" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="WALKTHROUGH" FontWeight="Bold" FontSize="12" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
 
                         <Button Content="Create New Seminar"
                                 Command="{Binding OpenCreateSeminarPanelCommand}"
@@ -190,7 +200,7 @@
 
                                 <!-- 2. LIVE SCANNER DOCK -->
                                 <TextBlock Text="LIVE SCANNER DOCK" Style="{StaticResource SidebarHeaderStyle}"/>
-                                <Border Background="White" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="10" Padding="12" Margin="0,0,0,14">
+                                <Border x:Name="LiveScannerDockBorder" Background="White" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="10" Padding="12" Margin="0,0,0,14">
                                     <StackPanel>
                                         <Border Background="{StaticResource ThemeAccentSoftBrush}" BorderBrush="{StaticResource ThemeAccentBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,0,0,10">
                                             <StackPanel Orientation="Horizontal">
@@ -359,7 +369,7 @@
                                     </StackPanel>
 
                                     <!-- Quick Actions -->
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <StackPanel x:Name="EventHeaderActions" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                                          <Button Content="RELEASE PAYOUT" Command="{Binding OpenPayoutPanelCommand}" Style="{StaticResource GoldActionButton}" Height="38" Margin="0,0,8,0" FontWeight="Bold"/>
                                          <Button Content="EDIT SEMINAR" Command="{Binding OpenEditSeminarPanelCommand}" Style="{StaticResource MaterialDesignOutlinedButton}" Height="38" Margin="0,0,8,0"/>
                                          <Button Content="SAVE PDF SHEET" Command="{Binding SaveAttendanceSheetPdfCommand}" Style="{StaticResource MaterialDesignOutlinedButton}" Height="38" Margin="0,0,8,0"/>
@@ -442,7 +452,7 @@
                         </Border>
 
                         <!-- 3. ATTENDANCE DATAGRID (Paginated) -->
-                        <Border Grid.Row="2" Background="White" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1,0,1,1" CornerRadius="0,0,12,12" Padding="0">
+                        <Border x:Name="AttendanceGridBorder" Grid.Row="2" Background="White" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1,0,1,1" CornerRadius="0,0,12,12" Padding="0">
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="*"/>
@@ -1064,6 +1074,209 @@
                     </Border>
                 </Grid>
             </Border>
+        </Grid>
+
+        <!-- ========================================================================= -->
+        <!-- SPOTLIGHT / INTERACTIVE WALKTHROUGH OVERLAY LAYER                         -->
+        <!-- ========================================================================= -->
+        <Grid x:Name="SpotlightOverlayGrid"
+              Panel.ZIndex="150"
+              Visibility="{Binding IsOnboardingOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+
+            <!-- Dark Translucent Backdrop with Dynamic Cutout Hole -->
+            <Path x:Name="SpotlightMaskPath"
+                  Fill="#CC0F172A"
+                  IsHitTestVisible="False"/>
+
+            <!-- Pulsing Golden Spotlight Focus Border around target element -->
+            <Border x:Name="SpotlightBorder"
+                    BorderBrush="#F59E0B"
+                    BorderThickness="2.5"
+                    CornerRadius="10"
+                    IsHitTestVisible="False"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Top">
+                <Border.Effect>
+                    <DropShadowEffect Color="#F59E0B" BlurRadius="22" ShadowDepth="0" Opacity="0.9"/>
+                </Border.Effect>
+            </Border>
+
+            <!-- Floating Instructional Popover Card -->
+            <Canvas x:Name="SpotlightCanvas" IsHitTestVisible="True" ClipToBounds="False">
+                <materialDesign:Card x:Name="InstructionCard" Width="430"
+                                     UniformCornerRadius="16" Background="White"
+                                     IsHitTestVisible="True"
+                                     materialDesign:ElevationAssist.Elevation="Dp16">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Header -->
+                        <Border Grid.Row="0" Background="#15803D" Padding="20,14" CornerRadius="16,16,0,0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
+                                        <materialDesign:PackIcon Kind="SchoolOutline" Width="18" Height="18" Foreground="White" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                        <TextBlock Text="SEMINAR &amp; TRAINING TOUR" Foreground="White" FontSize="11" FontWeight="Bold" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                    <TextBlock Text="{Binding OnboardingTitle}" Foreground="White" FontSize="16" FontWeight="Bold" TextWrapping="Wrap"/>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Border Background="#33FFFFFF" CornerRadius="10" Padding="8,3" Margin="0,0,8,0">
+                                        <TextBlock Foreground="White" FontSize="11" FontWeight="Bold">
+                                            <TextBlock.Text>
+                                                <MultiBinding StringFormat="Step {0} of 4">
+                                                    <Binding Path="OnboardingStep"/>
+                                                </MultiBinding>
+                                            </TextBlock.Text>
+                                        </TextBlock>
+                                    </Border>
+                                    <Button Style="{StaticResource MaterialDesignIconButton}" Foreground="White"
+                                            Command="{Binding CloseOnboardingCommand}" Width="26" Height="26" Padding="0">
+                                        <materialDesign:PackIcon Kind="Close" Width="16" Height="16"/>
+                                    </Button>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <!-- Body -->
+                        <StackPanel Grid.Row="1" Margin="20,16">
+                            <TextBlock Text="{Binding OnboardingInstruction}"
+                                       Foreground="#334155" FontSize="13" TextWrapping="Wrap" LineHeight="19" Margin="0,0,0,14"/>
+
+                            <!-- Dynamic Action Prompt Box -->
+                            <Border Background="#FEF3C7" BorderBrush="#FDE68A" BorderThickness="1" CornerRadius="8" Padding="12,10">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <materialDesign:PackIcon Grid.Column="0" Kind="CursorDefaultClickOutline" Foreground="#B45309" Width="18" Height="18" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding OnboardingActionHint}" Foreground="#92400E" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+
+                        <!-- Footer Navigation -->
+                        <Border Grid.Row="2" Background="#F8FAFC" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="0,1,0,0" Padding="18,12" CornerRadius="0,0,16,16">
+                            <Grid>
+                                <!-- Step Indicator Dots -->
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                    <Button Command="{Binding SetOnboardingStepCommand}" CommandParameter="1" Style="{StaticResource MaterialDesignIconButton}" Width="16" Height="16" Padding="0" Margin="0,0,4,0">
+                                        <Ellipse Width="8" Height="8">
+                                            <Ellipse.Style>
+                                                <Style TargetType="Ellipse">
+                                                    <Setter Property="Fill" Value="#CBD5E1"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding OnboardingStep}" Value="1">
+                                                            <Setter Property="Fill" Value="#15803D"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Ellipse.Style>
+                                        </Ellipse>
+                                    </Button>
+
+                                    <Button Command="{Binding SetOnboardingStepCommand}" CommandParameter="2" Style="{StaticResource MaterialDesignIconButton}" Width="16" Height="16" Padding="0" Margin="0,0,4,0">
+                                        <Ellipse Width="8" Height="8">
+                                            <Ellipse.Style>
+                                                <Style TargetType="Ellipse">
+                                                    <Setter Property="Fill" Value="#CBD5E1"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding OnboardingStep}" Value="2">
+                                                            <Setter Property="Fill" Value="#15803D"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Ellipse.Style>
+                                        </Ellipse>
+                                    </Button>
+
+                                    <Button Command="{Binding SetOnboardingStepCommand}" CommandParameter="3" Style="{StaticResource MaterialDesignIconButton}" Width="16" Height="16" Padding="0" Margin="0,0,4,0">
+                                        <Ellipse Width="8" Height="8">
+                                            <Ellipse.Style>
+                                                <Style TargetType="Ellipse">
+                                                    <Setter Property="Fill" Value="#CBD5E1"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding OnboardingStep}" Value="3">
+                                                            <Setter Property="Fill" Value="#15803D"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Ellipse.Style>
+                                        </Ellipse>
+                                    </Button>
+
+                                    <Button Command="{Binding SetOnboardingStepCommand}" CommandParameter="4" Style="{StaticResource MaterialDesignIconButton}" Width="16" Height="16" Padding="0">
+                                        <Ellipse Width="8" Height="8">
+                                            <Ellipse.Style>
+                                                <Style TargetType="Ellipse">
+                                                    <Setter Property="Fill" Value="#CBD5E1"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding OnboardingStep}" Value="4">
+                                                            <Setter Property="Fill" Value="#15803D"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Ellipse.Style>
+                                        </Ellipse>
+                                    </Button>
+                                </StackPanel>
+
+                                <!-- Action Buttons -->
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                    <Button Content="SKIP" Command="{Binding CloseOnboardingCommand}"
+                                            Style="{StaticResource MaterialDesignFlatButton}"
+                                            Foreground="#64748B"
+                                            Margin="0,0,6,0" Padding="8,0" Height="32" FontSize="11"/>
+
+                                    <Button Content="BACK" Command="{Binding PreviousOnboardingStepCommand}"
+                                            BorderBrush="{DynamicResource BrandBorderBrush}"
+                                            Foreground="#0F172A"
+                                            Height="32" Padding="12,0" Margin="0,0,6,0" FontSize="11">
+                                        <Button.Style>
+                                            <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignOutlinedButton}">
+                                                <Setter Property="IsEnabled" Value="True"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding OnboardingStep}" Value="1">
+                                                        <Setter Property="IsEnabled" Value="False"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+
+                                    <Button Command="{Binding NextOnboardingStepCommand}"
+                                            Background="#15803D"
+                                            BorderBrush="#15803D"
+                                            Foreground="White" Height="32" Padding="14,0" FontSize="11" FontWeight="Bold">
+                                        <Button.Style>
+                                            <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}">
+                                                <Setter Property="Content" Value="NEXT STEP"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding OnboardingStep}" Value="4">
+                                                        <Setter Property="Content" Value="FINISH TOUR"/>
+                                                        <Setter Property="Background" Value="#F59E0B"/>
+                                                        <Setter Property="BorderBrush" Value="#F59E0B"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </materialDesign:Card>
+            </Canvas>
         </Grid>
     </Grid>
 </UserControl>

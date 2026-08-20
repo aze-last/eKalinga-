@@ -56,6 +56,11 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly RelayCommand _confirmEnrollmentCommand;
         private readonly RelayCommand _openFullProfileCommand;
         private readonly RelayCommand _closeFullProfileCommand;
+        private readonly RelayCommand _openOnboardingCommand;
+        private readonly RelayCommand _closeOnboardingCommand;
+        private readonly RelayCommand _nextOnboardingStepCommand;
+        private readonly RelayCommand _previousOnboardingStepCommand;
+        private readonly RelayCommand _setOnboardingStepCommand;
 
         private readonly IMasterListQueryService _queryService;
         private readonly bool _autoRefresh;
@@ -72,6 +77,8 @@ namespace AttendanceShiftingManagement.ViewModels
         private bool _isDetailPanelOpen;
         private bool _isPcScannerOpen;
         private bool _isFullProfileOpen;
+        private bool _isOnboardingOpen;
+        private int _onboardingStep = 1;
         private MasterListBeneficiary? _scannedBeneficiary;
         private string? _scannedBeneficiaryStatus;
         private BitmapSource? _scannedBeneficiaryPhoto;
@@ -174,7 +181,14 @@ namespace AttendanceShiftingManagement.ViewModels
 
             _saveCorrectionsCommand = new RelayCommand(async _ => await SaveCorrectionsAsync(), _ => CanSaveCorrectionsSelected());
             _returnToPendingCommand = new RelayCommand(async _ => await ReturnToPendingAsync(), _ => CanReturnToPendingSelected());
-            _approveCommand = new RelayCommand(async _ => await ApproveSelectedAsync(), _ => CanApproveSelected());
+            _approveCommand = new RelayCommand(async _ =>
+            {
+                if (IsOnboardingOpen && OnboardingStep == 3)
+                {
+                    OnboardingStep = 4;
+                }
+                await ApproveSelectedAsync();
+            }, _ => CanApproveSelected());
             _rejectCommand = new RelayCommand(async _ => await RejectSelectedAsync(), _ => CanRejectSelected());
             _uploadDigitalIdPhotoCommand = new RelayCommand(async _ => await UploadDigitalIdPhotoAsync(), _ => CanUploadDigitalIdPhoto());
             _cropDigitalIdPhotoCommand = new RelayCommand(async _ => await CropDigitalIdPhotoAsync(), _ => CanCropDigitalIdPhoto());
@@ -184,11 +198,31 @@ namespace AttendanceShiftingManagement.ViewModels
             _confirmScannedClaimCommand = new RelayCommand(_ => ExecuteConfirmScannedLookup(), _ => !IsBusy && ScannedBeneficiary != null);
             _cancelScannedClaimCommand = new RelayCommand(_ => ResetScannedResult());
             _createLookupScannerSessionCommand = new RelayCommand(async _ => await CreateLookupScannerSessionAsync(), _ => CanCreateLookupScannerSession());
-            _openEnrollmentPanelCommand = new RelayCommand(async _ => await OpenEnrollmentPanelAsync(), _ => !IsBusy);
+            _openEnrollmentPanelCommand = new RelayCommand(async _ =>
+            {
+                if (IsOnboardingOpen && OnboardingStep == 4)
+                {
+                    CloseOnboarding();
+                }
+                await OpenEnrollmentPanelAsync();
+            }, _ => !IsBusy);
             _closeEnrollmentPanelCommand = new RelayCommand(_ => IsEnrollmentPanelOpen = false);
             _confirmEnrollmentCommand = new RelayCommand(async param => await ConfirmEnrollmentAsync(param), _ => !IsBusy && SelectedProjectToEnroll != null);
-            _openFullProfileCommand = new RelayCommand(_ => IsFullProfileOpen = true, _ => SelectedBeneficiary != null);
+            _openFullProfileCommand = new RelayCommand(_ =>
+            {
+                if (IsOnboardingOpen && OnboardingStep == 3)
+                {
+                    OnboardingStep = 4;
+                }
+                IsFullProfileOpen = true;
+            }, _ => SelectedBeneficiary != null);
             _closeFullProfileCommand = new RelayCommand(_ => IsFullProfileOpen = false);
+
+            _openOnboardingCommand = new RelayCommand(_ => OpenOnboarding());
+            _closeOnboardingCommand = new RelayCommand(_ => CloseOnboarding());
+            _nextOnboardingStepCommand = new RelayCommand(_ => NextOnboardingStep());
+            _previousOnboardingStepCommand = new RelayCommand(_ => PreviousOnboardingStep());
+            _setOnboardingStepCommand = new RelayCommand(param => SetOnboardingStep(param));
 
             if (autoLoad)
             {
@@ -203,6 +237,7 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 if (SetProperty(ref _isEnrollmentPanelOpen, value))
                 {
+                    OnPropertyChanged(nameof(IsStandardModalOpen));
                     OnPropertyChanged(nameof(IsAnyOverlayOpen));
                 }
             }
@@ -221,6 +256,120 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand ConfirmEnrollmentCommand => _confirmEnrollmentCommand;
         public ICommand OpenFullProfileCommand => _openFullProfileCommand;
         public ICommand CloseFullProfileCommand => _closeFullProfileCommand;
+
+        public bool IsOnboardingOpen
+        {
+            get => _isOnboardingOpen;
+            set
+            {
+                if (SetProperty(ref _isOnboardingOpen, value))
+                {
+                    OnPropertyChanged(nameof(IsAnyOverlayOpen));
+                }
+            }
+        }
+
+        public int OnboardingStep
+        {
+            get => _onboardingStep;
+            set
+            {
+                if (SetProperty(ref _onboardingStep, Math.Clamp(value, 1, 4)))
+                {
+                    OnPropertyChanged(nameof(OnboardingTitle));
+                    OnPropertyChanged(nameof(OnboardingInstruction));
+                    OnPropertyChanged(nameof(OnboardingActionHint));
+                    OnPropertyChanged(nameof(OnboardingTargetName));
+                }
+            }
+        }
+
+        public string OnboardingTitle => OnboardingStep switch
+        {
+            1 => "Search & Filter Registry",
+            2 => "Select Resident Profile",
+            3 => "Review & Issue Digital ID",
+            4 => "Direct Project Enrollment",
+            _ => "Masterlist Operator Guide"
+        };
+
+        public string OnboardingInstruction => OnboardingStep switch
+        {
+            1 => "Search across 40,000+ local residents using their Name, Civil Registry ID, or Address. Live filtering segments records in real-time.",
+            2 => "Click any resident record in the table to load their complete demographic profile, Civil Registry link, and household context.",
+            3 => "Inspect demographic flags and use quick actions to View Full Profile, Approve & Issue official QR Digital IDs, or record audit notes.",
+            4 => "Directly enroll approved beneficiaries into active community projects (Cash for Work, Seminars, Ayuda) without re-entering data.",
+            _ => string.Empty
+        };
+
+        public string OnboardingActionHint => OnboardingStep switch
+        {
+            1 => "Type in the search box to find a resident or click NEXT STEP.",
+            2 => SelectedBeneficiary != null 
+                ? $"Selected: {SelectedBeneficiary.DisplayName}. Click NEXT STEP to continue."
+                : "Click a resident row in the masterlist table.",
+            3 => "Click 'VIEW FULL PROFILE' or 'APPROVE & ISSUE ID'.",
+            4 => "Click 'ENROLL IN PROJECT' to start project disbursement.",
+            _ => string.Empty
+        };
+
+        public string OnboardingTargetName => OnboardingStep switch
+        {
+            1 => "SidebarSearchBorder",
+            2 => "ApprovedDataGrid",
+            3 => "QuickActionsPanel",
+            4 => "EnrollmentButton",
+            _ => string.Empty
+        };
+
+        public ICommand OpenOnboardingCommand => _openOnboardingCommand;
+        public ICommand CloseOnboardingCommand => _closeOnboardingCommand;
+        public ICommand NextOnboardingStepCommand => _nextOnboardingStepCommand;
+        public ICommand PreviousOnboardingStepCommand => _previousOnboardingStepCommand;
+        public ICommand SetOnboardingStepCommand => _setOnboardingStepCommand;
+
+        public void OpenOnboarding()
+        {
+            OnboardingStep = 1;
+            IsOnboardingOpen = true;
+        }
+
+        public void CloseOnboarding()
+        {
+            IsOnboardingOpen = false;
+        }
+
+        public void NextOnboardingStep()
+        {
+            if (OnboardingStep < 4)
+            {
+                OnboardingStep++;
+            }
+            else
+            {
+                CloseOnboarding();
+            }
+        }
+
+        public void PreviousOnboardingStep()
+        {
+            if (OnboardingStep > 1)
+            {
+                OnboardingStep--;
+            }
+        }
+
+        public void SetOnboardingStep(object? stepParam)
+        {
+            if (stepParam is int step)
+            {
+                OnboardingStep = step;
+            }
+            else if (stepParam is string s && int.TryParse(s, out var parsedStep))
+            {
+                OnboardingStep = parsedStep;
+            }
+        }
 
         private async Task OpenEnrollmentPanelAsync()
         {
@@ -456,7 +605,9 @@ namespace AttendanceShiftingManagement.ViewModels
             private set => SetProperty(ref _isHistoryLoading, value);
         }
 
-        public bool IsAnyOverlayOpen => _isFilterPanelOpen || _isDetailPanelOpen || _isPcScannerOpen || _isFullProfileOpen;
+        public bool IsStandardModalOpen => _isFilterPanelOpen || _isDetailPanelOpen || _isPcScannerOpen || _isFullProfileOpen || _isEnrollmentPanelOpen;
+
+        public bool IsAnyOverlayOpen => IsStandardModalOpen || _isOnboardingOpen;
 
         public bool IsFullProfileOpen
         {
@@ -465,6 +616,7 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 if (SetProperty(ref _isFullProfileOpen, value))
                 {
+                    OnPropertyChanged(nameof(IsStandardModalOpen));
                     OnPropertyChanged(nameof(IsAnyOverlayOpen));
                 }
             }
@@ -477,6 +629,7 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 if (SetProperty(ref _isFilterPanelOpen, value))
                 {
+                    OnPropertyChanged(nameof(IsStandardModalOpen));
                     OnPropertyChanged(nameof(IsAnyOverlayOpen));
                 }
             }
@@ -489,6 +642,7 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 if (SetProperty(ref _isDetailPanelOpen, value))
                 {
+                    OnPropertyChanged(nameof(IsStandardModalOpen));
                     OnPropertyChanged(nameof(IsAnyOverlayOpen));
                 }
             }
@@ -501,6 +655,7 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 if (SetProperty(ref _isPcScannerOpen, value))
                 {
+                    OnPropertyChanged(nameof(IsStandardModalOpen));
                     OnPropertyChanged(nameof(IsAnyOverlayOpen));
                 }
             }
@@ -873,6 +1028,11 @@ namespace AttendanceShiftingManagement.ViewModels
                     {
                         _ = LoadSelectedBeneficiaryHistoryAsync();
                         _ = SyncEditableFieldsFromSelectionAsync(value);
+
+                        if (IsOnboardingOpen && OnboardingStep == 2)
+                        {
+                            OnboardingStep = 3;
+                        }
                     }
                     else
                     {

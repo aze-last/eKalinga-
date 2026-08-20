@@ -126,6 +126,97 @@ public sealed class BudgetPageBindingTests
     }
 
     [Fact]
+    public void BudgetPage_HasWalkthroughOverlayAndButtonBindings()
+    {
+        var pagePath = GetProjectFilePath("Views", "BudgetPage.xaml");
+
+        var xaml = File.ReadAllText(pagePath);
+
+        // Header Walkthrough Launch Button
+        Assert.Contains("Command=\"{Binding OpenOnboardingCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"WALKTHROUGH\"", xaml, StringComparison.Ordinal);
+
+        // Workspace Blur separation: Bound to IsStandardModalOpen, NOT blurred by walkthrough
+        Assert.Contains("BlurEffect Radius=\"{Binding IsStandardModalOpen", xaml, StringComparison.Ordinal);
+
+        // Interactive Spotlight Layer
+        Assert.Contains("x:Name=\"SpotlightOverlayGrid\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("x:Name=\"SpotlightMaskPath\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("x:Name=\"SpotlightBorder\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("x:Name=\"SpotlightCanvas\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("x:Name=\"InstructionCard\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("IsHitTestVisible=\"True\"", xaml, StringComparison.Ordinal);
+
+        // Target UI Elements named for spotlight hit-testing & bounds
+        Assert.Contains("x:Name=\"FinancialSummaryGrid\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("x:Name=\"SyncGgmsButton\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("x:Name=\"BudgetBrowserCard\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("x:Name=\"BudgetDataGrid\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("x:Name=\"CreateProjectButton\"", xaml, StringComparison.Ordinal);
+
+        // Create Project Modal Guide and targets
+        Assert.Contains("Command=\"{Binding OpenCreateProjectTourCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"FORM GUIDE\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("x:Name=\"ProjectBasicInfoSection\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("x:Name=\"ReleaseSettingsSection\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("x:Name=\"FundingSourceSection\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("x:Name=\"BeneficiariesEnrollmentSection\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("x:Name=\"ConfirmCreateProjectButton\"", xaml, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BudgetViewModel_WalkthroughStepsAndProgression()
+    {
+        var vmPath = GetProjectFilePath("ViewModels", "BudgetViewModel.cs");
+
+        var source = File.ReadAllText(vmPath);
+
+        // Verify Tour Commands & Step Properties are implemented
+        Assert.Contains("OpenOnboardingCommand", source, StringComparison.Ordinal);
+        Assert.Contains("CloseOnboardingCommand", source, StringComparison.Ordinal);
+        Assert.Contains("NextOnboardingStepCommand", source, StringComparison.Ordinal);
+        Assert.Contains("PreviousOnboardingStepCommand", source, StringComparison.Ordinal);
+        Assert.Contains("SetOnboardingStepCommand", source, StringComparison.Ordinal);
+        Assert.Contains("OnboardingStep", source, StringComparison.Ordinal);
+        Assert.Contains("OnboardingTitle", source, StringComparison.Ordinal);
+        Assert.Contains("OnboardingInstruction", source, StringComparison.Ordinal);
+        Assert.Contains("OnboardingActionHint", source, StringComparison.Ordinal);
+        Assert.Contains("OnboardingTargetName", source, StringComparison.Ordinal);
+        Assert.Contains("IsStandardModalOpen", source, StringComparison.Ordinal);
+
+        // Step Targets
+        Assert.Contains("FinancialSummaryGrid", source, StringComparison.Ordinal);
+        Assert.Contains("SyncGgmsButton", source, StringComparison.Ordinal);
+        Assert.Contains("BudgetBrowserCard", source, StringComparison.Ordinal);
+        Assert.Contains("CreateProjectButton", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BudgetViewModel_CreateProjectTourStepsAndProgression()
+    {
+        var vmPath = GetProjectFilePath("ViewModels", "BudgetViewModel.cs");
+
+        var source = File.ReadAllText(vmPath);
+
+        // Verify Create Project Tour Commands & Step Properties
+        Assert.Contains("OpenCreateProjectTourCommand", source, StringComparison.Ordinal);
+        Assert.Contains("CloseCreateProjectTourCommand", source, StringComparison.Ordinal);
+        Assert.Contains("NextCreateProjectTourStepCommand", source, StringComparison.Ordinal);
+        Assert.Contains("PreviousCreateProjectTourStepCommand", source, StringComparison.Ordinal);
+        Assert.Contains("SetCreateProjectTourStepCommand", source, StringComparison.Ordinal);
+        Assert.Contains("IsCreateProjectTourOpen", source, StringComparison.Ordinal);
+        Assert.Contains("CreateProjectTourStep", source, StringComparison.Ordinal);
+        Assert.Contains("IsAnyTourOpen", source, StringComparison.Ordinal);
+
+        // Step Targets for Create Project
+        Assert.Contains("ProjectBasicInfoSection", source, StringComparison.Ordinal);
+        Assert.Contains("ReleaseSettingsSection", source, StringComparison.Ordinal);
+        Assert.Contains("FundingSourceSection", source, StringComparison.Ordinal);
+        Assert.Contains("BeneficiariesEnrollmentSection", source, StringComparison.Ordinal);
+        Assert.Contains("ConfirmCreateProjectButton", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void DashboardPage_ContainsBudgetModuleTile()
     {
         var pagePath = GetProjectFilePath("Views", "BarangayDashboardPage.xaml");

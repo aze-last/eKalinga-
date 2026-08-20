@@ -173,6 +173,27 @@ namespace AttendanceShiftingManagement.ViewModels
         private bool _isBeneficiaryValidationModalOpen;
         private DistributionBeneficiaryOption? _validatingBeneficiary;
 
+        // Interactive Walkthrough Tour Commands & Fields
+        private readonly RelayCommand _openOnboardingCommand;
+        private readonly RelayCommand _closeOnboardingCommand;
+        private readonly RelayCommand _nextOnboardingStepCommand;
+        private readonly RelayCommand _previousOnboardingStepCommand;
+        private readonly RelayCommand _setOnboardingStepCommand;
+        private bool _isOnboardingOpen;
+        private int _onboardingStep = 1;
+
+        // Scan Diagnostic & Error Modal Fields & Commands
+        private bool _isScanErrorModalVisible;
+        private string _scanErrorModalTitle = string.Empty;
+        private string _scanErrorModalMessage = string.Empty;
+        private string _scanErrorModalRawPayload = string.Empty;
+        private string _scanErrorModalReason = string.Empty;
+        private string _scanErrorModalSuggestedAction = string.Empty;
+        private string _scanErrorModalType = "Error";
+        private readonly RelayCommand _closeScanErrorModalCommand;
+        private readonly RelayCommand _retryScanCommand;
+        private readonly RelayCommand _searchManuallyFromErrorCommand;
+
         public ProjectDistributionViewModel(User currentUser)
         {
             _currentUser = currentUser;
@@ -264,6 +285,16 @@ namespace AttendanceShiftingManagement.ViewModels
             ClearBeneficiarySearchCommand = new RelayCommand(_ => BeneficiarySearchText = string.Empty);
             ClearScanErrorCommand = new RelayCommand(_ => ClearScanError());
 
+            _openOnboardingCommand = new RelayCommand(_ => OpenOnboarding());
+            _closeOnboardingCommand = new RelayCommand(_ => CloseOnboarding());
+            _nextOnboardingStepCommand = new RelayCommand(_ => NextOnboardingStep());
+            _previousOnboardingStepCommand = new RelayCommand(_ => PreviousOnboardingStep());
+            _setOnboardingStepCommand = new RelayCommand(param => SetOnboardingStep(param));
+
+            _closeScanErrorModalCommand = new RelayCommand(_ => CloseScanErrorModal());
+            _retryScanCommand = new RelayCommand(_ => RetryScan());
+            _searchManuallyFromErrorCommand = new RelayCommand(_ => SearchManuallyFromError());
+
             // Wire shared diagnostics channel → existing error banner bindings.
             ScannerDiagnostics.ErrorRaised += (kind, message) =>
             {
@@ -284,6 +315,12 @@ namespace AttendanceShiftingManagement.ViewModels
             ResetCreateProjectForm();
             _ = LoadAsync();
         }
+
+        public ICommand OpenOnboardingCommand => _openOnboardingCommand;
+        public ICommand CloseOnboardingCommand => _closeOnboardingCommand;
+        public ICommand NextOnboardingStepCommand => _nextOnboardingStepCommand;
+        public ICommand PreviousOnboardingStepCommand => _previousOnboardingStepCommand;
+        public ICommand SetOnboardingStepCommand => _setOnboardingStepCommand;
 
         public ObservableCollection<AyudaProgramType> ProgramTypes { get; }
         public ObservableCollection<AssistanceReleaseKind> ReleaseKinds { get; }
@@ -737,7 +774,202 @@ namespace AttendanceShiftingManagement.ViewModels
         private DistributionBeneficiaryOption? _selectedAvailableUnpickedBeneficiary;
         private DistributionBeneficiaryOption? _selectedProjectBeneficiary;
 
-        public bool IsAnyOverlayOpen => IsAddBeneficiaryPanelOpen || IsScannerPanelOpen || IsCreateProjectPanelOpen || IsCreateProjectSuccessPanelOpen || IsPcScannerOpen || IsScannedResultVisible || IsReleaseSuccessState || IsHouseholdConfirmVisible || IsPendingReasonModalVisible;
+        public bool IsOnboardingOpen
+        {
+            get => _isOnboardingOpen;
+            set
+            {
+                if (SetProperty(ref _isOnboardingOpen, value))
+                {
+                    OnPropertyChanged(nameof(IsAnyOverlayOpen));
+                }
+            }
+        }
+
+        public int OnboardingStep
+        {
+            get => _onboardingStep;
+            set
+            {
+                if (SetProperty(ref _onboardingStep, Math.Clamp(value, 1, 4)))
+                {
+                    OnPropertyChanged(nameof(OnboardingTitle));
+                    OnPropertyChanged(nameof(OnboardingInstruction));
+                    OnPropertyChanged(nameof(OnboardingActionHint));
+                    OnPropertyChanged(nameof(OnboardingTargetName));
+                }
+            }
+        }
+
+        public string OnboardingTitle => OnboardingStep switch
+        {
+            1 => "Active Project & Fund Context",
+            2 => "Digital ID Scanner & Search",
+            3 => "Distribution Queue & Status",
+            4 => "Verification & Disbursement",
+            _ => "Distribution Operator Guide"
+        };
+
+        public string OnboardingInstruction => OnboardingStep switch
+        {
+            1 => "Inspect the active distribution project code, funding source, and registered beneficiary roster. Click BROWSE to select or switch active distribution projects.",
+            2 => "Search beneficiaries by name, ID number, or civil registry ID. Click \"Swipe ID Card/Search ID\" or use a physical QR barcode reader to identify residents instantly.",
+            3 => "Manage payouts across the 3 pipeline lists: Released/Claimed, Pending (ready for disbursement), and Unreleased/Unclaimed. Double-click any resident to inspect details.",
+            4 => "During disbursement, verify resident photos, household duplicate alerts, and check off physical requirements (Cedula / Barangay Certificate) before issuing cash or goods.",
+            _ => string.Empty
+        };
+
+        public string OnboardingActionHint => OnboardingStep switch
+        {
+            1 => SelectedProgram != null
+                ? $"Active: {SelectedProgram.ProgramCode} - {SelectedProgram.ProgramName}. Click NEXT STEP to continue."
+                : "Click BROWSE to select a project or click NEXT STEP.",
+            2 => "Click SWIPE ID CARD or type into the search bar, then click NEXT STEP.",
+            3 => "Double-click any resident in the lists or click NEXT STEP.",
+            4 => "Click FINISH TOUR to begin processing distributions.",
+            _ => string.Empty
+        };
+
+        public string OnboardingTargetName => OnboardingStep switch
+        {
+            1 => "ProjectContextBar",
+            2 => "ScannerSearchBarSection",
+            3 => "DistributionColumnsGrid",
+            4 => "PendingClaimsCard",
+            _ => string.Empty
+        };
+
+        public void OpenOnboarding()
+        {
+            OnboardingStep = 1;
+            IsOnboardingOpen = true;
+        }
+
+        public void CloseOnboarding()
+        {
+            IsOnboardingOpen = false;
+        }
+
+        public void NextOnboardingStep()
+        {
+            if (OnboardingStep < 4)
+            {
+                OnboardingStep++;
+            }
+            else
+            {
+                CloseOnboarding();
+            }
+        }
+
+        public void PreviousOnboardingStep()
+        {
+            if (OnboardingStep > 1)
+            {
+                OnboardingStep--;
+            }
+        }
+
+        public void SetOnboardingStep(object? stepParam)
+        {
+            if (stepParam is int step)
+            {
+                OnboardingStep = step;
+            }
+            else if (stepParam is string s && int.TryParse(s, out var parsedStep))
+            {
+                OnboardingStep = parsedStep;
+            }
+        }
+
+        public bool IsScanErrorModalVisible
+        {
+            get => _isScanErrorModalVisible;
+            set
+            {
+                if (SetProperty(ref _isScanErrorModalVisible, value))
+                {
+                    OnPropertyChanged(nameof(IsStandardModalOpen));
+                    OnPropertyChanged(nameof(IsAnyOverlayOpen));
+                }
+            }
+        }
+
+        public string ScanErrorModalTitle
+        {
+            get => _scanErrorModalTitle;
+            set => SetProperty(ref _scanErrorModalTitle, value);
+        }
+
+        public string ScanErrorModalMessage
+        {
+            get => _scanErrorModalMessage;
+            set => SetProperty(ref _scanErrorModalMessage, value);
+        }
+
+        public string ScanErrorModalRawPayload
+        {
+            get => _scanErrorModalRawPayload;
+            set => SetProperty(ref _scanErrorModalRawPayload, value);
+        }
+
+        public string ScanErrorModalReason
+        {
+            get => _scanErrorModalReason;
+            set => SetProperty(ref _scanErrorModalReason, value);
+        }
+
+        public string ScanErrorModalSuggestedAction
+        {
+            get => _scanErrorModalSuggestedAction;
+            set => SetProperty(ref _scanErrorModalSuggestedAction, value);
+        }
+
+        public string ScanErrorModalType
+        {
+            get => _scanErrorModalType;
+            set => SetProperty(ref _scanErrorModalType, value);
+        }
+
+        public ICommand CloseScanErrorModalCommand => _closeScanErrorModalCommand;
+        public ICommand RetryScanCommand => _retryScanCommand;
+        public ICommand SearchManuallyFromErrorCommand => _searchManuallyFromErrorCommand;
+
+        public void CloseScanErrorModal()
+        {
+            IsScanErrorModalVisible = false;
+            RequestScannerFocus?.Invoke();
+        }
+
+        public void RetryScan()
+        {
+            IsScanErrorModalVisible = false;
+            RequestScannerFocus?.Invoke();
+        }
+
+        public void SearchManuallyFromError()
+        {
+            IsScanErrorModalVisible = false;
+            if (!string.IsNullOrWhiteSpace(ScanErrorModalRawPayload))
+            {
+                BeneficiarySearchText = ScanErrorModalRawPayload;
+            }
+        }
+
+        public void ShowScanErrorModal(string title, string message, string rawPayload, string reason, string suggestedAction, string errorType = "Error")
+        {
+            ScanErrorModalTitle = title;
+            ScanErrorModalMessage = message;
+            ScanErrorModalRawPayload = rawPayload;
+            ScanErrorModalReason = reason;
+            ScanErrorModalSuggestedAction = suggestedAction;
+            ScanErrorModalType = errorType;
+            IsScanErrorModalVisible = true;
+            _ = Task.Run(() => { try { Console.Beep(400, 600); } catch { } });
+        }
+
+        public bool IsStandardModalOpen => IsAddBeneficiaryPanelOpen || IsScannerPanelOpen || IsCreateProjectPanelOpen || IsCreateProjectSuccessPanelOpen || IsPcScannerOpen || IsScannedResultVisible || IsReleaseSuccessState || IsHouseholdConfirmVisible || IsPendingReasonModalVisible || IsScanErrorModalVisible;
+        public bool IsAnyOverlayOpen => IsStandardModalOpen || _isOnboardingOpen;
 
         public DistributionBeneficiaryOption? SelectedAvailableUnpickedBeneficiary
         {
@@ -2575,7 +2807,13 @@ namespace AttendanceShiftingManagement.ViewModels
                 ScanErrorMessage = msg;
                 HasScanError = true;
                 SetErrorStatus(msg);
-                _ = Task.Run(() => { try { Console.Beep(400, 600); } catch { } });
+                ShowScanErrorModal(
+                    "No Active Project Selected",
+                    msg,
+                    payload ?? string.Empty,
+                    "The USB barcode scanner is receiving input, but no project distribution roster is currently active.",
+                    "Click 'BROWSE' in the top project context bar to select an active distribution project.",
+                    "NoProject");
                 return;
             }
 
@@ -2644,6 +2882,13 @@ namespace AttendanceShiftingManagement.ViewModels
                 ScanErrorMessage = msg;
                 HasScanError = true;
                 SetErrorStatus(msg);
+                ShowScanErrorModal(
+                    "e-Kard Verification Failed",
+                    msg,
+                    payload,
+                    $"An error occurred while verifying the digital ID with the central registry: {ex.Message}",
+                    "Verify the network connection or perform manual resident identification.",
+                    "Error");
                 return;
             }
             finally
@@ -2662,6 +2907,13 @@ namespace AttendanceShiftingManagement.ViewModels
                         ScanErrorMessage = msg;
                         HasScanError = true;
                         SetErrorStatus(msg);
+                        ShowScanErrorModal(
+                            "e-Kard Expired",
+                            msg,
+                            payload,
+                            $"This digital ID expired on {result.ExpiryDate:MMM dd, yyyy}.",
+                            "Request alternative government-issued ID from the resident before proceeding with aid release.",
+                            "Warning");
                         return;
                     }
                 case EKardValidity.Revoked:
@@ -2670,7 +2922,13 @@ namespace AttendanceShiftingManagement.ViewModels
                         ScanErrorMessage = msg;
                         HasScanError = true;
                         SetErrorStatus(msg);
-                        _ = Task.Run(() => { try { Console.Beep(400, 600); } catch { } });
+                        ShowScanErrorModal(
+                            "e-Kard Revoked / Suspended",
+                            msg,
+                            payload,
+                            "This digital ID was flagged as REVOKED in the Central Registry System.",
+                            "Do not disburse cash or relief goods against this badge. Escalate to the Municipal Administrator.",
+                            "Error");
                         return;
                     }
                 case EKardValidity.NotFound:
@@ -2695,7 +2953,13 @@ namespace AttendanceShiftingManagement.ViewModels
                         ScanErrorMessage = msg;
                         HasScanError = true;
                         SetErrorStatus(msg);
-                        _ = Task.Run(() => { try { Console.Beep(400, 600); } catch { } });
+                        ShowScanErrorModal(
+                            "e-Kard Record Not Found",
+                            msg,
+                            payload,
+                            $"No digital card record matching '{result.BeneficiaryId}' was found in the Central Registry.",
+                            "Ensure the resident presents their official physical municipal ID, or search manually by name.",
+                            "NotFound");
                         return;
                     }
             }
@@ -2718,6 +2982,13 @@ namespace AttendanceShiftingManagement.ViewModels
                 ScanErrorMessage = msg;
                 HasScanError = true;
                 SetErrorStatus(msg);
+                ShowScanErrorModal(
+                    "No Active Project Selected",
+                    msg,
+                    beneficiaryId,
+                    "Cannot search beneficiary without an active project distribution roster.",
+                    "Select an active project first from the top context bar.",
+                    "NoProject");
                 return;
             }
 
@@ -2742,6 +3013,13 @@ namespace AttendanceShiftingManagement.ViewModels
                 ScanErrorMessage = msg;
                 HasScanError = true;
                 SetErrorStatus(msg);
+                ShowScanErrorModal(
+                    "No Active Project Selected",
+                    msg,
+                    request.Value ?? string.Empty,
+                    "No project distribution roster is currently active.",
+                    "Select an active project first from the top context bar.",
+                    "NoProject");
                 return;
             }
 
@@ -2768,25 +3046,47 @@ namespace AttendanceShiftingManagement.ViewModels
                 if (lookup == null)
                 {
                     // Do NOT set cooldown on failed lookup (allows instant retry)
-                    _ = Task.Run(() => { try { Console.Beep(400, 600); } catch { } });
                     LastScanSummaryText = "Last Scan: Not Found";
                     LastScanSummaryBrush = (Brush?)Application.Current.TryFindResource("BrandDangerBrush") ?? Brushes.Firebrick;
                     var msg = $"Scanned ID '{request.Value}' was not found in the beneficiary registry.";
                     ScanErrorMessage = msg;
                     HasScanError = true;
                     SetErrorStatus(msg);
+
+                    var rawCode = request.Value ?? string.Empty;
+                    var reason = rawCode.Length < 4
+                        ? "The scanner transmitted an incomplete or fragmented barcode. This often happens if the scanner lost keyboard focus during scanning or the card was swiped too fast."
+                        : $"No beneficiary with ID or QR code '{rawCode}' was found in the database. The card might belong to an un-enrolled resident or different municipality.";
+                    var action = rawCode.Length < 4
+                        ? "Point the scanner directly at the barcode and scan again firmly, or click 'Search Manually' to type the resident's name."
+                        : "Verify the resident's physical ID card, or search manually by their full name in the search bar above.";
+
+                    ShowScanErrorModal(
+                        rawCode.Length < 4 ? "Incomplete Barcode Scanned" : "Beneficiary ID Not Found",
+                        msg,
+                        rawCode,
+                        reason,
+                        action,
+                        "NotFound");
                     return;
                 }
 
                 if (lookup.IsOfflineError)
                 {
-                    _ = Task.Run(() => { try { Console.Beep(400, 600); } catch { } });
                     LastScanSummaryText = "Last Scan: Offline Error";
                     LastScanSummaryBrush = (Brush?)Application.Current.TryFindResource("BrandWarningBrush") ?? Brushes.OrangeRed;
                     var msg = lookup.ErrorMessage ?? "OFFLINE — Cannot verify scanned ID with server.";
                     ScanErrorMessage = msg;
                     HasScanError = true;
                     SetErrorStatus(msg);
+
+                    ShowScanErrorModal(
+                        "Central Registry System Offline",
+                        msg,
+                        request.Value ?? string.Empty,
+                        "The application could not contact the CRS server to authenticate this digital badge, and no local offline copy exists.",
+                        "Check your network connection, or verify resident identity manually using their printed physical documents.",
+                        "Offline");
                     return;
                 }
 

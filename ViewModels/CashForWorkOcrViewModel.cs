@@ -63,6 +63,15 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly RelayCommand _cancelScannedClaimCommand;
         private readonly RelayCommand _toggleSidebarCommand;
 
+        // Interactive Walkthrough Tour Commands & Fields
+        private readonly RelayCommand _openOnboardingCommand;
+        private readonly RelayCommand _closeOnboardingCommand;
+        private readonly RelayCommand _nextOnboardingStepCommand;
+        private readonly RelayCommand _previousOnboardingStepCommand;
+        private readonly RelayCommand _setOnboardingStepCommand;
+        private bool _isOnboardingOpen;
+        private int _onboardingStep = 1;
+
         private CashForWorkEvent? _selectedEvent;
         private CashForWorkSavedAttendanceRow? _selectedAttendanceRow;
         private CashForWorkWorkspacePanel _activePanel;
@@ -188,6 +197,12 @@ namespace AttendanceShiftingManagement.ViewModels
             _cancelScannedClaimCommand = new RelayCommand(_ => ResetScannedResult());
             ClearScanErrorCommand = new RelayCommand(_ => ClearScanError());
 
+            _openOnboardingCommand = new RelayCommand(_ => OpenOnboarding());
+            _closeOnboardingCommand = new RelayCommand(_ => CloseOnboarding());
+            _nextOnboardingStepCommand = new RelayCommand(_ => NextOnboardingStep());
+            _previousOnboardingStepCommand = new RelayCommand(_ => PreviousOnboardingStep());
+            _setOnboardingStepCommand = new RelayCommand(param => SetOnboardingStep(param));
+
             _eventsView = CollectionViewSource.GetDefaultView(Events);
             _eventsView.Filter = FilterEvents;
 
@@ -202,6 +217,12 @@ namespace AttendanceShiftingManagement.ViewModels
         public ObservableCollection<CashForWorkAnnouncementItem> OpenAnnouncements { get; }
         public ObservableCollection<ReportsMetricItem> HistoryMetrics { get; }
         public ObservableCollection<string> HistoryHighlights { get; }
+
+        public ICommand OpenOnboardingCommand => _openOnboardingCommand;
+        public ICommand CloseOnboardingCommand => _closeOnboardingCommand;
+        public ICommand NextOnboardingStepCommand => _nextOnboardingStepCommand;
+        public ICommand PreviousOnboardingStepCommand => _previousOnboardingStepCommand;
+        public ICommand SetOnboardingStepCommand => _setOnboardingStepCommand;
 
         public ICommand ClearScanErrorCommand { get; }
         public ICommand SaveEventCommand => _saveEventCommand;
@@ -860,7 +881,114 @@ namespace AttendanceShiftingManagement.ViewModels
                 }
             }
         }
-        public bool IsAnyOverlayOpen => IsDrawerOpen || IsPcScannerOpen || IsScannedResultVisible;
+        public bool IsOnboardingOpen
+        {
+            get => _isOnboardingOpen;
+            set
+            {
+                if (SetProperty(ref _isOnboardingOpen, value))
+                {
+                    OnPropertyChanged(nameof(IsAnyOverlayOpen));
+                }
+            }
+        }
+
+        public int OnboardingStep
+        {
+            get => _onboardingStep;
+            set
+            {
+                if (SetProperty(ref _onboardingStep, value))
+                {
+                    OnPropertyChanged(nameof(OnboardingTitle));
+                    OnPropertyChanged(nameof(OnboardingInstruction));
+                    OnPropertyChanged(nameof(OnboardingActionHint));
+                    OnPropertyChanged(nameof(OnboardingTargetName));
+                }
+            }
+        }
+
+        public string OnboardingTitle => OnboardingStep switch
+        {
+            1 => "Active Event & Budget Context",
+            2 => "Digital ID & Attendance Station",
+            3 => "Worker Roster & Shift Tracking",
+            4 => "Wage Calculation & Disbursement",
+            _ => "Cash-For-Work Workflow Guide"
+        };
+
+        public string OnboardingInstruction => OnboardingStep switch
+        {
+            1 => "Select an active Cash-For-Work event from the left rail or browse past events. This loads enrolled worker slots, daily shift rate, and allocated municipal budget.",
+            2 => "The USB barcode / QR scanner dock captures physical worker badges in real time for instant attendance verification, time-in, and time-out tracking.",
+            3 => "Review the live attendance roster showing present attendees, logged shifts, total hours worked, and attendance status compliance.",
+            4 => "Verify verified hours and release payroll disbursements directly to eligible beneficiaries upon completing attendance requirements.",
+            _ => string.Empty
+        };
+
+        public string OnboardingActionHint => OnboardingStep switch
+        {
+            1 => "Tip: Use '+ NEW EVENT VIA BUDGET' in the top header to allocate fresh project funding.",
+            2 => "Tip: The scanner remains armed globally—simply swipe or scan any beneficiary card.",
+            3 => "Tip: You can search or filter attendees by name, civil ID, or barcode in the filter bar.",
+            4 => "Tip: Click 'RELEASE PAYOUT' to disburse cash aid or in-kind supplies.",
+            _ => string.Empty
+        };
+
+        public string OnboardingTargetName => OnboardingStep switch
+        {
+            1 => "SidebarContainer",
+            2 => "LiveScannerDockBorder",
+            3 => "AttendanceGridBorder",
+            4 => "EventHeaderActions",
+            _ => string.Empty
+        };
+
+        public void OpenOnboarding()
+        {
+            OnboardingStep = 1;
+            IsOnboardingOpen = true;
+        }
+
+        public void CloseOnboarding()
+        {
+            IsOnboardingOpen = false;
+        }
+
+        public void NextOnboardingStep()
+        {
+            if (OnboardingStep < 4)
+            {
+                OnboardingStep++;
+            }
+            else
+            {
+                CloseOnboarding();
+            }
+        }
+
+        public void PreviousOnboardingStep()
+        {
+            if (OnboardingStep > 1)
+            {
+                OnboardingStep--;
+            }
+        }
+
+        public void SetOnboardingStep(object? stepParam)
+        {
+            if (stepParam is int step)
+            {
+                OnboardingStep = step;
+            }
+            else if (stepParam is string s && int.TryParse(s, out var parsedStep))
+            {
+                OnboardingStep = parsedStep;
+            }
+        }
+
+        public bool IsStandardModalOpen => IsDrawerOpen || IsPcScannerOpen || IsScannedResultVisible;
+        public bool IsAnyOverlayOpen => IsStandardModalOpen || _isOnboardingOpen;
         public Visibility DrawerVisibility => IsDrawerOpen ? Visibility.Visible : Visibility.Collapsed;
         public Visibility EventEditorVisibility => ActivePanel == CashForWorkWorkspacePanel.EventEditor ? Visibility.Visible : Visibility.Collapsed;
         public Visibility ScanAttendanceVisibility => ActivePanel == CashForWorkWorkspacePanel.ScanAttendance ? Visibility.Visible : Visibility.Collapsed;

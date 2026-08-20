@@ -1,8 +1,11 @@
 using AttendanceShiftingManagement.Models;
 using AttendanceShiftingManagement.ViewModels;
 using AttendanceShiftingManagement.Views.Dialog;
+using System;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using System.Windows.Threading;
 
 namespace AttendanceShiftingManagement.Views
@@ -10,12 +13,16 @@ namespace AttendanceShiftingManagement.Views
     public partial class ProjectDistributionPage : UserControl
     {
         private readonly DispatcherTimer _scanDebounceTimer;
+        private ProjectDistributionViewModel? _viewModel;
 
         public ProjectDistributionPage(User currentUser)
         {
             InitializeComponent();
-            DataContext = new ProjectDistributionViewModel(currentUser);
+            _viewModel = new ProjectDistributionViewModel(currentUser);
+            DataContext = _viewModel;
             Loaded += ProjectDistributionPage_Loaded;
+            Unloaded += ProjectDistributionPage_Unloaded;
+            SizeChanged += ProjectDistributionPage_SizeChanged;
 
             // Debounce timer for no-suffix scanners (150ms)
             _scanDebounceTimer = new DispatcherTimer
@@ -24,22 +31,24 @@ namespace AttendanceShiftingManagement.Views
             };
             _scanDebounceTimer.Tick += ScanDebounceTimer_Tick;
 
-            // Global key capture to keep scanner armed
+            // Global key & text capture to keep scanner armed
             PreviewKeyDown += UserControl_PreviewKeyDown;
+            PreviewTextInput += UserControl_PreviewTextInput;
+            PreviewMouseDown += UserControl_PreviewMouseDown;
         }
 
         private void ProjectDistributionPage_Loaded(object sender, RoutedEventArgs e)
         {
-            var viewModel = DataContext as ProjectDistributionViewModel;
-            if (viewModel?.SelectedProgram == null)
+            _viewModel = DataContext as ProjectDistributionViewModel;
+            if (_viewModel != null)
             {
-                ShowProjectSelection();
+                _viewModel.PropertyChanged += ViewModel_PropertyChanged;
+                _viewModel.RequestScannerFocus += FocusScanner;
             }
 
-            // Subscribe to ViewModel's RequestScannerFocus event
-            if (viewModel != null)
+            if (_viewModel?.SelectedProgram == null)
             {
-                viewModel.RequestScannerFocus += FocusScanner;
+                ShowProjectSelection();
             }
 
             // Hook scanner status events
@@ -47,16 +56,167 @@ namespace AttendanceShiftingManagement.Views
             {
                 HiddenScannerTextBox.GotFocus += (s, args) =>
                 {
-                    if (viewModel != null) viewModel.IsScannerActive = true;
+                    if (_viewModel != null) _viewModel.IsScannerActive = true;
                 };
                 HiddenScannerTextBox.LostFocus += (s, args) =>
                 {
-                    if (viewModel != null) viewModel.IsScannerActive = false;
+                    if (_viewModel != null) _viewModel.IsScannerActive = false;
                 };
                 HiddenScannerTextBox.TextChanged += HiddenScannerTextBox_TextChanged;
             }
 
             FocusScanner();
+
+            if (_viewModel?.IsOnboardingOpen == true)
+            {
+                Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () => UpdateSpotlight());
+            }
+        }
+
+        private void ProjectDistributionPage_Unloaded(object sender, RoutedEventArgs e)
+        {
+            if (_viewModel != null)
+            {
+                _viewModel.PropertyChanged -= ViewModel_PropertyChanged;
+                _viewModel.RequestScannerFocus -= FocusScanner;
+            }
+            Loaded -= ProjectDistributionPage_Loaded;
+            Unloaded -= ProjectDistributionPage_Unloaded;
+            SizeChanged -= ProjectDistributionPage_SizeChanged;
+        }
+
+        private void ProjectDistributionPage_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            if (_viewModel?.IsOnboardingOpen == true)
+            {
+                Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () => UpdateSpotlight());
+            }
+        }
+
+        private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(ProjectDistributionViewModel.IsOnboardingOpen) ||
+                e.PropertyName == nameof(ProjectDistributionViewModel.OnboardingStep) ||
+                e.PropertyName == nameof(ProjectDistributionViewModel.SelectedProgram))
+            {
+                Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () => UpdateSpotlight());
+            }
+        }
+
+        private void UpdateSpotlight()
+        {
+            if (_viewModel == null || !_viewModel.IsOnboardingOpen || SpotlightOverlayGrid.ActualWidth <= 0 || SpotlightOverlayGrid.ActualHeight <= 0)
+            {
+                SpotlightMaskPath.Data = null;
+                SpotlightBorder.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            var targetName = _viewModel.OnboardingTargetName;
+            var targetElement = FindName(targetName) as FrameworkElement;
+
+            if (targetElement == null || !targetElement.IsVisible || targetElement.ActualWidth <= 0 || targetElement.ActualHeight <= 0)
+            {
+                PositionCardCentered();
+                return;
+            }
+
+            try
+            {
+                var transform = targetElement.TransformToVisual(SpotlightOverlayGrid);
+                var bounds = transform.TransformBounds(new Rect(0, 0, targetElement.ActualWidth, targetElement.ActualHeight));
+
+                double pad = 8.0;
+                var overlayWidth = SpotlightOverlayGrid.ActualWidth;
+                var overlayHeight = SpotlightOverlayGrid.ActualHeight;
+
+                var paddedRect = new Rect(
+                    Math.Max(0, bounds.X - pad),
+                    Math.Max(0, bounds.Y - pad),
+                    Math.Min(overlayWidth - Math.Max(0, bounds.X - pad), bounds.Width + (pad * 2)),
+                    Math.Min(overlayHeight - Math.Max(0, bounds.Y - pad), bounds.Height + (pad * 2))
+                );
+
+                // Build cutout geometry: full area minus target hole
+                var fullGeometry = new RectangleGeometry(new Rect(0, 0, overlayWidth, overlayHeight));
+                var cutoutGeometry = new RectangleGeometry(paddedRect, 10, 10);
+                SpotlightMaskPath.Data = new CombinedGeometry(GeometryCombineMode.Exclude, fullGeometry, cutoutGeometry);
+
+                // Position glowing spotlight focus ring
+                SpotlightBorder.Visibility = Visibility.Visible;
+                SpotlightBorder.Width = paddedRect.Width;
+                SpotlightBorder.Height = paddedRect.Height;
+                SpotlightBorder.Margin = new Thickness(paddedRect.X, paddedRect.Y, 0, 0);
+                SpotlightBorder.HorizontalAlignment = HorizontalAlignment.Left;
+                SpotlightBorder.VerticalAlignment = VerticalAlignment.Top;
+
+                // Position floating instruction card
+                PositionInstructionCard(paddedRect, _viewModel.OnboardingStep);
+            }
+            catch
+            {
+                PositionCardCentered();
+            }
+        }
+
+        private void PositionInstructionCard(Rect targetRect, int step)
+        {
+            double cardWidth = 430;
+            double cardEstimatedHeight = 280;
+            double overlayWidth = SpotlightOverlayGrid.ActualWidth;
+            double overlayHeight = SpotlightOverlayGrid.ActualHeight;
+
+            double left;
+            double top;
+
+            switch (step)
+            {
+                case 1: // ProjectContextBar -> Float below project bar
+                    left = Math.Max(20, Math.Min(overlayWidth - cardWidth - 30, targetRect.X + 40));
+                    top = targetRect.Bottom + 20;
+                    break;
+
+                case 2: // ScannerSearchBarSection -> Float below search bar or to the right
+                    left = Math.Max(20, Math.Min(overlayWidth - cardWidth - 30, targetRect.X + 20));
+                    top = targetRect.Bottom + 16;
+                    break;
+
+                case 3: // DistributionColumnsGrid -> Float centered near top inside columns
+                    left = Math.Max(20, Math.Min(overlayWidth - cardWidth - 30, (overlayWidth - cardWidth) / 2));
+                    top = Math.Max(20, targetRect.Y + 40);
+                    break;
+
+                case 4: // Verification / Pending card -> Float to the left or above pending card
+                    left = Math.Max(20, targetRect.Left - cardWidth - 20);
+                    top = Math.Max(20, targetRect.Y + 20);
+                    break;
+
+                default:
+                    left = (overlayWidth - cardWidth) / 2;
+                    top = (overlayHeight - cardEstimatedHeight) / 2;
+                    break;
+            }
+
+            // Keep within viewport boundaries
+            left = Math.Max(16, Math.Min(overlayWidth - cardWidth - 16, left));
+            top = Math.Max(16, Math.Min(overlayHeight - cardEstimatedHeight - 16, top));
+
+            Canvas.SetLeft(InstructionCard, left);
+            Canvas.SetTop(InstructionCard, top);
+        }
+
+        private void PositionCardCentered()
+        {
+            double cardWidth = 430;
+            double cardHeight = 280;
+            double overlayWidth = SpotlightOverlayGrid.ActualWidth > 0 ? SpotlightOverlayGrid.ActualWidth : 1200;
+            double overlayHeight = SpotlightOverlayGrid.ActualHeight > 0 ? SpotlightOverlayGrid.ActualHeight : 800;
+
+            SpotlightMaskPath.Data = new RectangleGeometry(new Rect(0, 0, overlayWidth, overlayHeight));
+            SpotlightBorder.Visibility = Visibility.Collapsed;
+
+            Canvas.SetLeft(InstructionCard, Math.Max(16, (overlayWidth - cardWidth) / 2));
+            Canvas.SetTop(InstructionCard, Math.Max(16, (overlayHeight - cardHeight) / 2));
         }
 
         /// <summary>
@@ -68,7 +228,8 @@ namespace AttendanceShiftingManagement.Views
             if (System.Windows.Input.Keyboard.FocusedElement is TextBox focusedTb &&
                 focusedTb.Name != "HiddenScannerTextBox" &&
                 focusedTb.IsVisible &&
-                focusedTb.IsEnabled)
+                focusedTb.IsEnabled &&
+                !focusedTb.IsReadOnly)
             {
                 return;
             }
@@ -80,6 +241,43 @@ namespace AttendanceShiftingManagement.Views
                     $"Focus was not on HiddenScannerTextBox (focused: {System.Windows.Input.Keyboard.FocusedElement?.GetType().Name ?? "none"}); auto-refocusing.");
                 HiddenScannerTextBox.Focus();
                 System.Windows.Input.Keyboard.Focus(HiddenScannerTextBox);
+            }
+        }
+
+        private void UserControl_PreviewTextInput(object sender, System.Windows.Input.TextCompositionEventArgs e)
+        {
+            // Don't redirect if user is typing in a visible search/filter textbox
+            if (System.Windows.Input.Keyboard.FocusedElement is TextBox focusedTb &&
+                focusedTb.Name != "HiddenScannerTextBox" &&
+                focusedTb.IsVisible &&
+                focusedTb.IsEnabled &&
+                !focusedTb.IsReadOnly)
+            {
+                return;
+            }
+
+            if (HiddenScannerTextBox != null && !HiddenScannerTextBox.IsFocused)
+            {
+                HiddenScannerTextBox.Focus();
+                System.Windows.Input.Keyboard.Focus(HiddenScannerTextBox);
+                HiddenScannerTextBox.AppendText(e.Text);
+                HiddenScannerTextBox.CaretIndex = HiddenScannerTextBox.Text.Length;
+                e.Handled = true;
+            }
+        }
+
+        private void UserControl_PreviewMouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            // When clicking outside editable inputs or action buttons, ensure scanner focus is re-armed
+            if (e.OriginalSource is not TextBox && e.OriginalSource is not Button)
+            {
+                Dispatcher.BeginInvoke(DispatcherPriority.Background, () =>
+                {
+                    if (System.Windows.Input.Keyboard.FocusedElement is not TextBox tb || tb.Name == "HiddenScannerTextBox")
+                    {
+                        FocusScanner();
+                    }
+                });
             }
         }
 

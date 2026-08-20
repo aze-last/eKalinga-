@@ -103,6 +103,96 @@ public sealed class MasterListViewModelTests
         Assert.Equal(string.Empty, viewModel.ScannerInput);
     }
 
+    [Fact]
+    public void OnboardingTour_NavigatesThroughStepsAndClosesCorrectly()
+    {
+        var queryService = new FakeMasterListQueryService();
+        var viewModel = new MasterListViewModel(null, queryService, autoLoad: false, autoRefresh: false);
+
+        Assert.False(viewModel.IsOnboardingOpen);
+        Assert.False(viewModel.IsAnyOverlayOpen);
+
+        // Open Tour
+        viewModel.OpenOnboardingCommand.Execute(null);
+        Assert.True(viewModel.IsOnboardingOpen);
+        Assert.True(viewModel.IsAnyOverlayOpen);
+        Assert.False(viewModel.IsStandardModalOpen);
+        Assert.Equal(1, viewModel.OnboardingStep);
+        Assert.Equal("Search & Filter Registry", viewModel.OnboardingTitle);
+        Assert.Equal("SidebarSearchBorder", viewModel.OnboardingTargetName);
+
+        // Next Step: 1 -> 2
+        viewModel.NextOnboardingStepCommand.Execute(null);
+        Assert.Equal(2, viewModel.OnboardingStep);
+        Assert.Equal("Select Resident Profile", viewModel.OnboardingTitle);
+        Assert.Equal("ApprovedDataGrid", viewModel.OnboardingTargetName);
+
+        // Next Step: 2 -> 3
+        viewModel.NextOnboardingStepCommand.Execute(null);
+        Assert.Equal(3, viewModel.OnboardingStep);
+        Assert.Equal("Review & Issue Digital ID", viewModel.OnboardingTitle);
+        Assert.Equal("QuickActionsPanel", viewModel.OnboardingTargetName);
+
+        // Previous Step: 3 -> 2
+        viewModel.PreviousOnboardingStepCommand.Execute(null);
+        Assert.Equal(2, viewModel.OnboardingStep);
+
+        // Jump to Step 4
+        viewModel.SetOnboardingStepCommand.Execute(4);
+        Assert.Equal(4, viewModel.OnboardingStep);
+        Assert.Equal("Direct Project Enrollment", viewModel.OnboardingTitle);
+        Assert.Equal("EnrollmentButton", viewModel.OnboardingTargetName);
+
+        // Step 4 Next -> Closes Tour
+        viewModel.NextOnboardingStepCommand.Execute(null);
+        Assert.False(viewModel.IsOnboardingOpen);
+        Assert.False(viewModel.IsAnyOverlayOpen);
+    }
+
+    [Fact]
+    public void OnboardingTour_UpdatesActionHintWhenBeneficiarySelected()
+    {
+        var queryService = new FakeMasterListQueryService();
+        var viewModel = new MasterListViewModel(null, queryService, autoLoad: false, autoRefresh: false);
+
+        viewModel.OpenOnboarding();
+        viewModel.OnboardingStep = 2;
+
+        Assert.Contains("Click a resident row", viewModel.OnboardingActionHint);
+
+        var ben = new MasterListBeneficiary
+        {
+            Id = 1,
+            FullName = "Maria Santos",
+            BeneficiaryId = "BEN-00001"
+        };
+        viewModel.SelectedBeneficiary = ben;
+
+        // Auto-advances to step 3 on selection
+        Assert.Equal(3, viewModel.OnboardingStep);
+        Assert.Equal("QuickActionsPanel", viewModel.OnboardingTargetName);
+    }
+
+    [Fact]
+    public void OnboardingTour_AutoAdvancesOnFullProfileAndEnrollmentActions()
+    {
+        var queryService = new FakeMasterListQueryService();
+        var viewModel = new MasterListViewModel(null, queryService, autoLoad: false, autoRefresh: false);
+
+        viewModel.OpenOnboarding();
+        viewModel.OnboardingStep = 3;
+        viewModel.SelectedBeneficiary = new MasterListBeneficiary { Id = 1, FullName = "Juan Dela Cruz" };
+
+        // Step 3: Triggering OpenFullProfileCommand auto-advances to Step 4
+        viewModel.OpenFullProfileCommand.Execute(null);
+        Assert.Equal(4, viewModel.OnboardingStep);
+        Assert.Equal("EnrollmentButton", viewModel.OnboardingTargetName);
+
+        // Step 4: Triggering OpenEnrollmentPanelCommand completes/closes tour
+        viewModel.OpenEnrollmentPanelCommand.Execute(null);
+        Assert.False(viewModel.IsOnboardingOpen);
+    }
+
     private static IReadOnlyList<MasterListBeneficiary> BuildBeneficiaries(int start, int count)
     {
         return Enumerable.Range(start, count)

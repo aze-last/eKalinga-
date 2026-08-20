@@ -285,32 +285,6 @@
                                                VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
-
-                            <!-- OTP toggle -->
-                            <Border Background="#F8F9FA" CornerRadius="8" Padding="12,8"
-                                    BorderBrush="#E0E0E0" BorderThickness="1" Margin="0,10,0,0">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <materialDesign:PackIcon Grid.Column="0" Kind="ShieldLockOutline"
-                                                             Width="16" Height="16"
-                                                             Foreground="#757575" VerticalAlignment="Center"/>
-                                    <StackPanel Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Center">
-                                        <TextBlock Text="OTP Verification" FontSize="11"
-                                                   FontWeight="Medium" Foreground="#374151"/>
-                                        <TextBlock Text="Require email code for staff login"
-                                                   FontSize="10" Foreground="#9E9E9E"/>
-                                    </StackPanel>
-                                    <ToggleButton Grid.Column="2"
-                                                  Style="{StaticResource MaterialDesignSwitchToggleButton}"
-                                                  IsChecked="{Binding IsOtpEnabled, Mode=TwoWay}"
-                                                  VerticalAlignment="Center"/>
-                                </Grid>
-                            </Border>
-
                         </StackPanel>
                     </ScrollViewer>
                 </Grid>
