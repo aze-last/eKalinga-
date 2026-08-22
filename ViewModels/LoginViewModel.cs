@@ -321,7 +321,7 @@ namespace AttendanceShiftingManagement.ViewModels
                         _loginCommand.RaiseCanExecuteChanged();
                         _createInitialAdminCommand.RaiseCanExecuteChanged();
                         IsBootstrapMode = false;
-                        SetErrorStatus($"Database connection failed. No local database detected. Open Connection Settings and choose Remote or LAN. {ex.Message}");
+                        SetErrorStatus($"Local database initialization failed: {ex.Message}");
                     });
                 }
             });
@@ -479,10 +479,9 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private static void EnsureDatabaseReady()
         {
-            var configuration = BuildAppConfiguration();
-            var resetDb = configuration.GetValue("Database:ResetOnStartup", false);
-            var migrateOnStartup = configuration.GetValue("Database:MigrateOnStartup", true);
-            DatabaseInitializer.Initialize(resetDb, migrateOnStartup);
+            using var localDb = new LocalDbContext();
+            localDb.Database.EnsureCreated();
+            SQLiteSchemaBootstrapper.EnsureSQLiteSchema(localDb);
         }
 
         private CompanySerialValidationResult BuildCompanySerialValidationResult(LocalDbContext context)
@@ -516,14 +515,6 @@ namespace AttendanceShiftingManagement.ViewModels
             }
 
             Application.Current?.Dispatcher?.Invoke(action);
-        }
-
-        private static IConfiguration BuildAppConfiguration()
-        {
-            return new ConfigurationBuilder()
-                .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
-                .AddJsonFile("appsettings.json", optional: true)
-                .Build();
         }
     }
 }

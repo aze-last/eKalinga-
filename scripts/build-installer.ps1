@@ -180,10 +180,8 @@ New-Item -ItemType Directory -Force -Path $outputDir | Out-Null
 
 $appSettingsPath = Join-Path $projectRoot "appsettings.json"
 $appSettingsTemplatePath = Join-Path $projectRoot "appsettings.template.json"
-if (-not (Test-Path -LiteralPath $appSettingsPath)) {
-    Write-Host "appsettings.json not found. Copying from template..."
-    Copy-Item -Path $appSettingsTemplatePath -Destination $appSettingsPath
-}
+Write-Host "Resetting appsettings.json from template for a clean publish..."
+Copy-Item -Path $appSettingsTemplatePath -Destination $appSettingsPath -Force
 
 Write-Host "Publishing application..."
 $publishArgs = @(
@@ -208,8 +206,6 @@ $publishedExecutable = Join-Path $publishDir $appExeName
 if (-not (Test-Path -LiteralPath $publishedExecutable)) {
     throw "Published executable not found: $publishedExecutable"
 }
-
-$publishedSettingsPath = Join-Path $publishDir "appsettings.json"
 
 $appVersion = Get-AppVersion -ExecutablePath $publishedExecutable
 Write-Host "Resolved app version: $appVersion"

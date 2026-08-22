@@ -79,7 +79,7 @@
 
                         <!-- Connector / Spacing -->
                         <TextBlock Text="+" FontSize="22" FontWeight="Bold" Foreground="#BBDEFB" 
-                                   VerticalAlignment="Center" Margin="20,0,0,0"/>
+                                   VerticalAlignment="Center" Margin="60,0,0,0"/>
 
                         <!-- eKalinga+ Logo -->
                         <Image x:Name="EKalingaLogoImage"
@@ -201,77 +201,151 @@
                                        FontSize="11" Foreground="#6B7280"
                                        Margin="0,0,0,20"/>
 
-                            <TextBlock Text="Username" Style="{StaticResource LoginInputLabelStyle}"/>
-                            <TextBox x:Name="UsernameInput" 
-                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                     materialDesign:HintAssist.Hint="Enter your username or email"
-                                     Text="{Binding UsernameOrEmail, UpdateSourceTrigger=PropertyChanged}"
-                                     FontSize="13" Margin="0,0,0,16"/>
-                            
-                            <TextBlock Text="Password" Style="{StaticResource LoginInputLabelStyle}"/>
-                            <PasswordBox x:Name="PasswordInput"
-                                         Style="{StaticResource MaterialDesignOutlinedPasswordBox}"
-                                         materialDesign:HintAssist.Hint="Enter your password"
-                                         PasswordChanged="PasswordBox_PasswordChanged"
-                                         FontSize="13" Margin="0,0,0,12"/>
-                            
-                            <TextBlock Text="{Binding StatusMessage}"
-                                       Foreground="{Binding StatusBrush}" FontSize="11" TextWrapping="Wrap"
-                                       Margin="0,0,0,12" HorizontalAlignment="Center" TextAlignment="Center">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock">
-                                        <Style.Triggers>
-                                            <Trigger Property="Text" Value="">
-                                                <Setter Property="Visibility" Value="Collapsed"/>
-                                            </Trigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
+                            <!-- ── Login Panel (Visible when IsLoginMode) ── -->
+                            <StackPanel Visibility="{Binding IsLoginMode, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <TextBlock Text="Username" Style="{StaticResource LoginInputLabelStyle}"/>
+                                <TextBox x:Name="UsernameInput" 
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="Enter your username or email"
+                                         Text="{Binding UsernameOrEmail, UpdateSourceTrigger=PropertyChanged}"
+                                         FontSize="13" Margin="0,0,0,16"/>
+                                
+                                <TextBlock Text="Password" Style="{StaticResource LoginInputLabelStyle}"/>
+                                <PasswordBox x:Name="PasswordInput"
+                                             Style="{StaticResource MaterialDesignOutlinedPasswordBox}"
+                                             materialDesign:HintAssist.Hint="Enter your password"
+                                             PasswordChanged="PasswordBox_PasswordChanged"
+                                             FontSize="13" Margin="0,0,0,12"/>
+                                
+                                <TextBlock Text="{Binding StatusMessage}"
+                                           Foreground="{Binding StatusBrush}" FontSize="11" TextWrapping="Wrap"
+                                           Margin="0,0,0,12" HorizontalAlignment="Center" TextAlignment="Center">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Style.Triggers>
+                                                <Trigger Property="Text" Value="">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </Trigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
 
-                            <Button Content="SIGN IN"
-                                    Command="{Binding LoginCommand}"
-                                    Height="44" FontSize="14" FontWeight="Bold"
-                                    Margin="0,4,0,16">
-                                <Button.Style>
-                                    <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}">
-                                        <Setter Property="Background" Value="#2563EB"/>
-                                        <Setter Property="BorderBrush" Value="#2563EB"/>
-                                        <Setter Property="Foreground" Value="White"/>
-                                        <Style.Triggers>
-                                            <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter Property="Background" Value="#1E3A8A"/>
-                                                <Setter Property="BorderBrush" Value="#1E3A8A"/>
-                                            </Trigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Button.Style>
-                            </Button>
+                                <Button Content="SIGN IN"
+                                        Command="{Binding LoginCommand}"
+                                        Height="44" FontSize="14" FontWeight="Bold"
+                                        Margin="0,4,0,16">
+                                    <Button.Style>
+                                        <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}">
+                                            <Setter Property="Background" Value="#2563EB"/>
+                                            <Setter Property="BorderBrush" Value="#2563EB"/>
+                                            <Setter Property="Foreground" Value="White"/>
+                                            <Style.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter Property="Background" Value="#1E3A8A"/>
+                                                    <Setter Property="BorderBrush" Value="#1E3A8A"/>
+                                                </Trigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
 
-                            <Border BorderBrush="#E5E7EB" BorderThickness="0,1,0,0"
-                                    Padding="0,12,0,0" Margin="0,0,0,12">
-                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                    <TextBlock Text="Don't have an account? "
-                                               Foreground="#6B7280" FontSize="12" VerticalAlignment="Center"/>
-                                    <Button Content="Register here"
-                                            Style="{StaticResource MaterialDesignFlatButton}"
-                                            Foreground="#2563EB" FontSize="12" FontWeight="SemiBold"
-                                            Padding="4,0" Click="RegisterButton_Click"/>
-                                </StackPanel>
-                            </Border>
+                                <Border BorderBrush="#E5E7EB" BorderThickness="0,1,0,0"
+                                        Padding="0,12,0,0" Margin="0,0,0,12">
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                        <TextBlock Text="Don't have an account? "
+                                                   Foreground="#6B7280" FontSize="12" VerticalAlignment="Center"/>
+                                        <Button Content="Register here"
+                                                Style="{StaticResource MaterialDesignFlatButton}"
+                                                Foreground="#2563EB" FontSize="12" FontWeight="SemiBold"
+                                                Padding="4,0" Click="RegisterButton_Click"/>
+                                    </StackPanel>
+                                </Border>
 
-                            <!-- Demo accounts -->
-                            <Border Background="#F0F7FF" CornerRadius="8" Padding="14"
-                                    BorderBrush="#BFDBFE" BorderThickness="1.5" Margin="0,0,0,12">
-                                <StackPanel>
-                                    <TextBlock Text="DEMO ACCOUNTS" FontSize="11"
-                                               FontWeight="Bold" Foreground="#1E40AF" Margin="0,0,0,8"/>
-                                    <TextBlock FontSize="11" Margin="0,2">
-                                        <Run Text="Admin: " FontWeight="SemiBold"/>
-                                        <Run Text="admin@barangay.local / admin123" Foreground="#2563EB"/>
-                                    </TextBlock>
-                                </StackPanel>
-                            </Border>
+                                <!-- Demo accounts -->
+                                <Border Background="#F0F7FF" CornerRadius="8" Padding="14"
+                                        BorderBrush="#BFDBFE" BorderThickness="1.5" Margin="0,0,0,12">
+                                    <StackPanel>
+                                        <TextBlock Text="DEMO ACCOUNTS" FontSize="11"
+                                                   FontWeight="Bold" Foreground="#1E40AF" Margin="0,0,0,8"/>
+                                        <TextBlock FontSize="11" Margin="0,2">
+                                            <Run Text="Admin: " FontWeight="SemiBold"/>
+                                            <Run Text="admin@barangay.local / admin123" Foreground="#2563EB"/>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+
+                            <!-- ── Initial Admin Setup Panel (Visible when IsBootstrapMode) ── -->
+                            <StackPanel Visibility="{Binding IsBootstrapMode, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <TextBlock Text="Full Name" Style="{StaticResource LoginInputLabelStyle}"/>
+                                <TextBox x:Name="BootstrapFullNameInput"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="e.g. Juan Dela Cruz"
+                                         Text="{Binding BootstrapFullName, UpdateSourceTrigger=PropertyChanged}"
+                                         FontSize="13" Margin="0,0,0,14"/>
+
+                                <TextBlock Text="Admin Username" Style="{StaticResource LoginInputLabelStyle}"/>
+                                <TextBox x:Name="BootstrapUsernameInput"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="e.g. admin"
+                                         Text="{Binding BootstrapUsername, UpdateSourceTrigger=PropertyChanged}"
+                                         FontSize="13" Margin="0,0,0,14"/>
+
+                                <TextBlock Text="Admin Email" Style="{StaticResource LoginInputLabelStyle}"/>
+                                <TextBox x:Name="BootstrapEmailInput"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="e.g. admin@barangay.local"
+                                         Text="{Binding BootstrapEmail, UpdateSourceTrigger=PropertyChanged}"
+                                         FontSize="13" Margin="0,0,0,14"/>
+
+                                <TextBlock Text="Admin Password" Style="{StaticResource LoginInputLabelStyle}"/>
+                                <PasswordBox x:Name="BootstrapPasswordInput"
+                                             Style="{StaticResource MaterialDesignOutlinedPasswordBox}"
+                                             materialDesign:HintAssist.Hint="Minimum 8 characters"
+                                             PasswordChanged="BootstrapPasswordBox_PasswordChanged"
+                                             FontSize="13" Margin="0,0,0,14"/>
+
+                                <TextBlock Text="Confirm Password" Style="{StaticResource LoginInputLabelStyle}"/>
+                                <PasswordBox x:Name="BootstrapConfirmPasswordInput"
+                                             Style="{StaticResource MaterialDesignOutlinedPasswordBox}"
+                                             materialDesign:HintAssist.Hint="Re-enter password"
+                                             PasswordChanged="BootstrapConfirmPasswordBox_PasswordChanged"
+                                             FontSize="13" Margin="0,0,0,14"/>
+
+                                <TextBlock Text="{Binding StatusMessage}"
+                                           Foreground="{Binding StatusBrush}" FontSize="11" TextWrapping="Wrap"
+                                           Margin="0,0,0,12" HorizontalAlignment="Center" TextAlignment="Center">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Style.Triggers>
+                                                <Trigger Property="Text" Value="">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </Trigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+
+                                <Button Content="CREATE ADMIN ACCOUNT"
+                                        Command="{Binding CreateInitialAdminCommand}"
+                                        Height="44" FontSize="14" FontWeight="Bold"
+                                        Margin="0,4,0,16">
+                                    <Button.Style>
+                                        <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}">
+                                            <Setter Property="Background" Value="#15803D"/>
+                                            <Setter Property="BorderBrush" Value="#15803D"/>
+                                            <Setter Property="Foreground" Value="White"/>
+                                            <Style.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter Property="Background" Value="#166534"/>
+                                                    <Setter Property="BorderBrush" Value="#166534"/>
+                                                </Trigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+                            </StackPanel>
 
                             <Button HorizontalAlignment="Center"
                                     Click="ConnectionSettingsButton_Click"

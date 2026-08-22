@@ -38,6 +38,22 @@ namespace AttendanceShiftingManagement.Views
             }
         }
 
+        private void BootstrapPasswordBox_PasswordChanged(object sender, RoutedEventArgs e)
+        {
+            if (sender is PasswordBox passwordBox)
+            {
+                ViewModel.BootstrapPassword = passwordBox.Password;
+            }
+        }
+
+        private void BootstrapConfirmPasswordBox_PasswordChanged(object sender, RoutedEventArgs e)
+        {
+            if (sender is PasswordBox passwordBox)
+            {
+                ViewModel.BootstrapConfirmPassword = passwordBox.Password;
+            }
+        }
+
         private void LeftPanel_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             if (e.ChangedButton == MouseButton.Left)
