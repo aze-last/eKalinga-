@@ -869,7 +869,8 @@ namespace AttendanceShiftingManagement.ViewModels
             }
             catch (Exception ex)
             {
-                ProjectCreationErrorMessage = $"Failed to create project: {ex.Message}";
+                var detail = ex.InnerException?.Message ?? ex.Message;
+                ProjectCreationErrorMessage = $"Failed to create project: {detail}";
                 SetErrorStatus(ProjectCreationErrorMessage);
             }
             finally

@@ -3,42 +3,62 @@
 You are the designated agent for the Project Distribution (Ayuda Release) module in the eKalinga+ Ayuda Management System.
 
 ## Module Role & Scope
-Your role is to manage the distribution of specific aid projects (e.g., Rice, Financial Aid, Kits) to qualified beneficiaries. This includes verifying eligibility, recording claims, and displaying real-time distribution statistics.
+Your role is to execute and manage the field distribution of aid projects (e.g., Cash, Goods, Rice, Kits) to qualified beneficiaries. This includes beneficiary enrollment management, qualification evaluation, barcode/QR scanner processing, claim recording, and real-time distribution queue monitoring.
 
-Allowed files: `Views/ProjectDistribution*.xaml`, `ViewModels/ProjectDistributionViewModel.cs`, `Services/ProjectDistributionService.cs`, and corresponding tests.
+Allowed files:
+- `Views/ProjectDistribution*.xaml`
+- `Views/ProjectDistribution*.xaml.cs`
+- `ViewModels/ProjectDistributionViewModel.cs`
+- `Services/ProjectDistributionService.cs`
+- `AttendanceShiftingManagement.Tests/ProjectDistribution*.cs`
 
-## Business Logic (CRITICAL)
-1. **Eligibility Verification:** Before releasing aid, you must verify if a beneficiary is qualified for the selected project and ensure they haven't already claimed it.
-2. **Real-time Stats:** The distribution page must show a "Live Preview" of distribution progress (e.g., "50 of 200 kits released").
-3. **Scanner Integration:** Support both mobile and hardware scanners to quickly look up beneficiaries and mark them as "Released".
-4. **Audit Trail:** Every claim must be recorded with a timestamp, the user who performed the release, and the specific `AyudaProgramId`.
+## Core Business Logic & Workflows (Source of Truth)
 
-## UI/UX Constraints
-- **Module Layout:** Strictly adhere to the standard module layout: Left sidebar for filters/actions; Center is a 3-column bucket layout — **RELEASED / CLAIMED (left, Col 0)**, **PENDING (center, Col 2)**, **UNRELEASED / UNCLAIMED — not eligible (right, Col 4)**. This is the approved layout; do not reorder or collapse the buckets.
-- **Pagination:** Every list view MUST implement pagination to maintain performance on low-spec hardware.
+### 1. Project Sourcing (Budget Module Coupling)
+- **Spawned in Budget:** Projects (`AyudaProgram`) are created in the Budget module and strictly tied 1:1 to parent funding sources (`SourceDonationId`, `SourceGGMSBudgetId`, or `SourceProjectDetailsId`).
+- **Operational Loading:** The Distribution module loads active, non-closed distribution projects for execution. It does not spawn new projects directly.
+
+### 2. Beneficiary Enrollment & Bucketing
+- **Masterlist Sourcing:** Beneficiaries are selected individually or in bulk from approved `BeneficiaryStaging` records.
+- **3-Bucket State Machine:** Enrolled beneficiaries exist in one of three states (`DistributionBeneficiaryStatus`):
+  - **PENDING (Col 2):** Eligible and queued for release.
+  - **RELEASED / CLAIMED (Col 0):** Successfully claimed and disbursed.
+  - **UNRELEASED / REJECTED (Col 4):** Excluded or unreleased candidates (can be moved back to Pending or Released).
+- **Duplicate Prevention:** Prevents enrolling the same beneficiary twice within a single project.
+
+### 3. Household Duplicate Protection
+- **Cross-Member Check:** Evaluates `HouseholdVerificationContext` before release.
+- **Warning Prompts:** Warns operators if another member of the same household has already claimed or received the same assistance type across projects.
+
+### 4. Claim Recording & Financial Integration
+- **Claim Entity:** On release, creates an immutable `AyudaProjectClaim` capturing the snapshot of unit amount, item details, QR payload, and timestamps.
+- **Budget Waterfall Ledger:** Automatically calls `BudgetManagementService.RecordReleaseAsync` to log a `BudgetLedgerEntry` that consumes from the project's linked funding envelope.
+- **GGMS Consolidated Transactions:** Automatically calls `IGgmsConsolidatedTransactionService.RecordReleaseAsync` to record cross-system transaction sync records.
+- **Beneficiary Assistance Ledger:** Updates the global beneficiary aid history via `BeneficiaryAssistanceLedgerService`.
+
+### 5. Live Queue Monitor
+- **Secondary Display:** Manages `ProjectDistributionLivePreviewWindow` to broadcast real-time queue states, active recipient names, and live project progress to external client/public monitors.
 
 ## POS Scanner Workflow Constraints (CRITICAL)
-1. **Scanner-First Mode:** The module must operate in a scanner-first mode. The barcode scanner should remain permanently armed while a project is selected.
-2. **Global Focus Redirection:** All keyboard inputs (without explicit target focus) must be forcefully routed to the hidden scanner textbox buffer.
-3. **Queue Protection & Dialog Locks:** Ignore/dump new scans (`IsScannedResultVisible`, `IsReleaseSuccessState`) while a scanner result or success popup is open. This prevents operator panic scanning from breaking the UI.
-4. **Lookup Cooldowns:** Cooldowns (e.g., 1 second) must ONLY be stored *after* a successful beneficiary lookup, never after a failed scan. This allows operators to immediately retry bad reads.
-5. **Audio Cues (Sound Feedback):** Use `Console.Beep()` to provide sound feedback:
-   - Success: High-pitched, short beep.
-   - Already Claimed / Error: Low-pitched, long beep.
-6. **Auto-Closing Success Popups:** Successful distributions must show a massive "RELEASE SUCCESSFUL" overlay that automatically closes (e.g., after 1.5 seconds) and instantly re-arms the scanner for the next queue member.
+1. **Scanner-First Mode:** The module operates in a scanner-first mode; the barcode/QR scanner buffer remains armed whenever a project is selected.
+2. **Global Focus Redirection:** Unfocused keyboard inputs route to the scanner buffer textbox.
+3. **Queue Protection & Dialog Locks:** Ignore/dump new scan inputs while an active result modal or release success popup is open.
+4. **Lookup Cooldowns:** Cooldown timers apply ONLY after a successful lookup, allowing immediate retries on bad/failed reads.
+5. **Audio Feedback (`Console.Beep`):**
+   - Success: High-pitched, short beep (`2000Hz, 150ms`).
+   - Already Claimed / Error: Low-pitched, long beep (`800Hz, 300ms`).
+6. **Auto-Closing Success Overlay:** Successful releases show a large confirmation overlay that automatically dismisses (1.5 seconds) and instantly re-arms the scanner.
 
-## Theme & Dark Mode Consistency (Midnight Slate)
-To ensure a high-quality Dark Mode experience, you must never use hardcoded colors (e.g., "White", "#F8FAFC") or StaticResource for brushes.
-- **Midnight Slate:** The core dark theme color is `#16202C` (ThemeCardBrush).
-- **Dynamic Brushes:** Always use `DynamicResource` for all brushes so they adapt to theme changes.
-- **Card Backgrounds:** Use `{DynamicResource ThemeCardBrush}` for main cards and `{DynamicResource ThemeCardSubtleBrush}` for footers or secondary areas.
-- **Text & Borders:** Use `{DynamicResource BrandMidnightBrush}`, `{DynamicResource BrandTextSecondaryBrush}`, and `{DynamicResource BrandBorderBrush}`. **CRITICAL: Explicitly set Foreground to `{DynamicResource BrandMidnightBrush}` on all TextBlocks and DataGrid columns to ensure visibility in both themes.**
-- **DataGrid:** Set DataGrid Background to `Transparent` or `{DynamicResource ThemeCardBrush}` so it blends with the container.
-- **Overlays:** Use dynamic semi-transparent brushes for overlays rather than hardcoded hex values with alpha. Ensure the Blurred Overlay Standard is met (BlurRadius 15.0 on main grid, #CC0F172A backdrop for active panels).
+## UI/UX & Layout Architecture
+- **Left Sidebar:** Project selection, summary metrics (distributed amount, remaining budget, recipient count), mobile scanner session PINs, and bulk actions.
+- **Center Content (3-Column Bucket Layout):**
+  - Left (Col 0): **RELEASED / CLAIMED**
+  - Center (Col 2): **PENDING (QUEUED)**
+  - Right (Col 4): **UNRELEASED / EXCLUDED**
+- **Independent Pagination & Filtering:** All three bucket columns and beneficiary pickers MUST implement independent search and pagination.
+- **Overlays:** Beneficiary Add/Search panels and Release Confirmation dialogs open as overlays above the main bucket grid.
 
-## Technical Rules
-- All opération result logic should reside in `Services/ProjectDistributionService.cs`.
-- UI must remain responsive during bulk lookups or high-volume release sessions.
-- Use `AyudaProjectClaim` model for recording successful releases.
-- The create-project dropdown excludes `AssistanceCase` and `Seminar` program types (ViewModel constructor); do not re-add them.
-- Tests include text-based Source/Binding tests (e.g., `ProjectDistributionViewModelSourceTests.cs`) that assert on literal code/XAML fragments — renaming bindings, commands, or method bodies can break tests even when the build passes. Run the test suite after any rename.
+## Technical & Concurrency Rules
+- Support dual local/remote execution via `RemoteWriteExecutionService`.
+- Maintain soft deletes (`IsDeleted`) where applicable; never delete database rows.
+- Ensure all queries are paginated and memory-capped (`BeneficiaryPickerDisplayLimit`).

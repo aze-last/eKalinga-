@@ -259,35 +259,120 @@
 
                     <!-- Right: Membership Card Preview -->
                     <StackPanel Grid.Column="2">
-                        <TextBlock Text="ENROLLMENT PREVIEW" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,16"/>
+                        <TextBlock Text="ENROLLMENT PREVIEW" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,12"/>
                         
-                        <!-- Membership "Card" -->
-                        <materialDesign:Card UniformCornerRadius="20" Padding="24" Background="{DynamicResource ThemeCardSubtleBrush}" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="1">
+                        <!-- Resident Profile Card: Shown when a resident is selected or scanned -->
+                        <materialDesign:Card UniformCornerRadius="20" Padding="20" Background="{DynamicResource ThemeCardSubtleBrush}" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="1"
+                                             Visibility="{Binding SelectedAvailableBeneficiary, Converter={StaticResource NullToVisibilityConverter}}">
                             <StackPanel>
-                                <TextBlock Text="{Binding SelectedBeneficiariesCount, StringFormat='{} {0} Beneficiaries Selected'}" 
-                                           FontSize="20" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}" TextWrapping="Wrap" Margin="0,0,0,16"/>
-                                <TextBlock Text="Batch Enrollment Setup" 
-                                           FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,8"/>
+                                <Grid Margin="0,0,0,12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
 
-                                <Separator Margin="0,20" Background="{DynamicResource BrandBorderBrush}"/>
+                                    <!-- Photo or Initials Avatar -->
+                                    <Grid Grid.Column="0" Width="64" Height="64" Margin="0,0,14,0">
+                                        <Border CornerRadius="16" Background="{DynamicResource ThemeWindowShellBrush}">
+                                            <TextBlock Text="{Binding SelectedAvailableBeneficiary.Initials}" 
+                                                       Foreground="{DynamicResource ThemePrimaryActionBrush}" 
+                                                       FontWeight="Bold" FontSize="20" 
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                        <Border CornerRadius="16" Visibility="{Binding SelectedAvailableBeneficiary.PhotoBitmap, Converter={StaticResource NullToVisibilityConverter}}">
+                                            <Border.Background>
+                                                <ImageBrush ImageSource="{Binding SelectedAvailableBeneficiary.PhotoBitmap}" Stretch="UniformToFill"/>
+                                            </Border.Background>
+                                        </Border>
+                                    </Grid>
 
-                                <Border Margin="0,24,0,0" Padding="14" CornerRadius="12" Background="#26F9C231" BorderBrush="{DynamicResource BrandYellowBrush}" BorderThickness="1">
+                                    <!-- Name & ID Badges -->
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding SelectedAvailableBeneficiary.FullName}" 
+                                                   FontSize="16" FontWeight="Bold" 
+                                                   Foreground="{DynamicResource BrandMidnightBrush}" 
+                                                   TextWrapping="Wrap"/>
+                                        <WrapPanel Margin="0,4,0,0">
+                                            <Border Padding="6,2" CornerRadius="6" Background="#1A0284C7" Margin="0,0,6,0"
+                                                    Visibility="{Binding SelectedAvailableBeneficiary.BeneficiaryId, Converter={StaticResource NullToVisibilityConverter}}">
+                                                <TextBlock Text="{Binding SelectedAvailableBeneficiary.BeneficiaryId}" 
+                                                           FontSize="11" FontWeight="Bold" Foreground="#0284C7"/>
+                                            </Border>
+                                            <Border Padding="6,2" CornerRadius="6" Background="#1A475569" 
+                                                    Visibility="{Binding SelectedAvailableBeneficiary.CivilRegistryId, Converter={StaticResource NullToVisibilityConverter}}">
+                                                <TextBlock Text="{Binding SelectedAvailableBeneficiary.CivilRegistryId, StringFormat='{}CR: {0}'}" 
+                                                           FontSize="11" FontWeight="SemiBold" Foreground="#475569"/>
+                                            </Border>
+                                        </WrapPanel>
+                                    </StackPanel>
+
+                                    <!-- Selection Toggle -->
+                                    <CheckBox Grid.Column="2" 
+                                              IsChecked="{Binding SelectedAvailableBeneficiary.IsSelected, UpdateSourceTrigger=PropertyChanged}" 
+                                              VerticalAlignment="Top" 
+                                              ToolTip="Include in Enrollment Batch"/>
+                                </Grid>
+
+                                <Separator Margin="0,4,0,10" Background="{DynamicResource BrandBorderBrush}" Opacity="0.5"/>
+
+                                <!-- Demographics -->
+                                <StackPanel Visibility="{Binding SelectedAvailableBeneficiary.HasDemographics, Converter={StaticResource BooleanToVisibilityConverter}}" Margin="0,0,0,8">
+                                    <TextBlock Text="DEMOGRAPHICS" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
+                                    <TextBlock Text="{Binding SelectedAvailableBeneficiary.DemographicsSummary}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource BrandMidnightBrush}" Margin="0,2,0,0"/>
+                                </StackPanel>
+
+                                <!-- Residential Address -->
+                                <StackPanel Visibility="{Binding SelectedAvailableBeneficiary.HasAddress, Converter={StaticResource BooleanToVisibilityConverter}}" Margin="0,0,0,4">
+                                    <TextBlock Text="RESIDENTIAL ADDRESS" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
+                                    <TextBlock Text="{Binding SelectedAvailableBeneficiary.Address}" FontSize="12" Foreground="{DynamicResource BrandMidnightBrush}" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </materialDesign:Card>
+
+                        <!-- Empty State Placeholder: Shown when no resident is selected -->
+                        <materialDesign:Card UniformCornerRadius="20" Padding="20" Background="{DynamicResource ThemeCardSubtleBrush}" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="1"
+                                             Visibility="{Binding SelectedAvailableBeneficiary, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverse}">
+                            <StackPanel HorizontalAlignment="Center" Margin="0,16">
+                                <materialDesign:PackIcon Kind="AccountSearchOutline" Width="44" Height="44" Foreground="{DynamicResource BrandTextSecondaryBrush}" HorizontalAlignment="Center" Opacity="0.6"/>
+                                <TextBlock Text="No Resident Selected" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource BrandMidnightBrush}" HorizontalAlignment="Center" Margin="0,8,0,2"/>
+                                <TextBlock Text="Scan a beneficiary ID badge or select an approved resident from the list to inspect their identity." 
+                                           FontSize="11" Foreground="{DynamicResource BrandTextSecondaryBrush}" TextAlignment="Center" TextWrapping="Wrap" MaxWidth="240"/>
+                            </StackPanel>
+                        </materialDesign:Card>
+
+                        <!-- Batch Enrollment Setup Card -->
+                        <materialDesign:Card UniformCornerRadius="16" Padding="16" Background="{DynamicResource ThemeCardSubtleBrush}" BorderBrush="{DynamicResource BrandBorderBrush}" BorderThickness="1" Margin="0,10,0,0">
+                            <StackPanel>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="BATCH ENROLLMENT" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding SelectedBeneficiariesCount, StringFormat='{}{0} Selected'}" 
+                                               FontSize="13" FontWeight="Bold" Foreground="{DynamicResource ThemePrimaryActionBrush}"/>
+                                </Grid>
+                                
+                                <Border Margin="0,8,0,0" Padding="10,8" CornerRadius="10" Background="#26F9C231" BorderBrush="{DynamicResource BrandYellowBrush}" BorderThickness="1">
                                     <StackPanel Orientation="Horizontal">
-                                        <materialDesign:PackIcon Kind="Information" Width="18" Height="18" Foreground="{DynamicResource BrandGoldBrush}" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                        <TextBlock Text="Selected beneficiaries will be added as PENDING for verification." 
-                                                   FontSize="11" Foreground="{DynamicResource BrandGoldBrush}" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                        <materialDesign:PackIcon Kind="Information" Width="16" Height="16" Foreground="{DynamicResource BrandGoldBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                        <TextBlock Text="Selected beneficiaries will be enrolled as PENDING for verification." 
+                                                   FontSize="10" Foreground="{DynamicResource BrandGoldBrush}" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap"/>
                                     </StackPanel>
                                 </Border>
                             </StackPanel>
                         </materialDesign:Card>
 
                         <!-- Status Alert -->
-                        <Border Margin="0,20,0,0" Padding="16,12" CornerRadius="12" 
-                                Background="Transparent" 
-                                Visibility="{Binding AddBeneficiaryStatusMessage, Converter={StaticResource NullToHiddenConverter}}">
+                        <Border Margin="0,10,0,0" Padding="12,10" CornerRadius="10" 
+                                Background="{DynamicResource ThemeCardSubtleBrush}"
+                                BorderBrush="{Binding AddBeneficiaryStatusBrush}"
+                                BorderThickness="1"
+                                Visibility="{Binding AddBeneficiaryStatusMessage, Converter={StaticResource NullToVisibilityConverter}}">
                             <TextBlock Text="{Binding AddBeneficiaryStatusMessage}" 
                                        Foreground="{Binding AddBeneficiaryStatusBrush}" 
-                                       FontWeight="SemiBold" FontSize="13" TextAlignment="Center" TextWrapping="Wrap"/>
+                                       FontWeight="SemiBold" FontSize="12" TextAlignment="Center" TextWrapping="Wrap"/>
                         </Border>
                     </StackPanel>
                 </Grid>

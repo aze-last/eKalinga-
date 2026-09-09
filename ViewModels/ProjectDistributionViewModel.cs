@@ -89,7 +89,8 @@ namespace AttendanceShiftingManagement.ViewModels
         private sealed record PickerBeneficiaryRow(
             int StagingID, string? BeneficiaryId, string? CivilRegistryId, string? LastName,
             string? FirstName, string? MiddleName, string? FullName,
-            int? LinkedHouseholdId, int? LinkedHouseholdMemberId, bool IsSenior, bool IsPwd);
+            int? LinkedHouseholdId, int? LinkedHouseholdMemberId, bool IsSenior, bool IsPwd,
+            string? Address = null, string? Age = null, string? Sex = null, string? PhotoPath = null);
 
         private sealed record EnrolledBeneficiaryKey(
             int BeneficiaryStagingId, string? CivilRegistryId, string? BeneficiaryId);
@@ -1292,7 +1293,11 @@ namespace AttendanceShiftingManagement.ViewModels
                         item.LinkedHouseholdId,
                         item.LinkedHouseholdMemberId,
                         item.IsSenior,
-                        item.IsPwd))
+                        item.IsPwd,
+                        item.Address,
+                        item.Age,
+                        item.Sex,
+                        item.PhotoPath))
                     .ToListAsync();
                 return (count, rows);
             });
@@ -1305,17 +1310,14 @@ namespace AttendanceShiftingManagement.ViewModels
             UnpickedTotalPages = Math.Max(1, (int)Math.Ceiling(totalCount / (double)BeneficiaryPickerDisplayLimit));
             UnpickedCurrentPage = Math.Min(requestedPage, UnpickedTotalPages);
 
-            // Duplicate checks against the picker's Selected column stay in memory
-            var filteredBeneficiaries = beneficiaries
-                .Where(item => !currentSelectedIds.Contains(item.StagingID))
-                .Where(item => string.IsNullOrEmpty(item.CivilRegistryId) || !currentSelectedCivilIds.Contains(item.CivilRegistryId))
-                .Where(item => string.IsNullOrEmpty(item.BeneficiaryId) || !currentSelectedBenIds.Contains(item.BeneficiaryId))
-                .Take(BeneficiaryPickerDisplayLimit)
-                .ToList();
-
             AvailableUnpickedBeneficiaries.Clear();
-            foreach (var b in filteredBeneficiaries)
+            foreach (var b in beneficiaries)
             {
+                if (currentSelectedIds.Contains(b.StagingID)) continue;
+                if (!string.IsNullOrEmpty(b.CivilRegistryId) && currentSelectedCivilIds.Contains(b.CivilRegistryId)) continue;
+                if (!string.IsNullOrEmpty(b.BeneficiaryId) && currentSelectedBenIds.Contains(b.BeneficiaryId)) continue;
+                if (AvailableUnpickedBeneficiaries.Count >= BeneficiaryPickerDisplayLimit) break;
+
                 AvailableUnpickedBeneficiaries.Add(new DistributionBeneficiaryOption
                 {
                     StagingId = b.StagingID,
@@ -1326,7 +1328,13 @@ namespace AttendanceShiftingManagement.ViewModels
                     MiddleName = b.MiddleName ?? string.Empty,
                     FullName = b.FullName ?? string.Empty,
                     LinkedHouseholdId = b.LinkedHouseholdId,
-                    LinkedHouseholdMemberId = b.LinkedHouseholdMemberId
+                    LinkedHouseholdMemberId = b.LinkedHouseholdMemberId,
+                    IsSenior = b.IsSenior,
+                    IsPwd = b.IsPwd,
+                    Address = b.Address,
+                    Age = b.Age,
+                    Sex = b.Sex,
+                    PhotoPath = b.PhotoPath
                 });
             }
 
@@ -2412,10 +2420,14 @@ namespace AttendanceShiftingManagement.ViewModels
                         item.FirstName,
                         item.MiddleName,
                         item.FullName,
-                        null,
-                        null,
+                        item.LinkedHouseholdId,
+                        item.LinkedHouseholdMemberId,
                         item.IsSenior,
-                        item.IsPwd))
+                        item.IsPwd,
+                        item.Address,
+                        item.Age,
+                        item.Sex,
+                        item.PhotoPath))
                     .ToListAsync();
 
                 return (enrolled, count, page);
@@ -2450,8 +2462,14 @@ namespace AttendanceShiftingManagement.ViewModels
                     LastName = b.LastName ?? string.Empty,
                     BeneficiaryId = b.BeneficiaryId ?? string.Empty,
                     CivilRegistryId = b.CivilRegistryId ?? string.Empty,
+                    LinkedHouseholdId = b.LinkedHouseholdId,
+                    LinkedHouseholdMemberId = b.LinkedHouseholdMemberId,
                     IsSenior = b.IsSenior,
                     IsPwd = b.IsPwd,
+                    Address = b.Address,
+                    Age = b.Age,
+                    Sex = b.Sex,
+                    PhotoPath = b.PhotoPath,
                     // Re-queries (search) must not lose picks made on earlier pages.
                     IsSelected = _addPanelSelectedStagingIds.Contains(b.StagingID)
                 };
@@ -2797,9 +2815,145 @@ namespace AttendanceShiftingManagement.ViewModels
             }
         }
 
+        private async Task ProcessAddBeneficiaryScanAsync(string? rawPayload)
+        {
+            if (string.IsNullOrWhiteSpace(rawPayload)) return;
+
+            var payload = EKardPayloadRouter.ExtractBeneficiaryId(rawPayload);
+            if (string.IsNullOrWhiteSpace(payload)) return;
+
+            IsBusy = true;
+            ClearScanError();
+            AddBeneficiaryStatusMessage = $"Identifying beneficiary: {payload}...";
+            AddBeneficiaryStatusBrush = Brushes.SlateGray;
+
+            try
+            {
+                await using var context = new LocalDbContext();
+                var digitalIdService = new BeneficiaryDigitalIdService(context);
+
+                var lookup = await digitalIdService.ResolveLookupAsync(
+                    new BeneficiaryLookupRequest(BeneficiaryLookupSource.QrPayload, rawPayload));
+
+                if (lookup == null)
+                {
+                    lookup = await digitalIdService.ResolveLookupAsync(
+                        new BeneficiaryLookupRequest(BeneficiaryLookupSource.BeneficiaryId, payload));
+                }
+
+                BeneficiaryStaging? match = null;
+                if (lookup != null)
+                {
+                    match = await context.BeneficiaryStaging
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(b => b.StagingID == lookup.BeneficiaryStagingId);
+                }
+
+                if (match == null)
+                {
+                    match = await context.BeneficiaryStaging
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(b =>
+                            b.BeneficiaryId == payload ||
+                            b.CivilRegistryId == payload ||
+                            (b.BeneficiaryId != null && b.BeneficiaryId.EndsWith(payload)));
+                }
+
+                if (match == null)
+                {
+                    AddBeneficiaryStatusMessage = $"No approved beneficiary found for '{payload}'.";
+                    AddBeneficiaryStatusBrush = Brushes.Firebrick;
+                    _ = Task.Run(() => { try { Console.Beep(400, 300); } catch { } });
+                    return;
+                }
+
+                if (SelectedProgram != null)
+                {
+                    var alreadyEnrolled = await context.AyudaProjectBeneficiaries
+                        .AsNoTracking()
+                        .AnyAsync(b => b.AyudaProgramId == SelectedProgram.Id &&
+                                       (b.BeneficiaryStagingId == match.StagingID ||
+                                        (!string.IsNullOrEmpty(b.BeneficiaryId) && b.BeneficiaryId == match.BeneficiaryId) ||
+                                        (!string.IsNullOrEmpty(b.CivilRegistryId) && b.CivilRegistryId == match.CivilRegistryId)));
+
+                    if (alreadyEnrolled)
+                    {
+                        AddBeneficiaryStatusMessage = $"{match.FullName ?? match.LastName} is already enrolled in this project.";
+                        AddBeneficiaryStatusBrush = Brushes.DarkOrange;
+                        _ = Task.Run(() => { try { Console.Beep(600, 200); } catch { } });
+                        return;
+                    }
+                }
+
+                _addPanelSelectedStagingIds.Add(match.StagingID);
+
+                var option = AvailableBeneficiaries.FirstOrDefault(b => b.StagingId == match.StagingID);
+                if (option == null)
+                {
+                    option = DistributionBeneficiaryOption.FromEntity(match);
+                    option.IsSelected = true;
+                    option.PropertyChanged += (sender, args) =>
+                    {
+                        if (args.PropertyName == nameof(DistributionBeneficiaryOption.IsSelected) &&
+                            sender is DistributionBeneficiaryOption changed)
+                        {
+                            if (changed.IsSelected)
+                            {
+                                _addPanelSelectedStagingIds.Add(changed.StagingId);
+                            }
+                            else
+                            {
+                                _addPanelSelectedStagingIds.Remove(changed.StagingId);
+                            }
+
+                            OnPropertyChanged(nameof(SelectedBeneficiariesCount));
+                            if (ConfirmAddBeneficiaryCommand is RelayCommand confirm)
+                            {
+                                confirm.RaiseCanExecuteChanged();
+                            }
+                        }
+                    };
+
+                    AvailableBeneficiaries.Insert(0, option);
+                }
+                else
+                {
+                    option.IsSelected = true;
+                }
+
+                ApplyAvailableBeneficiaryFilter();
+                SelectedAvailableBeneficiary = option;
+
+                OnPropertyChanged(nameof(SelectedBeneficiariesCount));
+                if (ConfirmAddBeneficiaryCommand is RelayCommand confirmCmd)
+                {
+                    confirmCmd.RaiseCanExecuteChanged();
+                }
+
+                AddBeneficiaryStatusMessage = $"Scanned & Selected: {option.FullName} [{option.BeneficiaryId}]";
+                AddBeneficiaryStatusBrush = Brushes.SeaGreen;
+                _ = Task.Run(() => { try { Console.Beep(1200, 150); } catch { } });
+            }
+            catch (Exception ex)
+            {
+                AddBeneficiaryStatusMessage = $"Scan error: {ex.Message}";
+                AddBeneficiaryStatusBrush = Brushes.Firebrick;
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
         private async Task ExecuteProcessPcScan(string? payload)
         {
             if (string.IsNullOrWhiteSpace(payload)) return;
+
+            if (IsAddBeneficiaryPanelOpen)
+            {
+                await ProcessAddBeneficiaryScanAsync(payload);
+                return;
+            }
 
             if (SelectedProgram == null)
             {
@@ -4387,6 +4541,11 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 SelectedAvailableBeneficiary = null;
             }
+
+            if (SelectedAvailableBeneficiary == null && FilteredAvailableBeneficiaries.Count == 1)
+            {
+                SelectedAvailableBeneficiary = FilteredAvailableBeneficiaries[0];
+            }
         }
 
         private Task GetPendingBeneficiariesPaginatedAsync()
@@ -5024,7 +5183,26 @@ namespace AttendanceShiftingManagement.ViewModels
         public ObservableCollection<RequirementEntryRow> RequirementRows { get; } = new();
 
         public bool IsRequirementsComplete => RequirementRows.Count > 0 && RequirementRows.All(r => r.Status == "Complete");
-        
+
+        public BitmapSource? PhotoBitmap => !string.IsNullOrWhiteSpace(PhotoPath) ? LocalImageLoader.Load(PhotoPath) as BitmapSource : null;
+        public bool HasPhoto => !string.IsNullOrWhiteSpace(PhotoPath);
+
+        public string DemographicsSummary
+        {
+            get
+            {
+                var parts = new List<string>();
+                if (!string.IsNullOrWhiteSpace(Age)) parts.Add($"Age: {Age}");
+                if (!string.IsNullOrWhiteSpace(Sex)) parts.Add(Sex);
+                if (IsSenior) parts.Add("Senior");
+                if (IsPwd) parts.Add("PWD");
+                return parts.Count > 0 ? string.Join(" • ", parts) : string.Empty;
+            }
+        }
+
+        public bool HasDemographics => !string.IsNullOrWhiteSpace(DemographicsSummary);
+        public bool HasAddress => !string.IsNullOrWhiteSpace(Address);
+
         public string Initials
         {
             get
@@ -5066,6 +5244,8 @@ namespace AttendanceShiftingManagement.ViewModels
                 LastName = beneficiary.LastName ?? string.Empty,
                 BeneficiaryId = beneficiary.BeneficiaryId ?? string.Empty,
                 CivilRegistryId = beneficiary.CivilRegistryId ?? string.Empty,
+                LinkedHouseholdId = beneficiary.LinkedHouseholdId,
+                LinkedHouseholdMemberId = beneficiary.LinkedHouseholdMemberId,
                 IsSenior = beneficiary.IsSenior,
                 IsPwd = beneficiary.IsPwd,
                 Address = beneficiary.Address,

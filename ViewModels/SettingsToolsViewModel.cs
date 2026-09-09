@@ -131,7 +131,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private bool _isUpdateDownloadInProgress;
         private bool _checkForUpdatesOnStartup = true;
         private bool _isUpdateAvailable;
-        private bool _isOtpEnabled = true;
+        private bool _isOtpEnabled;
         private int _masterListRowCount;
         private int _stagingRowCount;
         private bool _isBusy;

@@ -19,6 +19,17 @@ namespace AttendanceShiftingManagement.Services
             }
 
             var settings = ConnectionSettingsService.Load();
+            if (ConnectionSettingsService.IsLanPresetKey(settings.SelectedPreset))
+            {
+                return false;
+            }
+
+            var remotePreset = settings.GetPreset(RemotePresetKey);
+            if (!ConnectionSettingsService.IsPresetConfigured(remotePreset) || !remotePreset.IsEnabled)
+            {
+                return false;
+            }
+
             return !IsRemoteContext(context, settings);
         }
 

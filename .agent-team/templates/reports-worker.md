@@ -3,32 +3,54 @@
 You are the designated agent for the Reports module in the eKalinga+ Ayuda Management System.
 
 ## Module Role & Scope
-Your responsibility is to generate, preview, and export operational reports (Beneficiary lists, Budget liquidation, CFW attendance).
-Allowed files: `ReportsPage.xaml`, `ReportsViewModel.cs`, `ReportsService.cs`, `Services/ReportDocumentService.cs`, and their corresponding test files.
+Your responsibility is to query, aggregate, preview, and export operational and financial reports across all ayuda modules (Budget Utilization, Distribution Claims, Cash-for-Work/Seminars, and Admin Activity Audits).
 
-## Business Logic (CRITICAL)
-1. **Dynamic Templates:** Support multiple report types with configurable filters.
-2. **Export Formats:** Provide CSV and PDF exports as standard.
-3. **Data Integrity:** Reports must reflect the latest validated data from the database.
+Allowed files:
+- `Views/ReportsPage.xaml`
+- `Views/ReportsPage.xaml.cs`
+- `ViewModels/ReportsViewModel.cs`
+- `Services/ReportsService.cs`
+- `Services/ReportDocumentService.cs`
+- `Services/ReportPdfExportService.cs`
+- `AttendanceShiftingManagement.Tests/ReportsPageBindingTests.cs`
+- `AttendanceShiftingManagement.Tests/ReportDocumentServiceTests.cs`
 
-## UI/UX Constraints
-- **Left Sidebar (Action Panel):** Must contain Template selection, Date Range pickers, and specific filters (Program, Barangay, Status).
-- **Center Content:** 
-  - Main area for report preview (DataGrid). **CRITICAL: The preview list MUST be paginated.**
-  - Summary metrics (total count, total amount) displayed above the table.
-- **Actions:** Export/Print buttons should be easily accessible, preferably in the top-right of the center content or the sidebar.
+## Core Business Logic & Workflows (Source of Truth)
 
-## Theme & Dark Mode Consistency (Midnight Slate)
-To ensure a high-quality Dark Mode experience, you must never use hardcoded colors (e.g., "White", "#F8FAFC") or StaticResource for brushes.
-- **Midnight Slate:** The core dark theme color is `#16202C` (ThemeCardBrush).
-- **Dynamic Brushes:** Always use `DynamicResource` for all brushes so they adapt to theme changes.
-- **Card Backgrounds:** Use `{DynamicResource ThemeCardBrush}` for main cards and `{DynamicResource ThemeCardSubtleBrush}` for footers or secondary areas.
-- **Text & Borders:** Use `{DynamicResource BrandMidnightBrush}`, `{DynamicResource BrandTextSecondaryBrush}`, and `{DynamicResource BrandBorderBrush}`. **CRITICAL: Explicitly set Foreground to `{DynamicResource BrandMidnightBrush}` on all TextBlocks and DataGrid columns to ensure visibility in both themes.**
-- **DataGrid:** Set DataGrid Background to `Transparent` or `{DynamicResource ThemeCardBrush}` so it blends with the container.
-- **Overlays:** Use dynamic semi-transparent brushes for overlays rather than hardcoded hex values with alpha.
+### 1. Supported Report Types (`ReportsReportType`)
+1. **Budget Utilization:** Analyzes budget caps versus actual released amounts, remaining balances, and threshold alerts across programs.
+2. **Distribution Claims:** Detailed claims log capturing beneficiary details, unit amounts/items, claim timestamps, and releasing users.
+3. **Cash-for-Work & Seminars:** Participant rosters, daily attendance records (Present/Absent/Pending), wage rates, and total payouts. Includes standalone event attendance sheet snapshots (`BuildCashForWorkAttendanceSheetSnapshotAsync`).
+4. **Admin Activity Audit:** Immutable audit trail tracking Create/Edit/Status changes by Admins and SuperAdmins.
 
-## Technical Rules
-- **Memory Management:** Report generation for large datasets must be handled in the background to avoid UI freezing.
-- **Styling:** Match the dashboard's visual style for metrics and tables.
+### 2. Snapshot Architecture (`ReportsSnapshot`)
+Each report query generates a structured snapshot containing:
+- **Metadata:** Report Title, Subtitle, Date Range label, Program label, and Suggested Orientation (`Portrait` or `Landscape`).
+- **Executive Summary Highlights (`Highlights`):** Key narrative bullet points summarizing performance and flags.
+- **KPI Metrics (`Metrics`):** Summary cards (Total Disbursed, Participant count, Remaining budget, etc.).
+- **Dynamic Table (`DataTable`):** Structured rows with typed columns for high-density preview.
 
-Before editing, verify that the left sidebar contains all necessary filters and that the preview table implements pagination.
+### 3. Document Generation & Export Pipelines
+- **CSV Export:** Direct CSV export of raw tabular rows.
+- **FlowDocument Builder (`ReportDocumentService`):** Compiles print-ready documents with municipality branding/logo, metadata header, KPI summary table, executive summary bullets, detailed tabular grid, and standard signature lines ("Prepared by / Reviewed by / Approved by").
+- **PDF Export (`ReportPdfExportService`):** Converts the report snapshot directly to a formatted PDF file.
+- **Print Preview:** Integrates with system print dialogs.
+
+## UI/UX & Layout Architecture
+
+### 1. Left Sidebar (Filter & Navigation Panel)
+- **Report Template Selector:** Navigate between the 4 standard report types with descriptive help cards.
+- **Date Range Filters:** `DateFrom` and `DateTo` date pickers.
+- **Program / Project Filter:** Conditional program dropdown (automatically enabled/disabled based on report relevance).
+- **Refresh Action:** Triggers asynchronous snapshot compilation.
+
+### 2. Center Content (Preview & Metrics)
+- **Header & Executive Summary:** Displays report title, active date range, and executive summary bullet cards.
+- **Metric Cards Row:** High-level KPI metric cards positioned above the detailed data grid.
+- **Detailed DataGrid:** Dynamic preview grid rendering the snapshot's `DataTable` rows.
+- **Action Toolbar:** Fast export buttons for **Save PDF**, **Export CSV**, and **Print Preview**.
+
+## Technical & Memory Rules
+- All report queries must execute asynchronously in background tasks to prevent UI thread freezing during large dataset aggregations.
+- Data table generation must utilize streaming or efficient LINQ projections.
+- Preserve text/binding properties expected by binding tests (`ReportsReportTypeOption`, `SelectedReportType`, `ProgramFilters`).

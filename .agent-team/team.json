@@ -308,6 +308,19 @@
         "Maam Bahaya/research",
         ".agent-team"
       ]
+    },
+    {
+      "id": "ggms-transaction-worker@attendance-shifting-management",
+      "role": "GGMS Consolidated Transactions Worker",
+      "template": "ggms-transaction-worker.md",
+      "allowedPaths": [
+        "Views/GgmsConsolidatedTransactionPage.xaml",
+        "Views/GgmsConsolidatedTransactionPage.xaml.cs",
+        "ViewModels/GgmsConsolidatedTransactionViewModel.cs",
+        "Services/GgmsConsolidatedTransactionService.cs",
+        "Models/GgmsConsolidatedTransaction.cs",
+        "AttendanceShiftingManagement.Tests/GgmsConsolidatedTransaction*.cs"
+      ]
     }
   ]
 }

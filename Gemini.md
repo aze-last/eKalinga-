@@ -1,36 +1,13 @@
 
 # Gemini CLI Project Rules
 
-You are my senior .NET and WPF coding partner for this repo.
+You are my senior Laravel coding partner for this repo.
 
 ## Project Context
 
-This is a WPF desktop application for ayuda operations. It includes:
-- login/bootstrap flows
-- modular admin pages
-- beneficiary management
-- aid requests
-- budget tracking
-- cash-for-work workflows
-- distribution flows
-- QR/ID scanning
-- update-aware desktop behavior
+This project uses Laravel 12 for the application backend and Tailwind CSS v4 for the user interface.
 
-The app uses:
-- WPF
-- XAML
-- C#
-- MVVM-friendly structure
-- services
-- commands
-- bindings
-- shared XAML styles/components
-
-Base all help on the actual repo structure and current implementation.
-
-## Developer Note:
-
-Cash for work and seminars got the same UI, same features, and same logic. they're basically the same module just different name.
+Base all help on the actual repository structure and current implementation. Follow Laravel 12 conventions for routes, controllers, models, migrations, policies, requests, services, Blade views, and tests. Use Tailwind CSS v4 utilities and CSS-first configuration for frontend styling.
 
 ## Repo Safety
 
@@ -58,7 +35,7 @@ Do not refactor unless I ask.
 Do not install packages unless I ask.
 Do not change public APIs unless I ask.
 Do not rename variables unless required.
-Do not invent files, bindings, commands, services, models, database tables, or repo structure.
+Do not invent files, routes, controllers, services, models, database tables, or repository structure.
 
 If something is missing or uncertain, say it in one short line.
 
@@ -77,7 +54,7 @@ Prefer reading only the relevant files.
 - Modify the fewest files possible.
 - Keep diffs small.
 - Preserve existing architecture.
-- Preserve existing bindings and commands unless I explicitly ask to change them.
+- Preserve existing routes, actions, and component interfaces unless I explicitly ask to change them.
 - Prefer a small fix over redesign.
 - Avoid formatting-only changes.
 - Avoid unrelated cleanup.
@@ -87,7 +64,7 @@ Prefer reading only the relevant files.
 
 After changes:
 - Run the exact build/test command I provide.
-- If no command is provided, use the smallest relevant dotnet build/test command.
+- If no command is provided, use the smallest relevant Laravel or frontend verification command.
 - Always check for build errors when code changes are made.
 - If the same error happens twice, stop and explain the blocker.
 - Stop after 3 failed attempts.
@@ -119,16 +96,16 @@ End with:
 
 When I ask for UI ideas:
 - give clean, implementation-friendly layouts
-- prefer realistic WPF desktop UX
+- prefer realistic Laravel web UX
 - optimize hierarchy, spacing, consistency, and maintainability
 
-When I send XAML:
+When I send Blade, HTML, or Tailwind CSS:
 - improve the layout directly
-- preserve bindings and commands unless told otherwise
+- preserve existing routes, forms, actions, and data flow unless told otherwise
 
 When I ask for visualization:
-1. HTML/CSS preview first if requested
-2. XAML after approval
+1. HTML/Tailwind preview first if requested
+2. Blade/Tailwind implementation after approval
 
 ## Code Work
 
@@ -140,8 +117,8 @@ When I ask for code:
 
 When I ask for refactors:
 - preserve current behavior
-- preserve existing bindings/commands
-- clearly mark any new binding, command, service, or model
+- preserve existing routes, actions, validation, and public interfaces
+- clearly mark any new route, controller, service, model, migration, or component
 
 ## Compact Mode
 
@@ -171,117 +148,162 @@ If I ask for discussion or planning:
 - mention risks only when relevant
 - do not start coding unless asked
 
-## UI/UX Theme Lock (eKalinga+ Design System)
+## eKalinga+ UI/UX Theme Lock (Laravel 12 + Tailwind CSS v4)
 
-All modules must strictly adhere to the following unified design system to ensure visual consistency across the entire application.
+All modules must strictly adhere to this design system to ensure visual consistency across the app. This is a hard lock, not a suggestion — deviating requires the developer's explicit sign-off.
 
-### 1. Dashboard Stability (LOCKED)
-Keep the dashboard UI stable. **Do not redesign the dashboard unless explicitly asked.**
-*   **Dashboard Scope:** Only for module entry points and high-level summary cards.
-*   **Module Set:** Keep the existing dashboard module set (Validated Beneficiaries, Aid Request, Budget, Distribution, Cash-for-Work, Reports). **The "Equipment Borrowing" module has been permanently hidden from the UI; do not expose its navigation, dashboard cards, or permission settings.**
-*   **Visual Direction:** Do not change dashboard visual direction when modifying module pages. Do not add random widgets or unrelated sections.
+**Scope note:** modules referenced below are limited to the 5 pages actually being built: **Dashboard, Budget, Project Distribution, Reports, GGMS Transactions.** Masterlist, Aid Requests, and Cash-for-Work are out of scope and must not appear in permission lists, navigation, or module references.
 
-### 2. User Management & Permissions (CRITICAL)
-Strictly enforce the following rules for User Management:
-*   **SuperAdmin Exemption:** The `SuperAdmin` role is the only role that can access the "System User Management" tab. SuperAdmins are exempt from all permission restrictions.
-*   **Self-Protection:** Users (including SuperAdmins) CANNOT delete or deactivate their own currently logged-in account.
-*   **Admin Deletion:** SuperAdmins have the authority to "Soft Delete" other accounts, including other SuperAdmin accounts (provided it is not themselves).
-*   **Permission Categorization:** In the permissions overlay, checkboxes must be categorized:
-    *   *MODULES:* Dashboard, Masterlist, Aid Requests, Budget, Distribution, Cash-for-Work, Reports, GGMS Transactions.
-    *   *SYSTEM SETTINGS:* App Database, GGMS Budget Source.
-*   **Protected Settings:** Security overlays for "Remote Snapshot," "App Database," and "GGMS Budget Source" MUST allow both `Admin` and `SuperAdmin` roles to unlock via password re-entry.
+### 1. User Management & Permissions
 
-### 3. Core Color Palette (Red/Green/Yellow theme — "Barangay Heraldic")
-Each color has ONE job; never distribute the three evenly (avoid the "fast-food kiosk" look).
-*   **Primary Brand (`BrandBrush`):** `#15803D` (Forest Green) - Used for headers, primary icons, and section titles. Green doubles as the money/success signal, which fits an ayuda system. (Replaced the old `#1E4E89` Midnight Blue; rollout started with the Budget module — other modules may still carry blue until swept.)
-*   **Action Accent:** `#F59E0B` (Amber/Gold) - Reserved for high-priority operational buttons and specific CTAs.
-*   **Sidebar Background:** `#F8FAFC` (Light Slate/Off-white) - Use this lighter shade for the left action panels to maintain a clean, professional "Institutional" look. Avoid dark/Midnight sidebars.
-*   **Main Surface:** `#FFFFFF` (Pure White) for cards; `#F1F5F9` for the main page background.
-*   **Neutral Emphasis:** `#0F172A` (Dark Slate) - For KPI values that need weight without a semantic color (e.g., Budget Cap), so brand green stays meaningful next to money figures.
-*   **Feedback Colors:**
-    *   *Success:* `#15803D` (Forest Green — same as brand; success and brand intentionally share the hue)
-    *   *Error/Alert:* `#BE123C` (Crimson) - Red is reserved EXCLUSIVELY for errors, destructive actions, and remove affordances. Never use red as chrome/header color.
-    *   *Warning:* `#854D0E` (Ochre)
-*   **Off-palette colors are banned:** no teal (`#0F766E`), no blue chrome. Yellow is fills-only with dark text — never yellow text on white.
+- **SuperAdmin exemption:** only `SuperAdmin` can access "System User Management." SuperAdmins are exempt from all permission restrictions.
+- **Self-protection:** a user (including SuperAdmin) cannot delete or deactivate their own currently logged-in account.
+- **Admin deletion:** SuperAdmins may soft-delete other accounts, including other SuperAdmin accounts — except themselves.
+- **Permission categorization** (checkboxes in the permissions UI, grouped):
+    - *MODULES:* Dashboard, Budget, Distribution, Reports, GGMS Transactions.
+    - *SYSTEM SETTINGS:* App Database, GGMS Budget Source.
+- **Protected settings:** unlocking "App Database" or "GGMS Budget Source" settings requires password re-entry, allowed for both `Admin` and `SuperAdmin`.
+- Roles are strictly `SuperAdmin` and `Admin` only — no other role exists.
+
+### 2. Core Color Palette — "Barangay Heraldic" (Green/Amber/Crimson)
+
+Each color has ONE job. Never distribute the three evenly — avoid the "fast-food kiosk" look.
+
+Define these as Tailwind v4 theme tokens in `resources/css/app.css` using the `@theme` directive:
+
+```css
+@theme {
+    --color-brand: #15803D;
+    --color-accent: #F59E0B;
+    --color-sidebar: #F8FAFC;
+    --color-surface: #FFFFFF;
+    --color-page-bg: #F1F5F9;
+    --color-neutral-strong: #0F172A;
+    --color-success: #15803D;
+    --color-error: #BE123C;
+    --color-warning: #854D0E;
+}
+```
+
+- Red (`error`) is reserved exclusively for errors, destructive actions, and remove affordances. Never use it as chrome, a header color, or decoration.
+- Amber/gold is fills-only with dark text on top — never amber/yellow text on a white background.
+- **Off-palette colors are banned:** no teal and no blue chrome. If a component needs an unlisted color, revisit the design instead of adding a one-off exception.
 
 ### 3. Typography Standards
-*   **Module Header:** `24px` Bold, `BrandBrush`.
-*   **Section Headers (Sidebar):** `13px` Bold, All-Caps, `BrandBrush`.
-*   **Sidebar Buttons:** `14px` Regular/Medium, Body Foreground.
-*   **Table/DataGrid Text:** `12px` or `13px` for high density.
-*   **Card Labels:** `12px` Bold, muted secondary color (placed above values).
-*   **Card Values:** `24px` Black/Heavy for primary metrics.
+
+Use Tailwind utility classes directly — do not invent a parallel type scale:
+
+| Element | Classes |
+| --- | --- |
+| Module header | `text-2xl font-bold text-brand` |
+| Sidebar section header | `text-[13px] font-bold uppercase tracking-wide text-brand` |
+| Sidebar buttons | `text-sm font-medium text-foreground` |
+| Table text | `text-xs` or `text-[13px]` for high density |
+| Card label | `text-xs font-bold text-muted-foreground` |
+| Card value | `text-2xl font-black` |
 
 ### 4. Structural Constraints
-*   **Sidebar Width:** Fixed at `320px`.
-*   **Margins/Padding:** Consistent `30px` padding for main content areas.
-*   **Corner Radius:** `12px` to `16px` for cards/panels; `6px` to `8px` for buttons.
-*   **Card Styling:** Prefer subtle borders (`1px #E2E8F0`) or very soft shadows over heavy elevations.
 
-### 5. Blurred Overlay Standard (MANDATORY)
-Every operational action (Create, Edit, Add, Payout, etc.) must open as a new panel in an overlay layer above the main content.
-*   **Blur Effect:** Set `BlurRadius` to `15.0` on the main content grid.
-*   **Backdrop Overlay:** Use `#CC0F172A` (Midnight Slate at 80% opacity) for the layer behind the active panel.
-*   **Layout Behavior:** The main list/DataGrid must remain visible (but blurred) while the overlay is active. Do not swap the center area or collapse lists.
+- **Sidebar width:** fixed `w-80` (320px).
+- **Main content padding:** consistent `p-[30px]`, or one standardized nearest Tailwind scale step across all pages.
+- **Corner radius:** `rounded-xl` to `rounded-2xl` for cards/panels; `rounded-md` to `rounded-lg` for buttons.
+- **Card styling:** prefer `border border-slate-200` or a soft `shadow-sm`/`shadow` over heavy elevation. `shadow-xl` and `shadow-2xl` are banned on cards.
+
+### 5. Overlay Standard (Mandatory for Every Operational Action)
+
+Every Create/Edit/Add/Payout-style action opens as a panel in an overlay layer above the main content — never a full-page navigation or a swap that hides the underlying list.
+
+- **Backdrop:** apply `backdrop-blur-md` to the main content wrapper while the overlay is active, with a `bg-[#0F172A]/80` scrim behind the active panel.
+- **Behavior:** the main list/table stays mounted and visible behind the overlay; do not unmount or collapse it while the panel is open.
+- **Panel transition (Alpine.js):**
+
+```html
+x-transition:enter="ease-out duration-200"
+x-transition:enter-start="opacity-0 scale-95"
+x-transition:enter-end="opacity-100 scale-100"
+x-transition:leave="ease-in duration-150"
+x-transition:leave-start="opacity-100 scale-100"
+x-transition:leave-end="opacity-0 scale-95"
+```
 
 ### 6. Module Layout Pattern
-*   **Left Side (Sidebar):** Navigation, Filters, Search, and primary "Action" buttons (Gold).
-*   **Center:** Main operational data (Lists, Tables, Records).
-*   **Right Side (Optional):** Selected item details, transaction history, or previews.
 
-Before changing UI:
-1. Verify that the proposed change aligns with these color and typography locks.
-2. Ensure the sidebar remains light (`#F8FAFC`).
-3. **DO NOT touch the dashboard layout.** Use existing WPF styles and dynamic brushes where possible.
+- **Left (sidebar, `bg-sidebar`):** navigation, filters, search, and primary action buttons in amber/gold.
+- **Center:** main operational data — lists, tables, and records.
+- **Right (optional):** selected-item details, transaction history, or previews.
+
+Before shipping any UI change: confirm it matches the color and typography locks, confirm the sidebar stays light (`--color-sidebar`), and confirm no out-of-scope module (Masterlist, Aid Requests, Cash-for-Work) leaked into navigation or permissions.
 
 Before editing:
-1. Identify affected workflow logic.
+1. Identify affected Laravel routes, backend workflow, and UI components.
 2. List exact files to inspect.
 3. List exact files to modify.
 4. Explain the smallest safe implementation plan.
-5. Do not edit until plan is clear.
+5. Do not edit until the plan is clear.
 
 Constraints:
-- Preserve existing bindings/commands unless required.
-- Do not touch unrelated modules.
+- Preserve existing routes, forms, validation, and actions unless required.
+- Do not touch unrelated features.
 - Do not refactor unrelated code.
-- Do not install packages.
+- Do not install packages unless asked.
 - Keep changes minimal.
 
 Verification:
-Run dotnet build.
+Run the smallest relevant Laravel test, lint, or frontend build command.
 
-## Core Business Logic Locks
+## Login Form Implementation Prompt
 
-### 1. Budget Waterfall & Earmarking
-*   **Funding Streams:** The system receives funds from two main streams: **Government (GGMS)** and **Private Donations**.
-*   **Earmarking/Targeting:** Incoming funds can be earmarked (locked) to specific sub-budgets: Aid Requests (Assistance Cases), Cash-for-Work, or Project Distributions.
-*   **Waterfall Consumption:** When an assistance case or project releases funds, it must follow the waterfall sequence. If the earmarked budget bucket has sufficient remaining capacity, it consumes from there; otherwise, it cascades down to general Private or Government funds based on priority.
-*   **Safety Rule:** Agents must **NEVER** break the connection between the core funding streams (GGMS/Private) and the sub-budgets. Do not implement independent, disconnected budget fields that bypass the waterfall ledger.
+Implement the Laravel 12 login page to match the existing eKalinga+ login experience in the repository. Use Blade, Tailwind CSS v4, Laravel validation, session authentication, and Alpine.js only where interactive state is needed. Reproduce the existing layout, content, and behavior as a responsive web page without carrying over desktop-specific implementation details.
 
-### 2. Aid Request (Assistance Case) Workflow
-*   **Lifecycle:** Aid requests follow a strict state pipeline: `Pending` -> `UnderReview` -> `Approved` -> `Released` (or `Rejected`/`Cancelled`).
-*   **Approval & Release:** A request must transition to `Approved` with an explicitly assigned `ApprovedAmount` before funds can be released.
-*   **Budget Coupling:** Upon `Released`, the system MUST record a `BudgetLedgerEntry` pulling from the `AssistanceCaseBudget` (Global or Earmarked). This directly triggers the Budget Waterfall.
-*   **Independence:** Aid Requests are designed for individual or walk-in assistance and are separate from bulk Project Distributions, though they draw from the same overarching funding streams.
+### Visual Layout
 
-### 3. Cash-for-Work Workflow
-*   **Structure:** Organized around specific `CashForWorkEvent` activities where beneficiaries are enrolled as participants.
-*   **Attendance & Payouts:** Wages are distributed based on logged attendance. Payouts must be verified against attendance records.
-*   **Budget Coupling:** Payouts pull directly from the `CashForWorkBudget` bucket (Global or Earmarked), which in turn triggers the overarching Budget Waterfall.
+- Build a centered, two-panel authentication card with a maximum width close to the existing desktop proportion and `rounded-xl` corners.
+- Keep the left panel as the LGU identity and branding area. Use a configurable background image with a dark brand overlay, a thin amber/gold accent bar at the top, the LGU seal/logo, the eKalinga+ logo, government identity text, municipality/owner name, optional address, installation serial, active connection summary when applicable, and the tagline `Better Service, Better Care`.
+- Keep the right panel white and dedicated to the authentication form. Include the eKalinga+ logo, system name, `Ayuda Management System` subtitle, a divider, a form title, and a form subtitle.
+- Use the theme tokens from `resources/css/app.css`: `brand`, `accent`, `sidebar`, `surface`, `page-bg`, `neutral-strong`, `success`, `error`, and `warning`. Do not introduce blue chrome or unrelated colors.
+- On small screens, stack the panels or hide only secondary branding details; never make the form unusable or require horizontal scrolling.
 
-### 4. Project Distribution & Event Creation Workflow
-*   **Structure:** Designed for bulk disbursements and structured events. All projects and events (Distribution, Cash-for-Work, Seminar) are no longer created independently in operational modules, but are spawned directly from a specific funding source (Private Donation or GGMS Budget) in the Budget Module.
-*   **Enrollment:** Beneficiary selection relies exclusively on manual and bulk selection from the approved masterlist. Auto-enrollment via demographics (e.g., all Senior Citizens) is NOT supported.
-*   **Funding & Claiming:** The project funding is automatically derived from and constrained by its parent donation/GGMS amount (1:1 relationship). The required budget (Unit Amount * Selected Beneficiaries) must never exceed the source fund. When a beneficiary claims their distribution, it logs a `BudgetLedgerEntry` pulling directly from the explicitly linked source fund.
+### Login Mode
 
-## Agent Swarm & Modules
+Display the normal login form when the application already has an administrator account:
 
-Before starting any workflow or UI task:
-1. Always check `.agent-team/team.json` for a designated agent corresponding to the module (e.g., `dashboard-worker@attendance-shifting-management`).
-2. Identify and state the name of the assigned agent.
-3. Review the agent's template in `.agent-team/templates/` to understand the established logic, workflow, and UI constraints (like pagination and sidebar rules) before making changes.
-4. Delegate the task to the agent's context or strictly follow its template rules to ensure design consistency and code recycling.
+- Title: `Admin Login`.
+- Subtitle: `Sign in to manage barangay operations.`
+- Required field: `Username or email`, with placeholder `Enter your username or email`.
+- Required field: `Password`, with placeholder `Enter your password`.
+- Use a real password input, an accessible show/hide password control if implemented, and a primary amber/gold `SIGN IN` button with dark text.
+- Submit on Enter, disable the button while processing, preserve old input for the username/email only, and never repopulate a password.
+- Show validation and authentication feedback in a clearly visible status area. Use the `error` token for failures and the `success` token only for successful actions.
+- Include the existing demo-account notice only when the application is explicitly running in a local/demo environment; never expose demo credentials in production.
+- Keep the registration area as a `Register here` link or action only if the existing application enables it. The current behavior is that self-registration is disabled and users must contact an administrator, so do not create an open registration flow without explicit approval.
+
+### Initial Administrator Setup Mode
+
+When the database has no administrator account, show an initial setup form instead of the normal login form:
+
+- Title: `Initial Admin Setup`.
+- Subtitle: `Create the first admin account for the selected database.`
+- Fields: `Full Name`, `Admin Username`, `Admin Email`, `Admin Password`, and `Confirm Password`.
+- Use the existing defaults where appropriate: `Barangay Administrator`, `admin`, and `admin@barangay.local`; never hard-code a password.
+- Show `Minimum 8 characters` and `Re-enter password` guidance through labels or placeholders.
+- Submit with a green `CREATE ADMIN ACCOUNT` button with white text.
+- Validate required values, email format, password length, password confirmation, unique username/email, and the rule that only the first administrator can be created through this setup route.
+- Hash the password with Laravel's approved password hashing mechanism. Never store or log plaintext passwords.
+- After successful creation, redirect to the login state and show a safe success message without revealing sensitive data.
+
+### Backend and Security Behavior
+
+- Use named Laravel routes, a dedicated form request for validation where appropriate, and Laravel's authentication/session mechanisms rather than custom plaintext authentication.
+- Accept either username or email, and authenticate only active accounts. Return the same generic failure message for an unknown account or invalid password to avoid account enumeration.
+- Record successful and failed login attempts through the project's existing audit/logging mechanism when one exists.
+- Add throttling/rate limiting, CSRF protection, session regeneration after login, and logout/session invalidation according to Laravel conventions.
+- Authorize the application after login using only the supported `SuperAdmin` and `Admin` roles. Do not add other roles.
+- Keep branding, logo, background, address, serial, and connection-summary values server-provided and safely escaped in Blade.
+- Provide a connection/settings action only if the Laravel application already supports it; do not expose credentials or raw connection strings in the UI.
+
+### Implementation Deliverables
+
+Create or update only the necessary Laravel files: routes, controller/action, form requests, authentication or setup service, Blade view/components, Alpine state if needed, and focused feature tests. Preserve existing route names and authentication behavior when they already exist. Test normal login, invalid credentials, inactive users, validation errors, first-admin setup, duplicate account protection, session regeneration, authorization, and responsive rendering.
 
 ## Obsidian Daily Reporting Rules
 At the end of every active coding session or day, the agent must document all changes after a prompt/query was done immediately in the Obsidian wiki:

@@ -1,3 +1,4 @@
+using AttendanceShiftingManagement.Services;
 using AttendanceShiftingManagement.ViewModels;
 using System.Windows;
 
@@ -9,7 +10,8 @@ namespace AttendanceShiftingManagement.Views
         {
             InitializeComponent();
 
-            var viewModel = new ConnectionSettingsViewModel(selectionOnly, requireOtpOnSave);
+            var isOtpEnabled = FeatureSettingsService.Load().IsOtpEnabled;
+            var viewModel = new ConnectionSettingsViewModel(selectionOnly, requireOtpOnSave && isOtpEnabled);
             viewModel.CloseRequested += OnCloseRequested;
             DataContext = viewModel;
         }

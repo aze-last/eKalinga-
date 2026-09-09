@@ -1,4 +1,5 @@
 using AttendanceShiftingManagement.Data;
+using AttendanceShiftingManagement.Models;
 using AttendanceShiftingManagement.Services;
 
 namespace AttendanceShiftingManagement.Tests;

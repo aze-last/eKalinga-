@@ -7,12 +7,14 @@ namespace AttendanceShiftingManagement.Services
 {
     public sealed class DatabaseConnectionPreset
     {
+        public string Key { get; set; } = string.Empty;
         public string DisplayName { get; set; } = string.Empty;
         public string Server { get; set; } = string.Empty;
         public int Port { get; set; } = 3306;
         public string Database { get; set; } = string.Empty;
         public string Username { get; set; } = string.Empty;
         public string Password { get; set; } = string.Empty;
+        public bool IsEnabled { get; set; } = true;
     }
 
     public sealed class ConnectionSettingsModel
@@ -24,11 +26,26 @@ namespace AttendanceShiftingManagement.Services
         {
             if (!Presets.TryGetValue(presetKey, out var preset))
             {
-                preset = new DatabaseConnectionPreset();
+                preset = new DatabaseConnectionPreset { Key = presetKey };
                 Presets[presetKey] = preset;
             }
 
+            if (string.IsNullOrWhiteSpace(preset.Key))
+            {
+                preset.Key = presetKey;
+            }
+
             return preset;
+        }
+
+        public IEnumerable<KeyValuePair<string, DatabaseConnectionPreset>> GetLanPresets()
+        {
+            return Presets.Where(p => ConnectionSettingsService.IsLanPresetKey(p.Key));
+        }
+
+        public IEnumerable<KeyValuePair<string, DatabaseConnectionPreset>> GetActiveLanPresets()
+        {
+            return Presets.Where(p => ConnectionSettingsService.IsLanPresetKey(p.Key) && p.Value.IsEnabled);
         }
     }
 
@@ -40,9 +57,9 @@ namespace AttendanceShiftingManagement.Services
 
     public static class ConnectionSettingsService
     {
-        private const string LocalPresetKey = "Local";
-        private const string LanPresetKey = "Lan";
-        private const string RemotePresetKey = "Remote";
+        public const string LocalPresetKey = "Local";
+        public const string LanPresetKey = "Lan";
+        public const string RemotePresetKey = "Remote";
         private const string DefaultAppPresetKey = "Local";
         private static readonly HashSet<string> AllowedActiveAppPresetKeys = new(StringComparer.OrdinalIgnoreCase)
         {
@@ -56,6 +73,22 @@ namespace AttendanceShiftingManagement.Services
             LanPresetKey,
             RemotePresetKey
         };
+
+        public static bool IsLanPresetKey(string? key)
+        {
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                return false;
+            }
+
+            return string.Equals(key, LanPresetKey, StringComparison.OrdinalIgnoreCase)
+                || key.StartsWith("Lan_", StringComparison.OrdinalIgnoreCase);
+        }
+
+        public static bool IsRuntimeEditablePreset(string presetKey)
+        {
+            return RuntimeEditablePresetKeys.Contains(presetKey) || IsLanPresetKey(presetKey);
+        }
 
         private static readonly JsonSerializerOptions JsonOptions = new()
         {
@@ -103,12 +136,14 @@ namespace AttendanceShiftingManagement.Services
 
                 foreach (var preset in runtimeSettings.Presets)
                 {
-                    if (!RuntimeEditablePresetKeys.Contains(preset.Key))
+                    if (!IsRuntimeEditablePreset(preset.Key))
                     {
                         continue;
                     }
 
-                    settings.Presets[preset.Key] = ClonePresetForUse(preset.Value);
+                    var loadedPreset = ClonePresetForUse(preset.Value);
+                    loadedPreset.Key = preset.Key;
+                    settings.Presets[preset.Key] = loadedPreset;
                 }
             }
             catch
@@ -143,7 +178,7 @@ namespace AttendanceShiftingManagement.Services
             {
                 SelectedPreset = settings.SelectedPreset,
                 Presets = settings.Presets
-                    .Where(pair => RuntimeEditablePresetKeys.Contains(pair.Key))
+                    .Where(pair => IsRuntimeEditablePreset(pair.Key))
                     .ToDictionary(
                         pair => pair.Key,
                         pair => ClonePresetForStorage(pair.Value),
@@ -153,19 +188,29 @@ namespace AttendanceShiftingManagement.Services
             File.WriteAllText(runtimePath, JsonSerializer.Serialize(payload, JsonOptions));
         }
 
-        public static async Task<ConnectionTestResult> TestConnectionAsync(DatabaseConnectionPreset preset)
+        public static async Task<ConnectionTestResult> TestConnectionAsync(DatabaseConnectionPreset preset, int timeoutSeconds = 5)
         {
             try
             {
-                await using var connection = new MySqlConnection(BuildConnectionString(preset));
-                await connection.OpenAsync();
+                var connStr = BuildConnectionString(preset, guidFormatNone: false, timeoutSeconds: timeoutSeconds);
+                await using var connection = new MySqlConnection(connStr);
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds + 1));
+                await connection.OpenAsync(cts.Token);
                 await using var command = new MySqlCommand("SELECT DATABASE();", connection);
-                var databaseName = (string?)await command.ExecuteScalarAsync() ?? preset.Database;
+                var databaseName = (string?)await command.ExecuteScalarAsync(cts.Token) ?? preset.Database;
 
                 return new ConnectionTestResult
                 {
                     IsSuccess = true,
                     Message = $"Connected successfully to {databaseName} on {preset.Server}:{preset.Port}."
+                };
+            }
+            catch (OperationCanceledException)
+            {
+                return new ConnectionTestResult
+                {
+                    IsSuccess = false,
+                    Message = $"Connection timed out after {timeoutSeconds}s connecting to {preset.Server}:{preset.Port}."
                 };
             }
             catch (Exception ex)
@@ -203,10 +248,15 @@ namespace AttendanceShiftingManagement.Services
 
         public static string BuildConnectionString(DatabaseConnectionPreset preset)
         {
-            return BuildConnectionString(preset, guidFormatNone: false);
+            return BuildConnectionString(preset, guidFormatNone: false, timeoutSeconds: 15);
         }
 
         public static string BuildConnectionString(DatabaseConnectionPreset preset, bool guidFormatNone)
+        {
+            return BuildConnectionString(preset, guidFormatNone, timeoutSeconds: 15);
+        }
+
+        public static string BuildConnectionString(DatabaseConnectionPreset preset, bool guidFormatNone, int timeoutSeconds)
         {
             var builder = new MySqlConnectionStringBuilder
             {
@@ -216,7 +266,7 @@ namespace AttendanceShiftingManagement.Services
                 UserID = preset.Username,
                 Password = preset.Password,
                 CharacterSet = "utf8mb4",
-                ConnectionTimeout = 15,
+                ConnectionTimeout = (uint)Math.Max(1, timeoutSeconds),
                 DefaultCommandTimeout = 300,
                 AllowLoadLocalInfile = true,
                 Keepalive = 30,
@@ -317,8 +367,14 @@ namespace AttendanceShiftingManagement.Services
 
         private static void NormalizeActiveAppPreset(ConnectionSettingsModel settings)
         {
-            if (string.IsNullOrWhiteSpace(settings.SelectedPreset)
-                || !AllowedActiveAppPresetKeys.Contains(settings.SelectedPreset))
+            if (string.IsNullOrWhiteSpace(settings.SelectedPreset))
+            {
+                settings.SelectedPreset = DefaultAppPresetKey;
+                return;
+            }
+
+            if (!AllowedActiveAppPresetKeys.Contains(settings.SelectedPreset)
+                && !IsLanPresetKey(settings.SelectedPreset))
             {
                 settings.SelectedPreset = DefaultAppPresetKey;
             }
@@ -328,12 +384,14 @@ namespace AttendanceShiftingManagement.Services
         {
             return new DatabaseConnectionPreset
             {
+                Key = preset.Key,
                 DisplayName = preset.DisplayName,
                 Server = preset.Server,
                 Port = preset.Port,
                 Database = preset.Database,
                 Username = preset.Username,
-                Password = ConnectionSecretProtector.Unprotect(preset.Password)
+                Password = ConnectionSecretProtector.Unprotect(preset.Password),
+                IsEnabled = preset.IsEnabled
             };
         }
 
@@ -341,12 +399,14 @@ namespace AttendanceShiftingManagement.Services
         {
             return new DatabaseConnectionPreset
             {
+                Key = preset.Key,
                 DisplayName = preset.DisplayName,
                 Server = preset.Server,
                 Port = preset.Port,
                 Database = preset.Database,
                 Username = preset.Username,
-                Password = ConnectionSecretProtector.Protect(preset.Password)
+                Password = ConnectionSecretProtector.Protect(preset.Password),
+                IsEnabled = preset.IsEnabled
             };
         }
 

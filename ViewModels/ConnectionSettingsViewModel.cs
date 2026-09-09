@@ -1,11 +1,163 @@
 using AttendanceShiftingManagement.Helpers;
 using AttendanceShiftingManagement.Services;
+using System.Collections.ObjectModel;
 using System.Net.Mail;
+using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 
 namespace AttendanceShiftingManagement.ViewModels
 {
+    public sealed class LanDatabaseItemViewModel : ObservableObject
+    {
+        private string _displayName = string.Empty;
+        private string _server = string.Empty;
+        private int _port = 3306;
+        private string _database = string.Empty;
+        private string _username = string.Empty;
+        private string _password = string.Empty;
+        private bool _isEnabled = true;
+        private bool _isSelected;
+
+        public string Key { get; init; } = string.Empty;
+        public bool IsDefault => string.Equals(Key, ConnectionSettingsService.LanPresetKey, StringComparison.OrdinalIgnoreCase);
+
+        public string DisplayName
+        {
+            get => _displayName;
+            set => SetProperty(ref _displayName, value);
+        }
+
+        public string Server
+        {
+            get => _server;
+            set
+            {
+                if (SetProperty(ref _server, value))
+                {
+                    OnPropertyChanged(nameof(Summary));
+                }
+            }
+        }
+
+        public int Port
+        {
+            get => _port;
+            set
+            {
+                if (SetProperty(ref _port, value))
+                {
+                    OnPropertyChanged(nameof(Summary));
+                }
+            }
+        }
+
+        public string Database
+        {
+            get => _database;
+            set
+            {
+                if (SetProperty(ref _database, value))
+                {
+                    OnPropertyChanged(nameof(Summary));
+                }
+            }
+        }
+
+        public string Username
+        {
+            get => _username;
+            set => SetProperty(ref _username, value);
+        }
+
+        public string Password
+        {
+            get => _password;
+            set => SetProperty(ref _password, value);
+        }
+
+        public bool IsEnabled
+        {
+            get => _isEnabled;
+            set
+            {
+                if (SetProperty(ref _isEnabled, value))
+                {
+                    OnPropertyChanged(nameof(StatusLabel));
+                    OnPropertyChanged(nameof(StatusBrush));
+                }
+            }
+        }
+
+        public bool IsSelected
+        {
+            get => _isSelected;
+            set => SetProperty(ref _isSelected, value);
+        }
+
+        public string Summary => string.IsNullOrWhiteSpace(Server)
+            ? "Not configured yet"
+            : $"{Server}:{Port} / {Database}";
+
+        public string StatusLabel => IsEnabled ? "Active (Running)" : "Inactive (Disabled)";
+
+        public Brush StatusBrush => IsEnabled
+            ? new SolidColorBrush((Color)ColorConverter.ConvertFromString("#15803D"))
+            : new SolidColorBrush((Color)ColorConverter.ConvertFromString("#94A3B8"));
+
+        public Visibility DeleteVisibility => IsDefault ? Visibility.Collapsed : Visibility.Visible;
+
+        private string _connectionStatusText = "Untested";
+        private Brush _connectionStatusBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#64748B"));
+        private bool _isTesting;
+
+        public string ConnectionStatusText
+        {
+            get => _connectionStatusText;
+            set => SetProperty(ref _connectionStatusText, value);
+        }
+
+        public Brush ConnectionStatusBrush
+        {
+            get => _connectionStatusBrush;
+            set => SetProperty(ref _connectionStatusBrush, value);
+        }
+
+        public bool IsTesting
+        {
+            get => _isTesting;
+            set => SetProperty(ref _isTesting, value);
+        }
+
+        public void SetTestingStatus()
+        {
+            IsTesting = true;
+            ConnectionStatusText = "Testing...";
+            ConnectionStatusBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#D97706"));
+        }
+
+        public void SetSuccessStatus(string message)
+        {
+            IsTesting = false;
+            ConnectionStatusText = message;
+            ConnectionStatusBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#15803D"));
+        }
+
+        public void SetFailedStatus(string message)
+        {
+            IsTesting = false;
+            ConnectionStatusText = message;
+            ConnectionStatusBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#BE123C"));
+        }
+
+        public void ResetStatus()
+        {
+            IsTesting = false;
+            ConnectionStatusText = "Untested";
+            ConnectionStatusBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#64748B"));
+        }
+    }
+
     public sealed class ConnectionSettingsViewModel : ObservableObject
     {
         private const string LocalPresetKey = "Local";
@@ -134,7 +286,7 @@ namespace AttendanceShiftingManagement.ViewModels
         public bool IsSelectionOnly => _selectionOnly;
         public bool RequiresOtpOnSave => !_selectionOnly && _requireOtpOnSave;
         public bool IsLocalSelected => string.Equals(SelectedPresetKey, LocalPresetKey, StringComparison.OrdinalIgnoreCase);
-        public bool IsLanSelected => string.Equals(SelectedPresetKey, LanPresetKey, StringComparison.OrdinalIgnoreCase);
+        public bool IsLanSelected => ConnectionSettingsService.IsLanPresetKey(SelectedPresetKey);
         public bool IsRemoteSelected => string.Equals(SelectedPresetKey, RemotePresetKey, StringComparison.OrdinalIgnoreCase);
         public bool CanEditSelectedPresetCredentials => IsSelectionOnly
             ? IsLanSelected
@@ -235,12 +387,17 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand SelectLocalPresetCommand { get; }
         public ICommand SelectLanPresetCommand { get; }
         public ICommand SelectRemotePresetCommand { get; }
+        public ICommand AddLanDatabaseCommand { get; }
+        public ICommand RemoveLanDatabaseCommand { get; }
+        public ICommand SelectSpecificLanDatabaseCommand { get; }
+        public ICommand TestSpecificLanDatabaseCommand { get; }
         public ICommand TestConnectionCommand => _testConnectionCommand;
         public ICommand SaveCommand => _saveCommand;
         public ICommand CancelCommand { get; }
         public ICommand SendSaveOtpCommand => _sendSaveOtpCommand;
         public ICommand VerifySaveOtpCommand => _verifySaveOtpCommand;
         public ICommand ResendSaveOtpCommand => _resendSaveOtpCommand;
+        public ObservableCollection<LanDatabaseItemViewModel> LanDatabases { get; } = new();
 
         public ConnectionSettingsViewModel(
             bool selectionOnly = true,
@@ -263,6 +420,10 @@ namespace AttendanceShiftingManagement.ViewModels
             SelectLocalPresetCommand = new RelayCommand(_ => SelectPreset(LocalPresetKey));
             SelectLanPresetCommand = new RelayCommand(_ => SelectPreset(LanPresetKey));
             SelectRemotePresetCommand = new RelayCommand(_ => SelectPreset(RemotePresetKey));
+            AddLanDatabaseCommand = new RelayCommand(_ => AddLanDatabase());
+            RemoveLanDatabaseCommand = new RelayCommand(p => RemoveLanDatabase(p as LanDatabaseItemViewModel));
+            SelectSpecificLanDatabaseCommand = new RelayCommand(p => SelectSpecificLanDatabase(p as LanDatabaseItemViewModel));
+            TestSpecificLanDatabaseCommand = new RelayCommand(async p => await ExecuteTestSpecificLanDatabaseAsync(p as LanDatabaseItemViewModel), _ => !IsBusy);
             _testConnectionCommand = new RelayCommand(async _ => await ExecuteTestConnectionAsync(), _ => !IsBusy);
             _saveCommand = new RelayCommand(_ => ExecuteSave(), _ => !IsBusy);
             _sendSaveOtpCommand = new RelayCommand(async _ => await SendSaveOtpAsync(isResend: false), _ => CanSendSaveOtp);
@@ -270,6 +431,7 @@ namespace AttendanceShiftingManagement.ViewModels
             _resendSaveOtpCommand = new RelayCommand(async _ => await SendSaveOtpAsync(isResend: true), _ => CanResendSaveOtp);
             CancelCommand = new RelayCommand(_ => CloseRequested?.Invoke(false));
 
+            InitializeLanDatabases();
             LoadPreset(_settings.SelectedPreset);
             SetNeutralStatus(BuildPresetLoadedMessage());
         }
@@ -291,6 +453,70 @@ namespace AttendanceShiftingManagement.ViewModels
             SetNeutralStatus(BuildPresetLoadedMessage());
         }
 
+        private async Task ExecuteTestSpecificLanDatabaseAsync(LanDatabaseItemViewModel? item)
+        {
+            if (IsBusy || item == null)
+            {
+                return;
+            }
+
+            if (string.Equals(SelectedPresetKey, item.Key, StringComparison.OrdinalIgnoreCase))
+            {
+                if (!TryUpdateSelectedPreset(showValidationErrors: true))
+                {
+                    return;
+                }
+            }
+
+            var preset = new DatabaseConnectionPreset
+            {
+                Key = item.Key,
+                DisplayName = item.DisplayName,
+                Server = item.Server,
+                Port = item.Port,
+                Database = item.Database,
+                Username = item.Username,
+                Password = item.Password
+            };
+
+            if (string.IsNullOrWhiteSpace(preset.Server))
+            {
+                item.SetFailedStatus("Missing server host");
+                SetErrorStatus($"{item.DisplayName} is missing a server or host name.");
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(preset.Database))
+            {
+                item.SetFailedStatus("Missing database name");
+                SetErrorStatus($"{item.DisplayName} is missing a database name.");
+                return;
+            }
+
+            IsBusy = true;
+            item.SetTestingStatus();
+            SetNeutralStatus($"Testing connection to {item.DisplayName} ({preset.Server}:{preset.Port})...");
+
+            try
+            {
+                var result = await ConnectionSettingsService.TestConnectionAsync(preset, timeoutSeconds: 5);
+                if (result.IsSuccess)
+                {
+                    item.SetSuccessStatus("Connected (OK)");
+                    SetSuccessStatus($"[{item.DisplayName}] {result.Message}");
+                }
+                else
+                {
+                    item.SetFailedStatus(result.Message);
+                    SetErrorStatus($"[{item.DisplayName}] {result.Message}");
+                }
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
         private async Task ExecuteTestConnectionAsync()
         {
             if (IsBusy)
@@ -298,18 +524,104 @@ namespace AttendanceShiftingManagement.ViewModels
                 return;
             }
 
-            if (!TryBuildPresetForTesting(out var preset, out var validationMessage))
+            if (IsLanSelected)
+            {
+                if (CanEditSelectedPresetCredentials)
+                {
+                    TryUpdateSelectedPreset(showValidationErrors: false);
+                }
+
+                var itemsToTest = LanDatabases.ToList();
+                if (itemsToTest.Count == 0)
+                {
+                    SetErrorStatus("No Network LAN databases configured.");
+                    return;
+                }
+
+                IsBusy = true;
+                var successCount = 0;
+                var failCount = 0;
+
+                try
+                {
+                    for (int i = 0; i < itemsToTest.Count; i++)
+                    {
+                        var item = itemsToTest[i];
+                        item.SetTestingStatus();
+                        SetNeutralStatus($"Testing LAN database {i + 1} of {itemsToTest.Count}: {item.DisplayName} ({item.Server}:{item.Port})...");
+
+                        var preset = new DatabaseConnectionPreset
+                        {
+                            Key = item.Key,
+                            DisplayName = item.DisplayName,
+                            Server = item.Server,
+                            Port = item.Port,
+                            Database = item.Database,
+                            Username = item.Username,
+                            Password = item.Password
+                        };
+
+                        if (string.IsNullOrWhiteSpace(preset.Server) || string.IsNullOrWhiteSpace(preset.Database))
+                        {
+                            item.SetFailedStatus("Unconfigured host/database");
+                            failCount++;
+                            continue;
+                        }
+
+                        var result = await ConnectionSettingsService.TestConnectionAsync(preset, timeoutSeconds: 5);
+                        if (result.IsSuccess)
+                        {
+                            item.SetSuccessStatus("Connected (OK)");
+                            successCount++;
+                        }
+                        else
+                        {
+                            item.SetFailedStatus(result.Message);
+                            failCount++;
+                        }
+                    }
+
+                    if (itemsToTest.Count == 1)
+                    {
+                        var singleItem = itemsToTest[0];
+                        if (singleItem.ConnectionStatusText.Contains("Connected", StringComparison.OrdinalIgnoreCase))
+                        {
+                            SetSuccessStatus($"[{singleItem.DisplayName}] Connected successfully to {singleItem.Database} on {singleItem.Server}:{singleItem.Port}.");
+                        }
+                        else
+                        {
+                            SetErrorStatus($"[{singleItem.DisplayName}] {singleItem.ConnectionStatusText}");
+                        }
+                    }
+                    else if (failCount == 0)
+                    {
+                        SetSuccessStatus($"All {itemsToTest.Count} LAN databases connected successfully.");
+                    }
+                    else
+                    {
+                        SetErrorStatus($"LAN test complete: {successCount} reachable, {failCount} failed/timed out. Check details above.");
+                    }
+                }
+                finally
+                {
+                    IsBusy = false;
+                }
+
+                return;
+            }
+
+            if (!TryBuildPresetForTesting(out var singlePreset, out var validationMessage))
             {
                 SetErrorStatus(validationMessage);
                 return;
             }
 
             IsBusy = true;
-            SetNeutralStatus("Testing connection...");
+            SetNeutralStatus($"Testing connection to {CurrentPresetDisplayName}...");
 
             try
             {
-                var result = await ConnectionSettingsService.TestConnectionAsync(preset);
+                var result = await ConnectionSettingsService.TestConnectionAsync(singlePreset, timeoutSeconds: 5);
                 if (result.IsSuccess)
                 {
                     SetSuccessStatus(result.Message);
@@ -435,6 +747,97 @@ namespace AttendanceShiftingManagement.ViewModels
             }
         }
 
+        private void InitializeLanDatabases()
+        {
+            LanDatabases.Clear();
+            foreach (var pair in _settings.GetLanPresets())
+            {
+                var item = new LanDatabaseItemViewModel
+                {
+                    Key = pair.Key,
+                    DisplayName = string.IsNullOrWhiteSpace(pair.Value.DisplayName) ? GetDefaultDisplayName(pair.Key) : pair.Value.DisplayName,
+                    Server = pair.Value.Server,
+                    Port = pair.Value.Port,
+                    Database = pair.Value.Database,
+                    Username = pair.Value.Username,
+                    Password = pair.Value.Password,
+                    IsEnabled = pair.Value.IsEnabled,
+                    IsSelected = string.Equals(SelectedPresetKey, pair.Key, StringComparison.OrdinalIgnoreCase)
+                };
+                LanDatabases.Add(item);
+            }
+        }
+
+        private void AddLanDatabase()
+        {
+            if (IsBusy)
+            {
+                return;
+            }
+
+            if (CanEditSelectedPresetCredentials)
+            {
+                TryUpdateSelectedPreset(showValidationErrors: false);
+            }
+
+            var nextIndex = LanDatabases.Count + 1;
+            var key = $"Lan_{Guid.NewGuid():N}";
+            var newPreset = new DatabaseConnectionPreset
+            {
+                Key = key,
+                DisplayName = $"Network LAN ({nextIndex})",
+                Server = "127.0.0.1",
+                Port = 3306,
+                Database = "attendance_shifting_db",
+                Username = "root",
+                Password = string.Empty,
+                IsEnabled = true
+            };
+
+            _settings.Presets[key] = newPreset;
+            var item = new LanDatabaseItemViewModel
+            {
+                Key = key,
+                DisplayName = newPreset.DisplayName,
+                Server = newPreset.Server,
+                Port = newPreset.Port,
+                Database = newPreset.Database,
+                Username = newPreset.Username,
+                Password = newPreset.Password,
+                IsEnabled = newPreset.IsEnabled,
+                IsSelected = false
+            };
+            LanDatabases.Add(item);
+
+            SelectPreset(key);
+        }
+
+        private void RemoveLanDatabase(LanDatabaseItemViewModel? item)
+        {
+            if (IsBusy || item == null || item.IsDefault)
+            {
+                return;
+            }
+
+            _settings.Presets.Remove(item.Key);
+            LanDatabases.Remove(item);
+
+            if (string.Equals(SelectedPresetKey, item.Key, StringComparison.OrdinalIgnoreCase))
+            {
+                SelectPreset(LanPresetKey);
+            }
+        }
+
+        private void SelectSpecificLanDatabase(LanDatabaseItemViewModel? item)
+        {
+            if (item == null)
+            {
+                return;
+            }
+
+            SelectPreset(item.Key);
+        }
+
         private void LoadPreset(string presetKey)
         {
             var preset = _settings.GetPreset(presetKey);
@@ -449,6 +852,11 @@ namespace AttendanceShiftingManagement.ViewModels
             Database = preset.Database;
             Username = preset.Username;
             Password = preset.Password;
+
+            foreach (var lanItem in LanDatabases)
+            {
+                lanItem.IsSelected = string.Equals(lanItem.Key, presetKey, StringComparison.OrdinalIgnoreCase);
+            }
         }
 
         private bool TryUpdateSelectedPreset(bool showValidationErrors)
@@ -469,12 +877,25 @@ namespace AttendanceShiftingManagement.ViewModels
             }
 
             var selectedPreset = _settings.GetPreset(SelectedPresetKey);
-            selectedPreset.DisplayName = GetDefaultDisplayName(SelectedPresetKey);
+            selectedPreset.DisplayName = string.IsNullOrWhiteSpace(selectedPreset.DisplayName)
+                ? GetDefaultDisplayName(SelectedPresetKey)
+                : selectedPreset.DisplayName;
             selectedPreset.Server = preset.Server;
             selectedPreset.Port = preset.Port;
             selectedPreset.Database = preset.Database;
             selectedPreset.Username = preset.Username;
             selectedPreset.Password = preset.Password;
+
+            var matchingLanItem = LanDatabases.FirstOrDefault(l => string.Equals(l.Key, SelectedPresetKey, StringComparison.OrdinalIgnoreCase));
+            if (matchingLanItem != null)
+            {
+                matchingLanItem.Server = preset.Server;
+                matchingLanItem.Port = preset.Port;
+                matchingLanItem.Database = preset.Database;
+                matchingLanItem.Username = preset.Username;
+                matchingLanItem.Password = preset.Password;
+            }
+
             return true;
         }
 
@@ -533,12 +954,30 @@ namespace AttendanceShiftingManagement.ViewModels
                 }
 
                 var selectedPreset = model.GetPreset(SelectedPresetKey);
-                selectedPreset.DisplayName = GetDefaultDisplayName(SelectedPresetKey);
+                selectedPreset.DisplayName = string.IsNullOrWhiteSpace(selectedPreset.DisplayName)
+                    ? GetDefaultDisplayName(SelectedPresetKey)
+                    : selectedPreset.DisplayName;
                 selectedPreset.Server = preset.Server;
                 selectedPreset.Port = preset.Port;
                 selectedPreset.Database = preset.Database;
                 selectedPreset.Username = preset.Username;
                 selectedPreset.Password = preset.Password;
+            }
+
+            foreach (var lanItem in LanDatabases)
+            {
+                var target = model.GetPreset(lanItem.Key);
+                target.Key = lanItem.Key;
+                target.DisplayName = lanItem.DisplayName;
+                target.IsEnabled = lanItem.IsEnabled;
+                if (!string.Equals(lanItem.Key, SelectedPresetKey, StringComparison.OrdinalIgnoreCase))
+                {
+                    target.Server = lanItem.Server;
+                    target.Port = lanItem.Port;
+                    target.Database = lanItem.Database;
+                    target.Username = lanItem.Username;
+                    target.Password = lanItem.Password;
+                }
             }
 
             model.SelectedPreset = SelectedPresetKey;
@@ -611,12 +1050,14 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             return new DatabaseConnectionPreset
             {
+                Key = source.Key,
                 DisplayName = source.DisplayName,
                 Server = source.Server,
                 Port = source.Port,
                 Database = source.Database,
                 Username = source.Username,
-                Password = source.Password
+                Password = source.Password,
+                IsEnabled = source.IsEnabled
             };
         }
 
@@ -655,7 +1096,8 @@ namespace AttendanceShiftingManagement.ViewModels
                 && left.Port == right.Port
                 && string.Equals(left.Database, right.Database, StringComparison.Ordinal)
                 && string.Equals(left.Username, right.Username, StringComparison.Ordinal)
-                && string.Equals(left.Password, right.Password, StringComparison.Ordinal);
+                && string.Equals(left.Password, right.Password, StringComparison.Ordinal)
+                && left.IsEnabled == right.IsEnabled;
         }
 
         private static bool IsValidEmail(string? email)
@@ -728,12 +1170,17 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private static string GetDefaultDisplayName(string presetKey)
         {
-            return presetKey switch
+            if (string.Equals(presetKey, LocalPresetKey, StringComparison.OrdinalIgnoreCase))
             {
-                LocalPresetKey => "Local",
-                LanPresetKey => "Network (LAN)",
-                _ => "Remote"
-            };
+                return "Local";
+            }
+
+            if (string.Equals(presetKey, LanPresetKey, StringComparison.OrdinalIgnoreCase) || presetKey.StartsWith("Lan_", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Network (LAN)";
+            }
+
+            return "Remote";
         }
 
         private string BuildPresetLoadedMessage()

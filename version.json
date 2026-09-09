@@ -1,12 +1,12 @@
 {
-  "version": "1.0.5",
+  "version": "1.0.6",
   "notes": [
-    "Prepared version 1.0.5 with latest dashboard wiring and session announcement features.",
-    "Includes fixes for various service integrations and improved UI stability."
+    "Updated eKalinga+ installer to version 1.0.6.",
+    "Includes UI/UX performance enhancements and database schema locks."
   ],
-  "publishedAt": "2026-05-04",
-  "releasePageUrl": "https://github.com/aze-last/BarangayAyudaSys/releases/tag/v1.0.5",
-  "installerFileName": "eKalingaPlus-Setup-1.0.5.exe",
-  "installerUrl": "https://github.com/aze-last/BarangayAyudaSys/releases/download/v1.0.5/eKalingaPlus-Setup-1.0.5.exe",
-  "sha256": "b7845516a0fbfc71b6ea343e1dbe9fa2dab76954076b85683c2f25a3b664e554"
+  "publishedAt": "2026-09-09",
+  "releasePageUrl": "https://github.com/aze-last/BarangayAyudaSys/releases/tag/v1.0.6",
+  "installerFileName": "eKalingaPlus-Setup-1.0.6.exe",
+  "installerUrl": "https://github.com/aze-last/BarangayAyudaSys/releases/download/v1.0.6/eKalingaPlus-Setup-1.0.6.exe",
+  "sha256": "a18ab67b15fc12da4f23f1c57d8d7b9b7d2ad13f028938c4fe8590944e40f8c5"
 }

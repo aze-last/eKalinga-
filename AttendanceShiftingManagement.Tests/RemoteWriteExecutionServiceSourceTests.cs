@@ -59,4 +59,19 @@ public sealed class RemoteWriteExecutionServiceSourceTests
         Assert.DoesNotContain("SyncFromRemoteToLocalAsync", source, StringComparison.Ordinal);
         Assert.DoesNotContain("RemotePhaseOneSyncResult", source, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void RemoteWriteExecutionService_IgnoresRemoteWhenLanPresetActive()
+    {
+        var root = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..",
+            "..",
+            "..",
+            ".."));
+
+        var source = File.ReadAllText(Path.Combine(root, "Services", "RemoteWriteExecutionService.cs"));
+
+        Assert.Contains("ConnectionSettingsService.IsLanPresetKey(settings.SelectedPreset)", source, StringComparison.Ordinal);
+    }
 }

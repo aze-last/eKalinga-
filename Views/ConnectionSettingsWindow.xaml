@@ -1,4 +1,4 @@
-﻿<Window x:Class="AttendanceShiftingManagement.Views.ConnectionSettingsWindow"
+<Window x:Class="AttendanceShiftingManagement.Views.ConnectionSettingsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -390,6 +390,153 @@
                         </DockPanel>
 
                         <StackPanel Visibility="{Binding ShowCredentialEditor, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <!-- Multi-LAN Database Management (Visible when Network LAN is selected) -->
+                            <Border Margin="0,0,0,16"
+                                    Padding="14"
+                                    Background="White"
+                                    BorderBrush="{StaticResource BrandBorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="10"
+                                    Visibility="{Binding ShowLanCredentialEditor, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <StackPanel>
+                                    <DockPanel LastChildFill="False" Margin="0,0,0,10">
+                                        <StackPanel DockPanel.Dock="Left">
+                                            <TextBlock Text="AVAILABLE NETWORK LAN DATABASES"
+                                                       FontSize="11"
+                                                       FontWeight="Bold"
+                                                       Foreground="{StaticResource BrandMidnightBrush}"/>
+                                            <TextBlock Text="Select a LAN database to edit credentials or set as active app database. Toggles control active network feeds."
+                                                       FontSize="11"
+                                                       Foreground="{StaticResource BrandTextSecondaryBrush}"
+                                                       Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                        <Button DockPanel.Dock="Right"
+                                                Content="+ ADD LAN DB"
+                                                Command="{Binding AddLanDatabaseCommand}"
+                                                Style="{StaticResource SecondaryActionButton}"
+                                                Height="30"
+                                                Padding="10,0"
+                                                FontSize="11"/>
+                                    </DockPanel>
+
+                                    <ItemsControl ItemsSource="{Binding LanDatabases}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Margin="0,0,0,6"
+                                                        Padding="10,8"
+                                                        CornerRadius="8"
+                                                        BorderThickness="1">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="Background" Value="#F8FAFC"/>
+                                                            <Setter Property="BorderBrush" Value="#E2E8F0"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                                    <Setter Property="Background" Value="#EFF6FF"/>
+                                                                    <Setter Property="BorderBrush" Value="#2563EB"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+
+                                                        <Button Grid.Column="0"
+                                                                Command="{Binding DataContext.SelectSpecificLanDatabaseCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                CommandParameter="{Binding}"
+                                                                Padding="6,0"
+                                                                Height="28"
+                                                                FontSize="10"
+                                                                FontWeight="Bold"
+                                                                Margin="0,0,8,0"
+                                                                VerticalAlignment="Center"
+                                                                ToolTip="Select to edit credentials in the form below">
+                                                            <Button.Style>
+                                                                <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignFlatButton}">
+                                                                    <Setter Property="Content" Value="EDIT"/>
+                                                                    <Setter Property="Foreground" Value="#64748B"/>
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                                            <Setter Property="Content" Value="EDITING"/>
+                                                                            <Setter Property="Foreground" Value="#2563EB"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </Button.Style>
+                                                        </Button>
+
+                                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,8,0">
+                                                            <TextBlock Text="{Binding DisplayName}"
+                                                                       FontWeight="SemiBold"
+                                                                       FontSize="12"
+                                                                       Foreground="{StaticResource BrandMidnightBrush}"/>
+                                                            <TextBlock Text="{Binding Summary}"
+                                                                       FontSize="11"
+                                                                       Foreground="{StaticResource BrandTextSecondaryBrush}"/>
+                                                            <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
+                                                                <TextBlock Text="● "
+                                                                           FontSize="10"
+                                                                           Foreground="{Binding ConnectionStatusBrush}"
+                                                                           VerticalAlignment="Center"/>
+                                                                <TextBlock Text="{Binding ConnectionStatusText}"
+                                                                           FontSize="11"
+                                                                           FontWeight="SemiBold"
+                                                                           Foreground="{Binding ConnectionStatusBrush}"
+                                                                           VerticalAlignment="Center"
+                                                                           TextTrimming="CharacterEllipsis"/>
+                                                            </StackPanel>
+                                                        </StackPanel>
+
+                                                        <StackPanel Grid.Column="2"
+                                                                    Orientation="Horizontal"
+                                                                    VerticalAlignment="Center"
+                                                                    Margin="6,0">
+                                                            <Button Command="{Binding DataContext.TestSpecificLanDatabaseCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                    CommandParameter="{Binding}"
+                                                                    Style="{StaticResource MaterialDesignOutlinedButton}"
+                                                                    Padding="8,0"
+                                                                    Height="28"
+                                                                    FontSize="10"
+                                                                    FontWeight="SemiBold"
+                                                                    Margin="0,0,10,0"
+                                                                    VerticalAlignment="Center"
+                                                                    ToolTip="Test connection for this database"
+                                                                    Content="TEST"/>
+                                                            <TextBlock Text="{Binding StatusLabel}"
+                                                                       FontSize="11"
+                                                                       FontWeight="SemiBold"
+                                                                       VerticalAlignment="Center"
+                                                                       Margin="0,0,6,0"
+                                                                       Foreground="{Binding StatusBrush}"/>
+                                                            <ToggleButton IsChecked="{Binding IsEnabled, Mode=TwoWay}"
+                                                                          Style="{StaticResource MaterialDesignSwitchToggleButton}"
+                                                                          ToolTip="Enable or disable this LAN database"/>
+                                                        </StackPanel>
+
+                                                        <Button Grid.Column="3"
+                                                                Command="{Binding DataContext.RemoveLanDatabaseCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                CommandParameter="{Binding}"
+                                                                Style="{StaticResource MaterialDesignFlatButton}"
+                                                                Padding="4"
+                                                                Height="28"
+                                                                Width="28"
+                                                                ToolTip="Remove this LAN database"
+                                                                Visibility="{Binding DeleteVisibility}">
+                                                            <materialDesign:PackIcon Kind="TrashCanOutline" Width="16" Height="16" Foreground="#BE123C"/>
+                                                        </Button>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+
                             <Grid Margin="0,0,0,12">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="3*"/>
