@@ -226,4 +226,25 @@ public sealed class BudgetPageBindingTests
         Assert.Contains("Text=\"BUDGET\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding DataContext.ShowBudgetCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}\"", xaml, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void BudgetPage_AllPackIconsAreValidPackIconKinds()
+    {
+        var pagePath = GetProjectFilePath("Views", "BudgetPage.xaml");
+        var xaml = File.ReadAllText(pagePath);
+
+        var matches = System.Text.RegularExpressions.Regex.Matches(xaml, @"Kind=""([^""]+)""");
+        var invalidIcons = new List<string>();
+
+        foreach (System.Text.RegularExpressions.Match match in matches)
+        {
+            var kindName = match.Groups[1].Value;
+            if (!Enum.TryParse(typeof(MaterialDesignThemes.Wpf.PackIconKind), kindName, out _))
+            {
+                invalidIcons.Add(kindName);
+            }
+        }
+
+        Assert.Empty(invalidIcons);
+    }
 }

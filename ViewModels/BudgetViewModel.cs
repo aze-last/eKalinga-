@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Linq.Expressions;
 using AttendanceShiftingManagement.Data;
 using AttendanceShiftingManagement.Helpers;
 using AttendanceShiftingManagement.Models;
@@ -67,12 +68,44 @@ namespace AttendanceShiftingManagement.ViewModels
         public string? Description { get; init; }
     }
 
+        public sealed class FundingSourceOption
+    {
+        public string DisplayText { get; init; } = string.Empty;
+        public string SourceCode { get; init; } = string.Empty;
+        public string Title { get; init; } = string.Empty;
+        public string Subtitle { get; init; } = string.Empty;
+        public string FundingType { get; init; } = string.Empty;
+        public decimal AllocatedAmount { get; init; }
+        public decimal DisbursedAmount { get; init; }
+        public decimal AvailableBalance { get; init; }
+        public bool IsNewDonation { get; init; }
+        public object? SourceItem { get; init; }
+
+        public override string ToString() => DisplayText;
+    }
+
+    public sealed class TargetBarangayOption : ObservableObject
+    {
+        private bool _isSelected;
+        public string Name { get; init; } = string.Empty;
+        public bool IsSelected
+        {
+            get => _isSelected;
+            set => SetProperty(ref _isSelected, value);
+        }
+
+        private RelayCommand? _toggleCommand;
+        public ICommand ToggleCommand => _toggleCommand ??= new RelayCommand(_ => IsSelected = !IsSelected);
+    }
+
     public class EnrollmentBeneficiaryOption : ObservableObject
     {
         private bool _isSelected;
         public int StagingId { get; init; }
         public string BeneficiaryId { get; init; } = string.Empty;
         public string FullName { get; init; } = string.Empty;
+        public string Barangay { get; init; } = string.Empty;
+        public string Address { get; init; } = string.Empty;
         public bool IsSelected
         {
             get => _isSelected;
@@ -96,6 +129,14 @@ namespace AttendanceShiftingManagement.ViewModels
     {
         private const string AllLedgerSourceFilter = "All Sources";
         private const string AllTypeFilter = "All Categories";
+        private static readonly string[] SulopBarangays = new[]
+        {
+            "Balasinon", "Buguis", "Carre", "Clib", "Harada Yano",
+            "Ibo", "Inayagan", "Kiblagon", "Labon", "Lapediche",
+            "Luparan", "Mckinley", "New Cebu", "Osmeña", "Palili",
+            "Parame", "Poblacion", "Roxas", "Solongvale", "Tagolilong",
+            "Tala-o", "Talas", "Tanwalang", "Waterfall"
+        };
         private readonly User _currentUser;
 
         /// <summary>Fires after a project is created. Code-behind shows the "Go to Distribution?" prompt.</summary>
@@ -108,6 +149,15 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly RelayCommand _openProjectCreationPanelCommand;
         private readonly RelayCommand _closeProjectCreationPanelCommand;
         private readonly RelayCommand _confirmCreateProjectCommand;
+        private readonly RelayCommand _nextProjectWizardStepCommand;
+        private readonly RelayCommand _previousProjectWizardStepCommand;
+        private readonly RelayCommand _goToProjectWizardStepCommand;
+        private readonly RelayCommand _toggleAllTargetBarangaysCommand;
+        private readonly RelayCommand _selectAllTargetBarangaysCommand;
+        private readonly RelayCommand _clearTargetBarangaysCommand;
+        private readonly RelayCommand _toggleTargetBarangayCommand;
+        private readonly RelayCommand _setBudgetCapToMaxCommand;
+        private readonly RelayCommand _autoFillCandidatesCommand;
         private readonly RelayCommand _closePanelCommand;
         private readonly RelayCommand _closeLedgerHistoryCardCommand;
         private readonly RelayCommand _clearSelectedBudgetCommand;
@@ -288,6 +338,261 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand OpenProjectCreationPanelCommand => _openProjectCreationPanelCommand;
         public ICommand CloseProjectCreationPanelCommand => _closeProjectCreationPanelCommand;
         public ICommand ConfirmCreateProjectCommand => _confirmCreateProjectCommand;
+        public ICommand NextProjectWizardStepCommand => _nextProjectWizardStepCommand;
+        public ICommand PreviousProjectWizardStepCommand => _previousProjectWizardStepCommand;
+        public ICommand GoToProjectWizardStepCommand => _goToProjectWizardStepCommand;
+        public ICommand ToggleAllTargetBarangaysCommand => _toggleAllTargetBarangaysCommand;
+        public ICommand SelectAllTargetBarangaysCommand => _selectAllTargetBarangaysCommand;
+        public ICommand ClearTargetBarangaysCommand => _clearTargetBarangaysCommand;
+        public ICommand ToggleTargetBarangayCommand => _toggleTargetBarangayCommand;
+        public ICommand SetBudgetCapToMaxCommand => _setBudgetCapToMaxCommand;
+        public ICommand AutoFillCandidatesCommand => _autoFillCandidatesCommand;
+
+        private int _projectWizardStep = 1;
+        public int ProjectWizardStep
+        {
+            get => _projectWizardStep;
+            set
+            {
+                if (SetProperty(ref _projectWizardStep, value))
+                {
+                    OnPropertyChanged(nameof(IsStep1));
+                    OnPropertyChanged(nameof(IsStep2));
+                    OnPropertyChanged(nameof(IsStep3));
+                    OnPropertyChanged(nameof(IsStep4));
+                    OnPropertyChanged(nameof(IsFirstWizardStep));
+                    OnPropertyChanged(nameof(IsLastWizardStep));
+                    OnPropertyChanged(nameof(WizardStepTitle));
+                    OnPropertyChanged(nameof(WizardStepSubtitle));
+                }
+            }
+        }
+
+        public bool IsStep1 => ProjectWizardStep == 1;
+        public bool IsStep2 => ProjectWizardStep == 2;
+        public bool IsStep3 => ProjectWizardStep == 3;
+        public bool IsStep4 => ProjectWizardStep == 4;
+        public bool IsFirstWizardStep => ProjectWizardStep == 1;
+        public bool IsLastWizardStep => ProjectWizardStep == 4;
+
+        public string WizardStepTitle => ProjectWizardStep switch
+        {
+            1 => "1. Funding Source & Benefit Type",
+            2 => "2. Project Particulars & Target Coverage",
+            3 => "3. Financial Earmark & Timeline Review",
+            4 => "4. Candidate Beneficiary Pre-Enrollment",
+            _ => "Create Ayuda Project"
+        };
+
+        public string WizardStepSubtitle => ProjectWizardStep switch
+        {
+            1 => "Select the 1:1 parent funding source pool and specify whether aid is cash or in-kind goods.",
+            2 => "Configure project particulars, package details, unit multiplier, and target barangays.",
+            3 => "Review financial earmark allocations, budget cap constraints, and schedule dates.",
+            4 => "Screen and pre-enroll eligible citizens from targeted barangays using live municipal registry records.",
+            _ => string.Empty
+        };
+
+        private decimal _sourceAllocatedAmount;
+        public decimal SourceAllocatedAmount
+        {
+            get => _sourceAllocatedAmount;
+            set => SetProperty(ref _sourceAllocatedAmount, value);
+        }
+
+        private decimal _sourceDisbursedAmount;
+        public decimal SourceDisbursedAmount
+        {
+            get => _sourceDisbursedAmount;
+            set => SetProperty(ref _sourceDisbursedAmount, value);
+        }
+
+        private decimal _sourceAvailableBalance;
+        public decimal SourceAvailableBalance
+        {
+            get => _sourceAvailableBalance;
+            set
+            {
+                if (SetProperty(ref _sourceAvailableBalance, value))
+                {
+                    NotifyEstimationCalculations();
+                }
+            }
+        }
+
+        private string _sourceCode = string.Empty;
+        public string SourceCode
+        {
+            get => _sourceCode;
+            set => SetProperty(ref _sourceCode, value);
+        }
+
+        private string _sourceTitle = string.Empty;
+        public string SourceTitle
+        {
+            get => _sourceTitle;
+            set => SetProperty(ref _sourceTitle, value);
+        }
+
+        private string _sourceFundingType = string.Empty;
+        public string SourceFundingType
+        {
+            get => _sourceFundingType;
+            set => SetProperty(ref _sourceFundingType, value);
+        }
+
+        private string _sourceSubtitle = string.Empty;
+        public string SourceSubtitle
+        {
+            get => _sourceSubtitle;
+            set => SetProperty(ref _sourceSubtitle, value);
+        }
+
+        public ObservableCollection<FundingSourceOption> FundingSourceOptions { get; } = new();
+
+        private FundingSourceOption? _selectedFundingSourceOption;
+        public FundingSourceOption? SelectedFundingSourceOption
+        {
+            get => _selectedFundingSourceOption;
+            set
+            {
+                if (SetProperty(ref _selectedFundingSourceOption, value) && value != null)
+                {
+                    ApplyFundingSourceOption(value);
+                }
+            }
+        }
+
+        public ICommand SelectCashBenefitTypeCommand { get; }
+        public ICommand SelectGoodsBenefitTypeCommand { get; }
+
+
+        private string _newProjectTargetCountText = "50";
+        public string NewProjectTargetCountText
+        {
+            get => _newProjectTargetCountText;
+            set
+            {
+                if (SetProperty(ref _newProjectTargetCountText, value))
+                {
+                    NotifyEstimationCalculations();
+                }
+            }
+        }
+
+        public string CalculatedTotalCostText
+        {
+            get
+            {
+                var targetCount = 0;
+                int.TryParse(NewProjectTargetCountText, out targetCount);
+
+                if (SelectedReleaseKind == AssistanceReleaseKind.Goods)
+                {
+                    var qty = 0m;
+                    TryParseAmount(NewProjectQuantityText, out qty);
+                    var totalQty = targetCount * qty;
+                    var unit = string.IsNullOrWhiteSpace(NewProjectUnitOfMeasure) ? "units" : NewProjectUnitOfMeasure;
+                    return $"{targetCount} recipients × {qty:G29} {unit} = {totalQty:G29} {unit} total";
+                }
+                else
+                {
+                    var unitAmt = 0m;
+                    TryParseAmount(NewProjectUnitAmountText, out unitAmt);
+                    var totalAmt = targetCount * unitAmt;
+                    return $"{targetCount} recipients × PHP {unitAmt:N2} = PHP {totalAmt:N2} total";
+                }
+            }
+        }
+
+        public decimal CalculatedTotalCostAmount
+        {
+            get
+            {
+                if (!int.TryParse(NewProjectTargetCountText, out var targetCount) || targetCount <= 0)
+                    return 0m;
+
+                if (SelectedReleaseKind == AssistanceReleaseKind.Goods)
+                {
+                    TryParseAmount(NewProjectQuantityText, out var qty);
+                    return targetCount * qty;
+                }
+                else
+                {
+                    TryParseAmount(NewProjectUnitAmountText, out var unitAmt);
+                    return targetCount * unitAmt;
+                }
+            }
+        }
+
+        public bool IsCostExceedingSourceBalance
+        {
+            get
+            {
+                if (IsNewDonationMode) return false;
+                if (SourceAvailableBalance <= 0) return false;
+
+                if (SelectedReleaseKind == AssistanceReleaseKind.Cash)
+                {
+                    var cost = CalculatedTotalCostAmount;
+                    return cost > 0 && cost > SourceAvailableBalance;
+                }
+
+                return false;
+            }
+        }
+
+        public decimal CostExceededDifference =>
+            IsCostExceedingSourceBalance ? (CalculatedTotalCostAmount - SourceAvailableBalance) : 0m;
+
+        public string CostExceededWarningText =>
+            IsCostExceedingSourceBalance
+                ? $"⚠️ Exceeds source available limit by ₱{CostExceededDifference:N2}! (Available: ₱{SourceAvailableBalance:N2})"
+                : string.Empty;
+
+        public bool IsBudgetCapExceedingSource
+        {
+            get
+            {
+                if (IsNewDonationMode) return false;
+                if (SourceAvailableBalance <= 0) return false;
+                if (TryParseOptionalAmount(NewProjectBudgetCapText, out var cap) && cap.HasValue)
+                {
+                    return cap.Value > SourceAvailableBalance;
+                }
+                return false;
+            }
+        }
+
+        public void NotifyEstimationCalculations()
+        {
+            OnPropertyChanged(nameof(CalculatedTotalCostText));
+            OnPropertyChanged(nameof(CalculatedTotalCostAmount));
+            OnPropertyChanged(nameof(IsCostExceedingSourceBalance));
+            OnPropertyChanged(nameof(CostExceededDifference));
+            OnPropertyChanged(nameof(CostExceededWarningText));
+            OnPropertyChanged(nameof(IsBudgetCapExceedingSource));
+        }
+
+        public ObservableCollection<TargetBarangayOption> TargetBarangayOptions { get; } = new();
+
+        public int SelectedTargetBarangayCount => TargetBarangayOptions.Count(b => b.IsSelected);
+        public bool IsAllTargetBarangaysSelected => TargetBarangayOptions.Count > 0 && TargetBarangayOptions.All(b => b.IsSelected);
+        public bool HasTargetBarangaysFilter => SelectedTargetBarangayCount > 0 && !IsAllTargetBarangaysSelected;
+
+        public string TargetBarangayCoverageText
+        {
+            get
+            {
+                var count = SelectedTargetBarangayCount;
+                if (count == 0)
+                    return "Municipality-Wide Scope: All 24 Sulop barangays are eligible for aid enrollment.";
+                if (count == TargetBarangayOptions.Count)
+                    return $"All {count} Barangays Selected: Full municipal coverage enabled.";
+                var list = string.Join(", ", TargetBarangayOptions.Where(b => b.IsSelected).Select(b => b.Name));
+                return $"{count} Barangay(s) Targeted: {list}";
+            }
+        }
 
         public ObservableCollection<AyudaProgramType> ProgramTypes { get; } = new(Enum.GetValues<AyudaProgramType>().Where(type => type != AyudaProgramType.AssistanceCase));
         public ObservableCollection<AssistanceReleaseKind> ReleaseKinds { get; } = new(Enum.GetValues<AssistanceReleaseKind>());
@@ -327,7 +632,14 @@ namespace AttendanceShiftingManagement.ViewModels
         public string NewProjectUnitAmountText
         {
             get => _newProjectUnitAmountText;
-            set { if (SetProperty(ref _newProjectUnitAmountText, value)) _confirmCreateProjectCommand.RaiseCanExecuteChanged(); }
+            set
+            {
+                if (SetProperty(ref _newProjectUnitAmountText, value))
+                {
+                    _confirmCreateProjectCommand.RaiseCanExecuteChanged();
+                    NotifyEstimationCalculations();
+                }
+            }
         }
 
         public string NewProjectItemDescription
@@ -351,8 +663,11 @@ namespace AttendanceShiftingManagement.ViewModels
             get => _newProjectQuantityText;
             set
             {
-                SetProperty(ref _newProjectQuantityText, value);
-                ((RelayCommand)_confirmCreateProjectCommand).RaiseCanExecuteChanged();
+                if (SetProperty(ref _newProjectQuantityText, value))
+                {
+                    ((RelayCommand)_confirmCreateProjectCommand).RaiseCanExecuteChanged();
+                    NotifyEstimationCalculations();
+                }
             }
         }
 
@@ -361,15 +676,24 @@ namespace AttendanceShiftingManagement.ViewModels
             get => _newProjectUnitOfMeasure;
             set
             {
-                SetProperty(ref _newProjectUnitOfMeasure, value);
-                ((RelayCommand)_confirmCreateProjectCommand).RaiseCanExecuteChanged();
+                if (SetProperty(ref _newProjectUnitOfMeasure, value))
+                {
+                    ((RelayCommand)_confirmCreateProjectCommand).RaiseCanExecuteChanged();
+                    OnPropertyChanged(nameof(CalculatedTotalCostText));
+                }
             }
         }
 
         public string NewProjectBudgetCapText
         {
             get => _newProjectBudgetCapText;
-            set => SetProperty(ref _newProjectBudgetCapText, value);
+            set
+            {
+                if (SetProperty(ref _newProjectBudgetCapText, value))
+                {
+                    NotifyEstimationCalculations();
+                }
+            }
         }
 
         public DateTime? NewProjectStartDate
@@ -410,6 +734,7 @@ namespace AttendanceShiftingManagement.ViewModels
                     OnPropertyChanged(nameof(IsGoodsReleaseKind));
                     OnPropertyChanged(nameof(IsCashReleaseKind));
                     ((RelayCommand)_confirmCreateProjectCommand).RaiseCanExecuteChanged();
+                    NotifyEstimationCalculations();
                 }
             }
         }
@@ -452,72 +777,17 @@ namespace AttendanceShiftingManagement.ViewModels
             set => SetProperty(ref _isCreateProjectGuided, value);
         }
 
-        private void OpenProjectCreationPanel(object sourceObj)
+        private void OpenProjectCreationPanel(object? sourceObj)
         {
             if (IsBusy) return;
             IsCreateProjectGuided = false;
             ProjectCreationErrorMessage = null;
-
-            if (sourceObj == null)
-            {
-                SetErrorStatus("Select a Private Donation or GGMS Fund row from the list below, then click CREATE PROJECT.");
-                return;
-            }
+            ProjectWizardStep = 1;
 
             ResetProjectCreationForm();
             IsNewDonationMode = false;
 
-            if (sourceObj is BudgetRecordListItem item)
-            {
-                if (item.OriginalItem is PrivateDonation donation)
-                {
-                    NewProjectSourceDonationId = donation.Id;
-                    NewProjectSourceGGMSBudgetId = null;
-                    NewProjectSourceProjectDetailsId = null;
-                    NewProjectSourceProjectBudget = null;
-                    NewProjectSourceDescription = $"Source: Private Donation - {donation.DonorName} (PHP {donation.Amount:N2})";
-                }
-                else if (item.OriginalItem is GovernmentBudgetSnapshot ggms)
-                {
-                    NewProjectSourceGGMSBudgetId = ggms.Id;
-                    NewProjectSourceDonationId = null;
-                    NewProjectSourceProjectDetailsId = null;
-                    NewProjectSourceProjectBudget = null;
-                    NewProjectSourceDescription = $"Source: GGMS Allocation - {ggms.OfficeName} (PHP {ggms.AllocatedAmount:N2})";
-                }
-                else if (item.OriginalItem is GgmsProjectCache ggmsProject)
-                {
-                    if (ggmsProject.IsLinked)
-                    {
-                        SetErrorStatus($"GGMS project '{ggmsProject.ProjectDetailsId}' is already linked to a local project.");
-                        return;
-                    }
-
-                    if (string.Equals(ggmsProject.Status, "archived", StringComparison.OrdinalIgnoreCase))
-                    {
-                        SetErrorStatus($"GGMS project '{ggmsProject.ProjectDetailsId}' is archived on GGMS and can no longer be linked.");
-                        return;
-                    }
-
-                    NewProjectSourceProjectDetailsId = ggmsProject.ProjectDetailsId;
-                    NewProjectSourceProjectBudget = ggmsProject.TotalBudget;
-                    NewProjectSourceDonationId = null;
-                    NewProjectSourceGGMSBudgetId = null;
-                    NewProjectName = ggmsProject.ProjectName;
-                    NewProjectDescription = ggmsProject.Description ?? string.Empty;
-                    NewProjectSourceDescription = $"Source: GGMS Project {ggmsProject.ProjectDetailsId} - {ggmsProject.ProjectName} (PHP {ggmsProject.TotalBudget:N2})";
-                }
-                else
-                {
-                    SetErrorStatus("Select a Private Donation, GGMS Fund, or GGMS Project row to create a project.");
-                    return;
-                }
-            }
-            else
-            {
-                SetErrorStatus("Select a Private Donation, GGMS Fund, or GGMS Project row to create a project.");
-                return;
-            }
+            RefreshFundingSourceOptions(sourceObj);
 
             var shouldOpenTour = IsOnboardingOpen && OnboardingStep == 4;
             if (shouldOpenTour)
@@ -539,6 +809,8 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             if (IsBusy) return;
             IsCreateProjectGuided = false;
+            ProjectCreationErrorMessage = null;
+            ProjectWizardStep = 1;
 
             var shouldOpenTour = IsOnboardingOpen && OnboardingStep == 4;
             if (shouldOpenTour)
@@ -548,12 +820,29 @@ namespace AttendanceShiftingManagement.ViewModels
 
             ResetProjectCreationForm();
             ResetDonationForm();
-            IsNewDonationMode = true;
-            NewProjectSourceDonationId = null;
-            NewProjectSourceGGMSBudgetId = null;
-            NewProjectSourceProjectDetailsId = null;
-            NewProjectSourceProjectBudget = null;
-            NewProjectSourceDescription = "Source: New Private Donation (recorded on confirm)";
+
+            RefreshFundingSourceOptions();
+            var newDonationOpt = FundingSourceOptions.FirstOrDefault(o => o.IsNewDonation);
+            if (newDonationOpt != null)
+            {
+                SelectedFundingSourceOption = newDonationOpt;
+            }
+            else
+            {
+                IsNewDonationMode = true;
+                NewProjectSourceDonationId = null;
+                NewProjectSourceGGMSBudgetId = null;
+                NewProjectSourceProjectDetailsId = null;
+                NewProjectSourceProjectBudget = null;
+                NewProjectSourceDescription = "Source: New Private Donation (recorded on confirm)";
+                SourceAllocatedAmount = 0;
+                SourceDisbursedAmount = 0;
+                SourceAvailableBalance = 0;
+                SourceCode = "NEW DONATION";
+                SourceTitle = "New Private Donation";
+                SourceSubtitle = "Enter donation details below";
+                SourceFundingType = "Private Donation";
+            }
 
             SetActivePanel(BudgetWorkspacePanel.ProjectCreation);
             IsProjectCreationPanelOpen = true;
@@ -565,13 +854,309 @@ namespace AttendanceShiftingManagement.ViewModels
             }
         }
 
+        public void RefreshFundingSourceOptions(object? preselectObj = null)
+        {
+            FundingSourceOptions.Clear();
+
+            foreach (var b in AllBudgets)
+            {
+                if (b.Category == "Government Fund" && b.OriginalItem is GovernmentBudgetSnapshot ggms)
+                {
+                    var rem = Math.Max(0, ggms.AllocatedAmount - ggms.SpentAmount);
+                    FundingSourceOptions.Add(new FundingSourceOption
+                    {
+                        DisplayText = $"[Government] {ggms.OfficeCode} - {ggms.OfficeName} (Available: ₱{rem:N2})",
+                        SourceCode = ggms.OfficeCode ?? $"OFF-{ggms.Id:D4}",
+                        Title = ggms.OfficeName ?? "Government Allocation",
+                        Subtitle = $"{ggms.OfficeCode} · FY {DateTime.Now.Year}",
+                        FundingType = "Government Fund",
+                        AllocatedAmount = ggms.AllocatedAmount,
+                        DisbursedAmount = ggms.SpentAmount,
+                        AvailableBalance = rem,
+                        IsNewDonation = false,
+                        SourceItem = ggms
+                    });
+                }
+                else if (b.Category == "GGMS Project" && b.OriginalItem is GgmsProjectCache ggmsProj && !ggmsProj.IsLinked)
+                {
+                    FundingSourceOptions.Add(new FundingSourceOption
+                    {
+                        DisplayText = $"[Government] {ggmsProj.ProjectDetailsId} - {ggmsProj.ProjectName} (Available: ₱{ggmsProj.TotalBudget:N2})",
+                        SourceCode = ggmsProj.ProjectDetailsId ?? "GGMS Project",
+                        Title = ggmsProj.ProjectName ?? "GGMS Project",
+                        Subtitle = $"{ggmsProj.ProjectDetailsId} · GGMS Central",
+                        FundingType = "Government Fund",
+                        AllocatedAmount = ggmsProj.TotalBudget,
+                        DisbursedAmount = 0,
+                        AvailableBalance = ggmsProj.TotalBudget,
+                        IsNewDonation = false,
+                        SourceItem = ggmsProj
+                    });
+                }
+                else if (b.Category == "Private Donation" && b.OriginalItem is PrivateDonation donation && !b.HasLinkedProject)
+                {
+                    FundingSourceOptions.Add(new FundingSourceOption
+                    {
+                        DisplayText = $"[Donation] {donation.ReferenceNumber ?? $"DON-{donation.Id:D4}"} - {donation.DonorName} (Available: ₱{donation.Amount:N2})",
+                        SourceCode = donation.ReferenceNumber ?? $"DON-{donation.Id:D4}",
+                        Title = donation.DonorName ?? "Private Donation",
+                        Subtitle = $"Received: {donation.DateReceived:MMM dd, yyyy} · {donation.DonorType}",
+                        FundingType = "Private Donation",
+                        AllocatedAmount = donation.Amount,
+                        DisbursedAmount = 0,
+                        AvailableBalance = donation.Amount,
+                        IsNewDonation = false,
+                        SourceItem = donation
+                    });
+                }
+            }
+
+            // Always add the "+ Record New Private Donation..." option
+            FundingSourceOptions.Add(new FundingSourceOption
+            {
+                DisplayText = "+ Record New Private Donation...",
+                SourceCode = "NEW DONATION",
+                Title = "New Private Donation",
+                Subtitle = "Ingest a new donation record",
+                FundingType = "Private Donation",
+                AllocatedAmount = 0,
+                DisbursedAmount = 0,
+                AvailableBalance = 0,
+                IsNewDonation = true,
+                SourceItem = null
+            });
+
+            // Handle pre-selection
+            if (preselectObj != null)
+            {
+                var target = preselectObj is BudgetRecordListItem rec ? rec.OriginalItem : preselectObj;
+                var found = FundingSourceOptions.FirstOrDefault(o => o.SourceItem != null && ReferenceEquals(o.SourceItem, target))
+                         ?? FundingSourceOptions.FirstOrDefault(o => o.SourceItem != null && o.SourceItem.Equals(target));
+                if (found != null)
+                {
+                    SelectedFundingSourceOption = found;
+                    return;
+                }
+            }
+
+            if (SelectedFundingSourceOption == null || !FundingSourceOptions.Contains(SelectedFundingSourceOption))
+            {
+                SelectedFundingSourceOption = FundingSourceOptions.FirstOrDefault(o => !o.IsNewDonation) ?? FundingSourceOptions.FirstOrDefault();
+            }
+        }
+
+        private void ApplyFundingSourceOption(FundingSourceOption option)
+        {
+            if (option.IsNewDonation)
+            {
+                IsNewDonationMode = true;
+                NewProjectSourceDonationId = null;
+                NewProjectSourceGGMSBudgetId = null;
+                NewProjectSourceProjectDetailsId = null;
+                NewProjectSourceProjectBudget = null;
+                NewProjectSourceDescription = "Source: New Private Donation (recorded on confirm)";
+                SourceAllocatedAmount = 0;
+                SourceDisbursedAmount = 0;
+                SourceAvailableBalance = 0;
+                SourceCode = "NEW DONATION";
+                SourceTitle = "New Private Donation";
+                SourceSubtitle = "Enter donation details below";
+                SourceFundingType = "Private Donation";
+                return;
+            }
+
+            IsNewDonationMode = false;
+            SourceAllocatedAmount = option.AllocatedAmount;
+            SourceDisbursedAmount = option.DisbursedAmount;
+            SourceAvailableBalance = option.AvailableBalance;
+            SourceCode = option.SourceCode;
+            SourceTitle = option.Title;
+            SourceSubtitle = option.Subtitle;
+            SourceFundingType = option.FundingType;
+
+            if (option.SourceItem is PrivateDonation donation)
+            {
+                NewProjectSourceDonationId = donation.Id;
+                NewProjectSourceGGMSBudgetId = null;
+                NewProjectSourceProjectDetailsId = null;
+                NewProjectSourceProjectBudget = null;
+                NewProjectSourceDescription = $"Source: Private Donation - {donation.DonorName} (PHP {donation.Amount:N2})";
+                if (donation.DonationType == DonationType.Goods)
+                {
+                    SelectedReleaseKind = AssistanceReleaseKind.Goods;
+                    NewProjectItemName = donation.ItemName;
+                    NewProjectQuantityText = donation.Quantity?.ToString() ?? string.Empty;
+                    NewProjectUnitOfMeasure = donation.UnitOfMeasure;
+                }
+            }
+            else if (option.SourceItem is GovernmentBudgetSnapshot ggms)
+            {
+                NewProjectSourceGGMSBudgetId = ggms.Id;
+                NewProjectSourceDonationId = null;
+                NewProjectSourceProjectDetailsId = null;
+                NewProjectSourceProjectBudget = null;
+                NewProjectSourceDescription = $"Source: GGMS Allocation - {ggms.OfficeName} (PHP {ggms.AllocatedAmount:N2})";
+            }
+            else if (option.SourceItem is GgmsProjectCache ggmsProject)
+            {
+                NewProjectSourceProjectDetailsId = ggmsProject.ProjectDetailsId;
+                NewProjectSourceProjectBudget = ggmsProject.TotalBudget;
+                NewProjectSourceDonationId = null;
+                NewProjectSourceGGMSBudgetId = null;
+                NewProjectName = ggmsProject.ProjectName;
+                NewProjectDescription = ggmsProject.Description ?? string.Empty;
+                NewProjectSourceDescription = $"Source: GGMS Project {ggmsProject.ProjectDetailsId} - {ggmsProject.ProjectName} (PHP {ggmsProject.TotalBudget:N2})";
+            }
+
+            NotifyEstimationCalculations();
+        }
+
         private void CloseProjectCreationPanel()
         {
             CloseCreateProjectTour();
             IsProjectCreationPanelOpen = false;
             IsNewDonationMode = false;
+            ProjectWizardStep = 1;
             ClearEnrollmentSelection();
             SetActivePanel(BudgetWorkspacePanel.Dashboard);
+        }
+
+        private void NextProjectWizardStep()
+        {
+            ProjectCreationErrorMessage = null;
+
+            if (ProjectWizardStep == 1)
+            {
+                if (IsNewDonationMode)
+                {
+                    if (string.IsNullOrWhiteSpace(DonorName))
+                    {
+                        ProjectCreationErrorMessage = "Please enter the donor's name.";
+                        return;
+                    }
+
+                    if (IsCashDonation)
+                    {
+                        if (!TryParseAmount(DonationAmountText, out var amt) || amt <= 0)
+                        {
+                            ProjectCreationErrorMessage = "Please enter a valid cash donation amount greater than 0.";
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        if (string.IsNullOrWhiteSpace(DonationItemName) ||
+                            string.IsNullOrWhiteSpace(DonationUnitOfMeasure) ||
+                            !TryParseAmount(DonationQuantityText, out var qty) || qty <= 0)
+                        {
+                            ProjectCreationErrorMessage = "Please enter valid donation item name, quantity, and unit of measure.";
+                            return;
+                        }
+                    }
+                }
+                else
+                {
+                    if (!NewProjectSourceDonationId.HasValue && !NewProjectSourceGGMSBudgetId.HasValue && string.IsNullOrWhiteSpace(NewProjectSourceProjectDetailsId))
+                    {
+                        ProjectCreationErrorMessage = "A source fund must be selected before proceeding.";
+                        return;
+                    }
+                }
+
+                ProjectWizardStep = 2;
+            }
+            else if (ProjectWizardStep == 2)
+            {
+                if (string.IsNullOrWhiteSpace(NewProjectName))
+                {
+                    ProjectCreationErrorMessage = "Please enter the project title / name.";
+                    return;
+                }
+
+                if (string.IsNullOrWhiteSpace(NewProjectCode))
+                {
+                    ProjectCreationErrorMessage = "Please enter the project code.";
+                    return;
+                }
+
+                if (SelectedReleaseKind == AssistanceReleaseKind.Goods)
+                {
+                    if (string.IsNullOrWhiteSpace(NewProjectItemName))
+                    {
+                        ProjectCreationErrorMessage = "Enter an item name for goods distribution.";
+                        return;
+                    }
+
+                    if (!TryParseAmount(NewProjectQuantityText, out var qty) || qty <= 0)
+                    {
+                        ProjectCreationErrorMessage = "Enter a valid quantity per beneficiary (greater than 0).";
+                        return;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(NewProjectUnitOfMeasure))
+                    {
+                        ProjectCreationErrorMessage = "Enter a unit of measure (e.g. Sacks, Boxes, Packs).";
+                        return;
+                    }
+                }
+                else
+                {
+                    if (!TryParseAmount(NewProjectUnitAmountText, out var amt) || amt <= 0)
+                    {
+                        ProjectCreationErrorMessage = "Enter a valid unit payout amount (greater than 0).";
+                        return;
+                    }
+                }
+
+                if (SelectedReleaseKind == AssistanceReleaseKind.Cash && !IsNewDonationMode && SourceAvailableBalance > 0)
+                {
+                    if (IsCostExceedingSourceBalance)
+                    {
+                        ProjectCreationErrorMessage = $"Project estimated cost of ₱{CalculatedTotalCostAmount:N2} exceeds available source balance of ₱{SourceAvailableBalance:N2} by ₱{CostExceededDifference:N2}. Please adjust recipient count or unit payout.";
+                        return;
+                    }
+                }
+
+                ProjectWizardStep = 3;
+            }
+            else if (ProjectWizardStep == 3)
+            {
+                if (TryParseOptionalAmount(NewProjectBudgetCapText, out var cap) && cap.HasValue)
+                {
+                    if (!IsNewDonationMode && SourceAvailableBalance > 0 && cap.Value > SourceAvailableBalance)
+                    {
+                        ProjectCreationErrorMessage = $"Hard budget cap of ₱{cap.Value:N2} exceeds available source balance of ₱{SourceAvailableBalance:N2}.";
+                        return;
+                    }
+                }
+
+                if (IsAttendanceBasedProgram)
+                {
+                    _ = ConfirmCreateProjectAsync();
+                }
+                else
+                {
+                    ProjectWizardStep = 4;
+                    _ = QueryEnrollmentBeneficiariesAsync();
+                }
+            }
+        }
+
+        private void PreviousProjectWizardStep()
+        {
+            ProjectCreationErrorMessage = null;
+            if (ProjectWizardStep > 1)
+            {
+                ProjectWizardStep--;
+            }
+        }
+
+        private void SetBudgetCapToMax()
+        {
+            if (SourceAvailableBalance > 0)
+            {
+                NewProjectBudgetCapText = SourceAvailableBalance.ToString("F2");
+            }
         }
 
 
@@ -697,6 +1282,23 @@ namespace AttendanceShiftingManagement.ViewModels
                 budgetCap ??= NewProjectSourceProjectBudget.Value;
             }
 
+            if (!IsNewDonationMode && SourceAvailableBalance > 0)
+            {
+                if (SelectedReleaseKind == AssistanceReleaseKind.Cash && CalculatedTotalCostAmount > SourceAvailableBalance)
+                {
+                    ProjectCreationErrorMessage = $"Project estimated cost of ₱{CalculatedTotalCostAmount:N2} exceeds available source balance of ₱{SourceAvailableBalance:N2}.";
+                    SetErrorStatus(ProjectCreationErrorMessage);
+                    return;
+                }
+
+                if (budgetCap.HasValue && budgetCap.Value > SourceAvailableBalance)
+                {
+                    ProjectCreationErrorMessage = $"Budget cap of ₱{budgetCap.Value:N2} exceeds available source balance of ₱{SourceAvailableBalance:N2}.";
+                    SetErrorStatus(ProjectCreationErrorMessage);
+                    return;
+                }
+            }
+
             IsBusy = true;
 
             try
@@ -733,6 +1335,16 @@ namespace AttendanceShiftingManagement.ViewModels
                 var enrollmentMessage = string.Empty;
                 var selectedIds = _selectedEnrollmentStagingIds.ToList();
 
+                var projectDescriptionToSave = NewProjectDescription;
+                if (HasTargetBarangaysFilter)
+                {
+                    var targetedList = TargetBarangayOptions.Where(b => b.IsSelected).Select(b => b.Name).ToList();
+                    var coveragePrefix = $"[Coverage: {string.Join(", ", targetedList)}]";
+                    projectDescriptionToSave = string.IsNullOrWhiteSpace(projectDescriptionToSave)
+                        ? coveragePrefix
+                        : $"{coveragePrefix} {projectDescriptionToSave}";
+                }
+
                 // Branch: CFW projects go through a different creation path
                 if (SelectedProgramType == AyudaProgramType.CashForWork)
                 {
@@ -741,7 +1353,7 @@ namespace AttendanceShiftingManagement.ViewModels
                     var cfwRequest = new CashForWorkProjectRequest(
                         BudgetCode: $"CFW-{NewProjectCode}",
                         BudgetName: NewProjectName,
-                        Description: NormalizeNullable(NewProjectDescription),
+                        Description: NormalizeNullable(projectDescriptionToSave),
                         DailyRate: unitAmount,
                         BudgetCap: budgetCap,
                         StartDate: NewProjectStartDate ?? DateTime.Now,
@@ -780,7 +1392,7 @@ namespace AttendanceShiftingManagement.ViewModels
                     var semRequest = new CashForWorkProjectRequest(
                         BudgetCode: $"SEM-{NewProjectCode}",
                         BudgetName: NewProjectName,
-                        Description: NormalizeNullable(NewProjectDescription),
+                        Description: NormalizeNullable(projectDescriptionToSave),
                         DailyRate: unitAmount,
                         BudgetCap: budgetCap,
                         StartDate: NewProjectStartDate ?? DateTime.Now,
@@ -813,7 +1425,7 @@ namespace AttendanceShiftingManagement.ViewModels
                             NewProjectCode,
                             NewProjectName,
                             SelectedProgramType,
-                            NormalizeNullable(NewProjectDescription),
+                            NormalizeNullable(projectDescriptionToSave),
                             NormalizeNullable(NewProjectName),
                             SelectedReleaseKind,
                             unitAmount,
@@ -950,24 +1562,77 @@ namespace AttendanceShiftingManagement.ViewModels
                 _currentUser.Id);
         }
 
+        private void InitializeTargetBarangays()
+        {
+            TargetBarangayOptions.Clear();
+            foreach (var b in SulopBarangays)
+            {
+                var opt = new TargetBarangayOption { Name = b, IsSelected = false };
+                opt.PropertyChanged += (s, e) =>
+                {
+                    if (e.PropertyName == nameof(TargetBarangayOption.IsSelected))
+                    {
+                        OnPropertyChanged(nameof(IsAllTargetBarangaysSelected));
+                        OnPropertyChanged(nameof(SelectedTargetBarangayCount));
+                        OnPropertyChanged(nameof(TargetBarangayCoverageText));
+                        OnPropertyChanged(nameof(HasTargetBarangaysFilter));
+                        _ = QueryEnrollmentBeneficiariesAsync();
+                    }
+                };
+                TargetBarangayOptions.Add(opt);
+            }
+        }
+
+        private void ToggleAllTargetBarangays()
+        {
+            var selectAll = !IsAllTargetBarangaysSelected;
+            foreach (var b in TargetBarangayOptions)
+            {
+                b.IsSelected = selectAll;
+            }
+        }
+
+        private void SelectAllTargetBarangays()
+        {
+            foreach (var b in TargetBarangayOptions)
+            {
+                b.IsSelected = true;
+            }
+        }
+
+        private void ClearTargetBarangays()
+        {
+            foreach (var b in TargetBarangayOptions)
+            {
+                b.IsSelected = false;
+            }
+        }
+
         private void ResetProjectCreationForm()
         {
             ProjectCreationErrorMessage = null;
+            ProjectWizardStep = 1;
             NewProjectName = string.Empty;
             NewProjectCode = string.Empty;
             NewProjectDescription = string.Empty;
             NewProjectUnitAmountText = string.Empty;
             NewProjectItemDescription = string.Empty;
+            NewProjectItemName = string.Empty;
+            NewProjectQuantityText = string.Empty;
+            NewProjectUnitOfMeasure = string.Empty;
+            NewProjectTargetCountText = "50";
             NewProjectBudgetCapText = string.Empty;
             NewProjectStartDate = DateTime.Today;
             NewProjectEndDate = DateTime.Today.AddMonths(1);
             SelectedProgramType = AyudaProgramType.GeneralPurpose;
             SelectedReleaseKind = AssistanceReleaseKind.Cash;
+            ClearTargetBarangays();
         }
 
         public BudgetViewModel(User currentUser)
         {
             _currentUser = currentUser;
+            InitializeTargetBarangays();
             DonorTypes = new ObservableCollection<PrivateDonationDonorType>(Enum.GetValues<PrivateDonationDonorType>());
             ProofTypes = new ObservableCollection<DonationProofType>(Enum.GetValues<DonationProofType>());
             Donations = new ObservableCollection<PrivateDonation>();
@@ -1006,6 +1671,38 @@ namespace AttendanceShiftingManagement.ViewModels
             _openNewDonationProjectCommand = new RelayCommand(_ => OpenNewDonationProjectPanel(), _ => !IsBusy && !IsProjectCreationPanelOpen);
             _closeProjectCreationPanelCommand = new RelayCommand(_ => CloseProjectCreationPanel());
             _confirmCreateProjectCommand = new RelayCommand(async _ => await ConfirmCreateProjectAsync(), _ => !IsBusy && CanConfirmCreateProject());
+            _nextProjectWizardStepCommand = new RelayCommand(_ => NextProjectWizardStep());
+            _previousProjectWizardStepCommand = new RelayCommand(_ => PreviousProjectWizardStep());
+            _goToProjectWizardStepCommand = new RelayCommand(param =>
+            {
+                if (param is int step && step >= 1 && step <= 4)
+                {
+                    ProjectWizardStep = step;
+                }
+                else if (int.TryParse(param?.ToString(), out var parsedStep) && parsedStep >= 1 && parsedStep <= 4)
+                {
+                    ProjectWizardStep = parsedStep;
+                }
+            });
+            _toggleAllTargetBarangaysCommand = new RelayCommand(_ => ToggleAllTargetBarangays());
+            _selectAllTargetBarangaysCommand = new RelayCommand(_ => SelectAllTargetBarangays());
+            _clearTargetBarangaysCommand = new RelayCommand(_ => ClearTargetBarangays());
+            _toggleTargetBarangayCommand = new RelayCommand(param =>
+            {
+                if (param is TargetBarangayOption opt)
+                {
+                    opt.IsSelected = !opt.IsSelected;
+                }
+                else if (param is string brgyName)
+                {
+                    var found = TargetBarangayOptions.FirstOrDefault(b => b.Name.Equals(brgyName, StringComparison.OrdinalIgnoreCase));
+                    if (found != null) found.IsSelected = !found.IsSelected;
+                }
+            });
+            _setBudgetCapToMaxCommand = new RelayCommand(_ => SetBudgetCapToMax());
+            _autoFillCandidatesCommand = new RelayCommand(async _ => await AutoFillCandidatesAsync(), _ => !IsBusy);
+            SelectCashBenefitTypeCommand = new RelayCommand(_ => SelectedReleaseKind = AssistanceReleaseKind.Cash);
+            SelectGoodsBenefitTypeCommand = new RelayCommand(_ => SelectedReleaseKind = AssistanceReleaseKind.Goods);
 
             _openEditProjectCommand = new RelayCommand(param => OpenEditProject(param as BudgetRecordListItem ?? SelectedBudget), _ => !IsBusy && (SelectedBudget?.IsProject == true || _isEditProjectPanelOpen));
             _closeEditProjectCommand = new RelayCommand(_ => CloseEditProjectPanel());
@@ -2093,6 +2790,8 @@ namespace AttendanceShiftingManagement.ViewModels
             {
                 SelectedBudget = AllBudgets.FirstOrDefault(b => b.Id == currentSelectedId && b.Category == currentCategory);
             }
+
+            RefreshFundingSourceOptions();
         }
 
         public void OpenEditProject(BudgetRecordListItem? item)
@@ -2666,9 +3365,12 @@ namespace AttendanceShiftingManagement.ViewModels
         }
 
         private sealed record EnrollmentBeneficiaryRow(
-            int StagingID, string? BeneficiaryId, string? FullName, string? LastName, string? FirstName);
+            int StagingID, string? BeneficiaryId, string? FullName, string? LastName, string? FirstName, string? Address);
 
-        private static IQueryable<BeneficiaryStaging> BuildEnrollmentQuery(LocalDbContext context, string? search)
+        private static IQueryable<BeneficiaryStaging> BuildEnrollmentQuery(
+            LocalDbContext context, 
+            string? search, 
+            IReadOnlyList<string>? targetBarangays = null)
         {
             var query = context.BeneficiaryStaging
                 .AsNoTracking()
@@ -2683,6 +3385,28 @@ namespace AttendanceShiftingManagement.ViewModels
                     (item.BeneficiaryId != null && item.BeneficiaryId.Contains(search)));
             }
 
+            if (targetBarangays != null && targetBarangays.Count > 0 && targetBarangays.Count < SulopBarangays.Length)
+            {
+                var parameter = System.Linq.Expressions.Expression.Parameter(typeof(BeneficiaryStaging), "item");
+                var addressProp = System.Linq.Expressions.Expression.Property(parameter, nameof(BeneficiaryStaging.Address));
+                var notNullExp = System.Linq.Expressions.Expression.NotEqual(addressProp, System.Linq.Expressions.Expression.Constant(null, typeof(string)));
+                var containsMethod = typeof(string).GetMethod(nameof(string.Contains), new[] { typeof(string) })!;
+
+                System.Linq.Expressions.Expression? orExp = null;
+                foreach (var brgy in targetBarangays)
+                {
+                    var call = System.Linq.Expressions.Expression.Call(addressProp, containsMethod, System.Linq.Expressions.Expression.Constant(brgy, typeof(string)));
+                    orExp = orExp == null ? call : System.Linq.Expressions.Expression.OrElse(orExp, call);
+                }
+
+                if (orExp != null)
+                {
+                    var combined = System.Linq.Expressions.Expression.AndAlso(notNullExp, orExp);
+                    var lambda = System.Linq.Expressions.Expression.Lambda<Func<BeneficiaryStaging, bool>>(combined, parameter);
+                    query = query.Where(lambda);
+                }
+            }
+
             return query;
         }
 
@@ -2695,6 +3419,10 @@ namespace AttendanceShiftingManagement.ViewModels
             var version = ++_enrollmentSearchVersion;
             var search = EnrollmentSearchText?.Trim();
             var page = Math.Max(1, _currentEnrollmentPage);
+            var targetBarangays = TargetBarangayOptions
+                .Where(b => b.IsSelected)
+                .Select(b => b.Name)
+                .ToList();
 
             try
             {
@@ -2703,7 +3431,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 var (totalCount, rows) = await Task.Run(async () =>
                 {
                     await using var context = new LocalDbContext();
-                    var query = BuildEnrollmentQuery(context, search);
+                    var query = BuildEnrollmentQuery(context, search, targetBarangays);
 
                     var count = await query.CountAsync();
                     var lastPage = Math.Max(1, (int)Math.Ceiling(count / (double)EnrollmentDisplayLimit));
@@ -2717,7 +3445,8 @@ namespace AttendanceShiftingManagement.ViewModels
                             item.BeneficiaryId,
                             item.FullName,
                             item.LastName,
-                            item.FirstName))
+                            item.FirstName,
+                            item.Address))
                         .ToListAsync();
                     return (count, pageRows);
                 });
@@ -2736,6 +3465,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
                 foreach (var b in rows)
                 {
+                    var brgy = GgmsConsolidatedTransactionService.ParseBarangayFromAddress(b.Address) ?? string.Empty;
                     var option = new EnrollmentBeneficiaryOption
                     {
                         StagingId = b.StagingID,
@@ -2743,6 +3473,8 @@ namespace AttendanceShiftingManagement.ViewModels
                         FullName = string.IsNullOrWhiteSpace(b.FullName)
                             ? $"{b.LastName}, {b.FirstName}".Trim(',', ' ')
                             : b.FullName,
+                        Barangay = brgy,
+                        Address = b.Address ?? string.Empty,
                         IsSelected = _selectedEnrollmentStagingIds.Contains(b.StagingID)
                     };
                     option.PropertyChanged += OnEnrollmentOptionPropertyChanged;
@@ -2754,11 +3486,15 @@ namespace AttendanceShiftingManagement.ViewModels
                 TotalEnrollmentPages = lastPageForCount;
                 CurrentEnrollmentPage = Math.Min(page, lastPageForCount);
 
+                var scopeSuffix = targetBarangays.Count > 0 && targetBarangays.Count < SulopBarangays.Length
+                    ? $" [Scoped to {targetBarangays.Count} targeted barangay(s)]"
+                    : string.Empty;
+
                 EnrollmentResultSummary = totalCount > EnrollmentDisplayLimit
-                    ? $"{totalCount:N0} match{(totalCount == 1 ? "" : "es")} — page {CurrentEnrollmentPage:N0} of {TotalEnrollmentPages:N0}. Type a name or ID to narrow the list."
+                    ? $"{totalCount:N0} match{(totalCount == 1 ? "" : "es")} — page {CurrentEnrollmentPage:N0} of {TotalEnrollmentPages:N0}. Type a name or ID to narrow the list.{scopeSuffix}"
                     : totalCount == 0
-                        ? "No approved beneficiaries match."
-                        : $"{totalCount:N0} beneficiar{(totalCount == 1 ? "y" : "ies")} shown.";
+                        ? $"No approved beneficiaries match.{scopeSuffix}"
+                        : $"{totalCount:N0} beneficiar{(totalCount == 1 ? "y" : "ies")} shown.{scopeSuffix}";
             }
             catch (Exception ex)
             {
@@ -2799,10 +3535,15 @@ namespace AttendanceShiftingManagement.ViewModels
             try
             {
                 var search = EnrollmentSearchText?.Trim();
+                var targetBarangays = TargetBarangayOptions
+                    .Where(b => b.IsSelected)
+                    .Select(b => b.Name)
+                    .ToList();
+
                 var ids = await Task.Run(async () =>
                 {
                     await using var context = new LocalDbContext();
-                    return await BuildEnrollmentQuery(context, search)
+                    return await BuildEnrollmentQuery(context, search, targetBarangays)
                         .Select(item => item.StagingID)
                         .ToListAsync();
                 });
@@ -2825,6 +3566,82 @@ namespace AttendanceShiftingManagement.ViewModels
             catch (Exception ex)
             {
                 SetErrorStatus($"Unable to select beneficiaries: {ex.Message}");
+            }
+        }
+
+        private async Task AutoFillCandidatesAsync()
+        {
+            if (IsBusy) return;
+            try
+            {
+                var targetSlots = 50;
+                if (int.TryParse(NewProjectTargetCountText, out var parsedCount) && parsedCount > 0)
+                {
+                    targetSlots = parsedCount;
+                }
+
+                var needed = targetSlots - _selectedEnrollmentStagingIds.Count;
+                if (needed <= 0)
+                {
+                    SetNeutralStatus($"Candidate roster is already at or above target slots ({_selectedEnrollmentStagingIds.Count}/{targetSlots}).");
+                    return;
+                }
+
+                var targetBarangays = TargetBarangayOptions
+                    .Where(b => b.IsSelected)
+                    .Select(b => b.Name)
+                    .ToList();
+
+                var candidatesToAdd = await Task.Run(async () =>
+                {
+                    await using var context = new LocalDbContext();
+                    var existingIds = _selectedEnrollmentStagingIds.ToList();
+                    return await BuildEnrollmentQuery(context, null, targetBarangays)
+                        .Where(b => !existingIds.Contains(b.StagingID))
+                        .OrderBy(b => b.FullName ?? b.LastName)
+                        .Take(needed)
+                        .Select(b => new EnrollmentBeneficiaryRow(
+                            b.StagingID,
+                            b.BeneficiaryId,
+                            b.FullName,
+                            b.LastName,
+                            b.FirstName,
+                            b.Address))
+                        .ToListAsync();
+                });
+
+                foreach (var c in candidatesToAdd)
+                {
+                    if (_selectedEnrollmentStagingIds.Add(c.StagingID))
+                    {
+                        var brgy = GgmsConsolidatedTransactionService.ParseBarangayFromAddress(c.Address) ?? string.Empty;
+                        var opt = new EnrollmentBeneficiaryOption
+                        {
+                            StagingId = c.StagingID,
+                            BeneficiaryId = c.BeneficiaryId ?? string.Empty,
+                            FullName = string.IsNullOrWhiteSpace(c.FullName) ? $"{c.LastName}, {c.FirstName}".Trim(',', ' ') : c.FullName,
+                            Barangay = brgy,
+                            Address = c.Address ?? string.Empty,
+                            IsSelected = true
+                        };
+                        SelectedEnrollmentBeneficiaries.Add(opt);
+                    }
+                }
+
+                foreach (var opt in EnrollmentBeneficiaries)
+                {
+                    if (_selectedEnrollmentStagingIds.Contains(opt.StagingId))
+                    {
+                        opt.IsSelected = true;
+                    }
+                }
+
+                SelectedEnrollmentCount = _selectedEnrollmentStagingIds.Count;
+                SetSuccessStatus($"Auto-filled {candidatesToAdd.Count} candidate(s) into project roster ({SelectedEnrollmentCount}/{targetSlots} slots).");
+            }
+            catch (Exception ex)
+            {
+                SetErrorStatus($"Auto-fill candidates failed: {ex.Message}");
             }
         }
 

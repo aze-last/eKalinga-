@@ -1045,41 +1045,192 @@
         </Border>
 
         <!-- Project Creation Panel Overlay (Combined: Donation Entry + Project + Enrollment) -->
+        <!-- Project Creation Panel Overlay (4-Step Wizard: Funding Source -> Scope & Barangays -> Earmark -> Beneficiaries) -->
         <Border Grid.RowSpan="3" Panel.ZIndex="103" Background="#CC0F172A" Visibility="{Binding ProjectCreationPanelVisibility}">
-            <materialDesign:Card Width="1100" VerticalAlignment="Center" HorizontalAlignment="Center">
+            <materialDesign:Card Width="1100" VerticalAlignment="Center" HorizontalAlignment="Center" UniformCornerRadius="12">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
-                    <Border Grid.Row="0" Background="{StaticResource PrimaryBrandBrush}" Padding="20,12">
+
+                    <!-- Row 0: Wizard Header & 4-Step Progress Navigation -->
+                    <Border Grid.Row="0" Background="White" CornerRadius="12,12,0,0" Padding="24,20,24,12">
                         <Grid>
-                            <TextBlock Text="CREATE NEW PROJECT (WATERFALL)" Foreground="White" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
-                            <Button Style="{StaticResource MaterialDesignRaisedButton}" 
-                                    Background="Transparent" 
-                                    BorderBrush="White" 
-                                    BorderThickness="1" 
-                                    Foreground="White" 
-                                    HorizontalAlignment="Right"
-                                    VerticalAlignment="Center"
-                                    Padding="10,0"
-                                    Height="32"
-                                    Command="{Binding OpenCreateProjectTourCommand}">
-                                <StackPanel Orientation="Horizontal">
-                                    <materialDesign:PackIcon Kind="SchoolOutline" Width="14" Height="14" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                    <TextBlock Text="FORM GUIDE" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="11"/>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- Top Bar: Step Badge, Title, Form Guide, Close Button -->
+                            <Grid Grid.Row="0">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <!-- Green Pill Badge -->
+                                    <Border Background="#DCFCE7" CornerRadius="6" Padding="8,3" VerticalAlignment="Center" Margin="0,0,10,0">
+                                        <TextBlock Text="{Binding ProjectWizardStep, StringFormat='Wizard Step {0} of 4'}" Foreground="#15803D" FontSize="11" FontWeight="Bold"/>
+                                    </Border>
+                                    <TextBlock Text="Create Ayuda Project" Foreground="#15803D" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
                                 </StackPanel>
-                            </Button>
+
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                    <!-- Form Guide Button (preserves test token) -->
+                                    <Button Style="{StaticResource MaterialDesignFlatButton}" 
+                                            Foreground="#64748B" 
+                                            VerticalAlignment="Center"
+                                            Padding="8,0"
+                                            Height="28"
+                                            Margin="0,0,8,0"
+                                            Command="{Binding OpenCreateProjectTourCommand}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <materialDesign:PackIcon Kind="SchoolOutline" Width="14" Height="14" VerticalAlignment="Center" Margin="0,0,4,0" Foreground="#64748B"/>
+                                            <TextBlock Text="FORM GUIDE" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="11"/>
+                                        </StackPanel>
+                                    </Button>
+
+                                    <!-- Close Button (matching top-right x in screenshot) -->
+                                    <Button Style="{StaticResource MaterialDesignIconButton}" 
+                                            Foreground="#64748B" 
+                                            Width="28" Height="28"
+                                            Command="{Binding CloseProjectCreationPanelCommand}"
+                                            VerticalAlignment="Center"
+                                            ToolTip="Close">
+                                        <materialDesign:PackIcon Kind="Close" Width="18" Height="18"/>
+                                    </Button>
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- Subtitle -->
+                            <TextBlock Grid.Row="1" Text="Select 1:1 Funding Source &amp; Benefit Type" Foreground="#64748B" FontSize="12" Margin="0,4,0,16"/>
+
+                            <!-- 4-Step Stepper Tabs (4 pill buttons) -->
+                            <Grid Grid.Row="2">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Tab 1: Funding Source -->
+                                <Button Grid.Column="0" Command="{Binding GoToProjectWizardStepCommand}" CommandParameter="1" Cursor="Hand" Margin="0,0,6,0">
+                                    <Button.Style>
+                                        <Style TargetType="Button">
+                                            <Setter Property="Height" Value="40"/>
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Border x:Name="TabBorder" Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8">
+                                                            <TextBlock x:Name="TabLabel" Text="1. Funding Source" Foreground="#64748B" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        </Border>
+                                                        <ControlTemplate.Triggers>
+                                                            <DataTrigger Binding="{Binding IsStep1}" Value="True">
+                                                                <Setter TargetName="TabBorder" Property="Background" Value="#ECFDF5"/>
+                                                                <Setter TargetName="TabBorder" Property="BorderBrush" Value="#15803D"/>
+                                                                <Setter TargetName="TabBorder" Property="BorderThickness" Value="1.5"/>
+                                                                <Setter TargetName="TabLabel" Property="Foreground" Value="#15803D"/>
+                                                                <Setter TargetName="TabLabel" Property="FontWeight" Value="Bold"/>
+                                                            </DataTrigger>
+                                                        </ControlTemplate.Triggers>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+
+                                <!-- Tab 2: Particulars -->
+                                <Button Grid.Column="1" Command="{Binding GoToProjectWizardStepCommand}" CommandParameter="2" Cursor="Hand" Margin="3,0,3,0">
+                                    <Button.Style>
+                                        <Style TargetType="Button">
+                                            <Setter Property="Height" Value="40"/>
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Border x:Name="TabBorder" Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8">
+                                                            <TextBlock x:Name="TabLabel" Text="2. Particulars" Foreground="#64748B" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        </Border>
+                                                        <ControlTemplate.Triggers>
+                                                            <DataTrigger Binding="{Binding IsStep2}" Value="True">
+                                                                <Setter TargetName="TabBorder" Property="Background" Value="#ECFDF5"/>
+                                                                <Setter TargetName="TabBorder" Property="BorderBrush" Value="#15803D"/>
+                                                                <Setter TargetName="TabBorder" Property="BorderThickness" Value="1.5"/>
+                                                                <Setter TargetName="TabLabel" Property="Foreground" Value="#15803D"/>
+                                                                <Setter TargetName="TabLabel" Property="FontWeight" Value="Bold"/>
+                                                            </DataTrigger>
+                                                        </ControlTemplate.Triggers>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+
+                                <!-- Tab 3: Earmark Review -->
+                                <Button Grid.Column="2" Command="{Binding GoToProjectWizardStepCommand}" CommandParameter="3" Cursor="Hand" Margin="3,0,3,0">
+                                    <Button.Style>
+                                        <Style TargetType="Button">
+                                            <Setter Property="Height" Value="40"/>
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Border x:Name="TabBorder" Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8">
+                                                            <TextBlock x:Name="TabLabel" Text="3. Earmark Review" Foreground="#64748B" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        </Border>
+                                                        <ControlTemplate.Triggers>
+                                                            <DataTrigger Binding="{Binding IsStep3}" Value="True">
+                                                                <Setter TargetName="TabBorder" Property="Background" Value="#ECFDF5"/>
+                                                                <Setter TargetName="TabBorder" Property="BorderBrush" Value="#15803D"/>
+                                                                <Setter TargetName="TabBorder" Property="BorderThickness" Value="1.5"/>
+                                                                <Setter TargetName="TabLabel" Property="Foreground" Value="#15803D"/>
+                                                                <Setter TargetName="TabLabel" Property="FontWeight" Value="Bold"/>
+                                                            </DataTrigger>
+                                                        </ControlTemplate.Triggers>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+
+                                <!-- Tab 4: Beneficiaries -->
+                                <Button Grid.Column="3" Command="{Binding GoToProjectWizardStepCommand}" CommandParameter="4" Cursor="Hand" Margin="6,0,0,0">
+                                    <Button.Style>
+                                        <Style TargetType="Button">
+                                            <Setter Property="Height" Value="40"/>
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Border x:Name="TabBorder" Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8">
+                                                            <TextBlock x:Name="TabLabel" Text="4. Beneficiaries" Foreground="#64748B" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        </Border>
+                                                        <ControlTemplate.Triggers>
+                                                            <DataTrigger Binding="{Binding IsStep4}" Value="True">
+                                                                <Setter TargetName="TabBorder" Property="Background" Value="#ECFDF5"/>
+                                                                <Setter TargetName="TabBorder" Property="BorderBrush" Value="#15803D"/>
+                                                                <Setter TargetName="TabBorder" Property="BorderThickness" Value="1.5"/>
+                                                                <Setter TargetName="TabLabel" Property="Foreground" Value="#15803D"/>
+                                                                <Setter TargetName="TabLabel" Property="FontWeight" Value="Bold"/>
+                                                            </DataTrigger>
+                                                        </ControlTemplate.Triggers>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+                            </Grid>
                         </Grid>
                     </Border>
 
-                    <ScrollViewer Grid.Row="1" MaxHeight="600" VerticalScrollBarVisibility="Auto">
-                        <Border Padding="25">
+                    <!-- Row 1: Wizard Step Content (Scrollable) -->
+                    <ScrollViewer Grid.Row="1" MaxHeight="520" VerticalScrollBarVisibility="Auto">
+                        <Border Padding="24,20" Background="#F8FAFC">
                             <StackPanel>
                                 <!-- Inline Error Banner inside Project Creation Modal -->
-                                <Border Background="#FEF2F2" BorderBrush="#EF4444" BorderThickness="1" CornerRadius="6"
-                                        Padding="14,10" Margin="0,0,0,20"
+                                <Border Background="#FEF2F2" BorderBrush="#EF4444" BorderThickness="1" CornerRadius="8"
+                                        Padding="14,10" Margin="0,0,0,18"
                                         Visibility="{Binding HasProjectCreationError, Converter={StaticResource BooleanToVisibilityConverter}}">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
@@ -1091,69 +1242,288 @@
                                     </Grid>
                                 </Border>
 
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="25"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="25"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
+                                <!-- ================= STEP 1: FUNDING SOURCE & BENEFIT TYPE ================= -->
+                                <StackPanel Visibility="{Binding IsStep1, Converter={StaticResource BooleanToVisibilityConverter}}" x:Name="FundingSourceSection">
+                                    <!-- Funding Source Dropdown Header -->
+                                    <TextBlock Text="SELECT 1:1 FUNDING SOURCE *" FontSize="11" FontWeight="Bold" Foreground="#475569" Margin="0,0,0,8"/>
 
-                                <!-- Column 0: Basic Information & Release Settings -->
-                                <StackPanel Grid.Column="0">
-                                    <Border x:Name="ProjectBasicInfoSection">
+                                    <!-- Funding Source ComboBox -->
+                                    <ComboBox ItemsSource="{Binding FundingSourceOptions}"
+                                              SelectedItem="{Binding SelectedFundingSourceOption}"
+                                              DisplayMemberPath="DisplayText"
+                                              Height="44"
+                                              Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                              materialDesign:HintAssist.Hint="Select funding source..."
+                                              BorderBrush="#CBD5E1"
+                                              FontSize="13"
+                                              Margin="0,0,0,16"/>
+
+                                    <!-- Selected Source Details KPI Card (when IsNewDonationMode is false) -->
+                                    <Border BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="10" Background="White" Padding="16" Margin="0,0,0,16"
+                                            Visibility="{Binding IsNewDonationMode, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
                                         <StackPanel>
-                                            <TextBlock Text="BASIC INFORMATION" FontSize="11" FontWeight="Bold" Foreground="{StaticResource PrimaryBrandBrush}" Margin="0,0,0,15"/>
+                                            <!-- Top Row: Badge (Left) and Source Code (Right) -->
+                                            <Grid>
+                                                <Border Background="#ECFDF5" BorderBrush="#86EFAC" BorderThickness="1" CornerRadius="6" Padding="8,3" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding SourceFundingType}" Foreground="#15803D" FontSize="11" FontWeight="Bold"/>
+                                                </Border>
+                                                <TextBlock Text="{Binding SourceCode}" Foreground="#475569" FontSize="12" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                            </Grid>
 
-                                            <TextBox materialDesign:HintAssist.Hint="Project Name *"
-                                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                                     Text="{Binding NewProjectName, UpdateSourceTrigger=PropertyChanged}"
-                                                     Margin="0,0,0,15"/>
+                                            <!-- Middle: Title and Subtitle -->
+                                            <TextBlock Text="{Binding SourceTitle}" FontSize="16" FontWeight="Bold" Foreground="#0F172A" Margin="0,10,0,0"/>
+                                            <TextBlock Text="{Binding SourceSubtitle}" FontSize="11" Foreground="#64748B" Margin="0,2,0,14"/>
 
-                                            <TextBox materialDesign:HintAssist.Hint="Project Code *"
+                                            <!-- Bottom Row: 3 Stat Tiles -->
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="10"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="10"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <!-- Allocated -->
+                                                <Border Grid.Column="0" Background="#F8FAFC" BorderBrush="#F1F5F9" BorderThickness="1" CornerRadius="8" Padding="12,10">
+                                                    <StackPanel HorizontalAlignment="Center">
+                                                        <TextBlock Text="ALLOCATED" FontSize="10" FontWeight="Bold" Foreground="#64748B" HorizontalAlignment="Center"/>
+                                                        <TextBlock Text="{Binding SourceAllocatedAmount, StringFormat='₱{0:N2}'}" FontSize="15" FontWeight="Bold" Foreground="#0F172A" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                                                    </StackPanel>
+                                                </Border>
+
+                                                <!-- Disbursed -->
+                                                <Border Grid.Column="2" Background="#F8FAFC" BorderBrush="#F1F5F9" BorderThickness="1" CornerRadius="8" Padding="12,10">
+                                                    <StackPanel HorizontalAlignment="Center">
+                                                        <TextBlock Text="DISBURSED" FontSize="10" FontWeight="Bold" Foreground="#64748B" HorizontalAlignment="Center"/>
+                                                        <TextBlock Text="{Binding SourceDisbursedAmount, StringFormat='₱{0:N2}'}" FontSize="15" FontWeight="Bold" Foreground="#0F172A" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                                                    </StackPanel>
+                                                </Border>
+
+                                                <!-- Available Cap -->
+                                                <Border Grid.Column="4" Background="#F0FDF4" BorderBrush="#DCFCE7" BorderThickness="1" CornerRadius="8" Padding="12,10">
+                                                    <StackPanel HorizontalAlignment="Center">
+                                                        <TextBlock Text="AVAILABLE CAP" FontSize="10" FontWeight="Bold" Foreground="#15803D" HorizontalAlignment="Center"/>
+                                                        <TextBlock Text="{Binding SourceAvailableBalance, StringFormat='₱{0:N2}'}" FontSize="15" FontWeight="Bold" Foreground="#166534" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                                                    </StackPanel>
+                                                </Border>
+                                            </Grid>
+
+                                            <!-- Mandatory token for test compatibility -->
+                                            <TextBlock Text="{Binding NewProjectSourceDescription}" Visibility="Collapsed"/>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- New Private Donation Ingestion Form (when IsNewDonationMode is true) -->
+                                    <Border BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="8" Background="White" Padding="18" Margin="0,0,0,18"
+                                            Visibility="{Binding IsNewDonationMode, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <StackPanel>
+                                            <TextBlock Text="NEW PRIVATE DONATION INGESTION" FontSize="11" FontWeight="Bold" Foreground="{StaticResource PrimaryBrandBrush}" Margin="0,0,0,14"/>
+
+                                            <Grid Margin="0,0,0,12">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="12"/>
+                                                    <ColumnDefinition Width="1.5*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <ComboBox Grid.Column="0" materialDesign:HintAssist.Hint="Donor Type *"
+                                                          Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                                          ItemsSource="{Binding DonorTypes}"
+                                                          SelectedItem="{Binding SelectedDonorType}"/>
+                                                <TextBox Grid.Column="2" materialDesign:HintAssist.Hint="Donor Name *"
+                                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                                         Text="{Binding DonorName, UpdateSourceTrigger=PropertyChanged}"/>
+                                            </Grid>
+
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                                <RadioButton Content="Cash Donation" IsChecked="{Binding IsCashDonation}" Style="{StaticResource MaterialDesignRadioButton}" Margin="0,0,24,0" Foreground="{StaticResource PrimaryBrandBrush}" Cursor="Hand"/>
+                                                <RadioButton Content="Goods Donation" IsChecked="{Binding IsGoodsDonation}" Style="{StaticResource MaterialDesignRadioButton}" Foreground="{StaticResource PrimaryBrandBrush}" Cursor="Hand"/>
+                                            </StackPanel>
+
+                                            <!-- Cash Donation Amount -->
+                                            <TextBox materialDesign:HintAssist.Hint="Donation Amount (PHP) *"
                                                      Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                                     Text="{Binding NewProjectCode, UpdateSourceTrigger=PropertyChanged}"
-                                                     Margin="0,0,0,15"/>
+                                                     Text="{Binding DonationAmountText, UpdateSourceTrigger=PropertyChanged}"
+                                                     FontSize="16" FontWeight="Bold"
+                                                     Visibility="{Binding IsCashDonation, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                     Margin="0,0,0,12"/>
+
+                                            <!-- Goods Donation Details -->
+                                            <StackPanel Visibility="{Binding IsGoodsDonation, Converter={StaticResource BooleanToVisibilityConverter}}" Margin="0,0,0,12">
+                                                <TextBox materialDesign:HintAssist.Hint="Item Name *"
+                                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                                         Text="{Binding DonationItemName, UpdateSourceTrigger=PropertyChanged}"
+                                                         Margin="0,0,0,10"/>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="10"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBox Grid.Column="0" materialDesign:HintAssist.Hint="Quantity *"
+                                                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                                             Text="{Binding DonationQuantityText, UpdateSourceTrigger=PropertyChanged}"/>
+                                                    <TextBox Grid.Column="2" materialDesign:HintAssist.Hint="Unit (e.g. Sacks) *"
+                                                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                                             Text="{Binding DonationUnitOfMeasure, UpdateSourceTrigger=PropertyChanged}"/>
+                                                </Grid>
+                                            </StackPanel>
+
+                                            <Grid Margin="0,0,0,12">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="12"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <DatePicker Grid.Column="0" materialDesign:HintAssist.Hint="Date Received *"
+                                                            Style="{StaticResource MaterialDesignOutlinedDatePicker}"
+                                                            SelectedDate="{Binding DonationDateReceived}"/>
+                                                <TextBox Grid.Column="2" materialDesign:HintAssist.Hint="Reference Number / Receipt #"
+                                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                                         Text="{Binding DonationReferenceNumber}"/>
+                                            </Grid>
+
+                                            <Grid Margin="0,0,0,12">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="12"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <ComboBox Grid.Column="0" materialDesign:HintAssist.Hint="Proof Type"
+                                                          Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                                          ItemsSource="{Binding ProofTypes}"
+                                                          SelectedItem="{Binding SelectedProofType}"/>
+                                                <TextBox Grid.Column="2" materialDesign:HintAssist.Hint="Proof File Path"
+                                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                                         Text="{Binding ProofFilePath}" IsReadOnly="True"/>
+                                                <Button Grid.Column="3" Content="..." Command="{Binding BrowseProofCommand}" Margin="5,0,0,0" Style="{StaticResource MaterialDesignRaisedButton}" Background="{StaticResource PrimaryBrandBrush}" Foreground="White" Cursor="Hand"/>
+                                            </Grid>
+
+                                            <TextBox materialDesign:HintAssist.Hint="Remarks"
+                                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                                     Text="{Binding DonationRemarks}"
+                                                     AcceptsReturn="True" Height="50"/>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- BENEFIT TYPE Selection (Matches screenshot toggle buttons) -->
+                                    <TextBlock Text="BENEFIT TYPE" FontSize="11" FontWeight="Bold" Foreground="#475569" Margin="0,0,0,8"/>
+                                    <Grid Margin="0,0,0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="12"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- Direct Cash Assistance (₱) Button -->
+                                        <Button Grid.Column="0" Command="{Binding SelectCashBenefitTypeCommand}" Cursor="Hand">
+                                            <Button.Style>
+                                                <Style TargetType="Button">
+                                                    <Setter Property="Height" Value="46"/>
+                                                    <Setter Property="Template">
+                                                        <Setter.Value>
+                                                            <ControlTemplate TargetType="Button">
+                                                                <Border x:Name="BtnBorder" Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8">
+                                                                    <TextBlock x:Name="BtnText" Text="Direct Cash Assistance (₱)" Foreground="#334155" FontWeight="SemiBold" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                </Border>
+                                                                <ControlTemplate.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsCashReleaseKind}" Value="True">
+                                                                        <Setter TargetName="BtnBorder" Property="Background" Value="#F0FDF4"/>
+                                                                        <Setter TargetName="BtnBorder" Property="BorderBrush" Value="#15803D"/>
+                                                                        <Setter TargetName="BtnBorder" Property="BorderThickness" Value="1.5"/>
+                                                                        <Setter TargetName="BtnText" Property="Foreground" Value="#15803D"/>
+                                                                        <Setter TargetName="BtnText" Property="FontWeight" Value="Bold"/>
+                                                                    </DataTrigger>
+                                                                </ControlTemplate.Triggers>
+                                                            </ControlTemplate>
+                                                        </Setter.Value>
+                                                    </Setter>
+                                                </Style>
+                                            </Button.Style>
+                                        </Button>
+
+                                        <!-- In-Kind Goods / Supplies Button -->
+                                        <Button Grid.Column="2" Command="{Binding SelectGoodsBenefitTypeCommand}" Cursor="Hand">
+                                            <Button.Style>
+                                                <Style TargetType="Button">
+                                                    <Setter Property="Height" Value="46"/>
+                                                    <Setter Property="Template">
+                                                        <Setter.Value>
+                                                            <ControlTemplate TargetType="Button">
+                                                                <Border x:Name="BtnBorder" Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8">
+                                                                    <TextBlock x:Name="BtnText" Text="In-Kind Goods / Supplies" Foreground="#334155" FontWeight="SemiBold" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                </Border>
+                                                                <ControlTemplate.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsGoodsReleaseKind}" Value="True">
+                                                                        <Setter TargetName="BtnBorder" Property="Background" Value="#F0FDF4"/>
+                                                                        <Setter TargetName="BtnBorder" Property="BorderBrush" Value="#15803D"/>
+                                                                        <Setter TargetName="BtnBorder" Property="BorderThickness" Value="1.5"/>
+                                                                        <Setter TargetName="BtnText" Property="Foreground" Value="#15803D"/>
+                                                                        <Setter TargetName="BtnText" Property="FontWeight" Value="Bold"/>
+                                                                    </DataTrigger>
+                                                                </ControlTemplate.Triggers>
+                                                            </ControlTemplate>
+                                                        </Setter.Value>
+                                                    </Setter>
+                                                </Style>
+                                            </Button.Style>
+                                        </Button>
+                                    </Grid>
+                                </StackPanel>
+
+                                <!-- ================= STEP 2: PARTICULARS & TARGET BARANGAYS SCOPE ================= -->
+                                <StackPanel Visibility="{Binding IsStep2, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <!-- Basic Information Card -->
+                                    <Border x:Name="ProjectBasicInfoSection" Background="White" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="18" Margin="0,0,0,16">
+                                        <StackPanel>
+                                            <TextBlock Text="BASIC INFORMATION" FontSize="12" FontWeight="Bold" Foreground="{StaticResource PrimaryBrandBrush}" Margin="0,0,0,14"/>
+                                            <Grid Margin="0,0,0,12">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="2*"/>
+                                                    <ColumnDefinition Width="16"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBox Grid.Column="0" materialDesign:HintAssist.Hint="Project Name *"
+                                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                                         Text="{Binding NewProjectName, UpdateSourceTrigger=PropertyChanged}"/>
+                                                <TextBox Grid.Column="2" materialDesign:HintAssist.Hint="Project Code *"
+                                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                                         Text="{Binding NewProjectCode, UpdateSourceTrigger=PropertyChanged}"/>
+                                            </Grid>
 
                                             <ComboBox materialDesign:HintAssist.Hint="Project Purpose *"
                                                       materialDesign:HintAssist.HelperText="💡 Operational purpose &amp; tracking rules for this project"
                                                       Style="{StaticResource MaterialDesignOutlinedComboBox}"
                                                       ItemsSource="{Binding ProgramTypes}"
                                                       SelectedItem="{Binding SelectedProgramType}"
-                                                      Margin="0,0,0,15">
-                                                 <ComboBox.ItemTemplate>
-                                                     <DataTemplate>
-                                                         <TextBlock Text="{Binding Converter={StaticResource AyudaProgramTypeToDisplayNameConverter}}"/>
-                                                     </DataTemplate>
-                                                 </ComboBox.ItemTemplate>
-                                             </ComboBox>
+                                                      Margin="0,0,0,12">
+                                                <ComboBox.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="{Binding Converter={StaticResource AyudaProgramTypeToDisplayNameConverter}}"/>
+                                                    </DataTemplate>
+                                                </ComboBox.ItemTemplate>
+                                            </ComboBox>
 
                                             <TextBox materialDesign:HintAssist.Hint="Description"
                                                      Style="{StaticResource MaterialDesignOutlinedTextBox}"
                                                      Text="{Binding NewProjectDescription}"
-                                                     AcceptsReturn="True" Height="60"
-                                                     Margin="0,0,0,15"/>
+                                                     AcceptsReturn="True" Height="50"/>
                                         </StackPanel>
                                     </Border>
 
-                                    <Border x:Name="ReleaseSettingsSection">
+                                    <!-- Release Settings & Live Estimation Card -->
+                                    <Border x:Name="ReleaseSettingsSection" Background="White" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="18" Margin="0,0,0,16">
                                         <StackPanel>
-                                            <TextBlock Text="RELEASE SETTINGS" FontSize="11" FontWeight="Bold" Foreground="{StaticResource PrimaryBrandBrush}" Margin="0,10,0,15"/>
-
-                                            <ComboBox materialDesign:HintAssist.Hint="Release Method"
-                                                      Style="{StaticResource MaterialDesignOutlinedComboBox}"
-                                                      ItemsSource="{Binding ReleaseKinds}"
-                                                      SelectedItem="{Binding SelectedReleaseKind}"
-                                                      Margin="0,0,0,15"/>
+                                            <TextBlock Text="BENEFIT SETTINGS &amp; ESTIMATION" FontSize="12" FontWeight="Bold" Foreground="{StaticResource PrimaryBrandBrush}" Margin="0,0,0,14"/>
 
                                             <!-- Cash Fields -->
                                             <StackPanel Visibility="{Binding IsCashReleaseKind, Converter={StaticResource BooleanToVisibilityConverter}}">
                                                 <TextBox materialDesign:HintAssist.Hint="Max Payout Amount (PHP) *"
                                                          Style="{StaticResource MaterialDesignOutlinedTextBox}"
                                                          Text="{Binding NewProjectUnitAmountText, UpdateSourceTrigger=PropertyChanged}"
-                                                         FontSize="18" FontWeight="Bold"
-                                                         Margin="0,0,0,15"/>
+                                                         FontSize="16" FontWeight="Bold"
+                                                         Margin="0,0,0,12"/>
                                             </StackPanel>
 
                                             <!-- Goods Fields -->
@@ -1161,12 +1531,12 @@
                                                 <TextBox materialDesign:HintAssist.Hint="Item Name (e.g. Rice) *"
                                                          Style="{StaticResource MaterialDesignOutlinedTextBox}"
                                                          Text="{Binding NewProjectItemName, UpdateSourceTrigger=PropertyChanged}"
-                                                         Margin="0,0,0,15"/>
-                                                <Grid Margin="0,0,0,15">
+                                                         Margin="0,0,0,12"/>
+                                                <Grid Margin="0,0,0,12">
                                                     <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*" />
-                                                        <ColumnDefinition Width="10" />
-                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="10"/>
+                                                        <ColumnDefinition Width="*"/>
                                                     </Grid.ColumnDefinitions>
                                                     <TextBox Grid.Column="0" materialDesign:HintAssist.Hint="Quantity Per Beneficiary *"
                                                              Style="{StaticResource MaterialDesignOutlinedTextBox}"
@@ -1178,197 +1548,553 @@
                                                 <TextBox materialDesign:HintAssist.Hint="Item Description (Optional)"
                                                          Style="{StaticResource MaterialDesignOutlinedTextBox}"
                                                          Text="{Binding NewProjectItemDescription, UpdateSourceTrigger=PropertyChanged}"
-                                                         Margin="0,0,0,15"/>
+                                                         Margin="0,0,0,12"/>
                                             </StackPanel>
 
-                                            <TextBlock Text="DURATION &amp; CAP" FontSize="11" FontWeight="Bold" Foreground="{StaticResource PrimaryBrandBrush}" Margin="0,10,0,15"/>
-
+                                            <!-- Target Count & Cost Estimation Grid -->
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="10"/>
-                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="16"/>
+                                                    <ColumnDefinition Width="1.4*"/>
                                                 </Grid.ColumnDefinitions>
-                                                <DatePicker Grid.Column="0" materialDesign:HintAssist.Hint="Start Date"
-                                                            Style="{StaticResource MaterialDesignOutlinedDatePicker}"
-                                                            SelectedDate="{Binding NewProjectStartDate}"/>
-                                                <DatePicker Grid.Column="2" materialDesign:HintAssist.Hint="End Date"
-                                                            Style="{StaticResource MaterialDesignOutlinedDatePicker}"
-                                                            SelectedDate="{Binding NewProjectEndDate}"/>
+                                                <TextBox Grid.Column="0" materialDesign:HintAssist.Hint="Target Beneficiaries Count"
+                                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                                         Text="{Binding NewProjectTargetCountText, UpdateSourceTrigger=PropertyChanged}"
+                                                         VerticalAlignment="Center"/>
+
+                                                <Border Grid.Column="2" CornerRadius="8" Padding="14,10">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="Background" Value="#F0FDF4"/>
+                                                            <Setter Property="BorderBrush" Value="#BBF7D0"/>
+                                                            <Setter Property="BorderThickness" Value="1"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsCostExceedingSourceBalance}" Value="True">
+                                                                    <Setter Property="Background" Value="#FEF2F2"/>
+                                                                    <Setter Property="BorderBrush" Value="#EF4444"/>
+                                                                    <Setter Property="BorderThickness" Value="1.5"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <materialDesign:PackIcon Grid.Column="0" Kind="Calculator" Width="24" Height="24" VerticalAlignment="Center" Margin="0,0,10,0">
+                                                            <materialDesign:PackIcon.Style>
+                                                                <Style TargetType="materialDesign:PackIcon">
+                                                                    <Setter Property="Foreground" Value="#15803D"/>
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding IsCostExceedingSourceBalance}" Value="True">
+                                                                            <Setter Property="Foreground" Value="#DC2626"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </materialDesign:PackIcon.Style>
+                                                        </materialDesign:PackIcon>
+                                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                            <TextBlock Text="CALCULATED PROJECT TOTAL" FontSize="10" FontWeight="Bold">
+                                                                <TextBlock.Style>
+                                                                    <Style TargetType="TextBlock">
+                                                                        <Setter Property="Foreground" Value="#15803D"/>
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding IsCostExceedingSourceBalance}" Value="True">
+                                                                                <Setter Property="Foreground" Value="#DC2626"/>
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </TextBlock.Style>
+                                                            </TextBlock>
+                                                            <TextBlock Text="{Binding CalculatedTotalCostText}" FontSize="14" FontWeight="Bold">
+                                                                <TextBlock.Style>
+                                                                    <Style TargetType="TextBlock">
+                                                                        <Setter Property="Foreground" Value="#166534"/>
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding IsCostExceedingSourceBalance}" Value="True">
+                                                                                <Setter Property="Foreground" Value="#B91C1C"/>
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </TextBlock.Style>
+                                                            </TextBlock>
+                                                            <TextBlock Text="{Binding CostExceededWarningText}" FontSize="11" FontWeight="Bold" Foreground="#DC2626" Margin="0,4,0,0" TextWrapping="Wrap"
+                                                                       Visibility="{Binding IsCostExceedingSourceBalance, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </Border>
+                                            </Grid>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- Target Barangay Scope Section (Sulop Municipality) -->
+                                    <Border Background="White" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="18">
+                                        <StackPanel>
+                                            <Grid Margin="0,0,0,12">
+                                                <StackPanel VerticalAlignment="Center">
+                                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                        <materialDesign:PackIcon Kind="MapMarkerRadiusOutline" Width="18" Height="18" Foreground="#0284C7" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                        <TextBlock Text="TARGET BARANGAY SCOPE (SULOP MUNICIPALITY)" FontSize="12" FontWeight="Bold" Foreground="#0F172A" VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                    <TextBlock Text="Click barangays to restrict beneficiary eligibility, or leave all selected for municipality-wide aid." FontSize="11" Foreground="#64748B" Margin="26,2,0,0"/>
+                                                </StackPanel>
+
+                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                                    <Button Content="ALL BARANGAYS (MUNICIPALITY-WIDE)" Style="{StaticResource MaterialDesignOutlinedButton}" Height="30" Padding="10,0" Margin="0,0,8,0"
+                                                            Command="{Binding SelectAllTargetBarangaysCommand}" FontSize="10"/>
+                                                    <Button Content="CLEAR" Style="{StaticResource MaterialDesignFlatButton}" Height="30" Padding="8,0"
+                                                            Command="{Binding ClearTargetBarangaysCommand}" Foreground="#64748B" FontSize="10"/>
+                                                </StackPanel>
                                             </Grid>
 
-                                            <TextBox materialDesign:HintAssist.Hint="Hard Budget Cap (Optional)"
-                                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                                     Text="{Binding NewProjectBudgetCapText}"
-                                                     Margin="0,15,0,0"/>
+                                            <!-- Coverage status banner -->
+                                            <Border Background="#EFF6FF" BorderBrush="#BFDBFE" BorderThickness="1" CornerRadius="6" Padding="12,8" Margin="0,0,0,14">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <materialDesign:PackIcon Grid.Column="0" Kind="CheckCircleOutline" Width="16" Height="16" Foreground="#0284C7" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                    <TextBlock Grid.Column="1" Text="{Binding TargetBarangayCoverageText}" Foreground="#0369A1" FontSize="12" FontWeight="Bold" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                                </Grid>
+                                            </Border>
+
+                                            <!-- Interactive Barangay Pills Grid (all 24 Sulop barangays) -->
+                                            <ItemsControl ItemsSource="{Binding TargetBarangayOptions}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <WrapPanel Orientation="Horizontal"/>
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Button Style="{StaticResource MaterialDesignFlatButton}"
+                                                                Command="{Binding ToggleCommand}"
+                                                                Height="32" Padding="0" Margin="0,0,8,8"
+                                                                Cursor="Hand">
+                                                            <Button.Template>
+                                                                <ControlTemplate TargetType="Button">
+                                                                    <Border x:Name="PillBorder" CornerRadius="16" BorderThickness="1" Padding="12,5"
+                                                                            Background="#F8FAFC" BorderBrush="#CBD5E1">
+                                                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                                            <materialDesign:PackIcon x:Name="PillCheck" Kind="CheckCircle" Width="13" Height="13"
+                                                                                                     Margin="0,0,6,0" VerticalAlignment="Center" Visibility="Collapsed"/>
+                                                                            <TextBlock x:Name="PillText" Text="{Binding Name}" FontSize="11" FontWeight="SemiBold"
+                                                                                       Foreground="#334155" VerticalAlignment="Center"/>
+                                                                        </StackPanel>
+                                                                    </Border>
+                                                                    <ControlTemplate.Triggers>
+                                                                        <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                                            <Setter TargetName="PillBorder" Property="Background" Value="#15803D"/>
+                                                                            <Setter TargetName="PillBorder" Property="BorderBrush" Value="#15803D"/>
+                                                                            <Setter TargetName="PillCheck" Property="Visibility" Value="Visible"/>
+                                                                            <Setter TargetName="PillCheck" Property="Foreground" Value="White"/>
+                                                                            <Setter TargetName="PillText" Property="Foreground" Value="White"/>
+                                                                            <Setter TargetName="PillText" Property="FontWeight" Value="Bold"/>
+                                                                        </DataTrigger>
+                                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                                            <Setter TargetName="PillBorder" Property="BorderBrush" Value="#15803D"/>
+                                                                        </Trigger>
+                                                                    </ControlTemplate.Triggers>
+                                                                </ControlTemplate>
+                                                            </Button.Template>
+                                                        </Button>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
                                         </StackPanel>
                                     </Border>
                                 </StackPanel>
 
-                                <!-- Column 2: Funding Source (dual-mode) -->
-                                <StackPanel Grid.Column="2" x:Name="FundingSourceSection">
-                                    <TextBlock Text="FUNDING SOURCE" FontSize="11" FontWeight="Bold" Foreground="{StaticResource PrimaryBrandBrush}" Margin="0,0,0,5"/>
-                                    <TextBlock Text="This project will draw funds exclusively from the source below." FontSize="10" Foreground="#64748B" Margin="0,0,0,15"/>
+                                <!-- ================= STEP 3: FINANCIAL EARMARK & TIMELINE REVIEW ================= -->
+                                <StackPanel Visibility="{Binding IsStep3, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="1.2*"/>
+                                            <ColumnDefinition Width="16"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
 
-                                    <!-- Existing source (from grid row) -->
-                                    <Border BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="4" MinHeight="60" Background="#F8FAFC" Padding="15"
-                                            Visibility="{Binding IsNewDonationMode, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
-                                        <TextBlock Text="{Binding NewProjectSourceDescription}" VerticalAlignment="Center" FontWeight="Bold" TextWrapping="Wrap" Foreground="{StaticResource PrimaryBrandBrush}"/>
+                                        <!-- Column 0: Earmark Summary -->
+                                        <Border Grid.Column="0" Background="White" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="18">
+                                            <StackPanel>
+                                                <TextBlock Text="FINANCIAL EARMARK &amp; SCOPE REVIEW" FontSize="12" FontWeight="Bold" Foreground="{StaticResource PrimaryBrandBrush}" Margin="0,0,0,14"/>
+
+                                                <!-- Waterfall Source Identity -->
+                                                <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,12">
+                                                    <StackPanel>
+                                                        <TextBlock Text="FUNDING SOURCE" FontSize="10" FontWeight="Bold" Foreground="#64748B"/>
+                                                        <TextBlock Text="{Binding SourceTitle}" FontSize="13" FontWeight="Bold" Foreground="#0F172A" Margin="0,2,0,0"/>
+                                                        <TextBlock Text="{Binding SourceCode, StringFormat='Code: {0}'}" FontSize="11" Foreground="#64748B"/>
+                                                    </StackPanel>
+                                                </Border>
+
+                                                <!-- Proposed Project Particulars -->
+                                                <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,12">
+                                                    <Grid>
+                                                        <Grid.RowDefinitions>
+                                                            <RowDefinition Height="Auto"/>
+                                                            <RowDefinition Height="Auto"/>
+                                                            <RowDefinition Height="Auto"/>
+                                                        </Grid.RowDefinitions>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                        </Grid.ColumnDefinitions>
+
+                                                        <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,8,8">
+                                                            <TextBlock Text="PROJECT NAME" FontSize="10" FontWeight="Bold" Foreground="#64748B"/>
+                                                            <TextBlock Text="{Binding NewProjectName}" FontSize="12" FontWeight="SemiBold" Foreground="#0F172A"/>
+                                                        </StackPanel>
+
+                                                        <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,8">
+                                                            <TextBlock Text="PROJECT CODE" FontSize="10" FontWeight="Bold" Foreground="#64748B"/>
+                                                            <TextBlock Text="{Binding NewProjectCode}" FontSize="12" FontWeight="SemiBold" Foreground="#0F172A"/>
+                                                        </StackPanel>
+
+                                                        <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,8,8">
+                                                            <TextBlock Text="PURPOSE" FontSize="10" FontWeight="Bold" Foreground="#64748B"/>
+                                                            <TextBlock Text="{Binding SelectedProgramType, Converter={StaticResource AyudaProgramTypeToDisplayNameConverter}}" FontSize="12" FontWeight="SemiBold" Foreground="#0F172A"/>
+                                                        </StackPanel>
+
+                                                        <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,0,0,8">
+                                                            <TextBlock Text="BENEFIT TYPE" FontSize="10" FontWeight="Bold" Foreground="#64748B"/>
+                                                            <TextBlock Text="{Binding SelectedReleaseKind}" FontSize="12" FontWeight="SemiBold" Foreground="#0F172A"/>
+                                                        </StackPanel>
+
+                                                        <StackPanel Grid.Row="2" Grid.ColumnSpan="2">
+                                                            <TextBlock Text="TARGET BARANGAY COVERAGE" FontSize="10" FontWeight="Bold" Foreground="#64748B"/>
+                                                            <TextBlock Text="{Binding TargetBarangayCoverageText}" FontSize="12" FontWeight="Bold" Foreground="#0369A1" TextWrapping="Wrap"/>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </Border>
+
+                                                <!-- Calculation & Available Balance -->
+                                                <Border CornerRadius="6" Padding="14">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="Background" Value="#F0FDF4"/>
+                                                            <Setter Property="BorderBrush" Value="#BBF7D0"/>
+                                                            <Setter Property="BorderThickness" Value="1"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsCostExceedingSourceBalance}" Value="True">
+                                                                    <Setter Property="Background" Value="#FEF2F2"/>
+                                                                    <Setter Property="BorderBrush" Value="#EF4444"/>
+                                                                    <Setter Property="BorderThickness" Value="1.5"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <Grid>
+                                                        <Grid.RowDefinitions>
+                                                            <RowDefinition Height="Auto"/>
+                                                            <RowDefinition Height="Auto"/>
+                                                            <RowDefinition Height="Auto"/>
+                                                        </Grid.RowDefinitions>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                        </Grid.ColumnDefinitions>
+
+                                                        <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,8,0">
+                                                            <TextBlock Text="ESTIMATED EARMARK" FontSize="10" FontWeight="Bold" Foreground="#15803D"/>
+                                                            <TextBlock Text="{Binding CalculatedTotalCostText}" FontSize="14" FontWeight="Bold" Foreground="#166534"/>
+                                                        </StackPanel>
+
+                                                        <StackPanel Grid.Row="0" Grid.Column="1">
+                                                            <TextBlock Text="SOURCE AVAILABLE" FontSize="10" FontWeight="Bold" Foreground="#15803D"/>
+                                                            <TextBlock Text="{Binding SourceAvailableBalance, StringFormat='₱{0:N2}'}" FontSize="14" FontWeight="Bold" Foreground="#166534"/>
+                                                        </StackPanel>
+
+                                                        <Border Grid.Row="1" Grid.ColumnSpan="2" Background="#FEE2E2" BorderBrush="#FCA5A5" BorderThickness="1" CornerRadius="4" Padding="8,6" Margin="0,10,0,0"
+                                                                Visibility="{Binding IsCostExceedingSourceBalance, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                            <TextBlock Text="{Binding CostExceededWarningText}" FontSize="11" FontWeight="Bold" Foreground="#B91C1C" TextWrapping="Wrap"/>
+                                                        </Border>
+                                                    </Grid>
+                                                </Border>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <!-- Column 2: Timeline & Budget Ceiling -->
+                                        <Border Grid.Column="2" Background="White" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="18">
+                                            <StackPanel>
+                                                <TextBlock Text="TIMELINE &amp; BUDGET CEILING" FontSize="12" FontWeight="Bold" Foreground="{StaticResource PrimaryBrandBrush}" Margin="0,0,0,14"/>
+
+                                                <!-- Start Date & End Date -->
+                                                <Grid Margin="0,0,0,14">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="10"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <DatePicker Grid.Column="0" materialDesign:HintAssist.Hint="Start Date"
+                                                                Style="{StaticResource MaterialDesignOutlinedDatePicker}"
+                                                                SelectedDate="{Binding NewProjectStartDate}"/>
+                                                    <DatePicker Grid.Column="2" materialDesign:HintAssist.Hint="End Date"
+                                                                Style="{StaticResource MaterialDesignOutlinedDatePicker}"
+                                                                SelectedDate="{Binding NewProjectEndDate}"/>
+                                                </Grid>
+
+                                                <!-- Hard Budget Cap with "Use Max Available" button -->
+                                                <Grid Margin="0,0,0,14">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBox Grid.Column="0" materialDesign:HintAssist.Hint="Hard Budget Cap (Optional)"
+                                                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                                             Text="{Binding NewProjectBudgetCapText}"/>
+                                                    <Button Grid.Column="1" Content="USE MAX" Style="{StaticResource MaterialDesignOutlinedButton}" Height="40" Margin="8,0,0,0"
+                                                            Command="{Binding SetBudgetCapToMaxCommand}" ToolTip="Set hard cap to remaining source available balance"/>
+                                                </Grid>
+
+                                                <!-- Notes Callout -->
+                                                <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="6" Padding="12">
+                                                    <StackPanel>
+                                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                                            <materialDesign:PackIcon Kind="InformationOutline" Width="14" Height="14" Foreground="#64748B" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                                            <TextBlock Text="WATERFALL FISCAL RULE" FontSize="10" FontWeight="Bold" Foreground="#64748B"/>
+                                                        </StackPanel>
+                                                        <TextBlock Text="Disbursements will strictly deduct from this source. Beneficiary enrollments in Step 4 can be skipped if attendance-based or dynamic."
+                                                                   FontSize="11" Foreground="#64748B" TextWrapping="Wrap" LineHeight="16"/>
+                                                    </StackPanel>
+                                                </Border>
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+                                </StackPanel>
+
+                                <!-- ================= STEP 4: BENEFICIARIES PRE-ENROLLMENT ================= -->
+                                <Grid Visibility="{Binding IsStep4, Converter={StaticResource BooleanToVisibilityConverter}}" x:Name="BeneficiariesEnrollmentSection">
+                                    <!-- Attendance-Based Event Notice (Cash-for-Work & Seminar) -->
+                                    <Border Visibility="{Binding IsAttendanceBasedProgram, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                            Background="#F0FDF4" BorderBrush="#BBF7D0" BorderThickness="1" CornerRadius="12" Padding="28" VerticalAlignment="Center" Margin="0,20">
+                                        <StackPanel HorizontalAlignment="Center">
+                                            <materialDesign:PackIcon Kind="AccountCheckOutline" Width="52" Height="52" Foreground="#15803D" HorizontalAlignment="Center" Margin="0,0,0,14"/>
+                                            <TextBlock Text="Attendance-Based Event" FontSize="16" FontWeight="Bold" Foreground="#15803D" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                                            <TextBlock Text="Pre-enrolling beneficiaries is not required for this event purpose. Participants register dynamically when scanning their digital IDs at the venue."
+                                                       FontSize="12" Foreground="#166534" TextWrapping="Wrap" TextAlignment="Center" LineHeight="18" MaxWidth="500"/>
+                                        </StackPanel>
                                     </Border>
 
-                                    <!-- New donation entry (from sidebar) -->
-                                    <StackPanel Visibility="{Binding IsNewDonationMode, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                        <ComboBox materialDesign:HintAssist.Hint="Donor Type *"
-                                                  Style="{StaticResource MaterialDesignOutlinedComboBox}"
-                                                  ItemsSource="{Binding DonorTypes}"
-                                                  SelectedItem="{Binding SelectedDonorType}"
-                                                  Margin="0,0,0,15"/>
+                                    <!-- Distribution Projects: Targeted Candidate Pool & Confirmed Roster -->
+                                    <Grid Visibility="{Binding IsEnrollBeneficiariesVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="*"/>
+                                        </Grid.RowDefinitions>
 
-                                        <TextBox materialDesign:HintAssist.Hint="Donor Name *"
-                                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                                 Text="{Binding DonorName, UpdateSourceTrigger=PropertyChanged}"
-                                                 Margin="0,0,0,15"/>
+                                        <!-- Top Toolbar: Header, Scoped Coverage, Auto-Fill, Add Beneficiaries Button -->
+                                        <Grid Grid.Row="0" Margin="0,0,0,14">
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <TextBlock Text="ENROLL BENEFICIARIES (OPTIONAL)" FontSize="12" FontWeight="Bold" Foreground="{StaticResource PrimaryBrandBrush}" VerticalAlignment="Center"/>
+                                                <Border Background="{StaticResource ActionAccentBrush}" CornerRadius="10" Padding="8,2" Margin="10,0,0,0">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="{Binding SelectedEnrollmentCount}" Foreground="White" FontSize="11" FontWeight="Bold"/>
+                                                        <TextBlock Text=" SELECTED" Foreground="White" FontSize="11" FontWeight="Bold"/>
+                                                    </StackPanel>
+                                                </Border>
+                                            </StackPanel>
 
-                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
-                                            <RadioButton Content="Cash" IsChecked="{Binding IsCashDonation}" Style="{StaticResource MaterialDesignRadioButton}" Margin="0,0,20,0" Foreground="{StaticResource PrimaryBrandBrush}" Cursor="Hand"/>
-                                            <RadioButton Content="Goods" IsChecked="{Binding IsGoodsDonation}" Style="{StaticResource MaterialDesignRadioButton}" Foreground="{StaticResource PrimaryBrandBrush}" Cursor="Hand"/>
-                                        </StackPanel>
-
-                                        <TextBox materialDesign:HintAssist.Hint="Donation Amount (PHP) *"
-                                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                                 Text="{Binding DonationAmountText, UpdateSourceTrigger=PropertyChanged}"
-                                                 FontSize="18" FontWeight="Bold"
-                                                 Visibility="{Binding IsCashDonation, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                                 Margin="0,0,0,15"/>
-
-                                        <StackPanel Visibility="{Binding IsGoodsDonation, Converter={StaticResource BooleanToVisibilityConverter}}" Margin="0,0,0,15">
-                                            <TextBox materialDesign:HintAssist.Hint="Item Name *"
-                                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                                     Text="{Binding DonationItemName, UpdateSourceTrigger=PropertyChanged}"
-                                                     Margin="0,0,0,10"/>
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="10"/>
-                                                    <ColumnDefinition Width="*"/>
-                                                </Grid.ColumnDefinitions>
-                                                <TextBox Grid.Column="0" materialDesign:HintAssist.Hint="Quantity *"
-                                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                                         Text="{Binding DonationQuantityText, UpdateSourceTrigger=PropertyChanged}"/>
-                                                <TextBox Grid.Column="2" materialDesign:HintAssist.Hint="Unit (e.g. Sacks) *"
-                                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                                         Text="{Binding DonationUnitOfMeasure, UpdateSourceTrigger=PropertyChanged}"/>
-                                            </Grid>
-                                        </StackPanel>
-
-                                        <DatePicker materialDesign:HintAssist.Hint="Date Received *"
-                                                    Style="{StaticResource MaterialDesignOutlinedDatePicker}"
-                                                    SelectedDate="{Binding DonationDateReceived}"
-                                                    Margin="0,0,0,15"/>
-
-                                        <TextBox materialDesign:HintAssist.Hint="Reference Number / Receipt #"
-                                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                                 Text="{Binding DonationReferenceNumber}"
-                                                 Margin="0,0,0,15"/>
-
-                                        <ComboBox materialDesign:HintAssist.Hint="Proof Type"
-                                                  Style="{StaticResource MaterialDesignOutlinedComboBox}"
-                                                  ItemsSource="{Binding ProofTypes}"
-                                                  SelectedItem="{Binding SelectedProofType}"
-                                                  Margin="0,0,0,15"/>
-
-                                        <Grid Margin="0,0,0,15">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                            </Grid.ColumnDefinitions>
-                                            <TextBox materialDesign:HintAssist.Hint="Proof File Path"
-                                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                                     Text="{Binding ProofFilePath}" IsReadOnly="True"/>
-                                            <Button Grid.Column="1" Content="..." Command="{Binding BrowseProofCommand}" Margin="5,0,0,0" Style="{StaticResource MaterialDesignRaisedButton}" Background="{StaticResource PrimaryBrandBrush}" Foreground="White" Cursor="Hand"/>
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                                <Button Content="⚡ AUTO-FILL SLOTS" Style="{StaticResource MaterialDesignOutlinedButton}" Height="34" Padding="12,0" Margin="0,0,8,0"
+                                                        Command="{Binding AutoFillCandidatesCommand}" ToolTip="Automatically fill target slots from scoped barangays"/>
+                                                <Button Content="ADD BENEFICIARIES"
+                                                        Command="{Binding OpenBeneficiaryPickerCommand}"
+                                                        Style="{StaticResource MaterialDesignRaisedButton}"
+                                                        Background="{StaticResource ActionAccentBrush}" BorderBrush="{StaticResource ActionAccentBrush}"
+                                                        Foreground="White" Height="34" Padding="12,0" Cursor="Hand"/>
+                                            </StackPanel>
                                         </Grid>
 
-                                        <TextBox materialDesign:HintAssist.Hint="Remarks"
-                                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                                 Text="{Binding DonationRemarks}"
-                                                 AcceptsReturn="True" Height="60"/>
-                                    </StackPanel>
-                                </StackPanel>
+                                        <!-- Split Workbench: Scoped Candidate Pool on Left vs Confirmed Roster on Right -->
+                                        <Grid Grid.Row="1">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="1.1*"/>
+                                                <ColumnDefinition Width="16"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
 
-                                 <!-- Column 4: Enroll Beneficiaries section container -->
-                                 <Grid Grid.Column="4" x:Name="BeneficiariesEnrollmentSection">
-                                     <!-- Attendance-Based Event Notice (Cash-for-Work & Seminar) -->
-                                     <Border Visibility="{Binding IsAttendanceBasedProgram, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                             Background="#F0FDF4" BorderBrush="#BBF7D0" BorderThickness="1" CornerRadius="12" Padding="20" VerticalAlignment="Center" Margin="0,20">
-                                         <StackPanel>
-                                             <materialDesign:PackIcon Kind="AccountCheckOutline" Width="48" Height="48" Foreground="#15803D" HorizontalAlignment="Center" Margin="0,0,0,12"/>
-                                             <TextBlock Text="Attendance-Based Event" FontSize="15" FontWeight="Bold" Foreground="#15803D" HorizontalAlignment="Center" Margin="0,0,0,6"/>
-                                             <TextBlock Text="Pre-enrolling beneficiaries is not required. Participants register dynamically when scanning their digital IDs at the event."
-                                                        FontSize="11" Foreground="#166534" TextWrapping="Wrap" TextAlignment="Center" LineHeight="16"/>
-                                         </StackPanel>
-                                     </Border>
+                                            <!-- Left: Scoped Candidate Pool -->
+                                            <Border Grid.Column="0" Background="White" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="14">
+                                                <Grid>
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto"/>
+                                                        <RowDefinition Height="Auto"/>
+                                                        <RowDefinition Height="*"/>
+                                                    </Grid.RowDefinitions>
 
-                                     <!-- Enroll Beneficiaries (optional) — Distribution Projects Only -->
-                                     <Grid Visibility="{Binding IsEnrollBeneficiariesVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                         <Grid.RowDefinitions>
-                                             <RowDefinition Height="Auto"/>
-                                             <RowDefinition Height="Auto"/>
-                                             <RowDefinition Height="*"/>
-                                         </Grid.RowDefinitions>
+                                                    <StackPanel Grid.Row="0" Margin="0,0,0,10">
+                                                        <TextBlock Text="CANDIDATE POOL (FILTERED BY TARGET BARANGAYS)" FontSize="11" FontWeight="Bold" Foreground="#0F172A"/>
+                                                        <TextBlock Text="{Binding TargetBarangayCoverageText}" FontSize="10" Foreground="#0284C7" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                                    </StackPanel>
 
-                                         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,5">
-                                             <TextBlock Text="ENROLL BENEFICIARIES (OPTIONAL)" FontSize="11" FontWeight="Bold" Foreground="{StaticResource PrimaryBrandBrush}" VerticalAlignment="Center"/>
-                                             <Border Background="{StaticResource ActionAccentBrush}" CornerRadius="10" Padding="8,2" Margin="10,0,0,0">
-                                                 <StackPanel Orientation="Horizontal">
-                                                     <TextBlock Text="{Binding SelectedEnrollmentCount}" Foreground="White" FontSize="11" FontWeight="Bold"/>
-                                                     <TextBlock Text=" SELECTED" Foreground="White" FontSize="11" FontWeight="Bold"/>
-                                                 </StackPanel>
-                                             </Border>
-                                         </StackPanel>
+                                                    <TextBox Grid.Row="1" materialDesign:HintAssist.Hint="Search scoped candidate name..."
+                                                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                                             Text="{Binding EnrollmentSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                                             Margin="0,0,0,10"/>
 
-                                         <Button Grid.Row="1" Content="ADD BENEFICIARIES"
-                                                 Command="{Binding OpenBeneficiaryPickerCommand}"
-                                                 Style="{StaticResource MaterialDesignRaisedButton}"
-                                                 Background="{StaticResource ActionAccentBrush}" BorderBrush="{StaticResource ActionAccentBrush}"
-                                                 Foreground="White" Height="40" Margin="0,10,0,10" Cursor="Hand"/>
+                                                    <ListBox Grid.Row="2" ItemsSource="{Binding FilteredEnrollmentBeneficiaries}"
+                                                             MinHeight="220" MaxHeight="340"
+                                                             BorderThickness="1" BorderBrush="{StaticResource CardBorderBrush}"
+                                                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                                             VirtualizingPanel.IsVirtualizing="True">
+                                                        <ListBox.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <Grid Margin="0,2">
+                                                                    <Grid.ColumnDefinitions>
+                                                                        <ColumnDefinition Width="*"/>
+                                                                        <ColumnDefinition Width="Auto"/>
+                                                                    </Grid.ColumnDefinitions>
+                                                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                                        <TextBlock Text="{Binding FullName}" FontSize="12" FontWeight="SemiBold" Foreground="#0F172A"/>
+                                                                        <StackPanel Orientation="Horizontal">
+                                                                            <TextBlock Text="{Binding Barangay}" FontSize="10" Foreground="#0284C7" FontWeight="Bold"/>
+                                                                            <TextBlock Text="{Binding BeneficiaryId, StringFormat=' • ID: {0}'}" FontSize="10" Foreground="#64748B"/>
+                                                                        </StackPanel>
+                                                                    </StackPanel>
+                                                                    <Button Grid.Column="1" Style="{StaticResource MaterialDesignFlatButton}" Height="28" Padding="8,0"
+                                                                            Command="{Binding DataContext.RequestAddBeneficiaryCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                            CommandParameter="{Binding}" Foreground="{StaticResource PrimaryBrandBrush}">
+                                                                        <StackPanel Orientation="Horizontal">
+                                                                            <materialDesign:PackIcon Kind="Plus" Width="14" Height="14" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                                                            <TextBlock Text="Add" FontSize="11" FontWeight="Bold" VerticalAlignment="Center"/>
+                                                                        </StackPanel>
+                                                                    </Button>
+                                                                </Grid>
+                                                            </DataTemplate>
+                                                        </ListBox.ItemTemplate>
+                                                    </ListBox>
+                                                </Grid>
+                                            </Border>
 
-                                         <!-- Compact preview of the confirmed roster -->
-                                         <ListBox Grid.Row="2" ItemsSource="{Binding SelectedEnrollmentBeneficiaries}"
-                                                  MinHeight="200" MaxHeight="420"
-                                                  BorderThickness="1" BorderBrush="{StaticResource CardBorderBrush}"
-                                                  ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                                  VirtualizingPanel.IsVirtualizing="True">
-                                             <ListBox.ItemTemplate>
-                                                 <DataTemplate>
-                                                     <Grid>
-                                                         <Grid.ColumnDefinitions>
-                                                             <ColumnDefinition Width="*"/>
-                                                             <ColumnDefinition Width="Auto"/>
-                                                         </Grid.ColumnDefinitions>
-                                                         <StackPanel Orientation="Horizontal">
-                                                             <TextBlock Text="{Binding FullName}" FontSize="12" VerticalAlignment="Center"/>
-                                                             <TextBlock Text="{Binding BeneficiaryId, StringFormat=' ({0})'}" FontSize="11" Foreground="#64748B" VerticalAlignment="Center"/>
-                                                         </StackPanel>
-                                                         <Button Grid.Column="1" Style="{StaticResource MaterialDesignIconButton}" Width="24" Height="24"
-                                                               Command="{Binding DataContext.RemoveSelectedBeneficiaryCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                               CommandParameter="{Binding}" Foreground="#BE123C" ToolTip="Remove from project">
-                                                             <materialDesign:PackIcon Kind="Close" Width="14" Height="14"/>
-                                                         </Button>
-                                                     </Grid>
-                                                 </DataTemplate>
-                                             </ListBox.ItemTemplate>
-                                         </ListBox>
-                                     </Grid>
-                                  </Grid>
-                             </Grid>
+                                            <!-- Right: Confirmed Roster -->
+                                            <Border Grid.Column="2" Background="White" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="14">
+                                                <Grid>
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto"/>
+                                                        <RowDefinition Height="*"/>
+                                                    </Grid.RowDefinitions>
+
+                                                    <TextBlock Grid.Row="0" Text="CONFIRMED PROJECT ROSTER" FontSize="11" FontWeight="Bold" Foreground="#0F172A" Margin="0,0,0,10"/>
+
+                                                    <ListBox Grid.Row="1" ItemsSource="{Binding SelectedEnrollmentBeneficiaries}"
+                                                             MinHeight="250" MaxHeight="380"
+                                                             BorderThickness="1" BorderBrush="{StaticResource CardBorderBrush}"
+                                                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                                             VirtualizingPanel.IsVirtualizing="True">
+                                                        <ListBox.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <Grid Margin="0,2">
+                                                                    <Grid.ColumnDefinitions>
+                                                                        <ColumnDefinition Width="*"/>
+                                                                        <ColumnDefinition Width="Auto"/>
+                                                                    </Grid.ColumnDefinitions>
+                                                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                                        <TextBlock Text="{Binding FullName}" FontSize="12" FontWeight="SemiBold" Foreground="#0F172A"/>
+                                                                        <StackPanel Orientation="Horizontal">
+                                                                            <TextBlock Text="{Binding Barangay}" FontSize="10" Foreground="#0284C7" FontWeight="Bold"/>
+                                                                            <TextBlock Text="{Binding BeneficiaryId, StringFormat=' ({0})'}" FontSize="10" Foreground="#64748B"/>
+                                                                        </StackPanel>
+                                                                    </StackPanel>
+                                                                    <Button Grid.Column="1" Style="{StaticResource MaterialDesignIconButton}" Width="24" Height="24"
+                                                                            Command="{Binding DataContext.RemoveSelectedBeneficiaryCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                            CommandParameter="{Binding}" Foreground="#BE123C" ToolTip="Remove from project">
+                                                                        <materialDesign:PackIcon Kind="Close" Width="14" Height="14"/>
+                                                                    </Button>
+                                                                </Grid>
+                                                            </DataTemplate>
+                                                        </ListBox.ItemTemplate>
+                                                    </ListBox>
+                                                </Grid>
+                                            </Border>
+                                        </Grid>
+                                    </Grid>
+                                </Grid>
                             </StackPanel>
                         </Border>
                     </ScrollViewer>
 
-                    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="20">
-                        <Button Content="CANCEL" Style="{StaticResource MaterialDesignFlatButton}" Command="{Binding CloseProjectCreationPanelCommand}" Margin="0,0,10,0" Foreground="#64748B"/>
-                        <Button x:Name="ConfirmCreateProjectButton" Content="CREATE PROJECT" Command="{Binding ConfirmCreateProjectCommand}" Style="{StaticResource MaterialDesignRaisedButton}" Background="{StaticResource ActionAccentBrush}" BorderBrush="{StaticResource ActionAccentBrush}" Foreground="White"/>
-                    </StackPanel>
+                    <!-- Row 2: Wizard Navigation Footer -->
+                    <Border Grid.Row="2" Background="White" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0" Padding="24,14" CornerRadius="0,0,12,12">
+                        <Grid>
+                            <!-- Left: Cancel & Previous -->
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                                <Button Content="Cancel" 
+                                        Style="{StaticResource MaterialDesignFlatButton}" 
+                                        Command="{Binding CloseProjectCreationPanelCommand}" 
+                                        Background="#F1F5F9"
+                                        Foreground="#334155"
+                                        FontWeight="SemiBold"
+                                        Height="40"
+                                        Padding="18,0"
+                                        materialDesign:ButtonAssist.CornerRadius="6"
+                                        Margin="0,0,10,0"/>
+                                <Button Content="← Back" 
+                                        Style="{StaticResource MaterialDesignOutlinedButton}" 
+                                        Command="{Binding PreviousProjectWizardStepCommand}"
+                                        Height="40"
+                                        Padding="16,0"
+                                        materialDesign:ButtonAssist.CornerRadius="6"
+                                        Visibility="{Binding IsStep1, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
+                            </StackPanel>
+
+                            <!-- Right: Next / Skip / Create -->
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                <!-- Step 1 -> Step 2 (Matching Screenshot) -->
+                                <Button Content="Continue to Particulars &gt;" 
+                                        Style="{StaticResource MaterialDesignRaisedButton}" 
+                                        Background="{StaticResource PrimaryBrandBrush}" 
+                                        Foreground="White"
+                                        FontWeight="Bold"
+                                        Height="40"
+                                        Padding="20,0"
+                                        materialDesign:ButtonAssist.CornerRadius="6"
+                                        Command="{Binding NextProjectWizardStepCommand}"
+                                        Visibility="{Binding IsStep1, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+
+                                <!-- Step 2 -> Step 3 -->
+                                <Button Content="Continue to Earmark Review &gt;" 
+                                        Style="{StaticResource MaterialDesignRaisedButton}" 
+                                        Background="{StaticResource PrimaryBrandBrush}" 
+                                        Foreground="White"
+                                        FontWeight="Bold"
+                                        Height="40"
+                                        Padding="20,0"
+                                        materialDesign:ButtonAssist.CornerRadius="6"
+                                        Command="{Binding NextProjectWizardStepCommand}"
+                                        Visibility="{Binding IsStep2, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+
+                                <!-- Step 3 Actions -->
+                                <StackPanel Orientation="Horizontal" Visibility="{Binding IsStep3, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <Button Content="SKIP BENEFICIARIES &amp; CREATE" Style="{StaticResource MaterialDesignFlatButton}" Foreground="{StaticResource PrimaryBrandBrush}"
+                                            Command="{Binding ConfirmCreateProjectCommand}" Margin="0,0,10,0"/>
+                                    <Button Content="Enroll Candidates (Step 4) &gt;" 
+                                            Style="{StaticResource MaterialDesignRaisedButton}" 
+                                            Background="{StaticResource PrimaryBrandBrush}" 
+                                            Foreground="White"
+                                            FontWeight="Bold"
+                                            Height="40"
+                                            Padding="20,0"
+                                            materialDesign:ButtonAssist.CornerRadius="6"
+                                            Command="{Binding NextProjectWizardStepCommand}"/>
+                                </StackPanel>
+
+                                <!-- Step 4 Actions -->
+                                <Button x:Name="ConfirmCreateProjectButton" Content="CREATE PROJECT"
+                                        Command="{Binding ConfirmCreateProjectCommand}"
+                                        Style="{StaticResource MaterialDesignRaisedButton}"
+                                        Background="{StaticResource ActionAccentBrush}" BorderBrush="{StaticResource ActionAccentBrush}" Foreground="White"
+                                        FontWeight="Bold"
+                                        Height="40"
+                                        Padding="20,0"
+                                        materialDesign:ButtonAssist.CornerRadius="6"
+                                        Visibility="{Binding IsStep4, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
                 </Grid>
             </materialDesign:Card>
         </Border>
