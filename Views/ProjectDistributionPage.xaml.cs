@@ -224,6 +224,12 @@ namespace AttendanceShiftingManagement.Views
         /// </summary>
         private void UserControl_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
         {
+            // Do not steal focus if any overlay or modal is open
+            if (_viewModel?.IsAnyOverlayOpen == true)
+            {
+                return;
+            }
+
             // Don't redirect if user is typing in a visible search/filter textbox
             if (System.Windows.Input.Keyboard.FocusedElement is TextBox focusedTb &&
                 focusedTb.Name != "HiddenScannerTextBox" &&
@@ -246,6 +252,12 @@ namespace AttendanceShiftingManagement.Views
 
         private void UserControl_PreviewTextInput(object sender, System.Windows.Input.TextCompositionEventArgs e)
         {
+            // Do not steal focus if any overlay or modal is open
+            if (_viewModel?.IsAnyOverlayOpen == true)
+            {
+                return;
+            }
+
             // Don't redirect if user is typing in a visible search/filter textbox
             if (System.Windows.Input.Keyboard.FocusedElement is TextBox focusedTb &&
                 focusedTb.Name != "HiddenScannerTextBox" &&
@@ -268,24 +280,66 @@ namespace AttendanceShiftingManagement.Views
 
         private void UserControl_PreviewMouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
-            // When clicking outside editable inputs or action buttons, ensure scanner focus is re-armed
-            if (e.OriginalSource is not TextBox && e.OriginalSource is not Button)
+            // Do not steal focus if any overlay or modal is open
+            if (_viewModel?.IsAnyOverlayOpen == true)
             {
-                Dispatcher.BeginInvoke(DispatcherPriority.Background, () =>
-                {
-                    if (System.Windows.Input.Keyboard.FocusedElement is not TextBox tb || tb.Name == "HiddenScannerTextBox")
-                    {
-                        FocusScanner();
-                    }
-                });
+                return;
             }
+
+            // When clicking inside interactive elements (buttons, checkboxes, textboxes, etc.), don't steal focus
+            if (IsInteractiveElement(e.OriginalSource as DependencyObject))
+            {
+                return;
+            }
+
+            Dispatcher.BeginInvoke(DispatcherPriority.Background, () =>
+            {
+                if (_viewModel?.IsAnyOverlayOpen == true)
+                {
+                    return;
+                }
+
+                if (System.Windows.Input.Keyboard.FocusedElement is not TextBox tb || tb.Name == "HiddenScannerTextBox")
+                {
+                    FocusScanner();
+                }
+            });
+        }
+
+        private static bool IsInteractiveElement(DependencyObject? element)
+        {
+            while (element != null)
+            {
+                if (element is System.Windows.Controls.Primitives.ButtonBase ||
+                    element is TextBox ||
+                    element is ComboBox ||
+                    element is System.Windows.Controls.Primitives.ScrollBar ||
+                    element is DataGrid ||
+                    element is DataGridRow ||
+                    element is DataGridCell)
+                {
+                    return true;
+                }
+                element = VisualTreeHelper.GetParent(element);
+            }
+            return false;
         }
 
         private void FocusScanner()
         {
+            if (_viewModel?.IsAnyOverlayOpen == true)
+            {
+                return;
+            }
+
             // Use Dispatcher to ensure focus happens after any pending layout updates
             Dispatcher.BeginInvoke(DispatcherPriority.Input, () =>
             {
+                if (_viewModel?.IsAnyOverlayOpen == true)
+                {
+                    return;
+                }
+
                 if (HiddenScannerTextBox != null)
                 {
                     HiddenScannerTextBox.Focus();
@@ -405,8 +459,8 @@ namespace AttendanceShiftingManagement.Views
         {
             var viewModel = DataContext as ProjectDistributionViewModel;
 
-            // Queue protection: clear textbox if a dialog is active
-            if (viewModel != null && (viewModel.IsScannedResultVisible || viewModel.IsReleaseSuccessState))
+            // Queue protection: clear textbox if an overlay/dialog is active
+            if (viewModel != null && (viewModel.IsAnyOverlayOpen || viewModel.IsScannedResultVisible || viewModel.IsReleaseSuccessState))
             {
                 HiddenScannerTextBox.Text = string.Empty;
                 e.Handled = true;
@@ -428,8 +482,8 @@ namespace AttendanceShiftingManagement.Views
         {
             var viewModel = DataContext as ProjectDistributionViewModel;
 
-            // Queue protection: clear textbox if a dialog is active
-            if (viewModel != null && (viewModel.IsScannedResultVisible || viewModel.IsReleaseSuccessState))
+            // Queue protection: clear textbox if an overlay/dialog is active
+            if (viewModel != null && (viewModel.IsAnyOverlayOpen || viewModel.IsScannedResultVisible || viewModel.IsReleaseSuccessState))
             {
                 HiddenScannerTextBox.Text = string.Empty;
                 return;

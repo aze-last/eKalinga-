@@ -1055,7 +1055,7 @@
 
         <!-- ============================ HOUSEHOLD REVIEW MODAL ============================ -->
         <!-- Pops on every CONFIRM so the operator reviews the household before releasing (scanner & list path). -->
-        <Grid Grid.RowSpan="2" Panel.ZIndex="140"
+        <Grid Grid.RowSpan="2" Panel.ZIndex="300"
               Visibility="{Binding IsHouseholdConfirmVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
             <Border Background="#CC0F172A"/>
             <Border Style="{StaticResource PanelCardStyle}" HorizontalAlignment="Center" VerticalAlignment="Center" Width="1020" MaxHeight="720" CornerRadius="16" Padding="0">
@@ -1195,7 +1195,7 @@
                                                         <ColumnDefinition Width="*"/>
                                                         <ColumnDefinition Width="Auto"/>
                                                     </Grid.ColumnDefinitions>
-                                                    <CheckBox Grid.Column="0" IsChecked="{Binding IsComplete, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center"/>
+                                                    <CheckBox Grid.Column="0" IsChecked="{Binding IsComplete, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center" Cursor="Hand"/>
                                                     <TextBlock Grid.Column="1" Text="{Binding DocumentName}" FontSize="13" FontWeight="SemiBold" Margin="8,0,0,0"
                                                                VerticalAlignment="Center" Foreground="{DynamicResource BrandMidnightBrush}" TextWrapping="Wrap"/>
                                                     <TextBlock Grid.Column="2" Text="MISSING" FontSize="9" FontWeight="Bold" VerticalAlignment="Center"
@@ -1316,10 +1316,11 @@
                                           Content="Authorize override"
                                           IsChecked="{Binding HouseholdOverrideAcknowledged}"
                                           Visibility="{Binding RequiresHouseholdOverride, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                          FontSize="12" Foreground="White"/>
-                                <Button Content="DECLINE" Command="{Binding CancelHouseholdConfirmCommand}" Background="#BE123C" Foreground="White" FontWeight="Bold" Height="45" Padding="20,0" Margin="0,0,12,0" BorderThickness="0"/>
-                                <Button Content="MARK AS PENDING" Command="{Binding PromptPendingReasonCommand}" Background="#F59E0B" Foreground="#0F172A" FontWeight="Bold" Height="45" Padding="18,0" Margin="0,0,12,0" BorderThickness="0"/>
-                                <Button Content="CONFIRM RELEASE" Command="{Binding ConfirmHouseholdReleaseCommand}" Style="{StaticResource OperationalActionButton}" Height="45" Padding="30,0" FontSize="16" FontWeight="Bold"/>
+                                          FontSize="12" Foreground="White"
+                                          Cursor="Hand"/>
+                                <Button Content="DECLINE" Command="{Binding CancelHouseholdConfirmCommand}" Background="#BE123C" Foreground="White" FontWeight="Bold" Height="45" Padding="20,0" Margin="0,0,12,0" BorderThickness="0" Cursor="Hand"/>
+                                <Button Content="MARK AS PENDING" Command="{Binding PromptPendingReasonCommand}" Background="#F59E0B" Foreground="#0F172A" FontWeight="Bold" Height="45" Padding="18,0" Margin="0,0,12,0" BorderThickness="0" Cursor="Hand"/>
+                                <Button Content="CONFIRM RELEASE" Command="{Binding ConfirmHouseholdReleaseCommand}" Style="{StaticResource OperationalActionButton}" Height="45" Padding="30,0" FontSize="16" FontWeight="Bold" Cursor="Hand"/>
                             </StackPanel>
                         </Grid>
                     </Border>
@@ -1365,6 +1366,7 @@
         <Grid x:Name="ScanDiagnosticErrorModalGrid"
               Grid.RowSpan="2"
               Panel.ZIndex="160"
+              IsHitTestVisible="{Binding IsScanErrorModalVisible}"
               Visibility="{Binding IsScanErrorModalVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
             <!-- Semi-transparent Dark Backdrop -->
             <Border Background="#CC0F172A"/>
@@ -1500,6 +1502,7 @@
         <Grid x:Name="SpotlightOverlayGrid"
               Grid.RowSpan="2"
               Panel.ZIndex="150"
+              IsHitTestVisible="{Binding IsOnboardingOpen}"
               Visibility="{Binding IsOnboardingOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
 
             <!-- Dark Translucent Backdrop with Dynamic Cutout Hole -->

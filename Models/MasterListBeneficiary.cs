@@ -10,7 +10,18 @@ namespace AttendanceShiftingManagement.Models
         public string LastName { get; set; } = string.Empty;
         public string FirstName { get; set; } = string.Empty;
         public string MiddleName { get; set; } = string.Empty;
-        public string FullName { get; set; } = string.Empty;
+        private string _fullName = string.Empty;
+        public string FullName
+        {
+            get => !string.IsNullOrWhiteSpace(_fullName)
+                ? _fullName
+                : string.Join(" ", new[] { FirstName, MiddleName, LastName }.Where(part => !string.IsNullOrWhiteSpace(part))).Trim();
+            set => _fullName = value ?? string.Empty;
+        }
+        public string DisplayId =>
+            !string.IsNullOrWhiteSpace(CivilRegistryId)
+                ? CivilRegistryId
+                : (!string.IsNullOrWhiteSpace(BeneficiaryId) ? BeneficiaryId : (Id > 0 ? $"ID-{Id}" : "--"));
         public string Sex { get; set; } = string.Empty;
         public string DateOfBirth { get; set; } = string.Empty;
         public string Age { get; set; } = string.Empty;

@@ -201,7 +201,19 @@
                                         Command="{Binding OpenNewDonationProjectCommand}"
                                         Style="{StaticResource GuidedCreateProjectButtonStyle}"
                                         Background="{StaticResource ActionAccentBrush}"
-                                        Foreground="White" HorizontalContentAlignment="Left" Height="45" Margin="0,0,0,20" FontSize="14"/>
+                                        Foreground="White" HorizontalContentAlignment="Left" Height="45" Margin="0,0,0,8" FontSize="14"/>
+
+                                <Button x:Name="RecordDonationButton"
+                                        Command="{Binding OpenRecordDonationModalCommand}"
+                                        Style="{StaticResource MaterialDesignRaisedButton}"
+                                        Background="#0D9488"
+                                        BorderBrush="#0D9488"
+                                        Foreground="White" HorizontalContentAlignment="Left" Height="45" Margin="0,0,0,20" FontSize="14">
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="HandHeart" Width="20" Height="20" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="RECORD DONATION" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
 
                                 <TextBlock Text="AUDIT (CLAIM)" Style="{StaticResource SidebarHeaderStyle}"/>
 
@@ -2093,6 +2105,320 @@
                                         materialDesign:ButtonAssist.CornerRadius="6"
                                         Visibility="{Binding IsStep4, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                             </StackPanel>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </materialDesign:Card>
+        </Border>
+
+        <!-- ============ RECORD PRIVATE DONATION MODAL (Replicated from Laravel Workspace showDonationModal) ============ -->
+        <Border Grid.RowSpan="3" Panel.ZIndex="106" Background="#CC0F172A"
+                Visibility="{Binding DonationModalVisibility}">
+            <materialDesign:Card Width="580" VerticalAlignment="Center" HorizontalAlignment="Center" UniformCornerRadius="16">
+                <Grid Background="White">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Modal Header -->
+                    <Border Grid.Row="0" BorderBrush="#F1F5F9" BorderThickness="0,0,0,1" Padding="24,18">
+                        <Grid>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <materialDesign:PackIcon Kind="HandHeart" Width="22" Height="22" Foreground="#15803D" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <TextBlock Text="Record Private Donation" Foreground="#15803D" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <Button Style="{StaticResource MaterialDesignIconButton}"
+                                    Foreground="#64748B"
+                                    Width="30" Height="30"
+                                    HorizontalAlignment="Right"
+                                    Command="{Binding CloseRecordDonationModalCommand}"
+                                    ToolTip="Close">
+                                <materialDesign:PackIcon Kind="Close" Width="18" Height="18"/>
+                            </Button>
+                        </Grid>
+                    </Border>
+
+                    <!-- Modal Body (Scrollable) -->
+                    <ScrollViewer Grid.Row="1" MaxHeight="520" VerticalScrollBarVisibility="Auto">
+                        <StackPanel Margin="24,20">
+                            <!-- Error Banner -->
+                            <Border Background="#FEF2F2" BorderBrush="#EF4444" BorderThickness="1" CornerRadius="8"
+                                    Padding="14,10" Margin="0,0,0,16"
+                                    Visibility="{Binding HasDonationModalError, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <materialDesign:PackIcon Grid.Column="0" Kind="AlertCircle" Width="18" Height="18" Foreground="#DC2626" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding DonationModalErrorMessage}" Foreground="#991B1B" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                </Grid>
+                            </Border>
+
+                            <!-- Donation Type Toggle Cards (Cash vs Goods) -->
+                            <TextBlock Text="DONATION TYPE" FontSize="11" FontWeight="Bold" Foreground="#475569" Margin="0,0,0,8"/>
+                            <Grid Margin="0,0,0,16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Cash Option Card -->
+                                <Border Grid.Column="0" CornerRadius="10" Cursor="Hand">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Background" Value="#F8FAFC"/>
+                                            <Setter Property="BorderBrush" Value="#E2E8F0"/>
+                                            <Setter Property="BorderThickness" Value="1.5"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsCashDonation}" Value="True">
+                                                    <Setter Property="Background" Value="#ECFDF5"/>
+                                                    <Setter Property="BorderBrush" Value="#15803D"/>
+                                                    <Setter Property="BorderThickness" Value="2"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <Border.InputBindings>
+                                        <MouseBinding Gesture="LeftClick" Command="{Binding SelectCashDonationCommand}"/>
+                                    </Border.InputBindings>
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="14,12">
+                                        <materialDesign:PackIcon Kind="CashMultiple" Width="20" Height="20" Margin="0,0,8,0" VerticalAlignment="Center">
+                                            <materialDesign:PackIcon.Style>
+                                                <Style TargetType="materialDesign:PackIcon">
+                                                    <Setter Property="Foreground" Value="#64748B"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsCashDonation}" Value="True">
+                                                            <Setter Property="Foreground" Value="#15803D"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </materialDesign:PackIcon.Style>
+                                        </materialDesign:PackIcon>
+                                        <TextBlock Text="Cash Donation (₱)" FontSize="13" FontWeight="Bold" VerticalAlignment="Center">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground" Value="#475569"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsCashDonation}" Value="True">
+                                                            <Setter Property="Foreground" Value="#15803D"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Goods Option Card -->
+                                <Border Grid.Column="2" CornerRadius="10" Cursor="Hand">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Background" Value="#F8FAFC"/>
+                                            <Setter Property="BorderBrush" Value="#E2E8F0"/>
+                                            <Setter Property="BorderThickness" Value="1.5"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsGoodsDonation}" Value="True">
+                                                    <Setter Property="Background" Value="#ECFDF5"/>
+                                                    <Setter Property="BorderBrush" Value="#15803D"/>
+                                                    <Setter Property="BorderThickness" Value="2"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <Border.InputBindings>
+                                        <MouseBinding Gesture="LeftClick" Command="{Binding SelectGoodsDonationCommand}"/>
+                                    </Border.InputBindings>
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="14,12">
+                                        <materialDesign:PackIcon Kind="PackageVariantClosed" Width="20" Height="20" Margin="0,0,8,0" VerticalAlignment="Center">
+                                            <materialDesign:PackIcon.Style>
+                                                <Style TargetType="materialDesign:PackIcon">
+                                                    <Setter Property="Foreground" Value="#64748B"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsGoodsDonation}" Value="True">
+                                                            <Setter Property="Foreground" Value="#15803D"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </materialDesign:PackIcon.Style>
+                                        </materialDesign:PackIcon>
+                                        <TextBlock Text="Goods / In-Kind" FontSize="13" FontWeight="Bold" VerticalAlignment="Center">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground" Value="#475569"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsGoodsDonation}" Value="True">
+                                                            <Setter Property="Foreground" Value="#15803D"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+
+                            <!-- Donor Information -->
+                            <Grid Margin="0,0,0,14">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="1.5*"/>
+                                </Grid.ColumnDefinitions>
+                                <ComboBox Grid.Column="0"
+                                          materialDesign:HintAssist.Hint="Donor Type *"
+                                          Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                          ItemsSource="{Binding DonorTypes}"
+                                          SelectedItem="{Binding SelectedDonorType}"
+                                          Height="44"
+                                          FontSize="12"/>
+                                <TextBox Grid.Column="2"
+                                         materialDesign:HintAssist.Hint="Donor or Org Name *"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         Text="{Binding DonorName, UpdateSourceTrigger=PropertyChanged}"
+                                         Height="44"
+                                         FontSize="12"/>
+                            </Grid>
+
+                            <!-- Cash Donation Amount Field -->
+                            <StackPanel Visibility="{Binding IsCashDonation, Converter={StaticResource BooleanToVisibilityConverter}}" Margin="0,0,0,14">
+                                <TextBox materialDesign:HintAssist.Hint="Donation Amount (PHP) *"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         Text="{Binding DonationAmountText, UpdateSourceTrigger=PropertyChanged}"
+                                         FontSize="16" FontWeight="Bold" FontFamily="Consolas"
+                                         Height="46"/>
+                            </StackPanel>
+
+                            <!-- Goods Donation Fields -->
+                            <StackPanel Visibility="{Binding IsGoodsDonation, Converter={StaticResource BooleanToVisibilityConverter}}" Margin="0,0,0,14">
+                                <Grid Margin="0,0,0,12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="2*"/>
+                                        <ColumnDefinition Width="10"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox Grid.Column="0"
+                                             materialDesign:HintAssist.Hint="Item Name * (e.g. Rice 25kg)"
+                                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                             Text="{Binding DonationItemName, UpdateSourceTrigger=PropertyChanged}"
+                                             Height="44"
+                                             FontSize="12"/>
+                                    <ComboBox Grid.Column="2"
+                                              materialDesign:HintAssist.Hint="Unit *"
+                                              Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                              IsEditable="True"
+                                              ItemsSource="{Binding DonationUnits}"
+                                              Text="{Binding DonationUnitOfMeasure, UpdateSourceTrigger=PropertyChanged}"
+                                              Height="44"
+                                              FontSize="12"/>
+                                </Grid>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="10"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox Grid.Column="0"
+                                             materialDesign:HintAssist.Hint="Quantity * (e.g. 100)"
+                                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                             Text="{Binding DonationQuantityText, UpdateSourceTrigger=PropertyChanged}"
+                                             FontFamily="Consolas"
+                                             Height="44"
+                                             FontSize="12"/>
+                                    <TextBox Grid.Column="2"
+                                             materialDesign:HintAssist.Hint="Estimated Value (₱)"
+                                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                             Text="{Binding GoodsEstimatedValueText, UpdateSourceTrigger=PropertyChanged}"
+                                             FontFamily="Consolas"
+                                             Height="44"
+                                             FontSize="12"/>
+                                </Grid>
+                            </StackPanel>
+
+                            <!-- Date & Reference Number Row -->
+                            <Grid Margin="0,0,0,14">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <DatePicker Grid.Column="0"
+                                            materialDesign:HintAssist.Hint="Date Received *"
+                                            Style="{StaticResource MaterialDesignOutlinedDatePicker}"
+                                            SelectedDate="{Binding DonationDateReceived}"
+                                            Height="44"
+                                            FontSize="12"/>
+                                <TextBox Grid.Column="2"
+                                         materialDesign:HintAssist.Hint="Reference / OR #"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         Text="{Binding DonationReferenceNumber, UpdateSourceTrigger=PropertyChanged}"
+                                         Height="44"
+                                         FontSize="12"/>
+                            </Grid>
+
+                            <!-- Notes / Remarks -->
+                            <TextBox materialDesign:HintAssist.Hint="Notes / Reference Details (receipt #, remarks...)"
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     Text="{Binding DonationRemarks, UpdateSourceTrigger=PropertyChanged}"
+                                     TextWrapping="Wrap"
+                                     AcceptsReturn="True"
+                                     Height="60"
+                                     FontSize="12"
+                                     Margin="0,0,0,14"/>
+
+                            <!-- Proof Attachment (Optional) -->
+                            <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="12,10">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                        <TextBlock Text="PROOF ATTACHMENT (OPTIONAL)" FontSize="10" FontWeight="Bold" Foreground="#64748B"/>
+                                        <TextBlock Text="{Binding ProofFileName, TargetNullValue='No file chosen (Receipt / Photo)'}" FontSize="11" Foreground="#334155" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1"
+                                            Command="{Binding BrowseProofCommand}"
+                                            Style="{StaticResource MaterialDesignOutlinedButton}"
+                                            BorderBrush="#CBD5E1" Foreground="#475569"
+                                            Height="32" Padding="10,0" FontSize="11"
+                                            VerticalAlignment="Center">
+                                        <StackPanel Orientation="Horizontal">
+                                            <materialDesign:PackIcon Kind="FileDocumentOutline" Width="14" Height="14" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text="Browse" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- Modal Footer -->
+                    <Border Grid.Row="2" BorderBrush="#F1F5F9" BorderThickness="0,1,0,0" Padding="24,14" Background="#F8FAFC" CornerRadius="0,0,16,16">
+                        <Grid>
+                            <Button Style="{StaticResource MaterialDesignFlatButton}"
+                                    Content="Cancel"
+                                    Foreground="#64748B"
+                                    FontWeight="SemiBold"
+                                    Height="38"
+                                    HorizontalAlignment="Left"
+                                    Command="{Binding CloseRecordDonationModalCommand}"/>
+
+                            <Button Style="{StaticResource MaterialDesignRaisedButton}"
+                                    Background="#15803D" BorderBrush="#15803D" Foreground="White"
+                                    Height="38" Padding="20,0"
+                                    FontWeight="Bold"
+                                    HorizontalAlignment="Right"
+                                    materialDesign:ButtonAssist.CornerRadius="6"
+                                    Command="{Binding SaveDonationCommand}">
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon Kind="CheckCircleOutline" Width="18" Height="18" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Post Donation to Ledger" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
                         </Grid>
                     </Border>
                 </Grid>

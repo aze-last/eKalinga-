@@ -208,14 +208,21 @@ namespace AttendanceShiftingManagement.ViewModels
             }, _ => !IsBusy);
             _closeEnrollmentPanelCommand = new RelayCommand(_ => IsEnrollmentPanelOpen = false);
             _confirmEnrollmentCommand = new RelayCommand(async param => await ConfirmEnrollmentAsync(param), _ => !IsBusy && SelectedProjectToEnroll != null);
-            _openFullProfileCommand = new RelayCommand(_ =>
+            _openFullProfileCommand = new RelayCommand(param =>
             {
+                if (param is MasterListBeneficiary ben)
+                {
+                    SelectedApprovedBeneficiary = ben;
+                }
                 if (IsOnboardingOpen && OnboardingStep == 3)
                 {
                     OnboardingStep = 4;
                 }
-                IsFullProfileOpen = true;
-            }, _ => SelectedBeneficiary != null);
+                if (SelectedBeneficiary != null)
+                {
+                    IsFullProfileOpen = true;
+                }
+            }, param => SelectedBeneficiary != null || param is MasterListBeneficiary);
             _closeFullProfileCommand = new RelayCommand(_ => IsFullProfileOpen = false);
 
             _openOnboardingCommand = new RelayCommand(_ => OpenOnboarding());
@@ -433,6 +440,9 @@ namespace AttendanceShiftingManagement.ViewModels
         }
 
         public ObservableCollection<BeneficiaryAssistanceLedgerEntry> SelectedBeneficiaryHistory => _selectedBeneficiaryHistory;
+        public decimal TotalBenefitsReceived => _selectedBeneficiaryHistory.Sum(h => h.Amount);
+        public string TotalBenefitsReceivedFormatted => $"₱{TotalBenefitsReceived:N2}";
+        public int TotalClaimsCount => _selectedBeneficiaryHistory.Count;
 
         public string ScannerInput
         {
@@ -1020,6 +1030,9 @@ namespace AttendanceShiftingManagement.ViewModels
                 if (SetProperty(ref _selectedBeneficiary, value))
                 {
                     _selectedBeneficiaryHistory.Clear();
+                    OnPropertyChanged(nameof(TotalBenefitsReceived));
+                    OnPropertyChanged(nameof(TotalBenefitsReceivedFormatted));
+                    OnPropertyChanged(nameof(TotalClaimsCount));
                     OnPropertyChanged(nameof(HistoryEmptyStateVisibility));
                     _viewHistoryCommand.RaiseCanExecuteChanged();
                     _printDigitalIdCommand.RaiseCanExecuteChanged();
@@ -1736,6 +1749,9 @@ namespace AttendanceShiftingManagement.ViewModels
             finally
             {
                 IsHistoryLoading = false;
+                OnPropertyChanged(nameof(TotalBenefitsReceived));
+                OnPropertyChanged(nameof(TotalBenefitsReceivedFormatted));
+                OnPropertyChanged(nameof(TotalClaimsCount));
                 OnPropertyChanged(nameof(HistoryEmptyStateVisibility));
             }
         }

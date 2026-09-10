@@ -3741,6 +3741,7 @@ namespace AttendanceShiftingManagement.ViewModels
             // Persist whatever the operator ticked and, when items are still missing, tag the
             // membership so the UNRELEASED / UNCLAIMED card shows the reason.
             _ = SaveAndAnnotateMissingRequirementsAsync();
+            RequestScannerFocus?.Invoke();
         }
 
         private async Task SaveAndAnnotateMissingRequirementsAsync()

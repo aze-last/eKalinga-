@@ -437,7 +437,7 @@ namespace AttendanceShiftingManagement.Services
                 UpdatedAt = DateTime.Now
             };
 
-            if (remoteGeneratedId.HasValue)
+            if (remoteGeneratedId.HasValue && !await _context.CashForWorkBudgets.AnyAsync(b => b.Id == remoteGeneratedId.Value))
             {
                 cfwBudget.Id = remoteGeneratedId.Value;
             }
@@ -467,7 +467,7 @@ namespace AttendanceShiftingManagement.Services
                 UpdatedAt = DateTime.Now
             };
 
-            if (remoteGeneratedEventId.HasValue)
+            if (remoteGeneratedEventId.HasValue && !await _context.CashForWorkEvents.AnyAsync(e => e.Id == remoteGeneratedEventId.Value))
             {
                 cfwEvent.Id = remoteGeneratedEventId.Value;
             }
@@ -784,7 +784,7 @@ namespace AttendanceShiftingManagement.Services
                 UpdatedAt = DateTime.Now
             };
 
-            if (remoteGeneratedId.HasValue)
+            if (remoteGeneratedId.HasValue && !await _context.AyudaPrograms.AnyAsync(p => p.Id == remoteGeneratedId.Value))
             {
                 ayudaProgram.Id = remoteGeneratedId.Value;
             }
@@ -926,7 +926,7 @@ namespace AttendanceShiftingManagement.Services
                 CreatedAt = DateTime.Now
             };
 
-            if (remoteGeneratedId.HasValue)
+            if (remoteGeneratedId.HasValue && !await _context.PrivateDonations.AnyAsync(d => d.Id == remoteGeneratedId.Value))
             {
                 donation.Id = remoteGeneratedId.Value;
             }

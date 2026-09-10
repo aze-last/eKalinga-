@@ -131,11 +131,11 @@ namespace AttendanceShiftingManagement.ViewModels
         private const string AllTypeFilter = "All Categories";
         private static readonly string[] SulopBarangays = new[]
         {
-            "Balasinon", "Buguis", "Carre", "Clib", "Harada Yano",
-            "Ibo", "Inayagan", "Kiblagon", "Labon", "Lapediche",
-            "Luparan", "Mckinley", "New Cebu", "Osmeña", "Palili",
-            "Parame", "Poblacion", "Roxas", "Solongvale", "Tagolilong",
-            "Tala-o", "Talas", "Tanwalang", "Waterfall"
+            "Balasinon", "Buguis", "Carre", "Clib", "Harada Butai",
+            "Katipunan", "Kiblagon", "Labon", "Laperas", "Lapla",
+            "Litos", "Luparan", "Mckinley", "New Cebu", "Osmeña",
+            "Palili", "Parami", "Poblacion", "Roxas", "Solongvale",
+            "Tagolilong", "Talao", "Talas", "Tanwalang", "Waterfall"
         };
         private readonly User _currentUser;
 
@@ -168,6 +168,11 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly RelayCommand _selectAllFilteredEnrollmentCommand;
         private readonly RelayCommand _deselectAllEnrollmentCommand;
         private readonly RelayCommand _openNewDonationProjectCommand;
+
+        private readonly RelayCommand _openRecordDonationModalCommand;
+        private readonly RelayCommand _closeRecordDonationModalCommand;
+        private readonly RelayCommand _saveDonationCommand;
+
 
         // Walkthrough Tour Commands & Fields
         private readonly RelayCommand _openOnboardingCommand;
@@ -805,6 +810,176 @@ namespace AttendanceShiftingManagement.ViewModels
             }
         }
 
+        
+        private bool _isDonationModalOpen;
+        public bool IsDonationModalOpen
+        {
+            get => _isDonationModalOpen;
+            private set
+            {
+                if (SetProperty(ref _isDonationModalOpen, value))
+                {
+                    OnPropertyChanged(nameof(IsAnyOverlayOpen));
+                    OnPropertyChanged(nameof(DonationModalVisibility));
+                    OnPropertyChanged(nameof(IsStandardModalOpen));
+                }
+            }
+        }
+
+        public Visibility DonationModalVisibility => IsDonationModalOpen ? Visibility.Visible : Visibility.Collapsed;
+
+        private string? _donationModalErrorMessage;
+        public string? DonationModalErrorMessage
+        {
+            get => _donationModalErrorMessage;
+            set
+            {
+                if (SetProperty(ref _donationModalErrorMessage, value))
+                {
+                    OnPropertyChanged(nameof(HasDonationModalError));
+                }
+            }
+        }
+
+        public bool HasDonationModalError => !string.IsNullOrWhiteSpace(DonationModalErrorMessage);
+
+        private string _goodsEstimatedValueText = string.Empty;
+        public string GoodsEstimatedValueText
+        {
+            get => _goodsEstimatedValueText;
+            set => SetProperty(ref _goodsEstimatedValueText, value);
+        }
+
+        public ObservableCollection<string> DonationUnits { get; } = new() { "Sacks", "Boxes", "Kits", "Pieces", "Packs" };
+
+        public void OpenRecordDonationModal()
+        {
+            if (IsBusy) return;
+            DonationModalErrorMessage = null;
+            ResetDonationForm();
+            IsDonationModalOpen = true;
+        }
+
+        public void CloseRecordDonationModal()
+        {
+            IsDonationModalOpen = false;
+            DonationModalErrorMessage = null;
+        }
+
+        public async Task SaveDonationAsync()
+        {
+            if (IsBusy) return;
+            DonationModalErrorMessage = null;
+
+            if (string.IsNullOrWhiteSpace(DonorName))
+            {
+                DonationModalErrorMessage = "Donor name is required.";
+                return;
+            }
+
+            decimal amount = 0m;
+            string? itemName = null;
+            decimal? quantity = null;
+            string? unitOfMeasure = null;
+            DonationType donationType = DonationType.Cash;
+
+            if (IsCashDonation)
+            {
+                if (!TryParseAmount(DonationAmountText, out amount) || amount <= 0)
+                {
+                    DonationModalErrorMessage = "Enter a valid cash donation amount greater than zero.";
+                    return;
+                }
+            }
+            else
+            {
+                donationType = DonationType.Goods;
+                itemName = NormalizeNullable(DonationItemName);
+                if (string.IsNullOrWhiteSpace(itemName))
+                {
+                    DonationModalErrorMessage = "Please enter the item name for the goods donation.";
+                    return;
+                }
+
+                if (!TryParseAmount(DonationQuantityText, out var qty) || qty <= 0)
+                {
+                    DonationModalErrorMessage = "Enter a valid donation quantity greater than zero.";
+                    return;
+                }
+                quantity = qty;
+
+                unitOfMeasure = NormalizeNullable(DonationUnitOfMeasure);
+                if (string.IsNullOrWhiteSpace(unitOfMeasure))
+                {
+                    DonationModalErrorMessage = "Please specify the unit of measure (e.g. Sacks, Boxes).";
+                    return;
+                }
+
+                if (!string.IsNullOrWhiteSpace(GoodsEstimatedValueText) && TryParseAmount(GoodsEstimatedValueText, out var estVal))
+                {
+                    amount = estVal;
+                }
+                else if (!string.IsNullOrWhiteSpace(DonationAmountText) && TryParseAmount(DonationAmountText, out var altEstVal))
+                {
+                    amount = altEstVal;
+                }
+            }
+
+            IsBusy = true;
+            SetNeutralStatus("Posting donation to immutable ledger...");
+
+            try
+            {
+                await using var context = new LocalDbContext();
+                var budgetService = new BudgetManagementService(context);
+
+                var req = new PrivateDonationRequest(
+                    SelectedDonorType,
+                    DonorName,
+                    donationType,
+                    amount,
+                    itemName,
+                    quantity,
+                    unitOfMeasure,
+                    DonationDateReceived,
+                    NormalizeNullable(DonationReferenceNumber),
+                    NormalizeNullable(DonationRemarks),
+                    SelectedProofType,
+                    NormalizeNullable(ProofReferenceNumber),
+                    NormalizeNullable(ProofFilePath)
+                );
+
+                var result = await budgetService.RecordPrivateDonationAsync(req, _currentUser.Id);
+                if (!result.IsSuccess)
+                {
+                    DonationModalErrorMessage = result.Message;
+                    SetErrorStatus(result.Message);
+                    return;
+                }
+
+                await LoadDonationsAsync();
+                await LoadOverviewAsync();
+                await LoadLedgerAsync();
+                await LoadBudgetsViewAsync();
+                RefreshFundingSourceOptions();
+
+                CloseRecordDonationModal();
+                SetSuccessStatus(donationType == DonationType.Cash
+                    ? $"Private cash donation of ₱{amount:N2} from {DonorName} posted to ledger."
+                    : $"Private goods donation ({quantity} {unitOfMeasure} of {itemName}) from {DonorName} posted to ledger.");
+            }
+            catch (Exception ex)
+            {
+                var message = ex.InnerException != null ? $"{ex.Message} ({ex.InnerException.Message})" : ex.Message;
+                DonationModalErrorMessage = message;
+                SetErrorStatus($"Failed to record donation: {message}");
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
         private void OpenNewDonationProjectPanel()
         {
             if (IsBusy) return;
@@ -820,29 +995,10 @@ namespace AttendanceShiftingManagement.ViewModels
 
             ResetProjectCreationForm();
             ResetDonationForm();
+            IsNewDonationMode = false;
 
             RefreshFundingSourceOptions();
-            var newDonationOpt = FundingSourceOptions.FirstOrDefault(o => o.IsNewDonation);
-            if (newDonationOpt != null)
-            {
-                SelectedFundingSourceOption = newDonationOpt;
-            }
-            else
-            {
-                IsNewDonationMode = true;
-                NewProjectSourceDonationId = null;
-                NewProjectSourceGGMSBudgetId = null;
-                NewProjectSourceProjectDetailsId = null;
-                NewProjectSourceProjectBudget = null;
-                NewProjectSourceDescription = "Source: New Private Donation (recorded on confirm)";
-                SourceAllocatedAmount = 0;
-                SourceDisbursedAmount = 0;
-                SourceAvailableBalance = 0;
-                SourceCode = "NEW DONATION";
-                SourceTitle = "New Private Donation";
-                SourceSubtitle = "Enter donation details below";
-                SourceFundingType = "Private Donation";
-            }
+            SelectedFundingSourceOption = FundingSourceOptions.FirstOrDefault(o => !o.IsNewDonation) ?? FundingSourceOptions.FirstOrDefault();
 
             SetActivePanel(BudgetWorkspacePanel.ProjectCreation);
             IsProjectCreationPanelOpen = true;
@@ -1669,6 +1825,12 @@ namespace AttendanceShiftingManagement.ViewModels
 
             _openProjectCreationPanelCommand = new RelayCommand(source => OpenProjectCreationPanel(source), _ => !IsBusy);
             _openNewDonationProjectCommand = new RelayCommand(_ => OpenNewDonationProjectPanel(), _ => !IsBusy && !IsProjectCreationPanelOpen);
+            _openRecordDonationModalCommand = new RelayCommand(_ => OpenRecordDonationModal(), _ => !IsBusy);
+            _closeRecordDonationModalCommand = new RelayCommand(_ => CloseRecordDonationModal());
+            _saveDonationCommand = new RelayCommand(async _ => await SaveDonationAsync(), _ => !IsBusy);
+            SelectCashDonationCommand = new RelayCommand(_ => IsCashDonation = true);
+            SelectGoodsDonationCommand = new RelayCommand(_ => IsGoodsDonation = true);
+
             _closeProjectCreationPanelCommand = new RelayCommand(_ => CloseProjectCreationPanel());
             _confirmCreateProjectCommand = new RelayCommand(async _ => await ConfirmCreateProjectAsync(), _ => !IsBusy && CanConfirmCreateProject());
             _nextProjectWizardStepCommand = new RelayCommand(_ => NextProjectWizardStep());
@@ -2013,7 +2175,7 @@ namespace AttendanceShiftingManagement.ViewModels
             }
         }
 
-        public bool IsStandardModalOpen => _activePanel == BudgetWorkspacePanel.Ledger || IsProjectCreationPanelOpen || IsEditProjectPanelOpen || IsBeneficiaryPickerOpen || IsHouseholdRecordsOpen;
+        public bool IsStandardModalOpen => _activePanel == BudgetWorkspacePanel.Ledger || IsProjectCreationPanelOpen || IsEditProjectPanelOpen || IsBeneficiaryPickerOpen || IsHouseholdRecordsOpen || IsDonationModalOpen;
 
         public ObservableCollection<PrivateDonationDonorType> DonorTypes { get; }
         public ObservableCollection<DonationProofType> ProofTypes { get; }
@@ -2030,6 +2192,12 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand RefreshCommand => _refreshCommand;
         public ICommand SyncGovernmentBudgetCommand => _syncGovernmentBudgetCommand;
         public ICommand OpenNewDonationProjectCommand => _openNewDonationProjectCommand;
+        public ICommand OpenRecordDonationModalCommand => _openRecordDonationModalCommand;
+        public ICommand CloseRecordDonationModalCommand => _closeRecordDonationModalCommand;
+        public ICommand SaveDonationCommand => _saveDonationCommand;
+        public ICommand SelectCashDonationCommand { get; }
+        public ICommand SelectGoodsDonationCommand { get; }
+
         public ICommand ClosePanelCommand => _closePanelCommand;
         public ICommand CloseLedgerHistoryCardCommand => _closeLedgerHistoryCardCommand;
         public ICommand ClearSelectedBudgetCommand => _clearSelectedBudgetCommand;
@@ -3392,10 +3560,32 @@ namespace AttendanceShiftingManagement.ViewModels
                 var notNullExp = System.Linq.Expressions.Expression.NotEqual(addressProp, System.Linq.Expressions.Expression.Constant(null, typeof(string)));
                 var containsMethod = typeof(string).GetMethod(nameof(string.Contains), new[] { typeof(string) })!;
 
-                System.Linq.Expressions.Expression? orExp = null;
+                var searchTerms = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 foreach (var brgy in targetBarangays)
                 {
-                    var call = System.Linq.Expressions.Expression.Call(addressProp, containsMethod, System.Linq.Expressions.Expression.Constant(brgy, typeof(string)));
+                    searchTerms.Add(brgy);
+                    if (brgy.Equals("Osmeña", StringComparison.OrdinalIgnoreCase))
+                    {
+                        searchTerms.Add("Osme");
+                    }
+                    else if (brgy.Equals("Talao", StringComparison.OrdinalIgnoreCase))
+                    {
+                        searchTerms.Add("Tala-o");
+                    }
+                    else if (brgy.Equals("Harada Butai", StringComparison.OrdinalIgnoreCase))
+                    {
+                        searchTerms.Add("Harada Yano");
+                    }
+                    else if (brgy.Equals("Parami", StringComparison.OrdinalIgnoreCase))
+                    {
+                        searchTerms.Add("Parame");
+                    }
+                }
+
+                System.Linq.Expressions.Expression? orExp = null;
+                foreach (var term in searchTerms)
+                {
+                    var call = System.Linq.Expressions.Expression.Call(addressProp, containsMethod, System.Linq.Expressions.Expression.Constant(term, typeof(string)));
                     orExp = orExp == null ? call : System.Linq.Expressions.Expression.OrElse(orExp, call);
                 }
 

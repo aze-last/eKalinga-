@@ -41,6 +41,15 @@ namespace AttendanceShiftingManagement.Views
                 }
             };
 
+            ApprovedDataGrid.KeyDown += (s, e) =>
+            {
+                if (e.Key == Key.Enter && _viewModel.SelectedBeneficiary != null)
+                {
+                    _viewModel.OpenFullProfileCommand.Execute(_viewModel.SelectedBeneficiary);
+                    e.Handled = true;
+                }
+            };
+
             ViewFullProfileButton.Click += (s, e) =>
             {
                 if (_viewModel.IsOnboardingOpen && _viewModel.OnboardingStep == 3)
@@ -245,12 +254,21 @@ namespace AttendanceShiftingManagement.Views
             }
         }
 
+        private void DataGridRow_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is DataGridRow row && row.Item is MasterListBeneficiary beneficiary)
+            {
+                _viewModel.SelectedApprovedBeneficiary = beneficiary;
+                _viewModel.OpenFullProfileCommand.Execute(beneficiary);
+            }
+        }
+
         private void Grid_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
             var grid = sender as DataGrid;
             if (grid?.SelectedItem == null) return;
 
-            _viewModel.OpenFullProfileCommand.Execute(null);
+            _viewModel.OpenFullProfileCommand.Execute(grid.SelectedItem);
         }
 
         private void Scanner_QrCodeScanned(string payload)
