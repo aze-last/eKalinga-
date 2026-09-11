@@ -69,6 +69,7 @@
                     <!-- Primary Action Button: Log Walk-in Request -->
                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                         <Button Command="{Binding OpenIntakeModalCommand}"
+                                IsEnabled="{Binding IsIntakeAvailable}"
                                 Height="42" Padding="18,0"
                                 Background="{StaticResource BrandAccentBrush}"
                                 BorderBrush="{StaticResource BrandAccentBrush}"
@@ -81,6 +82,14 @@
                         </Button>
                     </StackPanel>
                 </Grid>
+
+                <!-- ACTIVE CONNECTION BANNER: which database this list reads from -->
+                <Border Margin="0,0,0,16" Background="White" CornerRadius="12" BorderThickness="1" BorderBrush="#E2E8F0" Padding="14,10">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Ellipse Width="10" Height="10" Fill="{Binding ConnectionBannerBrush}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <TextBlock Text="{Binding ConnectionBannerText}" FontSize="12" FontWeight="SemiBold" Foreground="{Binding ConnectionBannerBrush}" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Border>
 
                 <!-- METRIC KPI CARDS -->
                 <Grid Margin="0,0,0,20">

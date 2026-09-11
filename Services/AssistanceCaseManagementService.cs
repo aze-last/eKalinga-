@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AttendanceShiftingManagement.Services
 {
-    public sealed record AssistanceCaseOperationResult(bool IsSuccess, string Message, int? AssistanceCaseId = null);
+    public sealed record AssistanceCaseOperationResult(bool IsSuccess, string Message, int? AssistanceCaseId = null, bool IsConcurrencyConflict = false);
 
     public sealed record AssistanceCaseUpsertRequest(
         int? HouseholdId,
@@ -55,33 +55,55 @@ namespace AttendanceShiftingManagement.Services
                 resolvedBudgetId = anyActive?.Id;
             }
 
-            var assistanceCase = new AssistanceCase
+            // Guardrail: two PCs intaking at the same moment can generate the same
+            // CaseNumber (Max + 1 race). case_number is UNIQUE in the DB, so
+            // retry with a freshly generated number instead of crashing.
+            const int maxCaseNumberAttempts = 3;
+            AssistanceCase? assistanceCase = null;
+            for (var attempt = 0; attempt < maxCaseNumberAttempts; attempt++)
             {
-                CaseNumber = await GenerateCaseNumberAsync(),
-                HouseholdId = null,
-                HouseholdMemberId = null,
-                ValidatedBeneficiaryName = validatedBeneficiaryName,
-                ValidatedBeneficiaryId = NormalizeNullable(request.ValidatedBeneficiaryId),
-                ValidatedCivilRegistryId = NormalizeNullable(request.ValidatedCivilRegistryId),
-                AssistanceType = NormalizeRequired(request.AssistanceType),
-                ReleaseKind = request.ReleaseKind,
-                Priority = request.Priority,
-                Status = AssistanceCaseStatus.Pending,
-                RequestedAmount = request.AssistanceAmount,
-                ApprovedAmount = null, // Approved amount is set during approval, not creation
-                RequestedOn = request.RequestedOn,
-                ScheduledReleaseDate = request.ScheduledReleaseDate,
-                Summary = NormalizeNullable(request.Summary),
-                Notes = null,
-                AyudaProgramId = request.AyudaProgramId,
-                AssistanceCaseBudgetId = resolvedBudgetId,
-                CreatedByUserId = actedByUserId,
-                CreatedAt = DateTime.Now,
-                UpdatedAt = DateTime.Now
-            };
+                var candidate = new AssistanceCase
+                {
+                    CaseNumber = await GenerateCaseNumberAsync(),
+                    HouseholdId = null,
+                    HouseholdMemberId = null,
+                    ValidatedBeneficiaryName = validatedBeneficiaryName,
+                    ValidatedBeneficiaryId = NormalizeNullable(request.ValidatedBeneficiaryId),
+                    ValidatedCivilRegistryId = NormalizeNullable(request.ValidatedCivilRegistryId),
+                    AssistanceType = NormalizeRequired(request.AssistanceType),
+                    ReleaseKind = request.ReleaseKind,
+                    Priority = request.Priority,
+                    Status = AssistanceCaseStatus.Pending,
+                    RequestedAmount = request.AssistanceAmount,
+                    ApprovedAmount = null, // Approved amount is set during approval, not creation
+                    RequestedOn = request.RequestedOn,
+                    ScheduledReleaseDate = request.ScheduledReleaseDate,
+                    Summary = NormalizeNullable(request.Summary),
+                    Notes = null,
+                    AyudaProgramId = request.AyudaProgramId,
+                    AssistanceCaseBudgetId = resolvedBudgetId,
+                    CreatedByUserId = actedByUserId,
+                    CreatedAt = DateTime.Now,
+                    UpdatedAt = DateTime.Now
+                };
 
-            _context.AssistanceCases.Add(assistanceCase);
-            await _context.SaveChangesAsync();
+                _context.AssistanceCases.Add(candidate);
+                try
+                {
+                    await _context.SaveChangesAsync();
+                    assistanceCase = candidate;
+                    break;
+                }
+                catch (DbUpdateException ex) when (IsCaseNumberConflict(ex) && attempt < maxCaseNumberAttempts - 1)
+                {
+                    _context.Entry(candidate).State = EntityState.Detached;
+                }
+            }
+
+            if (assistanceCase == null)
+            {
+                return new AssistanceCaseOperationResult(false, "Could not assign a unique case number after 3 attempts. Please retry.");
+            }
 
             await _auditService.LogActivityAsync(
                 actedByUserId,
@@ -96,7 +118,7 @@ namespace AttendanceShiftingManagement.Services
                 assistanceCase.Id);
         }
 
-        public async Task<AssistanceCaseOperationResult> UpdateAsync(int assistanceCaseId, AssistanceCaseUpsertRequest request, int actedByUserId)
+        public async Task<AssistanceCaseOperationResult> UpdateAsync(int assistanceCaseId, AssistanceCaseUpsertRequest request, int actedByUserId, DateTime? expectedUpdatedAt = null)
         {
             var assistanceCase = await _context.AssistanceCases
                 .FirstOrDefaultAsync(item => item.Id == assistanceCaseId);
@@ -104,6 +126,12 @@ namespace AttendanceShiftingManagement.Services
             if (assistanceCase == null)
             {
                 return new AssistanceCaseOperationResult(false, "The selected aid request no longer exists.");
+            }
+
+            // Guardrail: another PC may have changed this row since the UI loaded it.
+            if (expectedUpdatedAt.HasValue && assistanceCase.UpdatedAt != expectedUpdatedAt.Value)
+            {
+                return StaleConflictResult();
             }
 
             if (assistanceCase.Status is AssistanceCaseStatus.Released or AssistanceCaseStatus.Closed or AssistanceCaseStatus.Cancelled or AssistanceCaseStatus.Rejected)
@@ -155,8 +183,29 @@ namespace AttendanceShiftingManagement.Services
                 assistanceCase.Id);
         }
 
-        public async Task<AssistanceCaseOperationResult> ChangeStatusAsync(int assistanceCaseId, AssistanceCaseStatus targetStatus, int actedByUserId, string? resolutionNotes, int? targetBudgetId = null)
+        public async Task<AssistanceCaseOperationResult> ChangeStatusAsync(int assistanceCaseId, AssistanceCaseStatus targetStatus, int actedByUserId, string? resolutionNotes, int? targetBudgetId = null, DateTime? expectedUpdatedAt = null)
         {
+            // Guardrail: check BEFORE the remote-release branch below, so a stale
+            // local view never triggers a remote write that the local then rejects.
+            if (expectedUpdatedAt.HasValue)
+            {
+                var currentStamp = await _context.AssistanceCases
+                    .AsNoTracking()
+                    .Where(item => item.Id == assistanceCaseId)
+                    .Select(item => (DateTime?)item.UpdatedAt)
+                    .FirstOrDefaultAsync();
+
+                if (currentStamp == null)
+                {
+                    return new AssistanceCaseOperationResult(false, "The selected aid request no longer exists.");
+                }
+
+                if (currentStamp.Value != expectedUpdatedAt.Value)
+                {
+                    return StaleConflictResult();
+                }
+            }
+
             if (targetStatus == AssistanceCaseStatus.Released && RemoteWriteExecutionService.ShouldRouteToRemote(_context))
             {
                 var localCase = await _context.AssistanceCases
@@ -603,10 +652,37 @@ namespace AttendanceShiftingManagement.Services
         private async Task<string> GenerateCaseNumberAsync()
         {
             var prefix = $"AR-{DateTime.Now:yyyyMMdd}";
-            var nextSequence = await _context.AssistanceCases
-                .CountAsync(item => item.CaseNumber.StartsWith(prefix)) + 1;
+            // Max-suffix (not Count + 1): hard-deleted rows would otherwise make
+            // Count reuse an existing number. Still racy across PCs — the caller
+            // retries on UNIQUE violation.
+            var existingNumbers = await _context.AssistanceCases
+                .Where(item => item.CaseNumber.StartsWith(prefix))
+                .Select(item => item.CaseNumber)
+                .ToListAsync();
+
+            var nextSequence = 1;
+            foreach (var caseNumber in existingNumbers)
+            {
+                var separator = caseNumber.LastIndexOf('-');
+                if (separator >= 0
+                    && int.TryParse(caseNumber[(separator + 1)..], out var sequence)
+                    && sequence >= nextSequence)
+                {
+                    nextSequence = sequence + 1;
+                }
+            }
 
             return $"{prefix}-{nextSequence:0000}";
+        }
+
+        private static bool IsCaseNumberConflict(DbUpdateException ex)
+        {
+            var message = $"{ex.Message} {ex.InnerException?.Message}";
+            return message.Contains("Duplicate entry", StringComparison.OrdinalIgnoreCase)
+                || message.Contains("1062", StringComparison.OrdinalIgnoreCase)
+                || message.Contains("UNIQUE constraint failed", StringComparison.OrdinalIgnoreCase)
+                || message.Contains("IX_assistance_cases_case_number", StringComparison.OrdinalIgnoreCase)
+                || message.Contains("case_number", StringComparison.OrdinalIgnoreCase);
         }
 
         private static string NormalizeRequired(string value)
@@ -621,25 +697,25 @@ namespace AttendanceShiftingManagement.Services
             return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
         }
 
-        public async Task<AssistanceCaseOperationResult> RejectCaseAsync(int assistanceCaseId, string reason, int actedByUserId)
+        public async Task<AssistanceCaseOperationResult> RejectCaseAsync(int assistanceCaseId, string reason, int actedByUserId, DateTime? expectedUpdatedAt = null)
         {
             if (string.IsNullOrWhiteSpace(reason))
             {
                 return new AssistanceCaseOperationResult(false, "Resolution notes (reason) are required when rejecting a case.");
             }
-            return await ChangeStatusAsync(assistanceCaseId, AssistanceCaseStatus.Rejected, actedByUserId, reason);
+            return await ChangeStatusAsync(assistanceCaseId, AssistanceCaseStatus.Rejected, actedByUserId, reason, null, expectedUpdatedAt);
         }
 
-        public async Task<AssistanceCaseOperationResult> CancelCaseAsync(int assistanceCaseId, string reason, int actedByUserId)
+        public async Task<AssistanceCaseOperationResult> CancelCaseAsync(int assistanceCaseId, string reason, int actedByUserId, DateTime? expectedUpdatedAt = null)
         {
             if (string.IsNullOrWhiteSpace(reason))
             {
                 return new AssistanceCaseOperationResult(false, "Resolution notes (reason) are required when cancelling a case.");
             }
-            return await ChangeStatusAsync(assistanceCaseId, AssistanceCaseStatus.Cancelled, actedByUserId, reason);
+            return await ChangeStatusAsync(assistanceCaseId, AssistanceCaseStatus.Cancelled, actedByUserId, reason, null, expectedUpdatedAt);
         }
 
-        public async Task<AssistanceCaseOperationResult> FastTrackReleaseAsync(int assistanceCaseId, decimal approvedAmount, int actedByUserId, string? summary = null, int? targetBudgetId = null)
+        public async Task<AssistanceCaseOperationResult> FastTrackReleaseAsync(int assistanceCaseId, decimal approvedAmount, int actedByUserId, string? summary = null, int? targetBudgetId = null, DateTime? expectedUpdatedAt = null)
         {
             var assistanceCase = await _context.AssistanceCases
                 .FirstOrDefaultAsync(item => item.Id == assistanceCaseId);
@@ -647,6 +723,12 @@ namespace AttendanceShiftingManagement.Services
             if (assistanceCase == null)
             {
                 return new AssistanceCaseOperationResult(false, "The selected aid request no longer exists.");
+            }
+
+            // Guardrail: fail before mutating anything locally.
+            if (expectedUpdatedAt.HasValue && assistanceCase.UpdatedAt != expectedUpdatedAt.Value)
+            {
+                return StaleConflictResult();
             }
 
             if (targetBudgetId.HasValue)
@@ -676,7 +758,16 @@ namespace AttendanceShiftingManagement.Services
             await _context.SaveChangesAsync();
 
             // Delegate to the main release pipeline now that it's "Approved" and has an amount
-            return await ChangeStatusAsync(assistanceCaseId, AssistanceCaseStatus.Released, actedByUserId, null, targetBudgetId);
+            return await ChangeStatusAsync(assistanceCaseId, AssistanceCaseStatus.Released, actedByUserId, null, targetBudgetId, expectedUpdatedAt);
+        }
+
+        private static AssistanceCaseOperationResult StaleConflictResult()
+        {
+            return new AssistanceCaseOperationResult(
+                false,
+                "Another user updated this request after you opened it. Please review the latest details and try again.",
+                null,
+                true);
         }
     }
 }

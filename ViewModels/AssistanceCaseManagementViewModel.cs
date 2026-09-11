@@ -10,6 +10,7 @@ using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using System.Windows.Media;
 
 namespace AttendanceShiftingManagement.ViewModels
 {
@@ -154,6 +155,10 @@ namespace AttendanceShiftingManagement.ViewModels
 
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public DateTime RequestedOn { get; set; } = DateTime.Today;
+        // Guardrail: snapshot of the row version when the list was loaded. Passed back
+        // to the service on every mutation so a concurrent edit on another PC is
+        // rejected instead of silently overwritten.
+        public DateTime UpdatedAt { get; set; } = DateTime.Now;
         public string DepartmentName { get; set; } = "MSWDO";
         public string HandlerName { get; set; } = "Unassigned";
 
@@ -280,6 +285,15 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly AuditService _auditService;
 
         private bool _isLoading;
+
+        // Active-connection banner (Guardrail 3): which DB this list is reading from,
+        // and whether new intake is allowed right now.
+        private string _activeConnectionPreset = "Local";
+        private string _connectionBannerText = "Checking connection…";
+        private Brush _connectionBannerBrush = Brushes.Gray;
+        private bool _isIntakeAvailable = true;
+        private string _intakeBlockedReason = string.Empty;
+
         private string _searchText = string.Empty;
         private string _selectedStatusFilter = "ALL";
         private string _selectedCategoryFilter = "ALL";
@@ -447,6 +461,39 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             get => _isLoading;
             set => SetProperty(ref _isLoading, value);
+        }
+
+        // Which connection preset this page is currently reading from (Local / LAN / Remote).
+        public string ActiveConnectionPreset
+        {
+            get => _activeConnectionPreset;
+            private set => SetProperty(ref _activeConnectionPreset, value);
+        }
+
+        public string ConnectionBannerText
+        {
+            get => _connectionBannerText;
+            private set => SetProperty(ref _connectionBannerText, value);
+        }
+
+        public Brush ConnectionBannerBrush
+        {
+            get => _connectionBannerBrush;
+            private set => SetProperty(ref _connectionBannerBrush, value);
+        }
+
+        // False when the shared database is unreachable: the intake button is
+        // disabled and OpenIntakeModal refuses to open (Guardrail 3).
+        public bool IsIntakeAvailable
+        {
+            get => _isIntakeAvailable;
+            private set => SetProperty(ref _isIntakeAvailable, value);
+        }
+
+        public string IntakeBlockedReason
+        {
+            get => _intakeBlockedReason;
+            private set => SetProperty(ref _intakeBlockedReason, value);
         }
 
         public string SearchText
@@ -939,8 +986,69 @@ namespace AttendanceShiftingManagement.ViewModels
             }
             finally
             {
+                // Always refresh the banner, even when the list load itself failed:
+                // a failed load is itself evidence the database may be unreachable.
+                await RefreshConnectionBannerAsync();
                 IsLoading = false;
             }
+        }
+
+        // Guardrail 3: show which database this list comes from and block new
+        // intake while a shared (LAN/Remote) database is unreachable. Never throws.
+        public async Task RefreshConnectionBannerAsync()
+        {
+            try
+            {
+                var settings = ConnectionSettingsService.Load();
+                var presetKey = string.IsNullOrWhiteSpace(settings.SelectedPreset)
+                    ? ConnectionSettingsService.LocalPresetKey
+                    : settings.SelectedPreset.Trim();
+                var preset = settings.GetPreset(presetKey);
+
+                ActiveConnectionPreset = string.IsNullOrWhiteSpace(preset.DisplayName)
+                    ? presetKey.ToUpperInvariant()
+                    : preset.DisplayName.Trim();
+
+                if (string.Equals(presetKey, ConnectionSettingsService.LocalPresetKey, StringComparison.OrdinalIgnoreCase))
+                {
+                    ConnectionBannerBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#D97706"));
+                    ConnectionBannerText = $"SQLITE · SINGLE PC ONLY — stays on this machine (unit {Environment.MachineName})";
+                    IsIntakeAvailable = true;
+                    IntakeBlockedReason = string.Empty;
+                    return;
+                }
+
+                if (!ConnectionSettingsService.IsPresetConfigured(preset))
+                {
+                    MarkIntakeBlocked($"{presetKey} is not configured yet — ask the admin to set the connection first.");
+                    return;
+                }
+
+                var result = await ConnectionSettingsService.TestConnectionAsync(preset, timeoutSeconds: 3);
+                if (result.IsSuccess)
+                {
+                    ConnectionBannerBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#15803D"));
+                    ConnectionBannerText = $"● {ActiveConnectionPreset} · {preset.Server} · unit {Environment.MachineName} · updated {DateTime.Now:hh:mm tt}";
+                    IsIntakeAvailable = true;
+                    IntakeBlockedReason = string.Empty;
+                }
+                else
+                {
+                    MarkIntakeBlocked(result.Message);
+                }
+            }
+            catch
+            {
+                MarkIntakeBlocked("Could not verify the database connection — new intake paused.");
+            }
+        }
+
+        private void MarkIntakeBlocked(string reason)
+        {
+            ConnectionBannerBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#BE123C"));
+            ConnectionBannerText = $"● OFFLINE — {ActiveConnectionPreset} unreachable · new intake paused";
+            IntakeBlockedReason = reason;
+            IsIntakeAvailable = false;
         }
 
         public async Task LoadBudgetsAsync()
@@ -1308,6 +1416,16 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private void OpenIntakeModal()
         {
+            if (!IsIntakeAvailable)
+            {
+                ShowStatus(
+                    string.IsNullOrWhiteSpace(IntakeBlockedReason)
+                        ? "New intake is paused while the database is unreachable."
+                        : IntakeBlockedReason,
+                    "Error");
+                return;
+            }
+
             SelectedBeneficiaryOption = null;
             IsUnregisteredResident = false;
             BeneficiarySearchText = string.Empty;
@@ -1498,14 +1616,19 @@ namespace AttendanceShiftingManagement.ViewModels
             IsLoading = true;
             try
             {
-                var result = await _caseService.ChangeStatusAsync(SelectedRequest.Id, targetStatus, _currentUser.Id, auditReason);
+                var result = await _caseService.ChangeStatusAsync(SelectedRequest.Id, targetStatus, _currentUser.Id, auditReason, null, SelectedRequest.UpdatedAt);
                 if (result.IsSuccess)
                 {
                     SelectedRequest.Status = targetStatus;
+                    await SyncSelectedRequestStampAsync();
                     NotifySelectedRequestStateChanged();
                     ShowStatus($"Request status updated to {targetStatus}.", "Success");
                     UpdateMetrics();
                     FilterAndPaginate();
+                }
+                else if (result.IsConcurrencyConflict)
+                {
+                    await RefreshAfterStaleConflictAsync(SelectedRequest.Id, result.Message);
                 }
                 else
                 {
@@ -1522,6 +1645,36 @@ namespace AttendanceShiftingManagement.ViewModels
             }
         }
 
+        // --- Stale-write guardrail helpers ---
+        // Refreshes the selected item's row-version stamp after a successful write,
+        // so a second action in the same session is checked against current data.
+        private async Task SyncSelectedRequestStampAsync()
+        {
+            if (SelectedRequest == null) return;
+            var stamp = await _context.AssistanceCases
+                .AsNoTracking()
+                .Where(c => c.Id == SelectedRequest.Id)
+                .Select(c => (DateTime?)c.UpdatedAt)
+                .FirstOrDefaultAsync();
+            if (stamp.HasValue)
+            {
+                SelectedRequest.UpdatedAt = stamp.Value;
+            }
+        }
+
+        // Another PC changed the row since this list was loaded: reload the list
+        // and rebind the selection to the fresh item instead of overwriting.
+        private async Task RefreshAfterStaleConflictAsync(int caseId, string message)
+        {
+            ShowStatus(message, "Error");
+            await LoadRequestsAsync();
+            var fresh = Requests.FirstOrDefault(r => r.Id == caseId);
+            if (fresh != null)
+            {
+                SelectedRequest = fresh;
+            }
+        }
+
         private async Task ConfirmResolveAsync()
         {
             if (SelectedRequest == null || string.IsNullOrWhiteSpace(ResolutionSummary))
@@ -1534,7 +1687,7 @@ namespace AttendanceShiftingManagement.ViewModels
             try
             {
                 var outcomeNotes = $"[{ResolutionClassification}] {ResolutionSummary.Trim()}";
-                var result = await _caseService.ChangeStatusAsync(SelectedRequest.Id, AssistanceCaseStatus.Closed, _currentUser.Id, outcomeNotes);
+                var result = await _caseService.ChangeStatusAsync(SelectedRequest.Id, AssistanceCaseStatus.Closed, _currentUser.Id, outcomeNotes, null, SelectedRequest.UpdatedAt);
 
                 if (result.IsSuccess)
                 {
@@ -1547,12 +1700,17 @@ namespace AttendanceShiftingManagement.ViewModels
 
                     SelectedRequest.Status = AssistanceCaseStatus.Closed;
                     SelectedRequest.ResolutionNotes = outcomeNotes;
+                    await SyncSelectedRequestStampAsync();
                     NotifySelectedRequestStateChanged();
 
                     IsResolveModalOpen = false;
                     ShowStatus("Citizen request has been successfully resolved and closed.", "Success");
                     UpdateMetrics();
                     FilterAndPaginate();
+                }
+                else if (result.IsConcurrencyConflict)
+                {
+                    await RefreshAfterStaleConflictAsync(SelectedRequest.Id, result.Message);
                 }
                 else
                 {
@@ -1581,18 +1739,23 @@ namespace AttendanceShiftingManagement.ViewModels
             try
             {
                 var reason = RejectionReasonText.Trim();
-                var result = await _caseService.RejectCaseAsync(SelectedRequest.Id, reason, _currentUser.Id);
+                var result = await _caseService.RejectCaseAsync(SelectedRequest.Id, reason, _currentUser.Id, SelectedRequest.UpdatedAt);
 
                 if (result.IsSuccess)
                 {
                     SelectedRequest.Status = AssistanceCaseStatus.Rejected;
                     SelectedRequest.RejectionReason = reason;
+                    await SyncSelectedRequestStampAsync();
                     NotifySelectedRequestStateChanged();
 
                     IsRejectModalOpen = false;
                     ShowStatus("Citizen request has been marked as declined/ineligible.", "Warning");
                     UpdateMetrics();
                     FilterAndPaginate();
+                }
+                else if (result.IsConcurrencyConflict)
+                {
+                    await RefreshAfterStaleConflictAsync(SelectedRequest.Id, result.Message);
                 }
                 else
                 {
@@ -1647,7 +1810,8 @@ namespace AttendanceShiftingManagement.ViewModels
                     amount,
                     _currentUser.Id,
                     DisburseRemarks,
-                    targetBudgetId);
+                    targetBudgetId,
+                    SelectedRequest.UpdatedAt);
 
                 if (result.IsSuccess)
                 {
@@ -1660,6 +1824,7 @@ namespace AttendanceShiftingManagement.ViewModels
                         SelectedRequest.BudgetName = SelectedDisburseBudget.BudgetName;
                         SelectedRequest.BudgetCode = SelectedDisburseBudget.BudgetCode;
                     }
+                    await SyncSelectedRequestStampAsync();
                     NotifySelectedRequestStateChanged();
 
                     IsDisburseModalOpen = false;
@@ -1667,6 +1832,10 @@ namespace AttendanceShiftingManagement.ViewModels
                     ShowStatus($"Disbursement of ₱{amount:N2} recorded to {budgetName}.", "Success");
                     UpdateMetrics();
                     FilterAndPaginate();
+                }
+                else if (result.IsConcurrencyConflict)
+                {
+                    await RefreshAfterStaleConflictAsync(SelectedRequest.Id, result.Message);
                 }
                 else
                 {
@@ -1770,6 +1939,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 BudgetCode = budgetCode,
                 CreatedAt = c.CreatedAt,
                 RequestedOn = c.RequestedOn,
+                UpdatedAt = c.UpdatedAt,
                 ResolutionNotes = c.ResolutionNotes,
                 BudgetLedgerEntryId = c.BudgetLedgerEntryId,
                 AssistanceCaseBudgetId = c.AssistanceCaseBudgetId

@@ -34,6 +34,10 @@ public sealed class AssistanceCaseManagementPageBindingTests
         Assert.Contains("Command=\"{Binding CloseIntakeModalCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding CloseInspectModalCommand}\"", xaml, StringComparison.Ordinal);
 
+        // Guardrail 3: active-connection banner + intake blocked while offline
+        Assert.Contains("Text=\"{Binding ConnectionBannerText}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("IsEnabled=\"{Binding IsIntakeAvailable}\"", xaml, StringComparison.Ordinal);
+
         // Verification that public portal is NOT present per user requirement
         Assert.DoesNotContain("Public Portal", xaml, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("OpenPublicPortalCommand", xaml, StringComparison.Ordinal);
