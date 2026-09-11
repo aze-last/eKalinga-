@@ -172,4 +172,167 @@ public sealed class AssistanceCaseBudgetIntegrationTests
         });
         context.SaveChanges();
     }
+
+    [Fact]
+    public async Task AssistanceCaseManagementViewModel_LoadBudgetsAsync_AggregatesAllBudgetModuleRecords_AndReplacesDummyDefault()
+    {
+        using var context = TestDbContextFactory.CreateContext();
+        var admin = SeedAdmin(context);
+
+        // Seed dummy default budget
+        context.AssistanceCaseBudgets.Add(new AssistanceCaseBudget
+        {
+            BudgetCode = "GLOBAL_AID_BUDGET",
+            BudgetName = "General Municipal Assistance Fund",
+            IsActive = true,
+            CreatedByUserId = admin.Id,
+            CreatedAt = DateTime.Now,
+            UpdatedAt = DateTime.Now
+        });
+
+        // Seed other records across budget module
+        context.CashForWorkBudgets.Add(new CashForWorkBudget
+        {
+            BudgetCode = "CFW-2026-001",
+            BudgetName = "Community Road Clearing",
+            BudgetCap = 250000m,
+            IsActive = true,
+            CreatedByUserId = admin.Id,
+            CreatedAt = DateTime.Now,
+            UpdatedAt = DateTime.Now
+        });
+
+        context.AyudaPrograms.Add(new AyudaProgram
+        {
+            ProgramCode = "AYUDA-2026-001",
+            ProgramName = "Senior Food Pack Distribution",
+            BudgetCap = 150000m,
+            IsActive = true,
+            CreatedByUserId = admin.Id,
+            CreatedAt = DateTime.Now,
+            UpdatedAt = DateTime.Now
+        });
+
+        context.PrivateDonations.Add(new PrivateDonation
+        {
+            DonorName = "Rotary Club Foundation",
+            Amount = 50000m,
+            ProofReferenceNumber = "REF-DON-001",
+            ReceivedByUserId = admin.Id,
+            CreatedAt = DateTime.Now
+        });
+
+        context.GovernmentBudgetSnapshots.Add(new GovernmentBudgetSnapshot
+        {
+            OfficeCode = "MDRRMO-01",
+            OfficeName = "Disaster Risk Reduction Office",
+            AllocatedAmount = 500000m,
+            SourceRowId = "101",
+            CreatedAt = DateTime.Now,
+            UpdatedAt = DateTime.Now
+        });
+
+        context.SaveChanges();
+
+        var vm = new ViewModels.AssistanceCaseManagementViewModel(admin, context);
+        await vm.LoadBudgetsAsync();
+
+        // Check that AvailableBudgets contains records from all sources
+        Assert.Contains(vm.AvailableBudgets, b => b.BudgetCode == "CFW-2026-001" && b.Category == "Cash for Work Project");
+        Assert.Contains(vm.AvailableBudgets, b => b.BudgetCode == "AYUDA-2026-001" && b.Category == "Distribution Project");
+        Assert.Contains(vm.AvailableBudgets, b => b.Category == "Private Donation" && b.BudgetName == "Rotary Club Foundation");
+        Assert.Contains(vm.AvailableBudgets, b => b.BudgetCode == "GOV-MDRRMO-01" && b.Category == "Government Fund");
+
+        // The dummy General Municipal Assistance Fund must be deactivated when real budgets exist
+        Assert.DoesNotContain(vm.AvailableBudgets, b => b.BudgetCode == "GLOBAL_AID_BUDGET");
+
+        // DisplayText formatting check
+        var ayudaOption = vm.AvailableBudgets.Single(b => b.BudgetCode == "AYUDA-2026-001");
+        Assert.Contains("[Distribution Project]", ayudaOption.DisplayText);
+        Assert.Contains("Cap: ₱150,000.00", ayudaOption.DisplayText);
+    }
+
+    [Fact]
+    public async Task AssistanceCaseManagementViewModel_SubmitIntake_LinksToSelectedBudgetAndProgram()
+    {
+        using var context = TestDbContextFactory.CreateContext();
+        var admin = SeedAdmin(context);
+
+        var program = new AyudaProgram
+        {
+            ProgramCode = "AYUDA-2026-002",
+            ProgramName = "Medical Support Distribution",
+            BudgetCap = 100000m,
+            IsActive = true,
+            CreatedByUserId = admin.Id,
+            CreatedAt = DateTime.Now,
+            UpdatedAt = DateTime.Now
+        };
+        context.AyudaPrograms.Add(program);
+        context.SaveChanges();
+
+        var vm = new ViewModels.AssistanceCaseManagementViewModel(admin, context);
+        await vm.LoadBudgetsAsync();
+
+        var selectedBudget = vm.AvailableBudgets.Single(b => b.BudgetCode == "AYUDA-2026-002");
+        vm.SelectedIntakeBudget = selectedBudget;
+        vm.IntakeCitizenName = "Juan Dela Cruz";
+        vm.IntakeSubject = "Hospital Subsidy";
+        vm.IntakeDescription = "Requires prescription assistance";
+        vm.IntakeAmount = "2500";
+
+        Assert.True(vm.SubmitIntakeCommand.CanExecute(null));
+        vm.SubmitIntakeCommand.Execute(null);
+
+        // Wait brief moment for async command
+        for (int i = 0; i < 20; i++)
+        {
+            if (context.AssistanceCases.Any(c => c.Summary == "Hospital Subsidy"))
+                break;
+            await Task.Delay(50);
+        }
+
+        var created = context.AssistanceCases.FirstOrDefault(c => c.Summary == "Hospital Subsidy");
+        Assert.NotNull(created);
+        Assert.Equal("Juan Dela Cruz", created.ValidatedBeneficiaryName);
+        Assert.Equal(program.Id, created.AyudaProgramId);
+        Assert.Equal(selectedBudget.Id, created.AssistanceCaseBudgetId);
+    }
+
+    [Fact]
+    public void ClosedRequest_DisablesAllLifecycleActionsAndDisbursement()
+    {
+        using var context = TestDbContextFactory.CreateContext();
+        var admin = SeedAdmin(context);
+        var vm = new ViewModels.AssistanceCaseManagementViewModel(admin, context);
+
+        var requestItem = new ViewModels.CitizenRequestItemViewModel
+        {
+            Id = 1,
+            TicketNumber = "AR-20260910-0001",
+            CitizenName = "Pedro Penduko",
+            Status = AssistanceCaseStatus.Approved
+        };
+
+        vm.SelectedRequest = requestItem;
+        Assert.True(vm.CanResolve);
+        Assert.True(vm.CanDisburse);
+        Assert.True(vm.CanReject);
+        Assert.True(vm.CanAddInternalNote);
+        Assert.False(vm.IsRequestClosed);
+
+        // Transition to Closed
+        requestItem.Status = AssistanceCaseStatus.Closed;
+        vm.NotifySelectedRequestStateChanged();
+
+        Assert.False(vm.CanResolve);
+        Assert.False(vm.CanDisburse);
+        Assert.False(vm.CanReject);
+        Assert.False(vm.CanMarkInReview);
+        Assert.False(vm.CanStartProcessing);
+        Assert.False(vm.CanAddInternalNote);
+        Assert.True(vm.IsRequestClosed);
+        Assert.Equal("Resolved & Closed", requestItem.StatusLabel);
+    }
 }
+

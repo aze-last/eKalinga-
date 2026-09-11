@@ -14,6 +14,7 @@ namespace AttendanceShiftingManagement.Views
         SystemProfile = 1,
         MyAccount = 2,
         Security = 3,
+        CrsConnection = 4,
         RemoteSnapshot = 4,
         DatabaseBackup = 5,
         AppDatabase = 6,

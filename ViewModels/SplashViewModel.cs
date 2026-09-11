@@ -185,7 +185,7 @@ namespace AttendanceShiftingManagement.ViewModels
                     try
                     {
                         // 1. Always ensure local SQLite is ready first (offline fallback)
-                        using (var localDb = new LocalDbContext())
+                        using (var localDb = LocalDbContext.CreateSqliteContext())
                         {
                             await localDb.Database.EnsureCreatedAsync();
                             SQLiteSchemaBootstrapper.EnsureSQLiteSchema(localDb);

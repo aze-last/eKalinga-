@@ -20,31 +20,23 @@ public sealed class AssistanceCaseManagementPageBindingTests
 
         var xaml = File.ReadAllText(pagePath);
 
-        Assert.Contains("Text=\"BENEFICIARY\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"Assistance History\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Command=\"{Binding SearchCommand}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("ItemsSource=\"{Binding SearchResults}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("SelectedItem=\"{Binding SelectedBeneficiary}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Command=\"{Binding LoadSearchNextPageCommand}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Command=\"{Binding LoadSearchPreviousPageCommand}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Command=\"{Binding LoadNextPageCommand}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Command=\"{Binding LoadPreviousPageCommand}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Command=\"{Binding OpenRecordAssistanceCommand}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Command=\"{Binding SaveRecordAssistanceCommand}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Content=\"RECORD ASSISTANCE\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("CITIZEN REQUESTS", xaml, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Command=\"{Binding OpenIntakeModalCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("ItemsSource=\"{Binding PagedRequests}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding TotalCount}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding PendingTriageCount}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding InFlightCount}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding ResolvedCount}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding NextPageCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding PreviousPageCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding DataContext.InspectRequestCommand", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding SubmitIntakeCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding CloseIntakeModalCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding CloseInspectModalCommand}\"", xaml, StringComparison.Ordinal);
 
-        Assert.DoesNotContain("ItemsSource=\"{Binding CasesView}\"", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("SelectedItem=\"{Binding SelectedCase}\"", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("Command=\"{Binding ExportCasesCommand}\"", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("Command=\"{Binding ShowPendingCasesCommand}\"", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("Command=\"{Binding OpenCasePanelCommand}\"", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("Visibility=\"{Binding IsCasePanelOpen", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("Command=\"{Binding CloseCasePanelCommand}\"", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("Text=\"Aid request command center\"", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("Text=\"Request Queue\"", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("ItemsSource=\"{Binding AssistanceCaseBudgets}\"", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("SelectedItem=\"{Binding SelectedAssistanceCaseBudget}\"", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("ToolTip=\"{Binding AssistanceCaseBudgetErrorMessage}\"", xaml, StringComparison.Ordinal);
+        // Verification that public portal is NOT present per user requirement
+        Assert.DoesNotContain("Public Portal", xaml, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("OpenPublicPortalCommand", xaml, StringComparison.Ordinal);
     }
 
     [Fact]

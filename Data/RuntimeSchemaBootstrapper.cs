@@ -324,6 +324,36 @@ namespace AttendanceShiftingManagement.Data
                 "household_member_id",
                 "ALTER TABLE `cash_for_work_participants` MODIFY COLUMN `household_member_id` int NULL;");
 
+            EnsureColumnExists(
+                connection,
+                "activity_logs",
+                "SyncId",
+                "ALTER TABLE `activity_logs` ADD COLUMN `SyncId` char(36) NOT NULL DEFAULT '00000000-0000-0000-0000-000000000000';");
+
+            EnsureColumnExists(
+                connection,
+                "activity_logs",
+                "UpdatedAt",
+                "ALTER TABLE `activity_logs` ADD COLUMN `UpdatedAt` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6);");
+
+            EnsureColumnExists(
+                connection,
+                "users",
+                "UpdatedAt",
+                "ALTER TABLE `users` ADD COLUMN `UpdatedAt` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6);");
+
+            EnsureColumnExists(
+                connection,
+                "user_profiles",
+                "UpdatedAt",
+                "ALTER TABLE `user_profiles` ADD COLUMN `UpdatedAt` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6);");
+
+            EnsureColumnExists(
+                connection,
+                "user_permissions",
+                "UpdatedAt",
+                "ALTER TABLE `user_permissions` ADD COLUMN `UpdatedAt` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6);");
+
             ExecuteNonQuery(
                 connection,
                 """

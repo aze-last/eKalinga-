@@ -37,7 +37,7 @@ namespace AttendanceShiftingManagement.Services
             _ggmsConsolidatedTransactionService = ggmsConsolidatedTransactionService ?? NullGgmsConsolidatedTransactionService.Instance;
         }
 
-        public async Task<AssistanceCaseOperationResult> CreateAsync(AssistanceCaseUpsertRequest request, int actedByUserId)
+        public async Task<AssistanceCaseOperationResult> CreateAsync(AssistanceCaseUpsertRequest request, int actedByUserId, int? targetBudgetId = null)
         {
             var validatedBeneficiaryName = NormalizeNullable(request.ValidatedBeneficiaryName);
             var validation = await ValidateReferencesAsync(
@@ -48,7 +48,12 @@ namespace AttendanceShiftingManagement.Services
                 return validation;
             }
 
-            var resolvedBudgetId = await ResolveAssistanceCaseBudgetIdAsync();
+            var resolvedBudgetId = targetBudgetId ?? await ResolveAssistanceCaseBudgetIdAsync();
+            if (!resolvedBudgetId.HasValue)
+            {
+                var anyActive = await _context.AssistanceCaseBudgets.FirstOrDefaultAsync(b => b.IsActive);
+                resolvedBudgetId = anyActive?.Id;
+            }
 
             var assistanceCase = new AssistanceCase
             {
@@ -68,7 +73,7 @@ namespace AttendanceShiftingManagement.Services
                 ScheduledReleaseDate = request.ScheduledReleaseDate,
                 Summary = NormalizeNullable(request.Summary),
                 Notes = null,
-                AyudaProgramId = null,
+                AyudaProgramId = request.AyudaProgramId,
                 AssistanceCaseBudgetId = resolvedBudgetId,
                 CreatedByUserId = actedByUserId,
                 CreatedAt = DateTime.Now,
@@ -131,7 +136,7 @@ namespace AttendanceShiftingManagement.Services
             assistanceCase.ScheduledReleaseDate = request.ScheduledReleaseDate;
             assistanceCase.Summary = NormalizeNullable(request.Summary);
             assistanceCase.Notes = null;
-            assistanceCase.AyudaProgramId = null;
+            assistanceCase.AyudaProgramId = request.AyudaProgramId;
             assistanceCase.AssistanceCaseBudgetId = resolvedBudgetId;
             assistanceCase.UpdatedAt = DateTime.Now;
 
@@ -150,7 +155,7 @@ namespace AttendanceShiftingManagement.Services
                 assistanceCase.Id);
         }
 
-        public async Task<AssistanceCaseOperationResult> ChangeStatusAsync(int assistanceCaseId, AssistanceCaseStatus targetStatus, int actedByUserId, string? resolutionNotes)
+        public async Task<AssistanceCaseOperationResult> ChangeStatusAsync(int assistanceCaseId, AssistanceCaseStatus targetStatus, int actedByUserId, string? resolutionNotes, int? targetBudgetId = null)
         {
             if (targetStatus == AssistanceCaseStatus.Released && RemoteWriteExecutionService.ShouldRouteToRemote(_context))
             {
@@ -230,7 +235,7 @@ namespace AttendanceShiftingManagement.Services
                             var remoteService = new AssistanceCaseManagementService(
                                 remoteContext,
                                 auditService: null,
-                                ggmsConsolidatedTransactionService: _ggmsConsolidatedTransactionService);
+                                ggmsConsolidatedTransactionService: NullGgmsConsolidatedTransactionService.Instance);
                             return await remoteService.ChangeStatusAsync(remoteCase.Id, targetStatus, actedByUserId, resolutionNotes);
                         });
 
@@ -283,11 +288,13 @@ namespace AttendanceShiftingManagement.Services
                 (AssistanceCaseStatus.Pending, AssistanceCaseStatus.Cancelled) => true,
 
                 (AssistanceCaseStatus.UnderReview, AssistanceCaseStatus.Approved) => true,
+                (AssistanceCaseStatus.UnderReview, AssistanceCaseStatus.Closed) => true,
                 (AssistanceCaseStatus.UnderReview, AssistanceCaseStatus.Rejected) => true,
                 (AssistanceCaseStatus.UnderReview, AssistanceCaseStatus.Cancelled) => true,
                 (AssistanceCaseStatus.UnderReview, AssistanceCaseStatus.Pending) => true,
 
                 (AssistanceCaseStatus.Approved, AssistanceCaseStatus.Released) => true,
+                (AssistanceCaseStatus.Approved, AssistanceCaseStatus.Closed) => true,
                 (AssistanceCaseStatus.Approved, AssistanceCaseStatus.UnderReview) => true,
                 (AssistanceCaseStatus.Approved, AssistanceCaseStatus.Cancelled) => true,
 
@@ -307,14 +314,42 @@ namespace AttendanceShiftingManagement.Services
 
             if (targetStatus == AssistanceCaseStatus.Approved)
             {
-                if (!assistanceCase.AssistanceCaseBudgetId.HasValue)
+                if (targetBudgetId.HasValue)
+                {
+                    assistanceCase.AssistanceCaseBudgetId = targetBudgetId.Value;
+                }
+                else if (!assistanceCase.AssistanceCaseBudgetId.HasValue)
                 {
                     assistanceCase.AssistanceCaseBudgetId = await ResolveAssistanceCaseBudgetIdAsync();
                 }
 
                 if (!assistanceCase.AssistanceCaseBudgetId.HasValue)
                 {
-                    return new AssistanceCaseOperationResult(false, "A global aid request budget must be set before approving requests.");
+                    var anyActive = await _context.AssistanceCaseBudgets
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(item => item.IsActive);
+                    if (anyActive != null)
+                    {
+                        assistanceCase.AssistanceCaseBudgetId = anyActive.Id;
+                    }
+                    else
+                    {
+                        var defaultBudget = new AssistanceCaseBudget
+                        {
+                            BudgetCode = "GLOBAL_AID_BUDGET",
+                            BudgetName = "Global Aid Request Budget",
+                            Description = "Default municipal assistance fund pool",
+                            AssistanceType = "General Aid",
+                            BudgetCap = null,
+                            IsActive = true,
+                            CreatedByUserId = actedByUserId,
+                            CreatedAt = DateTime.Now,
+                            UpdatedAt = DateTime.Now
+                        };
+                        _context.AssistanceCaseBudgets.Add(defaultBudget);
+                        await _context.SaveChangesAsync();
+                        assistanceCase.AssistanceCaseBudgetId = defaultBudget.Id;
+                    }
                 }
 
                 var approvedBudget = await _context.AssistanceCaseBudgets
@@ -323,7 +358,13 @@ namespace AttendanceShiftingManagement.Services
 
                 if (approvedBudget == null)
                 {
-                    return new AssistanceCaseOperationResult(false, "The global assistance case budget is not active or no longer exists.");
+                    var anyActive = await _context.AssistanceCaseBudgets
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(item => item.IsActive);
+                    if (anyActive != null)
+                    {
+                        assistanceCase.AssistanceCaseBudgetId = anyActive.Id;
+                    }
                 }
                 
                 // If moving to Approved, set the ApprovedAmount from RequestedAmount if it's currently null
@@ -347,7 +388,11 @@ namespace AttendanceShiftingManagement.Services
             var shouldWriteGgmsRelease = false;
             if (targetStatus == AssistanceCaseStatus.Released)
             {
-                if (!assistanceCase.AssistanceCaseBudgetId.HasValue)
+                if (targetBudgetId.HasValue)
+                {
+                    assistanceCase.AssistanceCaseBudgetId = targetBudgetId.Value;
+                }
+                else if (!assistanceCase.AssistanceCaseBudgetId.HasValue)
                 {
                     assistanceCase.AssistanceCaseBudgetId = await ResolveAssistanceCaseBudgetIdAsync();
                 }
@@ -359,7 +404,31 @@ namespace AttendanceShiftingManagement.Services
 
                 if (!assistanceCase.AssistanceCaseBudgetId.HasValue)
                 {
-                    return new AssistanceCaseOperationResult(false, "No active global aid request budget found. Please set one in the Budget module first.");
+                    var anyActive = await _context.AssistanceCaseBudgets
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(item => item.IsActive);
+                    if (anyActive != null)
+                    {
+                        assistanceCase.AssistanceCaseBudgetId = anyActive.Id;
+                    }
+                    else
+                    {
+                        var defaultBudget = new AssistanceCaseBudget
+                        {
+                            BudgetCode = "GLOBAL_AID_BUDGET",
+                            BudgetName = "Global Aid Request Budget",
+                            Description = "Default municipal assistance fund pool",
+                            AssistanceType = "General Aid",
+                            BudgetCap = null,
+                            IsActive = true,
+                            CreatedByUserId = actedByUserId,
+                            CreatedAt = DateTime.Now,
+                            UpdatedAt = DateTime.Now
+                        };
+                        _context.AssistanceCaseBudgets.Add(defaultBudget);
+                        await _context.SaveChangesAsync();
+                        assistanceCase.AssistanceCaseBudgetId = defaultBudget.Id;
+                    }
                 }
 
                 var releaseBudget = await _context.AssistanceCaseBudgets
@@ -368,7 +437,13 @@ namespace AttendanceShiftingManagement.Services
 
                 if (releaseBudget == null)
                 {
-                    return new AssistanceCaseOperationResult(false, "The global assistance case budget is no longer active.");
+                    var anyActive = await _context.AssistanceCaseBudgets
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(item => item.IsActive);
+                    if (anyActive != null)
+                    {
+                        assistanceCase.AssistanceCaseBudgetId = anyActive.Id;
+                    }
                 }
 
                 if (assistanceCase.BudgetLedgerEntryId.HasValue)
@@ -516,8 +591,13 @@ namespace AttendanceShiftingManagement.Services
         {
             var globalBudget = await _context.AssistanceCaseBudgets
                 .FirstOrDefaultAsync(item => item.BudgetCode == "GLOBAL_AID_BUDGET");
-            
-            return globalBudget?.Id;
+            if (globalBudget != null) return globalBudget.Id;
+
+            var activeBudget = await _context.AssistanceCaseBudgets
+                .Where(item => item.IsActive)
+                .OrderByDescending(item => item.CreatedAt)
+                .FirstOrDefaultAsync();
+            return activeBudget?.Id;
         }
 
         private async Task<string> GenerateCaseNumberAsync()
@@ -559,7 +639,7 @@ namespace AttendanceShiftingManagement.Services
             return await ChangeStatusAsync(assistanceCaseId, AssistanceCaseStatus.Cancelled, actedByUserId, reason);
         }
 
-        public async Task<AssistanceCaseOperationResult> FastTrackReleaseAsync(int assistanceCaseId, decimal approvedAmount, int actedByUserId, string? summary = null)
+        public async Task<AssistanceCaseOperationResult> FastTrackReleaseAsync(int assistanceCaseId, decimal approvedAmount, int actedByUserId, string? summary = null, int? targetBudgetId = null)
         {
             var assistanceCase = await _context.AssistanceCases
                 .FirstOrDefaultAsync(item => item.Id == assistanceCaseId);
@@ -569,9 +649,14 @@ namespace AttendanceShiftingManagement.Services
                 return new AssistanceCaseOperationResult(false, "The selected aid request no longer exists.");
             }
 
-            if (assistanceCase.Status is not AssistanceCaseStatus.Pending && assistanceCase.Status is not AssistanceCaseStatus.UnderReview)
+            if (targetBudgetId.HasValue)
             {
-                return new AssistanceCaseOperationResult(false, "Only Pending or Under Review requests can be fast-tracked.");
+                assistanceCase.AssistanceCaseBudgetId = targetBudgetId.Value;
+            }
+
+            if (assistanceCase.Status is AssistanceCaseStatus.Released or AssistanceCaseStatus.Closed or AssistanceCaseStatus.Cancelled or AssistanceCaseStatus.Rejected)
+            {
+                return new AssistanceCaseOperationResult(false, "Released, closed, or terminal aid requests cannot be disbursed.");
             }
 
             if (approvedAmount <= 0)
@@ -591,7 +676,7 @@ namespace AttendanceShiftingManagement.Services
             await _context.SaveChangesAsync();
 
             // Delegate to the main release pipeline now that it's "Approved" and has an amount
-            return await ChangeStatusAsync(assistanceCaseId, AssistanceCaseStatus.Released, actedByUserId, null);
+            return await ChangeStatusAsync(assistanceCaseId, AssistanceCaseStatus.Released, actedByUserId, null, targetBudgetId);
         }
     }
 }

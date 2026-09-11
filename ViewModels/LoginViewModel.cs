@@ -283,6 +283,27 @@ namespace AttendanceShiftingManagement.ViewModels
                     using var context = new LocalDbContext();
                     var companySerialCheck = BuildCompanySerialValidationResult(context);
 
+                    InitialAdminState? state = null;
+                    if (companySerialCheck.IsSuccess)
+                    {
+                        try
+                        {
+                            state = InitialAdminSetupService.GetState(context);
+                        }
+                        catch (Exception dbEx)
+                        {
+                            InvokeOnUiThread(() =>
+                            {
+                                _isCompanySerialAccessValid = false;
+                                _loginCommand.RaiseCanExecuteChanged();
+                                _createInitialAdminCommand.RaiseCanExecuteChanged();
+                                IsBootstrapMode = false;
+                                SetErrorStatus($"Database connection failed: {dbEx.Message}. Check Connection Settings.");
+                            });
+                            return;
+                        }
+                    }
+
                     InvokeOnUiThread(() =>
                     {
                         _isCompanySerialAccessValid = companySerialCheck.IsSuccess;
@@ -296,10 +317,9 @@ namespace AttendanceShiftingManagement.ViewModels
                             return;
                         }
 
-                        var state = InitialAdminSetupService.GetState(context);
-                        IsBootstrapMode = state.RequiresSetup;
+                        IsBootstrapMode = state?.RequiresSetup ?? false;
 
-                        if (state.RequiresSetup)
+                        if (state?.RequiresSetup == true)
                         {
                             SetNeutralStatus(companySerialCheck.WasBoundToDatabase
                                 ? $"{companySerialCheck.Message} {state.Message}"
@@ -321,7 +341,7 @@ namespace AttendanceShiftingManagement.ViewModels
                         _loginCommand.RaiseCanExecuteChanged();
                         _createInitialAdminCommand.RaiseCanExecuteChanged();
                         IsBootstrapMode = false;
-                        SetErrorStatus($"Local database initialization failed: {ex.Message}");
+                        SetErrorStatus($"Database connection failed: {ex.Message}. Check Connection Settings.");
                     });
                 }
             });
@@ -479,7 +499,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private static void EnsureDatabaseReady()
         {
-            using var localDb = new LocalDbContext();
+            using var localDb = LocalDbContext.CreateSqliteContext();
             localDb.Database.EnsureCreated();
             SQLiteSchemaBootstrapper.EnsureSQLiteSchema(localDb);
         }

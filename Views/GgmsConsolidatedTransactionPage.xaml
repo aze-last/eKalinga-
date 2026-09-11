@@ -178,6 +178,11 @@
                                                      Command="{Binding FilterCommand}" CommandParameter="All Transactions"
                                                      Height="38" HorizontalContentAlignment="Left" Margin="0,0,0,4"/>
                                         <RadioButton Style="{StaticResource MaterialDesignTabRadioButton}"
+                                                     Content="Citizen Requests"
+                                                     IsChecked="{Binding SelectedProjectFilter, Converter={StaticResource EqualityToBooleanConverter}, ConverterParameter='Citizen Requests'}"
+                                                     Command="{Binding FilterCommand}" CommandParameter="Citizen Requests"
+                                                     Height="38" HorizontalContentAlignment="Left" Margin="0,0,0,4"/>
+                                        <RadioButton Style="{StaticResource MaterialDesignTabRadioButton}"
                                                      Content="Cash For Work"
                                                      IsChecked="{Binding SelectedProjectFilter, Converter={StaticResource EqualityToBooleanConverter}, ConverterParameter='Cash For Work'}"
                                                      Command="{Binding FilterCommand}" CommandParameter="Cash For Work"

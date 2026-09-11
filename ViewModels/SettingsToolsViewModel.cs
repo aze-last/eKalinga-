@@ -37,6 +37,10 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly RelayCommand _saveFeatureRulesCommand;
         private readonly RelayCommand _testGgmsConnectionCommand;
         private readonly RelayCommand _saveGgmsSettingsCommand;
+        private readonly RelayCommand _syncGgmsBudgetCommand;
+        private readonly RelayCommand _testCrsConnectionCommand;
+        private readonly RelayCommand _saveCrsSettingsCommand;
+        private readonly RelayCommand _syncCrsMasterlistCommand;
         private readonly RelayCommand _checkForUpdatesCommand;
         private readonly RelayCommand _downloadUpdateCommand;
         private readonly RelayCommand _installPendingUpdateCommand;
@@ -112,6 +116,14 @@ namespace AttendanceShiftingManagement.ViewModels
         private string _ggmsPassword = string.Empty;
         private string _ggmsStatusMessage = "Configure the GGMS budget source here. Keep the default table names unless your GGMS schema differs.";
         private Brush _ggmsStatusBrush = CreateBrush("#6B7280");
+        private string _crsServer = string.Empty;
+        private string _crsPortText = "3306";
+        private string _crsDatabase = string.Empty;
+        private string _crsUsername = string.Empty;
+        private string _crsPassword = string.Empty;
+        private string _crsStatusMessage = "Configure the e-Kard CRS verification source credentials here.";
+        private Brush _crsStatusBrush = CreateBrush("#6B7280");
+        private string _crsLocalMasterlistSummary = "Loading local masterlist status...";
         private string _largeAssistanceWarningThresholdText = string.Empty;
         private string _featureRulesStatusMessage = "Set the warning-only threshold used when a beneficiary has already received significant assistance.";
         private Brush _featureRulesStatusBrush = CreateBrush("#6B7280");
@@ -169,6 +181,10 @@ namespace AttendanceShiftingManagement.ViewModels
             _saveFeatureRulesCommand = new RelayCommand(_ => ExecuteSaveFeatureRules(), _ => !IsBusy);
             _testGgmsConnectionCommand = new RelayCommand(async _ => await ExecuteTestGgmsConnectionAsync(), _ => !IsBusy);
             _saveGgmsSettingsCommand = new RelayCommand(_ => ExecuteSaveGgmsSettings(), _ => !IsBusy);
+            _syncGgmsBudgetCommand = new RelayCommand(async _ => await ExecuteSyncGgmsBudgetAsync(), _ => !IsBusy);
+            _testCrsConnectionCommand = new RelayCommand(async _ => await ExecuteTestCrsConnectionAsync(), _ => !IsBusy);
+            _saveCrsSettingsCommand = new RelayCommand(_ => ExecuteSaveCrsSettings(), _ => !IsBusy);
+            _syncCrsMasterlistCommand = new RelayCommand(async _ => await ExecuteSyncCrsMasterlistAsync(), _ => !IsBusy);
             _checkForUpdatesCommand = new RelayCommand(async _ => await ExecuteCheckForUpdatesAsync(), _ => !IsBusy);
             _downloadUpdateCommand = new RelayCommand(async _ => await ExecuteDownloadUpdateAsync(), _ => !IsBusy && CanDownloadUpdate);
             _installPendingUpdateCommand = new RelayCommand(_ => ExecuteInstallPendingUpdate(), _ => !IsBusy && CanInstallPendingUpdate);
@@ -182,6 +198,7 @@ namespace AttendanceShiftingManagement.ViewModels
             LoadImportConnection();
             LoadFeatureRules();
             LoadGgmsSettings();
+            LoadCrsSettings();
             LoadUpdatePreferences();
             RefreshTargetSummaries();
             _ = RefreshPreviewAsync();
@@ -636,6 +653,54 @@ namespace AttendanceShiftingManagement.ViewModels
             private set => SetProperty(ref _ggmsStatusBrush, value);
         }
 
+        public string CrsServer
+        {
+            get => _crsServer;
+            set => SetProperty(ref _crsServer, value);
+        }
+
+        public string CrsPortText
+        {
+            get => _crsPortText;
+            set => SetProperty(ref _crsPortText, value);
+        }
+
+        public string CrsDatabase
+        {
+            get => _crsDatabase;
+            set => SetProperty(ref _crsDatabase, value);
+        }
+
+        public string CrsUsername
+        {
+            get => _crsUsername;
+            set => SetProperty(ref _crsUsername, value);
+        }
+
+        public string CrsPassword
+        {
+            get => _crsPassword;
+            set => SetProperty(ref _crsPassword, value);
+        }
+
+        public string CrsStatusMessage
+        {
+            get => _crsStatusMessage;
+            private set => SetProperty(ref _crsStatusMessage, value);
+        }
+
+        public Brush CrsStatusBrush
+        {
+            get => _crsStatusBrush;
+            private set => SetProperty(ref _crsStatusBrush, value);
+        }
+
+        public string CrsLocalMasterlistSummary
+        {
+            get => _crsLocalMasterlistSummary;
+            private set => SetProperty(ref _crsLocalMasterlistSummary, value);
+        }
+
         public string LargeAssistanceWarningThresholdText
         {
             get => _largeAssistanceWarningThresholdText;
@@ -810,6 +875,10 @@ namespace AttendanceShiftingManagement.ViewModels
                     _saveFeatureRulesCommand.RaiseCanExecuteChanged();
                     _testGgmsConnectionCommand.RaiseCanExecuteChanged();
                     _saveGgmsSettingsCommand.RaiseCanExecuteChanged();
+                    _syncGgmsBudgetCommand.RaiseCanExecuteChanged();
+                    _testCrsConnectionCommand.RaiseCanExecuteChanged();
+                    _saveCrsSettingsCommand.RaiseCanExecuteChanged();
+                    _syncCrsMasterlistCommand.RaiseCanExecuteChanged();
                     _checkForUpdatesCommand.RaiseCanExecuteChanged();
                     _downloadUpdateCommand.RaiseCanExecuteChanged();
                     _installPendingUpdateCommand.RaiseCanExecuteChanged();
@@ -842,6 +911,10 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand SaveFeatureRulesCommand => _saveFeatureRulesCommand;
         public ICommand TestGgmsConnectionCommand => _testGgmsConnectionCommand;
         public ICommand SaveGgmsSettingsCommand => _saveGgmsSettingsCommand;
+        public ICommand SyncGgmsBudgetCommand => _syncGgmsBudgetCommand;
+        public ICommand TestCrsConnectionCommand => _testCrsConnectionCommand;
+        public ICommand SaveCrsSettingsCommand => _saveCrsSettingsCommand;
+        public ICommand SyncCrsMasterlistCommand => _syncCrsMasterlistCommand;
         public ICommand CheckForUpdatesCommand => _checkForUpdatesCommand;
         public ICommand DownloadUpdateCommand => _downloadUpdateCommand;
         public ICommand InstallPendingUpdateCommand => _installPendingUpdateCommand;
@@ -912,6 +985,32 @@ namespace AttendanceShiftingManagement.ViewModels
             GgmsDatabase = settings.GgmsConnection.Database;
             GgmsUsername = settings.GgmsConnection.Username;
             GgmsPassword = settings.GgmsConnection.Password;
+        }
+
+        private void LoadCrsSettings()
+        {
+            var options = CrsContractRuntimeOptions.Load();
+            var conn = options.GetEffectiveConnection();
+            CrsServer = conn.Server ?? string.Empty;
+            CrsPortText = (conn.Port > 0 ? conn.Port : 3306).ToString(CultureInfo.InvariantCulture);
+            CrsDatabase = conn.Database ?? string.Empty;
+            CrsUsername = conn.Username ?? string.Empty;
+            CrsPassword = conn.Password ?? string.Empty;
+            RefreshCrsLocalCount();
+        }
+
+        public void RefreshCrsLocalCount()
+        {
+            try
+            {
+                using var localDb = _dbContextFactory();
+                var count = localDb.BeneficiaryStaging.Count();
+                CrsLocalMasterlistSummary = $"{count:N0} validated beneficiaries cached in local masterlist.";
+            }
+            catch
+            {
+                CrsLocalMasterlistSummary = "Local masterlist status ready.";
+            }
         }
 
         private void LoadUpdatePreferences()
@@ -1477,7 +1576,160 @@ namespace AttendanceShiftingManagement.ViewModels
             }
 
             BudgetRuntimeOptions.Save(settings);
-            SetGgmsSuccess("GGMS budget source settings saved.");
+            SetGgmsSuccess("GGMS budget source settings saved. Starting budget synchronization...");
+            _ = ExecuteSyncGgmsBudgetAsync();
+        }
+
+        private async Task ExecuteSyncGgmsBudgetAsync()
+        {
+            await ExecuteBusyAsync(
+                async () =>
+                {
+                    SetGgmsNeutral("Syncing GGMS budget allocation and projects...");
+                    try
+                    {
+                        using var localDb = _dbContextFactory();
+                        var userId = _currentUser?.Id ?? 1;
+                        var budgetResult = await new GgmsBudgetSyncService().SyncAyudaBudgetAsync(localDb, userId);
+                        var projectResult = await new GgmsProjectSyncService().RefreshProjectCacheAsync(localDb);
+
+                        if (budgetResult.IsSuccess)
+                        {
+                            SetGgmsSuccess($"Budget: {budgetResult.Message} | Projects: {projectResult.Message}");
+                        }
+                        else
+                        {
+                            SetGgmsError($"Budget: {budgetResult.Message} | Projects: {projectResult.Message}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        SetGgmsError($"GGMS sync failed: {ex.Message}");
+                    }
+                });
+        }
+
+        private bool TryBuildCrsSettings(bool requireConnectionDetails, out DatabaseConnectionPreset preset, out string validationMessage)
+        {
+            preset = new DatabaseConnectionPreset
+            {
+                DisplayName = "e-Kard CRS Verification Source"
+            };
+            validationMessage = string.Empty;
+
+            if (!int.TryParse(CrsPortText, out var port) || port <= 0 || port > 65535)
+            {
+                validationMessage = "Enter a valid CRS MySQL port between 1 and 65535.";
+                return false;
+            }
+
+            if (requireConnectionDetails)
+            {
+                if (string.IsNullOrWhiteSpace(CrsServer))
+                {
+                    validationMessage = "Enter the CRS server or host name.";
+                    return false;
+                }
+
+                if (string.IsNullOrWhiteSpace(CrsDatabase))
+                {
+                    validationMessage = "Enter the CRS database name.";
+                    return false;
+                }
+
+                if (string.IsNullOrWhiteSpace(CrsUsername))
+                {
+                    validationMessage = "Enter the CRS database username.";
+                    return false;
+                }
+            }
+
+            preset.Server = CrsServer.Trim();
+            preset.Port = port;
+            preset.Database = CrsDatabase.Trim();
+            preset.Username = CrsUsername.Trim();
+            preset.Password = CrsPassword;
+
+            return true;
+        }
+
+        private async Task ExecuteTestCrsConnectionAsync()
+        {
+            if (!TryBuildCrsSettings(requireConnectionDetails: true, out var preset, out var validationMessage))
+            {
+                SetCrsError(validationMessage);
+                return;
+            }
+
+            await ExecuteBusyAsync(
+                async () =>
+                {
+                    SetCrsNeutral("Testing e-Kard CRS verification source connection...");
+                    var result = await ConnectionSettingsService.TestConnectionAsync(preset);
+                    if (result.IsSuccess)
+                    {
+                        SetCrsSuccess(result.Message + " (CRS connection verified)");
+                    }
+                    else
+                    {
+                        SetCrsError(result.Message);
+                    }
+                });
+        }
+
+        private void ExecuteSaveCrsSettings()
+        {
+            if (!TryBuildCrsSettings(requireConnectionDetails: false, out var preset, out var validationMessage))
+            {
+                SetCrsError(validationMessage);
+                return;
+            }
+
+            if (!RequireSensitiveSettingsAuthorization("the CRS connection settings", ExecuteSaveCrsSettings))
+            {
+                return;
+            }
+
+            var options = CrsContractRuntimeOptions.Load();
+            options.CrsContractConnection = preset;
+            if (CrsContractRuntimeOptions.IsLocalOrLanHost(preset.Server))
+            {
+                options.LanConnection = CrsContractRuntimeOptions.ClonePreset(preset);
+            }
+            else
+            {
+                options.RemoteConnection = CrsContractRuntimeOptions.ClonePreset(preset);
+            }
+
+            CrsContractRuntimeOptions.Save(options);
+            SetCrsSuccess("e-Kard CRS connection settings saved successfully.");
+        }
+
+        private async Task ExecuteSyncCrsMasterlistAsync()
+        {
+            await ExecuteBusyAsync(
+                async () =>
+                {
+                    SetCrsNeutral("Connecting to CRS and mirroring validated beneficiaries into local masterlist...");
+                    try
+                    {
+                        var mirrorService = new CrsMasterlistMirrorService();
+                        var result = await mirrorService.MirrorValidatedBeneficiariesAsync();
+                        RefreshCrsLocalCount();
+                        if (result.IsSuccess)
+                        {
+                            SetCrsSuccess(result.Message);
+                        }
+                        else
+                        {
+                            SetCrsError(result.Message);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        SetCrsError($"CRS Masterlist mirror failed: {ex.Message}");
+                    }
+                });
         }
 
         private async Task ExecuteCheckForUpdatesAsync(bool backgroundCheckOnly = false)
@@ -1840,6 +2092,24 @@ namespace AttendanceShiftingManagement.ViewModels
             GgmsStatusBrush = CreateBrush("#991B1B");
         }
 
+        private void SetCrsNeutral(string message)
+        {
+            CrsStatusMessage = message;
+            CrsStatusBrush = CreateBrush("#6B7280");
+        }
+
+        private void SetCrsSuccess(string message)
+        {
+            CrsStatusMessage = message;
+            CrsStatusBrush = CreateBrush("#1A7A4A");
+        }
+
+        private void SetCrsError(string message)
+        {
+            CrsStatusMessage = message;
+            CrsStatusBrush = CreateBrush("#991B1B");
+        }
+
         private void SetUpdateNeutral(string message)
         {
             UpdateStatusMessage = message;
@@ -1978,20 +2248,18 @@ namespace AttendanceShiftingManagement.ViewModels
                 }
             }
 
-            settings = new BudgetRuntimeOptions
+            settings = BudgetRuntimeOptions.Load();
+            settings.AyudaOfficeCode = GgmsOfficeCode.Trim();
+            settings.GgmsOfficeTable = GgmsOfficeTable.Trim();
+            settings.GgmsAllocationTable = GgmsAllocationTable.Trim();
+            settings.GgmsConnection = new DatabaseConnectionPreset
             {
-                AyudaOfficeCode = GgmsOfficeCode.Trim(),
-                GgmsOfficeTable = GgmsOfficeTable.Trim(),
-                GgmsAllocationTable = GgmsAllocationTable.Trim(),
-                GgmsConnection = new DatabaseConnectionPreset
-                {
-                    DisplayName = "GGMS Budget Source",
-                    Server = GgmsServer.Trim(),
-                    Port = port,
-                    Database = GgmsDatabase.Trim(),
-                    Username = GgmsUsername.Trim(),
-                    Password = GgmsPassword
-                }
+                DisplayName = "GGMS Budget Source",
+                Server = GgmsServer.Trim(),
+                Port = port,
+                Database = GgmsDatabase.Trim(),
+                Username = GgmsUsername.Trim(),
+                Password = GgmsPassword
             };
 
             return true;

@@ -215,12 +215,12 @@
                                                  Foreground="White"
                                                  HorizontalAlignment="Left"/>
                         <TextBlock Margin="0,26,0,0"
-                                   Text="ASSISTANCE RECORDS"
+                                   Text="CITIZEN REQUESTS"
                                    FontSize="18"
                                    FontWeight="Bold"
                                    Foreground="White"/>
                         <TextBlock Margin="0,8,0,0"
-                                   Text="Search particular beneficiary for claims and records"
+                                   Text="Digitized desk triage, beneficiary verification, and request tracking"
                                    FontSize="13"
                                    Foreground="White"
                                    Opacity="0.82"

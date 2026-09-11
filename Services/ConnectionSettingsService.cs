@@ -320,6 +320,9 @@ namespace AttendanceShiftingManagement.Services
 
         private static void EnsureRequiredPresets(ConnectionSettingsModel settings)
         {
+            settings.Presets.Remove("Lan_crs");
+            settings.Presets.Remove("Lan_ggms");
+
             if (!settings.Presets.ContainsKey(LocalPresetKey))
             {
                 settings.Presets[LocalPresetKey] = new DatabaseConnectionPreset

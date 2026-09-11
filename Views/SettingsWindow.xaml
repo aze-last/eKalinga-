@@ -938,38 +938,25 @@
                 </Grid>
             </TabItem>
 
-            <TabItem Header="Remote Snapshot">
+            <TabItem Header="CRS Connection">
                 <Grid Margin="0,20,0,0">
                     <Grid Style="{StaticResource ProtectedSettingsContentGridStyle}">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="*" />
-                        </Grid.RowDefinitions>
-
-                        <Grid Grid.Row="0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="2.2*" />
-                                <ColumnDefinition Width="16" />
-                                <ColumnDefinition Width="1.2*" />
-                            </Grid.ColumnDefinitions>
-
-                        <Border Grid.Column="0"
-                                Background="{DynamicResource ThemeCardBrush}"
+                        <Border Background="{DynamicResource ThemeCardBrush}"
                                 BorderBrush="{DynamicResource BrandBorderBrush}"
                                 BorderThickness="1"
                                 CornerRadius="14"
                                 Padding="20">
                             <StackPanel>
-                                <TextBlock Text="Remote Snapshot Source"
+                                <TextBlock Text="e-Kard CRS Verification Source"
                                            FontSize="15"
                                            FontWeight="SemiBold"
                                            Foreground="{DynamicResource BrandMidnightBrush}" />
-                                <TextBlock Text="Type the remote database credentials here, test them, then snapshot `val_beneficiaries` or import pending rows into `BeneficiaryStaging`."
+                                <TextBlock Text="Configure the external Civil Registry System (CRS) database used for e-Kard verification and masterlist mirroring. Credentials stay outside the shipped installer."
                                            Margin="0,8,0,0"
                                            Foreground="{DynamicResource BrandTextSecondaryBrush}"
                                            TextWrapping="Wrap" />
 
-                                <Grid Margin="0,16,0,0">
+                                <Grid Margin="0,18,0,0">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="3*" />
                                         <ColumnDefinition Width="12" />
@@ -977,140 +964,44 @@
                                     </Grid.ColumnDefinitions>
 
                                     <TextBox Grid.Column="0"
-                                             Text="{Binding Server, UpdateSourceTrigger=PropertyChanged}"
+                                             Text="{Binding CrsServer, UpdateSourceTrigger=PropertyChanged}"
                                              Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                             materialDesign:HintAssist.Hint="Server / Host" />
+                                             materialDesign:HintAssist.Hint="CRS server / host" />
                                     <TextBox Grid.Column="2"
-                                             Text="{Binding PortText, UpdateSourceTrigger=PropertyChanged}"
+                                             Text="{Binding CrsPortText, UpdateSourceTrigger=PropertyChanged}"
                                              Style="{StaticResource MaterialDesignOutlinedTextBox}"
                                              materialDesign:HintAssist.Hint="Port" />
                                 </Grid>
 
                                 <TextBox Margin="0,12,0,0"
-                                         Text="{Binding Database, UpdateSourceTrigger=PropertyChanged}"
+                                         Text="{Binding CrsDatabase, UpdateSourceTrigger=PropertyChanged}"
                                          Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                         materialDesign:HintAssist.Hint="Database Name" />
+                                         materialDesign:HintAssist.Hint="CRS database name" />
 
-                                <Grid Margin="0,12,0,0">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="12" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-
-                                    <TextBox Grid.Column="0"
-                                             Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}"
+                                <UniformGrid Margin="0,12,0,0" Columns="2">
+                                    <TextBox Margin="0,0,8,0"
+                                             Text="{Binding CrsUsername, UpdateSourceTrigger=PropertyChanged}"
                                              Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                             materialDesign:HintAssist.Hint="Username / Email" />
-                                    <TextBox Grid.Column="2"
-                                             Text="{Binding Password, UpdateSourceTrigger=PropertyChanged}"
+                                             materialDesign:HintAssist.Hint="CRS username" />
+                                    <TextBox Margin="8,0,0,0"
+                                             Text="{Binding CrsPassword, UpdateSourceTrigger=PropertyChanged}"
                                              Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                             materialDesign:HintAssist.Hint="Password" />
-                                </Grid>
+                                             materialDesign:HintAssist.Hint="CRS password" />
+                                </UniformGrid>
 
-                                <TextBlock Margin="0,16,0,0"
-                                           Text="Local Target"
-                                           FontSize="15"
-                                           FontWeight="SemiBold"
-                                           Foreground="{DynamicResource BrandMidnightBrush}" />
-
-                                <Border Margin="0,8,0,0"
-                                        Padding="14"
-                                        Background="{DynamicResource ThemeCardSubtleBrush}"
-                                        BorderBrush="{DynamicResource BrandBorderBrush}"
-                                        BorderThickness="1"
-                                        CornerRadius="10">
-                                    <TextBlock Text="{Binding ActiveTargetSummary}"
-                                               Foreground="{DynamicResource BrandTextSecondaryBrush}"
-                                               TextWrapping="Wrap" />
-                                </Border>
-
-                                <Border Margin="0,16,0,0"
-                                        Padding="14"
-                                        CornerRadius="10"
-                                        Background="{DynamicResource ThemeWarningSurfaceBrush}"
-                                        BorderBrush="{DynamicResource ThemeWarningBorderBrush}"
-                                        BorderThickness="1">
-                                    <TextBlock Text="Snapshot Validated Beneficiaries copies `val_beneficiaries` into the active database so the Validated Beneficiaries page has local data. Import to Staging appends new records into `BeneficiaryStaging` as Pending."
-                                               Foreground="{DynamicResource ThemeWarningForegroundBrush}"
-                                               TextWrapping="Wrap" />
-                                </Border>
-
-                                <WrapPanel Margin="0,16,0,0">
-                                    <Button Content="TEST CONNECTION"
-                                            Margin="0,0,12,12"
+                                <WrapPanel Margin="0,18,0,0">
+                                    <Button Content="TEST CRS CONNECTION"
+                                            Margin="0,0,12,0"
                                             Style="{StaticResource SecondaryActionButton}"
-                                            Command="{Binding TestConnectionCommand}" />
-                                    <Button Content="SAVE IMPORT CONNECTION"
-                                            Margin="0,0,12,12"
-                                            Style="{StaticResource SecondaryActionButton}"
-                                            Command="{Binding SaveImportConnectionCommand}" />
-                                    <Button Content="SNAPSHOT VALIDATED BENEFICIARIES"
-                                            Margin="0,0,12,12"
+                                            Command="{Binding TestCrsConnectionCommand}" />
+                                    <Button Content="SAVE CRS SETTINGS"
+                                            Margin="0,0,12,0"
                                             Style="{StaticResource GoldActionButton}"
-                                            Command="{Binding SnapshotMasterListCommand}" />
-                                    <Button Content="IMPORT TO STAGING"
-                                            Margin="0,0,12,12"
+                                            Command="{Binding SaveCrsSettingsCommand}" />
+                                    <Button Content="SYNC MASTERLIST NOW"
                                             Style="{StaticResource PrimaryActionButton}"
-                                            Command="{Binding ImportToStagingCommand}" />
+                                            Command="{Binding SyncCrsMasterlistCommand}" />
                                 </WrapPanel>
-                            </StackPanel>
-                        </Border>
-
-                        <Border Grid.Column="2"
-                                Background="{DynamicResource ThemeCardBrush}"
-                                BorderBrush="{DynamicResource BrandBorderBrush}"
-                                BorderThickness="1"
-                                CornerRadius="14"
-                                Padding="20">
-                            <StackPanel>
-                                <TextBlock Text="Local Snapshot Status"
-                                           FontSize="15"
-                                           FontWeight="SemiBold"
-                                           Foreground="{DynamicResource BrandMidnightBrush}" />
-
-                                <Grid Margin="0,16,0,0">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-
-                                    <Border Grid.Column="0"
-                                            Margin="0,0,8,0"
-                                            Padding="12"
-                                            CornerRadius="10"
-                                            Background="{DynamicResource ThemeCardSubtleBrush}">
-                                        <StackPanel>
-                                            <TextBlock Text="VALIDATED BENEFICIARIES ROWS"
-                                                       FontSize="10"
-                                                       FontWeight="SemiBold"
-                                                       Foreground="{DynamicResource BrandTextSecondaryBrush}" />
-                                            <TextBlock Text="{Binding MasterListRowCount, StringFormat=N0}"
-                                                       Margin="0,6,0,0"
-                                                       FontSize="24"
-                                                       FontWeight="SemiBold"
-                                                       Foreground="{DynamicResource BrandMidnightBrush}" />
-                                        </StackPanel>
-                                    </Border>
-
-                                    <Border Grid.Column="1"
-                                            Margin="8,0,0,0"
-                                            Padding="12"
-                                            CornerRadius="10"
-                                            Background="{DynamicResource ThemeCardSubtleBrush}">
-                                        <StackPanel>
-                                            <TextBlock Text="STAGING ROWS"
-                                                       FontSize="10"
-                                                       FontWeight="SemiBold"
-                                                       Foreground="{DynamicResource BrandTextSecondaryBrush}" />
-                                            <TextBlock Text="{Binding StagingRowCount, StringFormat=N0}"
-                                                       Margin="0,6,0,0"
-                                                       FontSize="24"
-                                                       FontWeight="SemiBold"
-                                                       Foreground="{DynamicResource BrandMidnightBrush}" />
-                                        </StackPanel>
-                                    </Border>
-                                </Grid>
 
                                 <Border Margin="0,18,0,0"
                                         Padding="14"
@@ -1119,72 +1010,21 @@
                                         BorderThickness="1"
                                         CornerRadius="10">
                                     <StackPanel>
-                                        <TextBlock Text="Import Status"
-                                                   FontSize="11"
+                                        <TextBlock Text="Local Masterlist Status"
+                                                   FontSize="12"
                                                    FontWeight="SemiBold"
                                                    Foreground="{DynamicResource BrandMidnightBrush}" />
-                                        <TextBlock Text="{Binding SnapshotStatusMessage}"
-                                                   Margin="0,6,0,0"
-                                                   Foreground="{Binding SnapshotStatusBrush}"
+                                        <TextBlock Text="{Binding CrsLocalMasterlistSummary}"
+                                                   Margin="0,4,0,0"
+                                                   Foreground="{DynamicResource BrandTextSecondaryBrush}"
+                                                   TextWrapping="Wrap" />
+                                        <TextBlock Text="{Binding CrsStatusMessage}"
+                                                   Margin="0,8,0,0"
+                                                   Foreground="{Binding CrsStatusBrush}"
                                                    TextWrapping="Wrap" />
                                     </StackPanel>
                                 </Border>
-
-                                <Button Margin="0,18,0,0"
-                                        Content="ADVANCED LOAD TABLES"
-                                        Style="{StaticResource SecondaryActionButton}"
-                                        Command="{Binding OpenAdvancedLoadTablesCommand}" />
                             </StackPanel>
-                        </Border>
-                        </Grid>
-
-                        <Border Grid.Row="1"
-                                Margin="0,18,0,0"
-                                Background="{DynamicResource ThemeCardBrush}"
-                                BorderBrush="{DynamicResource BrandBorderBrush}"
-                                BorderThickness="1"
-                                CornerRadius="14"
-                                Padding="20">
-                            <Grid>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="*" />
-                                </Grid.RowDefinitions>
-
-                            <DockPanel>
-                                <TextBlock Text="{Binding PreviewCardTitle}"
-                                           FontSize="15"
-                                           FontWeight="SemiBold"
-                                           Foreground="{DynamicResource BrandMidnightBrush}" />
-
-                                <StackPanel DockPanel.Dock="Right"
-                                            Orientation="Horizontal">
-                                    <ComboBox Width="220"
-                                              Margin="0,0,12,0"
-                                              ItemsSource="{Binding PreviewOptions}"
-                                              SelectedItem="{Binding SelectedPreviewLabel}"
-                                              Style="{StaticResource MaterialDesignOutlinedComboBox}" />
-                                    <Button Content="REFRESH PREVIEW"
-                                            Style="{StaticResource SecondaryActionButton}"
-                                            Command="{Binding RefreshPreviewCommand}" />
-                                </StackPanel>
-                            </DockPanel>
-
-                            <TextBlock Grid.Row="1"
-                                       Margin="0,14,0,14"
-                                       Text="{Binding PreviewSummary}"
-                                       Foreground="{DynamicResource BrandTextSecondaryBrush}"
-                                       TextWrapping="Wrap" />
-
-                            <DataGrid Grid.Row="2"
-                                      ItemsSource="{Binding PreviewRowsView}"
-                                      AutoGenerateColumns="True"
-                                      CanUserAddRows="False"
-                                      CanUserDeleteRows="False"
-                                      IsReadOnly="True"
-                                      MinHeight="300" />
-                            </Grid>
                         </Border>
                     </Grid>
 
@@ -1530,8 +1370,12 @@
                                             Style="{StaticResource SecondaryActionButton}"
                                             Command="{Binding TestGgmsConnectionCommand}" />
                                     <Button Content="SAVE GGMS SETTINGS"
+                                            Margin="0,0,12,0"
                                             Style="{StaticResource GoldActionButton}"
                                             Command="{Binding SaveGgmsSettingsCommand}" />
+                                    <Button Content="SYNC GGMS BUDGET NOW"
+                                            Style="{StaticResource PrimaryActionButton}"
+                                            Command="{Binding SyncGgmsBudgetCommand}" />
                                 </WrapPanel>
 
                                 <TextBlock Margin="0,14,0,0"

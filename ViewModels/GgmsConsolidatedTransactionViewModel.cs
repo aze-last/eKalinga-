@@ -106,10 +106,13 @@ namespace AttendanceShiftingManagement.ViewModels
                 // 1. Run live check on demand
                 await ConnectivityService.Instance.CheckConnectivityAsync();
 
-                // 2. If available, trigger the queue flush
-                if (ConnectivityService.Instance.IsGgmsAvailable)
+                using (var localDb = new Data.LocalDbContext())
                 {
-                    using (var localDb = new Data.LocalDbContext())
+                    StatusMessage = "Reconciling citizen requests...";
+                    await _ggmsService.ReconcileReleasedCitizenRequestsAsync(localDb);
+
+                    // 2. If available, trigger the queue flush
+                    if (ConnectivityService.Instance.IsGgmsAvailable)
                     {
                         var pendingCount = await localDb.GgmsPendingTransactionCache.CountAsync();
                         if (pendingCount > 0)
@@ -309,7 +312,18 @@ namespace AttendanceShiftingManagement.ViewModels
 
             if (SelectedProjectFilter != "All Transactions")
             {
-                filtered = filtered.Where(t => string.Equals(t.ProjectName, SelectedProjectFilter, StringComparison.OrdinalIgnoreCase));
+                if (SelectedProjectFilter is "Citizen Requests" or "Aid Request")
+                {
+                    filtered = filtered.Where(t => 
+                        string.Equals(t.ProjectName, "Aid Request", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(t.ProjectName, "Citizen Requests", StringComparison.OrdinalIgnoreCase) ||
+                        (t.ProjectCode?.StartsWith("AR", StringComparison.OrdinalIgnoreCase) ?? false) ||
+                        (t.ProjectCode?.StartsWith("AMS-AR", StringComparison.OrdinalIgnoreCase) ?? false));
+                }
+                else
+                {
+                    filtered = filtered.Where(t => string.Equals(t.ProjectName, SelectedProjectFilter, StringComparison.OrdinalIgnoreCase));
+                }
             }
 
             var finalResults = filtered.ToList();
@@ -326,7 +340,13 @@ namespace AttendanceShiftingManagement.ViewModels
                 (string.IsNullOrWhiteSpace(SearchText) || 
                  (t.FullName?.ToLowerInvariant().Contains(SearchText.ToLower()) ?? false) ||
                  (t.ProjectCode?.ToLowerInvariant().Contains(SearchText.ToLower()) ?? false)) &&
-                (SelectedProjectFilter == "All Transactions" || string.Equals(t.ProjectName, SelectedProjectFilter, StringComparison.OrdinalIgnoreCase))
+                (SelectedProjectFilter == "All Transactions" || 
+                 (SelectedProjectFilter is "Citizen Requests" or "Aid Request"
+                     ? (string.Equals(t.ProjectName, "Aid Request", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(t.ProjectName, "Citizen Requests", StringComparison.OrdinalIgnoreCase) ||
+                        (t.ProjectCode?.StartsWith("AR", StringComparison.OrdinalIgnoreCase) ?? false) ||
+                        (t.ProjectCode?.StartsWith("AMS-AR", StringComparison.OrdinalIgnoreCase) ?? false))
+                     : string.Equals(t.ProjectName, SelectedProjectFilter, StringComparison.OrdinalIgnoreCase)))
             ).ToList();
 
             System.Windows.Application.Current.Dispatcher.Invoke(() =>

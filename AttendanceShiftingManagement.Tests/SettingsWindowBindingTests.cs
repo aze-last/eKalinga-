@@ -18,7 +18,12 @@ public sealed class SettingsWindowBindingTests
 
         Assert.Contains("MIGRATE LOCAL + REMOTE NOW", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding MigrateLocalAndRemoteCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Header=\"CRS Connection\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding TestCrsConnectionCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding SaveCrsSettingsCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding SyncCrsMasterlistCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Header=\"GGMS Budget Source\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding SyncGgmsBudgetCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Header=\"Updates\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding CheckForUpdatesCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding DownloadUpdateCommand}\"", xaml, StringComparison.Ordinal);

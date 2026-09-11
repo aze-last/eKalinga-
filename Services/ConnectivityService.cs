@@ -108,24 +108,25 @@ namespace AttendanceShiftingManagement.Services
             try
             {
                 var options = BudgetRuntimeOptions.Load();
-                if (string.IsNullOrWhiteSpace(options.GgmsConnection.Server) || string.IsNullOrWhiteSpace(options.GgmsConnection.Username))
+                var conn = options.GetEffectiveConnection();
+                if (string.IsNullOrWhiteSpace(conn.Server) || string.IsNullOrWhiteSpace(conn.Username))
                 {
                     return false;
                 }
 
                 var builder = new MySqlConnectionStringBuilder
                 {
-                    Server = options.GgmsConnection.Server,
-                    Port = (uint)options.GgmsConnection.Port,
-                    Database = options.GgmsConnection.Database,
-                    UserID = options.GgmsConnection.Username,
-                    Password = options.GgmsConnection.Password,
+                    Server = conn.Server,
+                    Port = (uint)conn.Port,
+                    Database = conn.Database,
+                    UserID = conn.Username,
+                    Password = conn.Password,
                     ConnectionTimeout = 3
                 };
 
-                await using var conn = new MySqlConnection(builder.ConnectionString);
+                await using var mySqlConn = new MySqlConnection(builder.ConnectionString);
                 using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-                await conn.OpenAsync(cts.Token);
+                await mySqlConn.OpenAsync(cts.Token);
                 return true;
             }
             catch (Exception ex) when (ex is MySqlException || ex is SocketException || ex is TimeoutException || ex is OperationCanceledException)

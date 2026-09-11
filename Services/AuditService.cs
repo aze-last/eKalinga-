@@ -21,36 +21,50 @@ namespace AttendanceShiftingManagement.Services
         /// </summary>
         public void LogActivity(int? userId, string action, string entity, int? entityId, string details, string ipAddress = "127.0.0.1")
         {
-            var log = new ActivityLog
+            try
             {
-                UserId = userId,
-                Action = action,
-                Entity = entity,
-                EntityId = entityId,
-                Details = details,
-                IpAddress = ipAddress,
-                Timestamp = DateTime.Now
-            };
+                var log = new ActivityLog
+                {
+                    UserId = userId,
+                    Action = action,
+                    Entity = entity,
+                    EntityId = entityId,
+                    Details = details,
+                    IpAddress = ipAddress,
+                    Timestamp = DateTime.Now
+                };
 
-            _context.ActivityLogs.Add(log);
-            _context.SaveChanges();
+                _context.ActivityLogs.Add(log);
+                _context.SaveChanges();
+            }
+            catch
+            {
+                // Non-fatal: audit log failure should never crash the caller or block user authentication
+            }
         }
 
         public async Task LogActivityAsync(int? userId, string action, string entity, int? entityId, string details, string ipAddress = "127.0.0.1")
         {
-            var log = new ActivityLog
+            try
             {
-                UserId = userId,
-                Action = action,
-                Entity = entity,
-                EntityId = entityId,
-                Details = details,
-                IpAddress = ipAddress,
-                Timestamp = DateTime.Now
-            };
+                var log = new ActivityLog
+                {
+                    UserId = userId,
+                    Action = action,
+                    Entity = entity,
+                    EntityId = entityId,
+                    Details = details,
+                    IpAddress = ipAddress,
+                    Timestamp = DateTime.Now
+                };
 
-            _context.ActivityLogs.Add(log);
-            await _context.SaveChangesAsync();
+                _context.ActivityLogs.Add(log);
+                await _context.SaveChangesAsync();
+            }
+            catch
+            {
+                // Non-fatal: audit log failure should never crash the caller
+            }
         }
 
         /// <summary>
@@ -110,12 +124,18 @@ namespace AttendanceShiftingManagement.Services
         /// </summary>
         public void DeleteOldLogs(DateTime olderThan)
         {
-            var oldLogs = _context.ActivityLogs
-                .Where(al => al.Timestamp < olderThan)
-                .ToList();
+            try
+            {
+                var oldLogs = _context.ActivityLogs
+                    .Where(al => al.Timestamp < olderThan)
+                    .ToList();
 
-            _context.ActivityLogs.RemoveRange(oldLogs);
-            _context.SaveChanges();
+                _context.ActivityLogs.RemoveRange(oldLogs);
+                _context.SaveChanges();
+            }
+            catch
+            {
+            }
         }
     }
 }

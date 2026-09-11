@@ -56,7 +56,8 @@ Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription:
 
 [Files]
 Source: "{#MyPublishDir}\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#MyPublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "{#MyAppExeName}"
+Source: "{#MyPublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "{#MyAppExeName},ams.db"
+Source: "{#MyProjectDir}\ams.db"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyProjectDir}\Images\municipal-house.ico"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]

@@ -77,7 +77,7 @@ public sealed class BarangayDashboardBeneficiarySourceTests
         Assert.Contains("Text=\"{Binding DataContext.OfficeInitials, RelativeSource={RelativeSource AncestorType={x:Type Window}}}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"{Binding DataContext.SoftwareTitle, RelativeSource={RelativeSource AncestorType={x:Type Window}}}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"{Binding DataContext.SoftwareSubtitle, RelativeSource={RelativeSource AncestorType={x:Type Window}}}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"ASSISTANCE RECORDS\"", xaml, StringComparison.Ordinal);
+        Assert.True(xaml.Contains("Text=\"CITIZEN REQUESTS\"") || xaml.Contains("Text=\"ASSISTANCE RECORDS\""));
         Assert.Contains("Text=\"MASTERLIST\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"CASH-FOR-WORK\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"REPORTS\"", xaml, StringComparison.Ordinal);

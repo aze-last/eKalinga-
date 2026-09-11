@@ -304,8 +304,8 @@ namespace AttendanceShiftingManagement.ViewModels
                     CurrentSectionSubtitle = "Browse the full registry of validated beneficiaries, search by name or ID, and view individual profiles.";
                     return new MasterListPage(_currentUser);
                 case "AssistanceCases":
-                    CurrentSectionTitle = "Aid Request";
-                    CurrentSectionSubtitle = "Create requests, choose a validated beneficiary or household, and release approved aid against budget.";
+                    CurrentSectionTitle = "Citizen Requests";
+                    CurrentSectionSubtitle = "Digitized municipal desk triage, beneficiary verification, department routing, and tracking.";
                     return new AssistanceCaseManagementPage(_currentUser);
                 case "GgmsTransactions":
                     CurrentSectionTitle = "GGMS Consolidated Transactions";

@@ -1,5 +1,6 @@
 using AttendanceShiftingManagement.Models;
 using Microsoft.EntityFrameworkCore;
+using System.IO;
 
 namespace AttendanceShiftingManagement.Data
 {
@@ -56,32 +57,135 @@ namespace AttendanceShiftingManagement.Data
         {
         }
 
+        public static string GetResolvedDatabasePath()
+        {
+            string appDataFolder = System.IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "eKalingaPlus");
+            System.IO.Directory.CreateDirectory(appDataFolder);
+            string primaryDbPath = System.IO.Path.Combine(appDataFolder, "ams.db");
+
+            string legacyDbPath = System.IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "AttendanceShiftingManagement",
+                "ams.db");
+
+            // If user manually replaced ams.db in the legacy folder and it's newer than primary, sync it
+            if (File.Exists(legacyDbPath))
+            {
+                try
+                {
+                    var legacyInfo = new FileInfo(legacyDbPath);
+                    if (!File.Exists(primaryDbPath) || legacyInfo.LastWriteTimeUtc > new FileInfo(primaryDbPath).LastWriteTimeUtc)
+                    {
+                        var walFile = primaryDbPath + "-wal";
+                        var shmFile = primaryDbPath + "-shm";
+                        if (File.Exists(walFile)) { try { File.Delete(walFile); } catch { } }
+                        if (File.Exists(shmFile)) { try { File.Delete(shmFile); } catch { } }
+
+                        File.Copy(legacyDbPath, primaryDbPath, overwrite: true);
+                    }
+                }
+                catch { }
+            }
+
+            long primarySize = File.Exists(primaryDbPath) ? new FileInfo(primaryDbPath).Length : 0;
+
+            // If primary ams.db does not exist or has minimal initial bootstrap size (< 600KB),
+            // check known deployment and staging locations for a populated ams.db.
+            if (primarySize < 600_000)
+            {
+                string[] candidateLocations = new[]
+                {
+                    // 1. AppData\Local\AttendanceShiftingManagement\ams.db
+                    legacyDbPath,
+                    // 2. Application base directory (installer or unpackaged zip)
+                    System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ams.db"),
+                    // 3. Parent repo root during development
+                    System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "ams.db")
+                };
+
+                foreach (var candidate in candidateLocations)
+                {
+                    try
+                    {
+                        var fullCandidate = System.IO.Path.GetFullPath(candidate);
+                        if (File.Exists(fullCandidate))
+                        {
+                            var candidateInfo = new FileInfo(fullCandidate);
+                            if (candidateInfo.Length > primarySize)
+                            {
+                                var walFile = primaryDbPath + "-wal";
+                                var shmFile = primaryDbPath + "-shm";
+                                if (File.Exists(walFile)) { try { File.Delete(walFile); } catch { } }
+                                if (File.Exists(shmFile)) { try { File.Delete(shmFile); } catch { } }
+
+                                File.Copy(fullCandidate, primaryDbPath, overwrite: true);
+                                break;
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        // Ignore and fall through to next candidate if copy fails
+                    }
+                }
+            }
+
+            return primaryDbPath;
+        }
+
+        public static LocalDbContext CreateSqliteContext()
+        {
+            var optionsBuilder = new DbContextOptionsBuilder<LocalDbContext>();
+            ConfigureSqlite(optionsBuilder);
+            return new LocalDbContext(optionsBuilder.Options);
+        }
+
+        public static void ConfigureSqlite(DbContextOptionsBuilder optionsBuilder)
+        {
+            string dbPath = GetResolvedDatabasePath();
+            var connection = new Microsoft.Data.Sqlite.SqliteConnection(
+                $"Data Source={dbPath};Cache=Shared");
+            connection.Open();
+
+            using (var pragma = connection.CreateCommand())
+            {
+                pragma.CommandText = "PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;";
+                pragma.ExecuteNonQuery();
+            }
+
+            optionsBuilder.UseSqlite(connection);
+        }
+
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             if (!optionsBuilder.IsConfigured)
             {
-                // Always point to local SQLite file for offline usage, stored in AppData
-                // to avoid permission issues when installed in Program Files.
-                string appDataFolder = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "eKalingaPlus");
-                System.IO.Directory.CreateDirectory(appDataFolder);
-                string dbPath = System.IO.Path.Combine(appDataFolder, "ams.db");
-
-                // Cache=Shared enables shared-cache mode so multiple connections
-                // within the same process reuse the same page cache.
-                var connection = new Microsoft.Data.Sqlite.SqliteConnection(
-                    $"Data Source={dbPath};Cache=Shared");
-                connection.Open();
-
-                // WAL allows concurrent readers + one writer without SQLITE_BUSY
-                // on read operations. busy_timeout makes the writer wait up to 5s
-                // for the lock instead of failing immediately.
-                using (var pragma = connection.CreateCommand())
+                try
                 {
-                    pragma.CommandText = "PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;";
-                    pragma.ExecuteNonQuery();
+                    var settings = Services.ConnectionSettingsService.Load();
+                    var selectedPresetKey = settings.SelectedPreset;
+
+                    if (!string.IsNullOrWhiteSpace(selectedPresetKey) &&
+                        !string.Equals(selectedPresetKey, Services.ConnectionSettingsService.LocalPresetKey, StringComparison.OrdinalIgnoreCase))
+                    {
+                        var preset = settings.GetPreset(selectedPresetKey);
+                        if (Services.ConnectionSettingsService.IsPresetConfigured(preset))
+                        {
+                            var connectionString = Services.ConnectionSettingsService.BuildConnectionString(preset);
+                            var serverVersion = new MySqlServerVersion(new Version(8, 0, 36));
+                            optionsBuilder.UseMySql(connectionString, serverVersion);
+                            return;
+                        }
+                    }
+                }
+                catch
+                {
+                    // Fall back to SQLite if loading settings fails
                 }
 
-                optionsBuilder.UseSqlite(connection);
+                ConfigureSqlite(optionsBuilder);
             }
         }
 

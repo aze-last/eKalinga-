@@ -56,4 +56,28 @@ public sealed class BudgetRuntimeOptionsTests
             }
         }
     }
+
+    [Fact]
+    public void GetEffectiveConnection_ReturnsLanConnection_WhenActivePresetIsLan()
+    {
+        var options = new BudgetRuntimeOptions
+        {
+            RemoteConnection = new DatabaseConnectionPreset
+            {
+                DisplayName = "Remote GGMS",
+                Server = "193.203.175.157"
+            },
+            LanConnection = new DatabaseConnectionPreset
+            {
+                DisplayName = "LAN GGMS",
+                Server = "192.168.1.32"
+            }
+        };
+
+        var effectiveLan = options.GetEffectiveConnection("Lan");
+        Assert.Equal("192.168.1.32", effectiveLan.Server);
+
+        var effectiveRemote = options.GetEffectiveConnection("Remote");
+        Assert.Equal("193.203.175.157", effectiveRemote.Server);
+    }
 }

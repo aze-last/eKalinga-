@@ -515,9 +515,9 @@
                                     </Grid>
                                 </Button>
 
-                                <!-- Assistance Case Management -->
+                                <!-- Assistance Case Management / Citizen Requests -->
                                 <Button Command="{Binding ShowAssistanceCasesCommand}"
-                                        ToolTip="Assistance Case Management"
+                                        ToolTip="Citizen Requests"
                                         Visibility="{Binding AssistanceCasesVisibility}">
                                     <Button.Style>
                                         <Style TargetType="Button" BasedOn="{StaticResource SidebarNavButtonStyle}">
@@ -546,7 +546,7 @@
                                                 </Style>
                                             </Border.Style>
                                         </Border>
-                                        <materialDesign:PackIcon Grid.Column="0" Kind="FileDocumentEditOutline" Width="20" Height="20" Margin="4,0,10,0" VerticalAlignment="Center">
+                                        <materialDesign:PackIcon Grid.Column="0" Kind="HandshakeOutline" Width="20" Height="20" Margin="4,0,10,0" VerticalAlignment="Center">
                                             <materialDesign:PackIcon.Style>
                                                 <Style TargetType="materialDesign:PackIcon">
                                                     <Style.Triggers>
@@ -557,7 +557,7 @@
                                                 </Style>
                                             </materialDesign:PackIcon.Style>
                                         </materialDesign:PackIcon>
-                                        <TextBlock Grid.Column="1" Text="Assistance Cases" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"
+                                        <TextBlock Grid.Column="1" Text="Citizen Requests" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"
                                                    Visibility="{Binding IsSidebarCollapsed, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
                                     </Grid>
                                 </Button>

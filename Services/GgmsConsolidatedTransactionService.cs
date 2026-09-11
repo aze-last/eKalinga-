@@ -24,6 +24,7 @@ namespace AttendanceShiftingManagement.Services
         
         Task<List<GgmsConsolidatedTransaction>> LoadTransactionsAsync(string? projectNameFilter = null);
         Task FlushPendingTransactionsAsync(LocalDbContext context);
+        Task ReconcileReleasedCitizenRequestsAsync(LocalDbContext context);
     }
 
     public sealed class NullGgmsConsolidatedTransactionService : IGgmsConsolidatedTransactionService
@@ -38,6 +39,7 @@ namespace AttendanceShiftingManagement.Services
         public Task<string?> TryWriteCashForWorkReleaseAsync(LocalDbContext context, CashForWorkEvent cashForWorkEvent, IReadOnlyCollection<CashForWorkParticipant> participants, IReadOnlyCollection<int> releasedParticipantIds, decimal totalAmount) => Task.FromResult<string?>(null);
         public Task<List<GgmsConsolidatedTransaction>> LoadTransactionsAsync(string? projectNameFilter = null) => Task.FromResult(new List<GgmsConsolidatedTransaction>());
         public Task FlushPendingTransactionsAsync(LocalDbContext context) => Task.CompletedTask;
+        public Task ReconcileReleasedCitizenRequestsAsync(LocalDbContext context) => Task.CompletedTask;
     }
 
     public sealed class GgmsConsolidatedTransactionService : IGgmsConsolidatedTransactionService
@@ -171,7 +173,7 @@ namespace AttendanceShiftingManagement.Services
                     beneficiary.Barangay,
                     beneficiary.HouseholdNo);
 
-                return await TryInsertEntriesAsync([entry]);
+                return await TryInsertEntriesAsync([entry], context);
             }
             catch (Exception ex)
             {
@@ -221,7 +223,7 @@ namespace AttendanceShiftingManagement.Services
                     beneficiary.Barangay,
                     beneficiary.HouseholdNo);
 
-                return await TryInsertEntriesAsync([entry]);
+                return await TryInsertEntriesAsync([entry], context);
             }
             catch (Exception ex)
             {
@@ -276,7 +278,7 @@ namespace AttendanceShiftingManagement.Services
                         beneficiary.HouseholdNo));
                 }
 
-                return await TryInsertEntriesAsync(entries);
+                return await TryInsertEntriesAsync(entries, context);
             }
             catch (Exception ex)
             {
@@ -363,7 +365,7 @@ namespace AttendanceShiftingManagement.Services
                         beneficiary.HouseholdNo));
                 }
 
-                return await TryInsertEntriesAsync(entries);
+                return await TryInsertEntriesAsync(entries, context);
             }
             catch (Exception ex)
             {
@@ -371,7 +373,7 @@ namespace AttendanceShiftingManagement.Services
             }
         }
 
-        private async Task<string?> TryInsertEntriesAsync(IReadOnlyCollection<GgmsConsolidatedTransactionEntry> entries)
+        private async Task<string?> TryInsertEntriesAsync(IReadOnlyCollection<GgmsConsolidatedTransactionEntry> entries, LocalDbContext? context = null)
         {
             if (entries.Count == 0) return null;
 
@@ -380,13 +382,25 @@ namespace AttendanceShiftingManagement.Services
                 try
                 {
                     var payload = JsonSerializer.Serialize(entries);
-                    using var localDb = new LocalDbContext();
-                    localDb.GgmsPendingTransactionCache.Add(new GgmsPendingTransactionCache
+                    if (context != null)
                     {
-                        PayloadJson = payload,
-                        CreatedAt = DateTime.Now
-                    });
-                    await localDb.SaveChangesAsync();
+                        context.GgmsPendingTransactionCache.Add(new GgmsPendingTransactionCache
+                        {
+                            PayloadJson = payload,
+                            CreatedAt = DateTime.Now
+                        });
+                        await context.SaveChangesAsync();
+                    }
+                    else
+                    {
+                        using var localDb = new LocalDbContext();
+                        localDb.GgmsPendingTransactionCache.Add(new GgmsPendingTransactionCache
+                        {
+                            PayloadJson = payload,
+                            CreatedAt = DateTime.Now
+                        });
+                        await localDb.SaveChangesAsync();
+                    }
                     return null; // Gracefully skipped, stored for later sync
                 }
                 catch (Exception ex)
@@ -435,6 +449,34 @@ namespace AttendanceShiftingManagement.Services
             }
             catch (Exception ex)
             {
+                try
+                {
+                    var payload = JsonSerializer.Serialize(entries);
+                    if (context != null)
+                    {
+                        context.GgmsPendingTransactionCache.Add(new GgmsPendingTransactionCache
+                        {
+                            PayloadJson = payload,
+                            CreatedAt = DateTime.Now
+                        });
+                        await context.SaveChangesAsync();
+                    }
+                    else
+                    {
+                        using var localDb = new LocalDbContext();
+                        localDb.GgmsPendingTransactionCache.Add(new GgmsPendingTransactionCache
+                        {
+                            PayloadJson = payload,
+                            CreatedAt = DateTime.Now
+                        });
+                        await localDb.SaveChangesAsync();
+                    }
+                }
+                catch
+                {
+                    // Suppress local cache failure to return underlying GGMS error
+                }
+
                 return $"GGMS Database Write Error: {ex.Message}";
             }
         }
@@ -453,7 +495,7 @@ namespace AttendanceShiftingManagement.Services
                     var entries = JsonSerializer.Deserialize<List<GgmsConsolidatedTransactionEntry>>(record.PayloadJson);
                     if (entries != null && entries.Count > 0)
                     {
-                        var error = await TryInsertEntriesAsync(entries);
+                        var error = await TryInsertEntriesAsync(entries, context);
                         if (string.IsNullOrEmpty(error))
                         {
                             context.GgmsPendingTransactionCache.Remove(record);
@@ -471,6 +513,83 @@ namespace AttendanceShiftingManagement.Services
                 {
                     // If it fails, keep it in the cache and try again later.
                 }
+            }
+        }
+
+        public async Task ReconcileReleasedCitizenRequestsAsync(LocalDbContext context)
+        {
+            ArgumentNullException.ThrowIfNull(context);
+
+            try
+            {
+                var releasedCases = await context.AssistanceCases
+                    .Include(c => c.AyudaProgram)
+                    .Where(c => c.Status == AssistanceCaseStatus.Released)
+                    .ToListAsync();
+
+                if (releasedCases.Count == 0) return;
+
+                var existingCodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                if (ConnectivityService.Instance.IsGgmsAvailable)
+                {
+                    try
+                    {
+                        await using var connection = new MySqlConnection(ConnectionSettingsService.BuildConnectionString(_ggmsConnection));
+                        await connection.OpenAsync();
+
+                        var query = $@"
+                            SELECT project_code FROM `{_tableName}`
+                            WHERE office_id = @officeId AND (project_name = @projectName OR project_code LIKE 'AMS-AR-%')
+                        ";
+                        await using var command = new MySqlCommand(query, connection);
+                        command.Parameters.AddWithValue("@officeId", _officeId);
+                        command.Parameters.AddWithValue("@projectName", AidRequestProjectName);
+
+                        await using var reader = await command.ExecuteReaderAsync();
+                        while (await reader.ReadAsync())
+                        {
+                            if (!reader.IsDBNull(0))
+                            {
+                                existingCodes.Add(reader.GetString(0));
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Error querying existing GGMS transactions: {ex.Message}");
+                    }
+                }
+
+                var pendingPayloads = await context.GgmsPendingTransactionCache
+                    .Select(p => p.PayloadJson)
+                    .ToListAsync();
+
+                foreach (var c in releasedCases)
+                {
+                    var caseRef = !string.IsNullOrWhiteSpace(c.CaseNumber) ? $"AMS-{c.CaseNumber}" : $"AMS-{c.Id:D6}";
+
+                    // If already posted to remote GGMS, skip
+                    if (existingCodes.Contains(caseRef) || (!string.IsNullOrWhiteSpace(c.CaseNumber) && existingCodes.Contains(c.CaseNumber)))
+                    {
+                        continue;
+                    }
+
+                    // If already queued locally, skip
+                    if (pendingPayloads.Any(payload =>
+                        (!string.IsNullOrWhiteSpace(c.CaseNumber) && payload.Contains(c.CaseNumber, StringComparison.OrdinalIgnoreCase)) ||
+                        payload.Contains(caseRef, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        continue;
+                    }
+
+                    // Post missing release (will write to GGMS or queue into GgmsPendingTransactionCache if offline)
+                    await TryWriteAssistanceCaseReleaseAsync(context, c);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error reconciling released citizen requests: {ex.Message}");
             }
         }
 

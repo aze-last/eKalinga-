@@ -17,6 +17,10 @@ namespace AttendanceShiftingManagement.Helpers
 
         public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
+            if (value is bool b && !b)
+            {
+                return Binding.DoNothing;
+            }
             return parameter?.ToString() ?? string.Empty;
         }
     }

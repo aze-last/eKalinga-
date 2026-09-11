@@ -14,7 +14,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private static readonly TimeSpan OtpResendCooldown = TimeSpan.FromSeconds(45);
         private static readonly TimeSpan PasswordChangeAuthorizationDuration = TimeSpan.FromMinutes(3);
         private const int OtpMaxAttempts = 3;
-        private const string SharedProtectedSettingsPurposeLabel = "Remote Snapshot, App Database, and GGMS Budget Source";
+        private const string SharedProtectedSettingsPurposeLabel = "CRS Connection, App Database, and GGMS Budget Source";
         private const string PasswordChangePurposeLabel = "password change";
 
         private RelayCommand _unlockSensitiveSettingsCommand = null!;
@@ -99,9 +99,9 @@ namespace AttendanceShiftingManagement.ViewModels
 
         public string SensitiveSettingsUnlockPromptText => !HasCurrentUser
             ? "Sign in with the current admin account first before unlocking protected settings."
-            : _currentUser?.Role != UserRole.Admin
+            : (_currentUser?.Role != UserRole.Admin && _currentUser?.Role != UserRole.SuperAdmin)
                 ? "Only admin accounts can unlock protected settings."
-                : "Re-enter the current admin password to unlock Remote Snapshot, App Database, and GGMS Budget Source.";
+                : "Re-enter the current admin password to unlock CRS Connection, App Database, and GGMS Budget Source.";
 
         public string SensitiveSettingsUnlockStatusMessage
         {

@@ -36,6 +36,48 @@ public sealed class GgmsConsolidatedTransactionReleaseTests
     }
 
     [Fact]
+    public async Task ReconcileReleasedCitizenRequests_QueuesUnsyncedReleasedCases_WhenOffline()
+    {
+        using var context = TestDbContextFactory.CreateContext();
+        var admin = SeedAdmin(context, "aid-admin");
+        var beneficiary = SeedApprovedBeneficiary(context, 1401, "Elena", "Ramos", "Cruz");
+        SeedGlobalAidRequestBudget(context, admin.Id);
+        SeedGovernmentSnapshot(context, 10000m);
+        var assistanceCase = SeedApprovedAssistanceCase(context, admin.Id, null, beneficiary, 5000m);
+        assistanceCase.Status = AssistanceCaseStatus.Released;
+        assistanceCase.CaseNumber = "AR-20260910-0003";
+        await context.SaveChangesAsync();
+
+        var service = new GgmsConsolidatedTransactionService();
+        await service.ReconcileReleasedCitizenRequestsAsync(context);
+
+        var pending = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ToListAsync(context.GgmsPendingTransactionCache);
+        Assert.Single(pending);
+        Assert.Contains("AR-20260910-0003", pending[0].PayloadJson, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task ReconcileReleasedCitizenRequests_IsIdempotent_DoesNotDuplicatePendingQueue()
+    {
+        using var context = TestDbContextFactory.CreateContext();
+        var admin = SeedAdmin(context, "aid-admin");
+        var beneficiary = SeedApprovedBeneficiary(context, 1402, "Marco", "Santos", null);
+        SeedGlobalAidRequestBudget(context, admin.Id);
+        SeedGovernmentSnapshot(context, 10000m);
+        var assistanceCase = SeedApprovedAssistanceCase(context, admin.Id, null, beneficiary, 3000m);
+        assistanceCase.Status = AssistanceCaseStatus.Released;
+        assistanceCase.CaseNumber = "AR-20260910-0004";
+        await context.SaveChangesAsync();
+
+        var service = new GgmsConsolidatedTransactionService();
+        await service.ReconcileReleasedCitizenRequestsAsync(context);
+        await service.ReconcileReleasedCitizenRequestsAsync(context);
+
+        var pending = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ToListAsync(context.GgmsPendingTransactionCache);
+        Assert.Single(pending);
+    }
+
+    [Fact]
     public async Task ProjectDistributionClaim_WritesGgmsConsolidatedTransaction()
     {
         using var context = TestDbContextFactory.CreateContext();
@@ -170,7 +212,7 @@ public sealed class GgmsConsolidatedTransactionReleaseTests
     private static AssistanceCase SeedApprovedAssistanceCase(
         LocalDbContext context,
         int createdByUserId,
-        int ayudaProgramId,
+        int? ayudaProgramId,
         BeneficiaryStaging beneficiary,
         decimal approvedAmount)
     {
@@ -298,6 +340,8 @@ public sealed class GgmsConsolidatedTransactionReleaseTests
         }
 
         public Task FlushPendingTransactionsAsync(LocalDbContext context) => Task.CompletedTask;
+
+        public Task ReconcileReleasedCitizenRequestsAsync(LocalDbContext context) => Task.CompletedTask;
     }
 
     private sealed record CashForWorkReleaseCall(
