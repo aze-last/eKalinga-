@@ -36,6 +36,16 @@ public sealed class WhatsNewServiceTests
     }
 
     [Fact]
+    public void ShouldShowWhatsNew_AfterPatchIncrement_ShowsOnlyNewestEntry()
+    {
+        var shown = WhatsNewService.ShouldShowWhatsNew("1.0.11", "1.0.10", out var entries);
+
+        Assert.True(shown);
+        var single = Assert.Single(entries);
+        Assert.Equal("1.0.11", single.Version);
+    }
+
+    [Fact]
     public void ShouldShowWhatsNew_WhenAlreadySeen_DoesNotShow()
     {
         var shown = WhatsNewService.ShouldShowWhatsNew("1.0.9", "1.0.9", out var entries);

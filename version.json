@@ -1,12 +1,13 @@
 {
-  "version": "1.0.10",
+  "version": "1.0.11",
   "notes": [
-    "New What's New modal after login that explains what's new or updated in each version.",
-    "Release notes are shown once per version and work offline."
+    "Dashboard update banner now appears even when the startup check was skipped, and offers retry when the check fails.",
+    "Update notifications stay visible on the dashboard without opening Settings."
   ],
   "publishedAt": "2026-09-12",
-  "releasePageUrl": "https://github.com/aze-last/eKalinga-/releases/tag/v1.0.10",
-  "installerFileName": "eKalingaPlus-Setup-1.0.10.exe",
-  "installerUrl": "https://github.com/aze-last/eKalinga-/releases/download/v1.0.10/eKalingaPlus-Setup-1.0.10.exe",
-  "sha256": "53d542de82eef066c1c8c755f176d7f279e26705363e7b12b446bab5669ee0e4"
+  "releasePageUrl": "https://github.com/aze-last/eKalinga-/releases/tag/v1.0.11",
+  "installerFileName": "eKalingaPlus-Setup-1.0.11.exe",
+  "installerUrl": "https://github.com/aze-last/eKalinga-/releases/download/v1.0.11/eKalingaPlus-Setup-1.0.11.exe",
+  "sha256": "PENDING-BUILD"
 }
+

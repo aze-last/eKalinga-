@@ -295,11 +295,52 @@ namespace AttendanceShiftingManagement.ViewModels
                     return;
                 }
 
+                if (result.Status == UpdateCheckStatus.Failed)
+                {
+                    UpdateBannerMessage = "Couldn't check for updates. Select to retry.";
+                    UpdateBannerVisibility = Visibility.Visible;
+                    return;
+                }
+
+                if (result.Status == UpdateCheckStatus.NotChecked)
+                {
+                    TriggerUpdateCheckIfEnabled();
+                }
+
                 UpdateBannerVisibility = Visibility.Collapsed;
             }
             catch
             {
                 UpdateBannerVisibility = Visibility.Collapsed;
+            }
+        }
+
+        private static void TriggerUpdateCheckIfEnabled()
+        {
+            try
+            {
+                var preferences = AppPreferencesService.Load();
+                if (!preferences.CheckForUpdatesOnStartup
+                    || string.IsNullOrWhiteSpace(preferences.UpdateManifestUrl))
+                {
+                    return;
+                }
+
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await AppUpdateCoordinator.CheckNowAsync();
+                    }
+                    catch
+                    {
+                        // The coordinator surfaces failures via LatestResultChanged.
+                    }
+                });
+            }
+            catch
+            {
+                // Banner stays hidden when preferences cannot be read.
             }
         }
 

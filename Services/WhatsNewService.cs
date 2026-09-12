@@ -13,6 +13,16 @@ namespace AttendanceShiftingManagement.Services
         [
             new()
             {
+                Version = "1.0.11",
+                PublishedAt = "2026-09-12",
+                Notes =
+                [
+                    "Dashboard update banner now appears even when the startup check was skipped, and offers retry when the check fails.",
+                    "Update notifications stay visible on the dashboard without opening Settings."
+                ]
+            },
+            new()
+            {
                 Version = "1.0.10",
                 PublishedAt = "2026-09-12",
                 Notes =
