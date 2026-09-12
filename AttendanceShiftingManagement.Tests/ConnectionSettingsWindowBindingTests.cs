@@ -38,4 +38,22 @@ public sealed class ConnectionSettingsWindowBindingTests
         Assert.Contains("Command=\"{Binding SendSaveOtpCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding VerifySaveOtpCommand}\"", xaml, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void ConnectionSettingsWindow_UsesPasswordBox_WithAsteriskMasking()
+    {
+        var windowPath = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..",
+            "..",
+            "..",
+            "..",
+            "Views",
+            "ConnectionSettingsWindow.xaml"));
+
+        var xaml = File.ReadAllText(windowPath);
+
+        Assert.Contains("PasswordChar=\"*\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("helpers:PasswordBoxHelper.BoundPassword=\"{Binding Password", xaml, StringComparison.Ordinal);
+    }
 }

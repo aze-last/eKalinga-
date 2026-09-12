@@ -1,12 +1,13 @@
 {
-  "version": "1.0.6",
+  "version": "1.0.8",
   "notes": [
-    "Updated eKalinga+ installer to version 1.0.6.",
-    "Includes UI/UX performance enhancements and database schema locks."
+    "Updated eKalinga+ installer to version 1.0.8.",
+    "Added password asterisk masking on CRS, GGMS, and database settings.",
+    "Configured remote database connections and auto-update settings."
   ],
-  "publishedAt": "2026-09-09",
-  "releasePageUrl": "https://github.com/aze-last/BarangayAyudaSys/releases/tag/v1.0.6",
-  "installerFileName": "eKalingaPlus-Setup-1.0.6.exe",
-  "installerUrl": "https://github.com/aze-last/BarangayAyudaSys/releases/download/v1.0.6/eKalingaPlus-Setup-1.0.6.exe",
-  "sha256": "a18ab67b15fc12da4f23f1c57d8d7b9b7d2ad13f028938c4fe8590944e40f8c5"
+  "publishedAt": "2026-09-12",
+  "releasePageUrl": "https://github.com/aze-last/eKalinga-/releases/tag/v1.0.8",
+  "installerFileName": "eKalingaPlus-Setup-1.0.8.exe",
+  "installerUrl": "https://github.com/aze-last/eKalinga-/releases/download/v1.0.8/eKalingaPlus-Setup-1.0.8.exe",
+  "sha256": "76017fa743bc41d1039cb51d9222ca00450743f208d23c291bf6469d6309a049"
 }

@@ -115,4 +115,24 @@ public sealed class SettingsWindowBindingTests
 
         Assert.Contains("ContentSource=\"Header\"", xaml, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void SettingsWindow_UsesPasswordBox_WithAsteriskMasking_ForCrsAndGgms()
+    {
+        var windowPath = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..",
+            "..",
+            "..",
+            "..",
+            "Views",
+            "SettingsWindow.xaml"));
+
+        var xaml = File.ReadAllText(windowPath);
+
+        Assert.Contains("helpers:PasswordBoxHelper.BoundPassword=\"{Binding CrsPassword", xaml, StringComparison.Ordinal);
+        Assert.Contains("helpers:PasswordBoxHelper.BoundPassword=\"{Binding GgmsPassword", xaml, StringComparison.Ordinal);
+        Assert.Contains("materialDesign:HintAssist.Hint=\"CRS password\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("materialDesign:HintAssist.Hint=\"GGMS password\"", xaml, StringComparison.Ordinal);
+    }
 }

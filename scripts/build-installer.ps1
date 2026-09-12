@@ -180,8 +180,10 @@ New-Item -ItemType Directory -Force -Path $outputDir | Out-Null
 
 $appSettingsPath = Join-Path $projectRoot "appsettings.json"
 $appSettingsTemplatePath = Join-Path $projectRoot "appsettings.template.json"
-Write-Host "Resetting appsettings.json from template for a clean publish..."
-Copy-Item -Path $appSettingsTemplatePath -Destination $appSettingsPath -Force
+if (-not (Test-Path -LiteralPath $appSettingsPath)) {
+    Write-Host "appsettings.json not found. Copying from template..."
+    Copy-Item -Path $appSettingsTemplatePath -Destination $appSettingsPath
+}
 
 Write-Host "Publishing application..."
 $publishArgs = @(

@@ -4,6 +4,7 @@
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         xmlns:local="clr-namespace:AttendanceShiftingManagement.Views"
+        xmlns:helpers="clr-namespace:AttendanceShiftingManagement.Helpers"
         Title="Settings"
         Width="1280"
         Height="860"
@@ -983,10 +984,11 @@
                                              Text="{Binding CrsUsername, UpdateSourceTrigger=PropertyChanged}"
                                              Style="{StaticResource MaterialDesignOutlinedTextBox}"
                                              materialDesign:HintAssist.Hint="CRS username" />
-                                    <TextBox Margin="8,0,0,0"
-                                             Text="{Binding CrsPassword, UpdateSourceTrigger=PropertyChanged}"
-                                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                             materialDesign:HintAssist.Hint="CRS password" />
+                                    <PasswordBox Margin="8,0,0,0"
+                                                 PasswordChar="*"
+                                                 Style="{StaticResource MaterialDesignOutlinedPasswordBox}"
+                                                 materialDesign:HintAssist.Hint="CRS password"
+                                                 helpers:PasswordBoxHelper.BoundPassword="{Binding CrsPassword, UpdateSourceTrigger=PropertyChanged}" />
                                 </UniformGrid>
 
                                 <WrapPanel Margin="0,18,0,0">
@@ -1358,10 +1360,11 @@
                                              Text="{Binding GgmsUsername, UpdateSourceTrigger=PropertyChanged}"
                                              Style="{StaticResource MaterialDesignOutlinedTextBox}"
                                              materialDesign:HintAssist.Hint="GGMS username" />
-                                    <TextBox Margin="8,0,0,0"
-                                             Text="{Binding GgmsPassword, UpdateSourceTrigger=PropertyChanged}"
-                                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                             materialDesign:HintAssist.Hint="GGMS password" />
+                                    <PasswordBox Margin="8,0,0,0"
+                                                 PasswordChar="*"
+                                                 Style="{StaticResource MaterialDesignOutlinedPasswordBox}"
+                                                 materialDesign:HintAssist.Hint="GGMS password"
+                                                 helpers:PasswordBoxHelper.BoundPassword="{Binding GgmsPassword, UpdateSourceTrigger=PropertyChanged}" />
                                 </UniformGrid>
 
                                 <WrapPanel Margin="0,18,0,0">
