@@ -13,6 +13,16 @@ namespace AttendanceShiftingManagement.Services
         [
             new()
             {
+                Version = "1.0.14",
+                PublishedAt = "2026-09-12",
+                Notes =
+                [
+                    "Fixed updates not appearing on machines installed by older versions: the app now self-repairs a stale update address on launch.",
+                    "Fresh installs default to the correct update manifest out of the box."
+                ]
+            },
+            new()
+            {
                 Version = "1.0.13",
                 PublishedAt = "2026-09-12",
                 Notes =

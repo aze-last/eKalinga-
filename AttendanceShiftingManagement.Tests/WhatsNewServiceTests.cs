@@ -48,11 +48,11 @@ public sealed class WhatsNewServiceTests
     [Fact]
     public void ShouldShowWhatsNew_AfterLatestPatchIncrement_ShowsOnlyNewestEntry()
     {
-        var shown = WhatsNewService.ShouldShowWhatsNew("1.0.13", "1.0.12", out var entries);
+        var shown = WhatsNewService.ShouldShowWhatsNew("1.0.14", "1.0.13", out var entries);
 
         Assert.True(shown);
         var single = Assert.Single(entries);
-        Assert.Equal("1.0.13", single.Version);
+        Assert.Equal("1.0.14", single.Version);
     }
 
     [Fact]

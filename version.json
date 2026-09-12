@@ -1,13 +1,13 @@
 {
-  "version": "1.0.13",
+  "version": "1.0.14",
   "notes": [
-    "Settings tab strip is now scrollable: swipe on touch screens or use the gold chevron arrows to reach hidden tabs like Updates.",
-    "Active tab always scrolls into view, and arrows dim at each end so you know when more settings remain."
+    "Fixed updates not appearing on machines installed by older versions: the app now self-repairs a stale update address on launch.",
+    "Fresh installs default to the correct update manifest out of the box."
   ],
   "publishedAt": "2026-09-12",
-  "releasePageUrl": "https://github.com/aze-last/eKalinga-/releases/tag/v1.0.13",
-  "installerFileName": "eKalingaPlus-Setup-1.0.13.exe",
-  "installerUrl": "https://github.com/aze-last/eKalinga-/releases/download/v1.0.13/eKalingaPlus-Setup-1.0.13.exe",
-  "sha256": "8e9397f550670908a2acbfa60c7a71265d59a7e41e239c4bfa667172df8739e7"
+  "releasePageUrl": "https://github.com/aze-last/eKalinga-/releases/tag/v1.0.14",
+  "installerFileName": "eKalingaPlus-Setup-1.0.14.exe",
+  "installerUrl": "https://github.com/aze-last/eKalinga-/releases/download/v1.0.14/eKalingaPlus-Setup-1.0.14.exe",
+  "sha256": "f7cc7b3d35ee55a2640717ec7c82cfa35303e4e93f46cb68e7fdacb8176c6e4a"
 }
 

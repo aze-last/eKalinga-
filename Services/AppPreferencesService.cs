@@ -13,6 +13,14 @@ namespace AttendanceShiftingManagement.Services
 
     public static class AppPreferencesService
     {
+        public const string DefaultUpdateManifestUrl =
+            "https://raw.githubusercontent.com/aze-last/eKalinga-/main/version.json";
+
+        private static readonly HashSet<string> LegacyUpdateManifestUrls = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "https://raw.githubusercontent.com/aze-last/BarangayAyudaSys/main/version.json"
+        };
+
         private static readonly JsonSerializerOptions JsonOptions = new()
         {
             PropertyNameCaseInsensitive = true,
@@ -73,16 +81,27 @@ namespace AttendanceShiftingManagement.Services
             return Normalize(new AppPreferencesModel
             {
                 CheckForUpdatesOnStartup = configuration.GetValue("UpdateSettings:CheckOnStartup", true),
-                UpdateManifestUrl = configuration["UpdateSettings:ManifestUrl"] ?? string.Empty
+                UpdateManifestUrl = configuration["UpdateSettings:ManifestUrl"] ?? DefaultUpdateManifestUrl
             });
         }
 
         private static AppPreferencesModel Normalize(AppPreferencesModel? settings)
         {
             settings ??= new AppPreferencesModel();
-            settings.UpdateManifestUrl = settings.UpdateManifestUrl?.Trim() ?? string.Empty;
+            settings.UpdateManifestUrl = NormalizeManifestUrl(settings.UpdateManifestUrl);
             settings.LastSeenWhatsNewVersion = settings.LastSeenWhatsNewVersion?.Trim() ?? string.Empty;
             return settings;
+        }
+
+        private static string NormalizeManifestUrl(string? manifestUrl)
+        {
+            var trimmed = manifestUrl?.Trim() ?? string.Empty;
+            if (string.IsNullOrEmpty(trimmed) || LegacyUpdateManifestUrls.Contains(trimmed))
+            {
+                return DefaultUpdateManifestUrl;
+            }
+
+            return trimmed;
         }
 
         private static string GetRuntimeSettingsPath()
