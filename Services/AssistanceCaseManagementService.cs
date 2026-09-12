@@ -519,8 +519,13 @@ namespace AttendanceShiftingManagement.Services
 
                 if (!budgetResult.IsSuccess)
                 {
-                    if (budgetResult.Message != null && budgetResult.Message.Contains("already has a budget ledger entry", StringComparison.OrdinalIgnoreCase))
+                    if (budgetResult.IsDuplicate)
                     {
+                        if (budgetResult.LedgerEntryId.HasValue)
+                        {
+                            assistanceCase.BudgetLedgerEntryId = budgetResult.LedgerEntryId;
+                        }
+
                         assistanceCase.Status = AssistanceCaseStatus.Released;
                         assistanceCase.UpdatedAt = DateTime.Now;
                         await _context.SaveChangesAsync();

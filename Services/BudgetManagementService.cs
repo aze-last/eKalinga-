@@ -1,6 +1,7 @@
 using AttendanceShiftingManagement.Data;
 using AttendanceShiftingManagement.Models;
 using Microsoft.EntityFrameworkCore;
+using System.Data;
 
 namespace AttendanceShiftingManagement.Services
 {
@@ -153,7 +154,7 @@ namespace AttendanceShiftingManagement.Services
         int? CashForWorkBudgetId = null,
         string? ForcedBudgetBucketType = null);
 
-    public sealed record BudgetReleaseOperationResult(bool IsSuccess, string Message, int? LedgerEntryId = null);
+    public sealed record BudgetReleaseOperationResult(bool IsSuccess, string Message, int? LedgerEntryId = null, bool IsDuplicate = false, bool IsConcurrencyConflict = false);
 
     public sealed record BudgetOverviewSnapshot(
         decimal GovernmentAllocated,
@@ -731,18 +732,11 @@ namespace AttendanceShiftingManagement.Services
             GgmsProjectCache? linkedGgmsProject = null;
             var budgetCap = request.BudgetCap;
 
-            // ggms_project_cache is a local-only SQLite mirror, so this validation is skipped on
-            // the remote (MySQL) pass — the caller resolves the cap before building the request.
-            if (sourceProjectDetailsId != null && _context.Database.ProviderName != "Pomelo.EntityFrameworkCore.MySql")
+            // Double-link guard runs on EVERY provider: AyudaPrograms exists on all
+            // schemas, so two PCs sharing one database can never link the same GGMS
+            // project into two active programs.
+            if (sourceProjectDetailsId != null)
             {
-                linkedGgmsProject = await _context.GgmsProjectCache
-                    .FirstOrDefaultAsync(cache => cache.ProjectDetailsId == sourceProjectDetailsId);
-
-                if (linkedGgmsProject == null)
-                {
-                    return new AyudaProgramOperationResult(false, $"GGMS project '{sourceProjectDetailsId}' was not found in the local mirror. Run Sync GGMS first.");
-                }
-
                 var alreadyLinked = await _context.AyudaPrograms.AsNoTracking()
                     .AnyAsync(p => p.SourceProjectDetailsId == sourceProjectDetailsId && p.IsActive);
                 if (alreadyLinked)
@@ -750,12 +744,24 @@ namespace AttendanceShiftingManagement.Services
                     return new AyudaProgramOperationResult(false, $"GGMS project '{sourceProjectDetailsId}' is already linked to an active project.");
                 }
 
-                // The GGMS sub-allocation is the spending envelope: cap defaults to it and can never exceed it.
-                if (budgetCap.HasValue && budgetCap.Value > linkedGgmsProject.TotalBudget)
+                // The spending-envelope check needs the ggms_project_cache mirror, which
+                // exists on SQLite and fresh MySQL schemas but is absent from legacy
+                // MySQL databases. When the mirror is unreadable, keep the previous
+                // behavior (skip) instead of blocking project creation.
+                linkedGgmsProject = await TryFindLinkedGgmsProjectAsync(sourceProjectDetailsId);
+                if (linkedGgmsProject != null)
                 {
-                    return new AyudaProgramOperationResult(false, $"Budget cap cannot exceed the GGMS project budget of {linkedGgmsProject.TotalBudget:N2}.");
+                    // The GGMS sub-allocation is the spending envelope: cap defaults to it and can never exceed it.
+                    if (budgetCap.HasValue && budgetCap.Value > linkedGgmsProject.TotalBudget)
+                    {
+                        return new AyudaProgramOperationResult(false, $"Budget cap cannot exceed the GGMS project budget of {linkedGgmsProject.TotalBudget:N2}.");
+                    }
+                    budgetCap ??= linkedGgmsProject.TotalBudget;
                 }
-                budgetCap ??= linkedGgmsProject.TotalBudget;
+                else if (_context.Database.ProviderName != "Pomelo.EntityFrameworkCore.MySql")
+                {
+                    return new AyudaProgramOperationResult(false, $"GGMS project '{sourceProjectDetailsId}' was not found in the local mirror. Run Sync GGMS first.");
+                }
             }
 
             var ayudaProgram = new AyudaProgram
@@ -796,7 +802,17 @@ namespace AttendanceShiftingManagement.Services
                 linkedGgmsProject.IsLinked = true;
             }
 
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex) when (IsProgramCodeConflict(ex))
+            {
+                // Exact-simultaneous create from another unit passed the pre-check
+                // above: the UNIQUE index won the race, so report it friendly.
+                _context.Entry(ayudaProgram).State = EntityState.Detached;
+                return new AyudaProgramOperationResult(false, $"Program code '{programCode}' was just created by another unit. Open the existing project instead.");
+            }
 
             await _auditService.LogActivityAsync(
                 createdByUserId,
@@ -812,6 +828,200 @@ namespace AttendanceShiftingManagement.Services
             }
 
             return new AyudaProgramOperationResult(true, message, ayudaProgram.Id);
+        }
+
+        // Best-effort read of the GGMS mirror: returns null when the row is absent
+        // OR when the table itself is missing (legacy MySQL schemas). Never throws.
+        private async Task<GgmsProjectCache?> TryFindLinkedGgmsProjectAsync(string sourceProjectDetailsId)
+        {
+            try
+            {
+                return await _context.GgmsProjectCache
+                    .FirstOrDefaultAsync(cache => cache.ProjectDetailsId == sourceProjectDetailsId);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static bool IsProgramCodeConflict(DbUpdateException ex)
+        {
+            var message = ex.InnerException?.Message ?? ex.Message;
+            var isUniqueViolation = message.Contains("Duplicate entry", StringComparison.OrdinalIgnoreCase)
+                || message.Contains("UNIQUE constraint failed", StringComparison.OrdinalIgnoreCase);
+            return isUniqueViolation && message.Contains("ProgramCode", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private void DetachPendingChanges()
+        {
+            foreach (var entry in _context.ChangeTracker.Entries().Where(e => e.State != EntityState.Unchanged).ToList())
+            {
+                entry.State = EntityState.Detached;
+            }
+        }
+
+        private static bool IsReleaseSerializationConflict(DbUpdateException ex)
+        {
+            if (HasProviderErrorNumber(ex, 1213, 1205))
+            {
+                return true;
+            }
+
+            var message = ex.InnerException?.Message ?? ex.Message;
+            return message.Contains("deadlock", StringComparison.OrdinalIgnoreCase)
+                || message.Contains("Lock wait timeout", StringComparison.OrdinalIgnoreCase)
+                || message.Contains("database is locked", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsLedgerDuplicate(DbUpdateException ex)
+        {
+            if (HasProviderErrorNumber(ex, 1062, 19, 2067))
+            {
+                return true;
+            }
+
+            var message = ex.InnerException?.Message ?? ex.Message;
+            var isUniqueViolation = message.Contains("Duplicate entry", StringComparison.OrdinalIgnoreCase)
+                || message.Contains("UNIQUE constraint failed", StringComparison.OrdinalIgnoreCase)
+                || message.Contains("unique constraint", StringComparison.OrdinalIgnoreCase);
+            if (!isUniqueViolation)
+            {
+                return false;
+            }
+
+            return message.Contains("budget_ledger_entries", StringComparison.OrdinalIgnoreCase)
+                || message.Contains("BudgetLedgerEntr", StringComparison.OrdinalIgnoreCase)
+                || message.Contains("feature_source", StringComparison.OrdinalIgnoreCase)
+                || message.Contains("source_record_id", StringComparison.OrdinalIgnoreCase)
+                || message.Contains("IX_budget_ledger", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool HasProviderErrorNumber(DbUpdateException ex, params int[] numbers)
+        {
+            for (var current = ex.InnerException; current != null; current = current.InnerException)
+            {
+                var numberProperty = current.GetType().GetProperty("Number")
+                    ?? current.GetType().GetProperty("SqliteErrorCode")
+                    ?? current.GetType().GetProperty("ErrorCode");
+                if (numberProperty?.GetValue(current) is int number && numbers.Contains(number))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public sealed record FundIntegrityIssue(
+            string EnvelopeKind,
+            string EnvelopeName,
+            decimal EnvelopeAmount,
+            decimal ReleasedTotal)
+        {
+            public decimal OverdrawnBy => ReleasedTotal - EnvelopeAmount;
+        }
+
+        // Monitoring probe (not a gate): lists earmarked envelopes whose ledger
+        // releases exceed the envelope — evidence of a past race or manual edit.
+        // Never throws; the Budget module calls it after loading and surfaces any
+        // issues through the existing status line.
+        public async Task<IReadOnlyList<FundIntegrityIssue>> GetOverdrawnEnvelopesAsync()
+        {
+            var issues = new List<FundIntegrityIssue>();
+
+            var donations = await _context.PrivateDonations.AsNoTracking().ToListAsync();
+            foreach (var donation in donations)
+            {
+                var released = await GetSharedEnvelopeSpendAsync(
+                    sharingProgramIds: await _context.AyudaPrograms.AsNoTracking()
+                        .Where(p => p.SourceDonationId == donation.Id)
+                        .Select(p => p.Id)
+                        .ToListAsync(),
+                    sharingCfwBudgetIds: await _context.CashForWorkBudgets.AsNoTracking()
+                        .Where(b => b.SourceDonationId == donation.Id)
+                        .Select(b => b.Id)
+                        .ToListAsync());
+                if (released > donation.Amount)
+                {
+                    issues.Add(new FundIntegrityIssue(
+                        "Private Donation",
+                        string.IsNullOrWhiteSpace(donation.DonorName) ? $"Donation #{donation.Id}" : donation.DonorName,
+                        donation.Amount,
+                        released));
+                }
+            }
+
+            var snapshots = await _context.GovernmentBudgetSnapshots.AsNoTracking().ToListAsync();
+            foreach (var snapshot in snapshots)
+            {
+                var released = await GetSharedEnvelopeSpendAsync(
+                    sharingProgramIds: await _context.AyudaPrograms.AsNoTracking()
+                        .Where(p => p.SourceGGMSBudgetId == snapshot.Id)
+                        .Select(p => p.Id)
+                        .ToListAsync(),
+                    sharingCfwBudgetIds: await _context.CashForWorkBudgets.AsNoTracking()
+                        .Where(b => b.SourceGGMSBudgetId == snapshot.Id)
+                        .Select(b => b.Id)
+                        .ToListAsync());
+                if (released > snapshot.AllocatedAmount)
+                {
+                    issues.Add(new FundIntegrityIssue(
+                        "GGMS Allocation",
+                        string.IsNullOrWhiteSpace(snapshot.OfficeName) ? $"Snapshot #{snapshot.Id}" : snapshot.OfficeName,
+                        snapshot.AllocatedAmount,
+                        released));
+                }
+            }
+
+            var cappedPrograms = await _context.AyudaPrograms.AsNoTracking()
+                .Where(p => p.IsActive && p.BudgetCap.HasValue)
+                .ToListAsync();
+            foreach (var program in cappedPrograms)
+            {
+                var spent = await _context.BudgetLedgerEntries
+                    .AsNoTracking()
+                    .Where(entry =>
+                        entry.EntryType == BudgetLedgerEntryType.Release &&
+                        entry.ProgramId == program.Id &&
+                        entry.AssistanceCaseBudgetId == null &&
+                        entry.CashForWorkBudgetId == null)
+                    .SumAsync(entry => (decimal?)entry.TotalAmount) ?? 0m;
+                if (spent > program.BudgetCap!.Value)
+                {
+                    issues.Add(new FundIntegrityIssue(
+                        "Program Cap",
+                        $"{program.ProgramCode} - {program.ProgramName}",
+                        program.BudgetCap.Value,
+                        spent));
+                }
+            }
+
+            return issues;
+        }
+
+        private async Task<decimal> GetSharedEnvelopeSpendAsync(List<int> sharingProgramIds, List<int> sharingCfwBudgetIds)
+        {
+            return await _context.BudgetLedgerEntries.AsNoTracking()
+                .Where(e => e.EntryType == BudgetLedgerEntryType.Release &&
+                    ((e.ProgramId.HasValue && sharingProgramIds.Contains(e.ProgramId.Value)) ||
+                     (e.CashForWorkBudgetId.HasValue && sharingCfwBudgetIds.Contains(e.CashForWorkBudgetId.Value))))
+                .SumAsync(e => (decimal?)e.TotalAmount) ?? 0m;
+        }
+
+        public sealed record DuplicateLedgerKey(BudgetLedgerFeatureSource FeatureSource, string SourceRecordId, BudgetLedgerEntryType EntryType, int Count);
+
+        // Pre-UNIQUE audit: groups violating the (FeatureSource, SourceRecordId,
+        // EntryType) idempotency key. Empty means the UNIQUE index is safe to create.
+        // Never deletes; callers surface the keys for manual review.
+        public async Task<IReadOnlyList<DuplicateLedgerKey>> GetDuplicateLedgerReleaseKeysAsync()
+        {
+            return await _context.BudgetLedgerEntries
+                .AsNoTracking()
+                .GroupBy(e => new { e.FeatureSource, e.SourceRecordId, e.EntryType })
+                .Where(g => g.Count() > 1)
+                .Select(g => new DuplicateLedgerKey(g.Key.FeatureSource, g.Key.SourceRecordId, g.Key.EntryType, g.Count()))
+                .ToListAsync();
         }
 
         public async Task<GovernmentBudgetSnapshotOperationResult> RecordGovernmentSnapshotAsync(GovernmentBudgetSnapshotRequest request, int recordedByUserId)
@@ -966,6 +1176,72 @@ namespace AttendanceShiftingManagement.Services
 
         public async Task<BudgetReleaseOperationResult> RecordReleaseAsync(BudgetReleaseRequest request, int recordedByUserId)
         {
+            // Fund-depletion race guard: the SUM-check + INSERT inside the core must be
+            // atomic across PCs sharing one database, otherwise two units can both see
+            // sufficient funds and jointly overspend. Serializable makes the second
+            // unit's reads wait for the first unit's commit. Only MySQL is shared
+            // across PCs, so SQLite (single-PC file) and InMemory (tests) run the
+            // core directly with no behavior change.
+            if (_context.Database.ProviderName != "Pomelo.EntityFrameworkCore.MySql")
+            {
+                return await RecordReleaseCoreAsync(request, recordedByUserId);
+            }
+
+            // One automatic retry on serialization conflict: the first attempt's
+            // transaction rolls back on dispose, the second re-reads committed sums.
+            for (var attempt = 0; attempt < 2; attempt++)
+            {
+                await using var transaction = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+                BudgetReleaseOperationResult result;
+                try
+                {
+                    result = await RecordReleaseCoreAsync(request, recordedByUserId);
+                }
+                catch (DbUpdateException ex) when (IsReleaseSerializationConflict(ex))
+                {
+                    // Deadlock / lock-wait: another unit's release won the race. Nothing was
+                    // saved (the transaction rolls back on dispose); retry once, then ask.
+                    DetachPendingChanges();
+                    if (attempt == 0)
+                    {
+                        await Task.Delay(100 * (attempt + 1));
+                        continue;
+                    }
+
+                    return new BudgetReleaseOperationResult(false, "Another unit is recording a release at the same time. Please retry.", IsConcurrencyConflict: true);
+                }
+                catch (DbUpdateException ex) when (IsLedgerDuplicate(ex))
+                {
+                    // Same-record double release: the friendly pre-check lost an exact race.
+                    // The UNIQUE index won, so look up the winner to let callers link it.
+                    DetachPendingChanges();
+                    var winner = await FindReleaseByKeyAsync(request);
+                    return new BudgetReleaseOperationResult(false, "This release was already recorded by another unit. Reload to see the latest balances.", winner?.Id, IsDuplicate: true);
+                }
+
+                if (result.IsSuccess)
+                {
+                    await transaction.CommitAsync();
+                }
+                return result;
+            }
+
+            return new BudgetReleaseOperationResult(false, "Another unit is recording a release at the same time. Please retry.", IsConcurrencyConflict: true);
+        }
+
+        private Task<BudgetLedgerEntry?> FindReleaseByKeyAsync(BudgetReleaseRequest request)
+        {
+            var sourceRecordId = NormalizeRequired(request.SourceRecordId);
+            return _context.BudgetLedgerEntries
+                .AsNoTracking()
+                .FirstOrDefaultAsync(entry =>
+                    entry.EntryType == BudgetLedgerEntryType.Release &&
+                    entry.FeatureSource == request.FeatureSource &&
+                    entry.SourceRecordId == sourceRecordId);
+        }
+
+        private async Task<BudgetReleaseOperationResult> RecordReleaseCoreAsync(BudgetReleaseRequest request, int recordedByUserId)
+        {
             if (request.TotalAmount <= 0)
             {
                 return new BudgetReleaseOperationResult(false, "Release amount must be greater than zero.");
@@ -986,7 +1262,7 @@ namespace AttendanceShiftingManagement.Services
 
             if (existingRelease != null)
             {
-                return new BudgetReleaseOperationResult(false, "This release already has a budget ledger entry.", existingRelease.Id);
+                return new BudgetReleaseOperationResult(false, "This release already has a budget ledger entry.", existingRelease.Id, IsDuplicate: true);
             }
 
             AyudaProgram? ayudaProgram = null;

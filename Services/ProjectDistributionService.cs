@@ -181,7 +181,16 @@ namespace AttendanceShiftingManagement.Services
             };
 
             _context.AyudaProjectBeneficiaries.Add(membership);
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex) when (IsEnrollmentConflict(ex))
+            {
+                // Another unit added this beneficiary after our duplicate read.
+                _context.Entry(membership).State = EntityState.Detached;
+                return new ProjectDistributionOperationResult(false, "Another unit just added this beneficiary. Reload the project list.", null);
+            }
 
             await _auditService.LogActivityAsync(
                 actedByUserId,
@@ -322,7 +331,20 @@ namespace AttendanceShiftingManagement.Services
             }
 
             _context.AyudaProjectBeneficiaries.AddRange(newMemberships);
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex) when (IsEnrollmentConflict(ex))
+            {
+                // Another unit enrolled overlapping names after our pre-check read:
+                // the UNIQUE index kept the data correct, so just say so.
+                foreach (var membership in newMemberships)
+                {
+                    _context.Entry(membership).State = EntityState.Detached;
+                }
+                return new ProjectDistributionOperationResult(false, "Another unit just enrolled some of these beneficiaries. Reload the project list and retry with the remaining names.");
+            }
 
             await _auditService.LogActivityAsync(
                 actedByUserId,
@@ -332,6 +354,22 @@ namespace AttendanceShiftingManagement.Services
                 $"Bulk added {newMemberships.Count} beneficiaries to project/program #{ayudaProgramId}.");
 
             return new ProjectDistributionOperationResult(true, $"Successfully enrolled {newMemberships.Count} beneficiaries to the project.");
+        }
+
+        private static bool IsEnrollmentConflict(DbUpdateException ex)
+        {
+            var message = ex.InnerException?.Message ?? ex.Message;
+            var isUniqueViolation = message.Contains("Duplicate entry", StringComparison.OrdinalIgnoreCase)
+                || message.Contains("UNIQUE constraint failed", StringComparison.OrdinalIgnoreCase);
+            return isUniqueViolation && message.Contains("AyudaProjectBeneficiar", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsClaimConflict(DbUpdateException ex)
+        {
+            var message = ex.InnerException?.Message ?? ex.Message;
+            var isUniqueViolation = message.Contains("Duplicate entry", StringComparison.OrdinalIgnoreCase)
+                || message.Contains("UNIQUE constraint failed", StringComparison.OrdinalIgnoreCase);
+            return isUniqueViolation && message.Contains("AyudaProjectClaim", StringComparison.OrdinalIgnoreCase);
         }
 
         public async Task<ProjectDistributionOperationResult> BulkRecordClaimsAsync(
@@ -391,6 +429,7 @@ namespace AttendanceShiftingManagement.Services
             }
 
             var successfulClaims = 0;
+            var addedClaims = new List<AyudaProjectClaim>();
             var now = DateTime.Now;
             var historyService = new BeneficiaryAssistanceLedgerService(_context, _auditService);
 
@@ -442,6 +481,7 @@ namespace AttendanceShiftingManagement.Services
                 };
 
                 _context.AyudaProjectClaims.Add(claim);
+                addedClaims.Add(claim);
                 
                 membership.Status = DistributionBeneficiaryStatus.Released;
                 membership.StatusUpdatedByUserId = actedByUserId;
@@ -482,12 +522,29 @@ namespace AttendanceShiftingManagement.Services
                 successfulClaims++;
             }
 
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex) when (IsClaimConflict(ex))
+            {
+                // Another unit claimed overlapping beneficiaries after our reads:
+                // nothing was saved (single transaction), so report it friendly.
+                foreach (var entry in _context.ChangeTracker.Entries().Where(e => e.State != EntityState.Unchanged).ToList())
+                {
+                    entry.State = EntityState.Detached;
+                }
+                return new ProjectDistributionOperationResult(false, "Another unit just recorded claims for some of these beneficiaries. Nothing was saved — reload the project and retry with the remaining names.");
+            }
 
             if (successfulClaims > 0)
             {
+                // Identity values are populated by SaveChanges above: select by Id,
+                // not by timestamp, because MySQL datetime(6) truncates sub-microsecond
+                // precision and a ClaimedAt equality miss would silently skip the GGMS push.
+                var syncedClaimIds = addedClaims.Where(c => c.Id != 0).Select(c => c.Id).ToList();
                 var claimsToSync = await _context.AyudaProjectClaims
-                    .Where(c => c.AyudaProgramId == ayudaProgramId && c.ClaimedAt == now)
+                    .Where(c => syncedClaimIds.Contains(c.Id))
                     .ToListAsync();
 
                 var ggmsWarningMessage = await _ggmsConsolidatedTransactionService.TryWriteBulkProjectDistributionClaimsAsync(_context, program, claimsToSync);
@@ -774,7 +831,17 @@ namespace AttendanceShiftingManagement.Services
             };
 
             _context.AyudaProjectClaims.Add(claim);
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex) when (IsClaimConflict(ex))
+            {
+                // Another unit claimed this beneficiary after our qualification read:
+                // the UNIQUE index kept a single claim, so report it friendly.
+                _context.Entry(claim).State = EntityState.Detached;
+                return new ProjectDistributionOperationResult(false, "Another unit just recorded this claim. Reload the project to see the latest list.", qualification.ProjectBeneficiaryId);
+            }
 
             var membership = await _context.AyudaProjectBeneficiaries
                 .FirstAsync(item => item.Id == qualification.ProjectBeneficiaryId);
@@ -800,6 +867,9 @@ namespace AttendanceShiftingManagement.Services
                 if (!releaseResult.IsSuccess)
                 {
                     _context.AyudaProjectClaims.Remove(claim);
+                    // Revert the pre-marked status: without this the membership says
+                    // Released while no claim row exists, permanently blocking release.
+                    membership.Status = DistributionBeneficiaryStatus.Pending;
                     await _context.SaveChangesAsync();
                     return new ProjectDistributionOperationResult(false, releaseResult.Message, membership.Id);
                 }
@@ -1361,7 +1431,16 @@ namespace AttendanceShiftingManagement.Services
             };
 
             _context.AyudaProjectBeneficiaries.Add(entry);
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex) when (IsEnrollmentConflict(ex))
+            {
+                // Another unit enrolled this beneficiary after our duplicate read.
+                _context.Entry(entry).State = EntityState.Detached;
+                return new ProjectDistributionOperationResult(false, "Another unit just enrolled this beneficiary. Reload the project list.");
+            }
 
             return new ProjectDistributionOperationResult(true, "Beneficiary enrolled successfully.");
         }

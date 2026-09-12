@@ -194,6 +194,8 @@ namespace AttendanceShiftingManagement.Data
                 {
                     EnsureColumnExists(connection, "user_permissions", "can_access_seminar_attendance", "INTEGER NOT NULL DEFAULT 1", userPermissionColumns);
                 }
+
+                EnsureUniqueBudgetLedgerIndex(connection);
             }
             finally
             {
@@ -231,6 +233,35 @@ namespace AttendanceShiftingManagement.Data
             using var command = connection.CreateCommand();
             command.CommandText = $"ALTER TABLE {tableName} ADD COLUMN {columnName} {columnDefinition};";
             command.ExecuteNonQuery();
+        }
+
+        // Mirrors the MySQL UQ_budget_ledger_entries_source idempotency guard.
+        // Skipped when the table is absent or duplicate keys already exist.
+        private static void EnsureUniqueBudgetLedgerIndex(DbConnection connection)
+        {
+            if (GetTableColumns(connection, "budget_ledger_entries").Count == 0)
+            {
+                return;
+            }
+
+            using var dupeCommand = connection.CreateCommand();
+            dupeCommand.CommandText = """
+                SELECT COUNT(*) FROM (
+                    SELECT feature_source, source_record_id, entry_type
+                    FROM budget_ledger_entries
+                    GROUP BY feature_source, source_record_id, entry_type
+                    HAVING COUNT(*) > 1
+                    LIMIT 1
+                );
+                """;
+            if (Convert.ToInt32(dupeCommand.ExecuteScalar()) > 0)
+            {
+                return;
+            }
+
+            using var createCommand = connection.CreateCommand();
+            createCommand.CommandText = "CREATE UNIQUE INDEX IF NOT EXISTS UQ_budget_ledger_entries_source ON budget_ledger_entries(feature_source, source_record_id, entry_type);";
+            createCommand.ExecuteNonQuery();
         }
     }
 }

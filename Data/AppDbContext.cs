@@ -242,7 +242,8 @@ namespace AttendanceShiftingManagement.Data
                 .HasIndex(entry => entry.BeneficiaryId);
 
             modelBuilder.Entity<BudgetLedgerEntry>()
-                .HasIndex(entry => new { entry.FeatureSource, entry.SourceRecordId, entry.EntryType });
+                .HasIndex(entry => new { entry.FeatureSource, entry.SourceRecordId, entry.EntryType })
+                .IsUnique();
 
             modelBuilder.Entity<CashForWorkParticipant>()
                 .HasIndex(participant => new { participant.EventId, participant.BeneficiaryStagingId })

@@ -210,6 +210,8 @@ namespace AttendanceShiftingManagement.Data
                 "release_kind",
                 "ALTER TABLE `budget_ledger_entries` ADD COLUMN `release_kind` varchar(32) NULL;");
 
+            EnsureUniqueBudgetLedgerIndex(connection);
+
             EnsureColumnExists(
                 connection,
                 "scanner_sessions",
@@ -1117,6 +1119,51 @@ namespace AttendanceShiftingManagement.Data
         {
             using var command = new MySqlCommand(statement, connection);
             command.ExecuteNonQuery();
+        }
+
+        // Idempotency guard for multi-PC releases: UNIQUE(feature_source,
+        // source_record_id, entry_type) lets the second unit's INSERT fail instead of
+        // double-spending. Skipped when duplicate keys already exist — resolve them via
+        // BudgetManagementService.GetDuplicateLedgerReleaseKeysAsync first (never delete).
+        private static void EnsureUniqueBudgetLedgerIndex(MySqlConnection connection)
+        {
+            using var existsCommand = new MySqlCommand(
+                """
+                SELECT COUNT(*)
+                FROM information_schema.STATISTICS
+                WHERE TABLE_SCHEMA = DATABASE()
+                  AND TABLE_NAME = 'budget_ledger_entries'
+                  AND INDEX_NAME = 'UQ_budget_ledger_entries_source'
+                  AND NON_UNIQUE = 0;
+                """,
+                connection);
+
+            if (Convert.ToInt32(existsCommand.ExecuteScalar()) > 0)
+            {
+                return;
+            }
+
+            using var duplicateCommand = new MySqlCommand(
+                """
+                SELECT COUNT(*) FROM (
+                    SELECT `feature_source`, `source_record_id`, `entry_type`
+                    FROM `budget_ledger_entries`
+                    GROUP BY `feature_source`, `source_record_id`, `entry_type`
+                    HAVING COUNT(*) > 1
+                    LIMIT 1
+                ) AS `dupes`;
+                """,
+                connection);
+
+            if (Convert.ToInt32(duplicateCommand.ExecuteScalar()) > 0)
+            {
+                return;
+            }
+
+            using var createCommand = new MySqlCommand(
+                "CREATE UNIQUE INDEX `UQ_budget_ledger_entries_source` ON `budget_ledger_entries` (`feature_source`(255), `source_record_id`, `entry_type`(255));",
+                connection);
+            createCommand.ExecuteNonQuery();
         }
 
         private static string EscapeIdentifier(string identifier)

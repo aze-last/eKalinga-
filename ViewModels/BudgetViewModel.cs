@@ -4028,6 +4028,7 @@ namespace AttendanceShiftingManagement.ViewModels
                 await LoadLedgerAsync();
                 await LoadBudgetsViewAsync();
                 SetSuccessStatus("Budget controls refreshed.");
+                await CheckFundIntegrityAsync();
             }
             catch (Exception ex)
             {
@@ -4036,6 +4037,39 @@ namespace AttendanceShiftingManagement.ViewModels
             finally
             {
                 IsBusy = false;
+            }
+        }
+
+        /// <summary>
+        /// Monitoring probe (not a gate): flags earmarked envelopes whose ledger
+        /// releases exceed the envelope — evidence of a past multi-PC race or a
+        /// manual edit. Surfaces through the existing status line; never blocks loading.
+        /// </summary>
+        private async Task CheckFundIntegrityAsync()
+        {
+            try
+            {
+                await using var context = new LocalDbContext();
+                var service = new BudgetManagementService(context);
+                var issues = await service.GetOverdrawnEnvelopesAsync();
+                var duplicates = await service.GetDuplicateLedgerReleaseKeysAsync();
+                if (issues.Count == 0 && duplicates.Count == 0)
+                {
+                    return;
+                }
+
+                var parts = issues.Select(issue =>
+                    $"{issue.EnvelopeKind} '{issue.EnvelopeName}' overdrawn by PHP {issue.OverdrawnBy:N2}").ToList();
+                if (duplicates.Count > 0)
+                {
+                    parts.Add($"{duplicates.Count} duplicate ledger key(s): " + string.Join("; ", duplicates.Take(3).Select(d => $"{d.FeatureSource}:{d.SourceRecordId} x{d.Count}")));
+                }
+
+                SetErrorStatus($"FUND INTEGRITY: {string.Join("; ", parts)}.");
+            }
+            catch
+            {
+                // The probe must never break the Budget module.
             }
         }
 

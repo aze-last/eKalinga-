@@ -260,7 +260,7 @@ namespace AttendanceShiftingManagement.Data
             modelBuilder.Entity<BeneficiaryStaging>().HasIndex(r => r.FirstName);
             modelBuilder.Entity<BeneficiaryAssistanceLedgerEntry>().HasIndex(e => e.CivilRegistryId);
             modelBuilder.Entity<BeneficiaryAssistanceLedgerEntry>().HasIndex(e => e.BeneficiaryId);
-            modelBuilder.Entity<BudgetLedgerEntry>().HasIndex(e => new { e.FeatureSource, e.SourceRecordId, e.EntryType });
+            modelBuilder.Entity<BudgetLedgerEntry>().HasIndex(e => new { e.FeatureSource, e.SourceRecordId, e.EntryType }).IsUnique();
             modelBuilder.Entity<EquipmentBorrowing>().HasIndex(b => b.BeneficiaryId);
             modelBuilder.Entity<UserPermission>().HasIndex(p => p.UserId).IsUnique();
             modelBuilder.Entity<ProjectBudgetSource>().HasIndex(i => new { i.AyudaProgramId, i.Priority });

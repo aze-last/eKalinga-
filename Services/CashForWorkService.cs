@@ -863,8 +863,13 @@ namespace AttendanceShiftingManagement.Services
 
             if (!budgetResult.IsSuccess)
             {
-                if (budgetResult.Message != null && budgetResult.Message.Contains("already has a budget ledger entry", StringComparison.OrdinalIgnoreCase))
+                if (budgetResult.IsDuplicate)
                 {
+                    if (budgetResult.LedgerEntryId.HasValue)
+                    {
+                        cashForWorkEvent.BudgetLedgerEntryId = budgetResult.LedgerEntryId;
+                    }
+
                     cashForWorkEvent.Status = CashForWorkEventStatus.Completed;
                     cashForWorkEvent.UpdatedAt = DateTime.Now;
                     await _context.SaveChangesAsync();
