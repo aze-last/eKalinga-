@@ -12,6 +12,12 @@ namespace AttendanceShiftingManagement.Services
 
         public static UpdateCheckResult LatestResult => _latestResult;
 
+        public static event Action? LatestResultChanged;
+
+        public static event Action? UpdateUiRequested;
+
+        public static void RequestUpdateUi() => UpdateUiRequested?.Invoke();
+
         public static void StartBackgroundCheck()
         {
             _ = Task.Run(async () =>
@@ -33,16 +39,20 @@ namespace AttendanceShiftingManagement.Services
                 ? preferences.UpdateManifestUrl
                 : manifestUrl.Trim();
 
+            UpdateCheckResult result;
             await CheckGate.WaitAsync(cancellationToken);
             try
             {
-                _latestResult = await UpdateCheckService.CheckForUpdatesAsync(effectiveManifestUrl, cancellationToken);
-                return _latestResult;
+                result = await UpdateCheckService.CheckForUpdatesAsync(effectiveManifestUrl, cancellationToken);
+                _latestResult = result;
             }
             finally
             {
                 CheckGate.Release();
             }
+
+            LatestResultChanged?.Invoke();
+            return result;
         }
     }
 }

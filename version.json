@@ -1,13 +1,14 @@
 {
-  "version": "1.0.8",
+  "version": "1.0.9",
   "notes": [
-    "Updated eKalinga+ installer to version 1.0.8.",
-    "Added password asterisk masking on CRS, GGMS, and database settings.",
-    "Configured remote database connections and auto-update settings."
+    "Automatic update download, install, and restart from the dashboard banner and Settings.",
+    "New update banner on the dashboard when a newer version is posted.",
+    "Updater reliability: update client identification, longer manifest timeout, and automatic re-check before downloading.",
+    "Fixed the default update manifest URL to point at the eKalinga- repository."
   ],
   "publishedAt": "2026-09-12",
-  "releasePageUrl": "https://github.com/aze-last/eKalinga-/releases/tag/v1.0.8",
-  "installerFileName": "eKalingaPlus-Setup-1.0.8.exe",
-  "installerUrl": "https://github.com/aze-last/eKalinga-/releases/download/v1.0.8/eKalingaPlus-Setup-1.0.8.exe",
-  "sha256": "76017fa743bc41d1039cb51d9222ca00450743f208d23c291bf6469d6309a049"
+  "releasePageUrl": "https://github.com/aze-last/eKalinga-/releases/tag/v1.0.9",
+  "installerFileName": "eKalingaPlus-Setup-1.0.9.exe",
+  "installerUrl": "https://github.com/aze-last/eKalinga-/releases/download/v1.0.9/eKalingaPlus-Setup-1.0.9.exe",
+  "sha256": "9e98b5a7cf69edd5c7455cd4d9b1b3bbd754827362ab434a36c8b042f252a3ad"
 }

@@ -186,7 +186,7 @@ namespace AttendanceShiftingManagement.ViewModels
             _saveCrsSettingsCommand = new RelayCommand(_ => ExecuteSaveCrsSettings(), _ => !IsBusy);
             _syncCrsMasterlistCommand = new RelayCommand(async _ => await ExecuteSyncCrsMasterlistAsync(), _ => !IsBusy);
             _checkForUpdatesCommand = new RelayCommand(async _ => await ExecuteCheckForUpdatesAsync(), _ => !IsBusy);
-            _downloadUpdateCommand = new RelayCommand(async _ => await ExecuteDownloadUpdateAsync(), _ => !IsBusy && CanDownloadUpdate);
+            _downloadUpdateCommand = new RelayCommand(async _ => await ExecuteDownloadUpdateAsync(), _ => !IsBusy);
             _installPendingUpdateCommand = new RelayCommand(_ => ExecuteInstallPendingUpdate(), _ => !IsBusy && CanInstallPendingUpdate);
             _remindMeLaterCommand = new RelayCommand(_ => ExecuteRemindMeLater(), _ => !IsBusy && HasPendingUpdate);
             _saveUpdatePreferencesCommand = new RelayCommand(_ => ExecuteSaveUpdatePreferences(), _ => !IsBusy);
@@ -1752,10 +1752,31 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private async Task ExecuteDownloadUpdateAsync()
         {
+            if (IsBusy)
+            {
+                SetUpdateNeutral("Please wait while the current update task finishes, then try again.");
+                return;
+            }
+
             if (!AppUpdateCoordinator.LatestResult.CanDownloadInstaller)
             {
-                SetUpdateError("The latest update result does not include a downloadable installer yet.");
-                return;
+                SetUpdateNeutral("Checking for the latest update before downloading...");
+                var refreshResult = await AppUpdateCoordinator.CheckNowAsync(UpdateManifestUrl);
+                ApplyUpdateResult(refreshResult, preserveNotCheckedMessage: false);
+
+                if (!refreshResult.CanDownloadInstaller)
+                {
+                    if (refreshResult.Status == UpdateCheckStatus.UpdateAvailable)
+                    {
+                        SetUpdateError("The latest update does not include a downloadable installer yet. Open the download page instead.");
+                    }
+                    else if (refreshResult.Status != UpdateCheckStatus.UpToDate)
+                    {
+                        SetUpdateError(refreshResult.Message);
+                    }
+
+                    return;
+                }
             }
 
             PendingAppUpdate? downloadedUpdate = null;
@@ -1805,20 +1826,8 @@ namespace AttendanceShiftingManagement.ViewModels
                 return;
             }
 
-            var choice = MessageBox.Show(
-                $"Version {downloadedUpdate.Version} is ready to install. Install it now?",
-                "Update Ready",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
-
-            if (choice == MessageBoxResult.Yes)
-            {
-                ExecuteInstallPendingUpdate(skipConfirmation: true);
-            }
-            else
-            {
-                ExecuteRemindMeLater();
-            }
+            SetUpdateSuccess($"Downloaded version {downloadedUpdate.Version}. Launching the installer now...");
+            ExecuteInstallPendingUpdate(skipConfirmation: true);
         }
 
         private void ExecuteInstallPendingUpdate(bool skipConfirmation = false)

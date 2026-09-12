@@ -124,12 +124,54 @@
     <Grid Background="{DynamicResource BrandSurfaceBrush}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <Button Visibility="Collapsed"
                 Click="CheckForUpdateButton_Click"/>
+
+        <Border Grid.Row="1"
+                Margin="8,8,8,0"
+                Background="#FFFBEB"
+                BorderBrush="#F59E0B"
+                BorderThickness="1"
+                CornerRadius="12"
+                Padding="14,10"
+                Visibility="{Binding UpdateBannerVisibility}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="UPDATE AVAILABLE"
+                               FontSize="12"
+                               FontWeight="Bold"
+                               Foreground="#15803D"/>
+                    <TextBlock Margin="0,4,0,0"
+                               Text="{Binding UpdateBannerMessage}"
+                               FontSize="13"
+                               Foreground="#0F172A"
+                               TextWrapping="Wrap"/>
+                </StackPanel>
+
+                <Button Grid.Column="1"
+                        Margin="12,0,0,0"
+                        Padding="16,8"
+                        Background="#F59E0B"
+                        BorderThickness="0"
+                        Content="DOWNLOAD &amp; INSTALL"
+                        Cursor="Hand"
+                        FontSize="13"
+                        FontWeight="Bold"
+                        Foreground="White"
+                        VerticalAlignment="Center"
+                        Command="{Binding ViewUpdateCommand}"/>
+            </Grid>
+        </Border>
 
         <Border Grid.Row="0"
                 Background="#1a1d21"
@@ -185,9 +227,9 @@
             </Grid>
         </Border>
 
-        <ScrollViewer Grid.Row="1"
-                      VerticalScrollBarVisibility="Auto"
-                      HorizontalScrollBarVisibility="Disabled">
+        <ScrollViewer Grid.Row="2"
+                       VerticalScrollBarVisibility="Auto"
+                       HorizontalScrollBarVisibility="Disabled">
             <Grid Margin="8" MinHeight="600">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -601,7 +643,7 @@
             </Grid>
         </ScrollViewer>
 
-        <Border Grid.Row="2"
+        <Border Grid.Row="3"
                 Background="#1a1d21"
                 Padding="20,8">
             <Grid>

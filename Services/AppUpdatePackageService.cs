@@ -30,10 +30,18 @@ namespace AttendanceShiftingManagement.Services
     {
         private const string PendingUpdateStateFileName = "pending-update.json";
 
-        private static readonly HttpClient DownloadClient = new()
+        private static readonly HttpClient DownloadClient = CreateDownloadClient();
+
+        private static HttpClient CreateDownloadClient()
         {
-            Timeout = TimeSpan.FromMinutes(15)
-        };
+            var client = new HttpClient
+            {
+                Timeout = TimeSpan.FromMinutes(15)
+            };
+
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("eKalingaPlus-Updater");
+            return client;
+        }
 
         private static readonly JsonSerializerOptions JsonOptions = new()
         {

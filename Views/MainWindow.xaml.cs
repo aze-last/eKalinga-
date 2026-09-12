@@ -90,6 +90,34 @@ namespace AttendanceShiftingManagement.Views
             DataContext = new BarangayMainViewModel(user);
             WindowBrandingService.ApplyWindowIcon(this);
             Loaded += MainWindow_Loaded;
+            AppUpdateCoordinator.LatestResultChanged += OnUpdateResultChanged;
+            AppUpdateCoordinator.UpdateUiRequested += OnUpdateUiRequested;
+            Closed += MainWindow_Closed;
+        }
+
+        private void MainWindow_Closed(object? sender, EventArgs e)
+        {
+            AppUpdateCoordinator.LatestResultChanged -= OnUpdateResultChanged;
+            AppUpdateCoordinator.UpdateUiRequested -= OnUpdateUiRequested;
+        }
+
+        private void OnUpdateResultChanged()
+        {
+            Dispatcher.InvokeAsync(RefreshDashboardUpdateBanner);
+        }
+
+        private void OnUpdateUiRequested()
+        {
+            _ = Dispatcher.InvokeAsync(async () => await RunUpdateCheckFlowAsync());
+        }
+
+        private void RefreshDashboardUpdateBanner()
+        {
+            if (ViewModel.CurrentView is BarangayDashboardPage dashboardPage
+                && dashboardPage.DataContext is BarangayDashboardViewModel dashboardViewModel)
+            {
+                dashboardViewModel.RefreshUpdateBanner();
+            }
         }
 
         protected override void OnSourceInitialized(EventArgs e)
@@ -417,17 +445,6 @@ namespace AttendanceShiftingManagement.Views
                 return;
             }
 
-            var downloadNow = MessageBox.Show(
-                $"{summary}\n\nDownload this update now?",
-                "Update Available",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
-
-            if (downloadNow != MessageBoxResult.Yes)
-            {
-                return;
-            }
-
             PendingAppUpdate downloadedUpdate;
             try
             {
@@ -448,23 +465,13 @@ namespace AttendanceShiftingManagement.Views
                 Mouse.OverrideCursor = null;
             }
 
-            var installNow = MessageBox.Show(
-                $"Version {downloadedUpdate.Version} was downloaded and verified.\n\nInstall it now? The app will close while setup runs.",
-                "Update Ready",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
-
-            if (installNow == MessageBoxResult.Yes)
-            {
-                LaunchPendingInstaller(downloadedUpdate);
-                return;
-            }
-
             MessageBox.Show(
-                $"Version {downloadedUpdate.Version} is downloaded and ready.\n\nClick 'Check for Update' again anytime to install it.",
+                $"{summary}\n\nVersion {downloadedUpdate.Version} was downloaded and verified.\n\nThe app will now close and launch the installer. It will reopen automatically after the upgrade completes.",
                 "Update Ready",
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
+
+            LaunchPendingInstaller(downloadedUpdate);
         }
 
         private async Task PromptInstallPendingUpdateAsync(PendingAppUpdate pendingUpdate)

@@ -1,6 +1,8 @@
 using AttendanceShiftingManagement.Helpers;
 using AttendanceShiftingManagement.Services;
 using System.Collections.ObjectModel;
+using System.IO;
+using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 
@@ -10,6 +12,9 @@ namespace AttendanceShiftingManagement.ViewModels
     {
         private readonly BarangayDashboardService _dashboardService;
         private readonly RelayCommand _refreshCommand;
+        private readonly RelayCommand _viewUpdateCommand;
+        private Visibility _updateBannerVisibility = Visibility.Collapsed;
+        private string _updateBannerMessage = string.Empty;
         private string _todayLabel = DateTime.Now.ToString("dddd, MMMM dd, yyyy");
         private string _timeLabel = DateTime.Now.ToString("hh:mm tt");
         private string _activeDatabaseLabel = "Loading active database...";
@@ -42,6 +47,7 @@ namespace AttendanceShiftingManagement.ViewModels
             RecentActivities = new ObservableCollection<BarangayDashboardRecentActivityItem>();
             TodaySummaries = new ObservableCollection<BarangayDashboardTodaySummaryItem>();
             _refreshCommand = new RelayCommand(async _ => await LoadAsync(), _ => !IsBusy);
+            _viewUpdateCommand = new RelayCommand(_ => AppUpdateCoordinator.RequestUpdateUi());
 
             if (loadImmediately)
             {
@@ -252,6 +258,51 @@ namespace AttendanceShiftingManagement.ViewModels
 
         public ICommand RefreshCommand => _refreshCommand;
 
+        public ICommand ViewUpdateCommand => _viewUpdateCommand;
+
+        public Visibility UpdateBannerVisibility
+        {
+            get => _updateBannerVisibility;
+            private set => SetProperty(ref _updateBannerVisibility, value);
+        }
+
+        public string UpdateBannerMessage
+        {
+            get => _updateBannerMessage;
+            private set => SetProperty(ref _updateBannerMessage, value);
+        }
+
+        public void RefreshUpdateBanner()
+        {
+            try
+            {
+                var pending = AppUpdatePackageService.LoadPendingUpdate();
+                if (pending != null && File.Exists(pending.InstallerPath))
+                {
+                    UpdateBannerMessage = $"Version {pending.Version} is downloaded and ready. Select to install it now.";
+                    UpdateBannerVisibility = Visibility.Visible;
+                    return;
+                }
+
+                var result = AppUpdateCoordinator.LatestResult;
+                if (result.Status == UpdateCheckStatus.UpdateAvailable)
+                {
+                    var posted = string.IsNullOrWhiteSpace(result.PublishedAt)
+                        ? string.Empty
+                        : $" (posted {result.PublishedAt})";
+                    UpdateBannerMessage = $"New version {result.LatestVersion} is available{posted}. Select to download and install it.";
+                    UpdateBannerVisibility = Visibility.Visible;
+                    return;
+                }
+
+                UpdateBannerVisibility = Visibility.Collapsed;
+            }
+            catch
+            {
+                UpdateBannerVisibility = Visibility.Collapsed;
+            }
+        }
+
         private async Task LoadAsync()
         {
             if (IsBusy)
@@ -300,6 +351,7 @@ namespace AttendanceShiftingManagement.ViewModels
             finally
             {
                 IsBusy = false;
+                RefreshUpdateBanner();
             }
         }
 

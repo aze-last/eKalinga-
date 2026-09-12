@@ -44,10 +44,19 @@ namespace AttendanceShiftingManagement.Services
 
     public static class UpdateCheckService
     {
-        private static readonly HttpClient HttpClient = new()
+        private static readonly HttpClient HttpClient = CreateHttpClient();
+
+        private static HttpClient CreateHttpClient()
         {
-            Timeout = TimeSpan.FromSeconds(5)
-        };
+            var client = new HttpClient
+            {
+                Timeout = TimeSpan.FromSeconds(30)
+            };
+
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("eKalingaPlus-Updater");
+            client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+            return client;
+        }
 
         private static readonly JsonSerializerOptions JsonOptions = new()
         {
@@ -79,7 +88,7 @@ namespace AttendanceShiftingManagement.Services
             try
             {
                 using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                timeoutSource.CancelAfter(TimeSpan.FromSeconds(5));
+                timeoutSource.CancelAfter(TimeSpan.FromSeconds(15));
 
                 var manifestJson = await httpClient.GetStringAsync(manifestUrl.Trim(), timeoutSource.Token);
                 var manifest = JsonSerializer.Deserialize<UpdateManifest>(manifestJson, JsonOptions);
