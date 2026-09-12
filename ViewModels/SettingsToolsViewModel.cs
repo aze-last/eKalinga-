@@ -1886,11 +1886,10 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private void ExecuteSaveUpdatePreferences()
         {
-            AppPreferencesService.Save(new AppPreferencesModel
-            {
-                CheckForUpdatesOnStartup = CheckForUpdatesOnStartup,
-                UpdateManifestUrl = UpdateManifestUrl
-            });
+            var preferences = AppPreferencesService.Load();
+            preferences.CheckForUpdatesOnStartup = CheckForUpdatesOnStartup;
+            preferences.UpdateManifestUrl = UpdateManifestUrl;
+            AppPreferencesService.Save(preferences);
 
             SetUpdateSuccess("Update preferences saved.");
         }

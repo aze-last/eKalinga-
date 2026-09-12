@@ -1,0 +1,155 @@
+<Window x:Class="AttendanceShiftingManagement.Views.WhatsNewWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="What's New"
+        Width="600"
+        Height="650"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="White"
+        FontFamily="Segoe UI"
+        WindowStyle="None"
+        AllowsTransparency="True">
+
+    <Window.Resources>
+        <Storyboard x:Key="WindowEntrance">
+            <DoubleAnimation Storyboard.TargetName="RootBorder" Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.3"/>
+            <DoubleAnimation Storyboard.TargetName="RootTranslate" Storyboard.TargetProperty="Y" From="30" To="0" Duration="0:0:0.4">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+        </Storyboard>
+    </Window.Resources>
+
+    <Window.Triggers>
+        <EventTrigger RoutedEvent="Window.Loaded">
+            <BeginStoryboard Storyboard="{StaticResource WindowEntrance}"/>
+        </EventTrigger>
+    </Window.Triggers>
+
+    <Border x:Name="RootBorder"
+            BorderBrush="#E2E8F0"
+            BorderThickness="1"
+            CornerRadius="16"
+            Background="White"
+            Margin="10"
+            Opacity="0">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="20" ShadowDepth="0" Opacity="0.1"/>
+        </Border.Effect>
+        <Border.RenderTransform>
+            <TranslateTransform x:Name="RootTranslate" Y="30"/>
+        </Border.RenderTransform>
+
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <Border Grid.Row="0" Padding="32,32,32,24">
+                <StackPanel Orientation="Horizontal">
+                    <Border Width="52"
+                            Height="52"
+                            CornerRadius="26"
+                            Background="#FFFBEB"
+                            BorderBrush="#F59E0B"
+                            BorderThickness="1"
+                            VerticalAlignment="Center">
+                        <materialDesign:PackIcon Kind="GiftOutline"
+                                                  Width="26"
+                                                  Height="26"
+                                                  Foreground="#F59E0B"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"/>
+                    </Border>
+                    <StackPanel Margin="16,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding VersionTitle, Mode=OneWay}"
+                                   FontSize="24"
+                                   FontWeight="Bold"
+                                   Foreground="#15803D"/>
+                        <TextBlock Text="{Binding Subtitle, Mode=OneWay}"
+                                   Margin="0,4,0,0"
+                                   FontSize="14"
+                                   Foreground="#64748B"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Release notes -->
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <Border Padding="32,0">
+                    <ItemsControl ItemsSource="{Binding Entries, Mode=OneWay}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="0,0,0,24">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Border Background="#15803D"
+                                                CornerRadius="10"
+                                                Padding="10,4">
+                                            <TextBlock Text="{Binding Version, Mode=OneWay}"
+                                                       FontSize="12"
+                                                       FontWeight="Bold"
+                                                       Foreground="White"/>
+                                        </Border>
+                                        <TextBlock Text="{Binding PublishedAt, Mode=OneWay}"
+                                                   Margin="10,0,0,0"
+                                                   FontSize="12"
+                                                   Foreground="#94A3B8"
+                                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+
+                                    <ItemsControl Margin="0,12,0,0"
+                                                  ItemsSource="{Binding Notes, Mode=OneWay}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Margin="0,0,0,10">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <materialDesign:PackIcon Grid.Column="0"
+                                                                              Kind="CheckCircle"
+                                                                              Width="18"
+                                                                              Height="18"
+                                                                              Margin="0,2,0,0"
+                                                                              Foreground="#15803D"/>
+
+                                                    <TextBlock Grid.Column="1"
+                                                               Margin="10,0,0,0"
+                                                               Text="{Binding Mode=OneWay}"
+                                                               TextWrapping="Wrap"
+                                                               FontSize="14"
+                                                               Foreground="#334155"/>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Border>
+            </ScrollViewer>
+
+            <!-- Footer -->
+            <Border Grid.Row="2" Padding="32,24" BorderBrush="#F1F5F9" BorderThickness="0,1,0,0">
+                <Button x:Name="GotItButton"
+                        Content="GOT IT"
+                        Height="48"
+                        Style="{StaticResource MaterialDesignFlatButton}"
+                        Background="#F59E0B"
+                        Foreground="White"
+                        FontSize="14"
+                        FontWeight="Bold"
+                        materialDesign:ButtonAssist.CornerRadius="12"
+                        Click="Close_Click"/>
+            </Border>
+        </Grid>
+    </Border>
+</Window>

@@ -91,6 +91,18 @@ After changes:
 - If the same error happens twice, stop and explain the blocker.
 - Stop after 3 failed attempts.
 
+## Installer Build & Auto-Versioning
+
+When I ask to build the installer, increment the version FIRST, then build. Never rebuild the same version number.
+
+1. Bump patch +1 in all four sources: `AssemblyInfo.cs`, `AttendanceShiftingManagement.csproj`, `installer/AttendanceShiftingManagement.iss` default, `version.json`.
+2. In `version.json`: update version, notes, publishedAt, releasePageUrl, installerFileName, installerUrl. Set sha256 to `PENDING-BUILD`.
+3. Add a matching entry to `WhatsNewService.Entries` so the post-login modal stays in sync with the manifest.
+4. Build with `.\scripts\build-installer.ps1 -BootstrapInnoSetup`, then fill `version.json` sha256 from `artifacts\installer\output\version.json`.
+5. Re-run build + update/binding tests.
+
+Rollover rule: patch stays 0-99. `1.0.99` -> next is `1.1.0` (minor +1, patch resets to 0). Never ship a 3-digit patch (no `v1.0.100`).
+
 ## Output Style
 
 Default to concise.

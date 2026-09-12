@@ -233,6 +233,8 @@ namespace AttendanceShiftingManagement.Views
 
             _hasShownSessionAnnouncements = true;
 
+            ShowWhatsNewIfNeeded();
+
             try
             {
                 var service = new SessionAnnouncementService();
@@ -248,6 +250,29 @@ namespace AttendanceShiftingManagement.Views
                 };
 
                 window.ShowDialog();
+            }
+            catch
+            {
+                // Keep login flow resilient if the popup cannot be loaded.
+            }
+        }
+
+        private void ShowWhatsNewIfNeeded()
+        {
+            try
+            {
+                if (!WhatsNewService.ShouldShowWhatsNew(out var entries))
+                {
+                    return;
+                }
+
+                var window = new WhatsNewWindow(entries)
+                {
+                    Owner = this
+                };
+
+                window.ShowDialog();
+                WhatsNewService.MarkWhatsNewSeen();
             }
             catch
             {

@@ -8,6 +8,7 @@ namespace AttendanceShiftingManagement.Services
     {
         public bool CheckForUpdatesOnStartup { get; set; } = true;
         public string UpdateManifestUrl { get; set; } = string.Empty;
+        public string LastSeenWhatsNewVersion { get; set; } = string.Empty;
     }
 
     public static class AppPreferencesService
@@ -80,6 +81,7 @@ namespace AttendanceShiftingManagement.Services
         {
             settings ??= new AppPreferencesModel();
             settings.UpdateManifestUrl = settings.UpdateManifestUrl?.Trim() ?? string.Empty;
+            settings.LastSeenWhatsNewVersion = settings.LastSeenWhatsNewVersion?.Trim() ?? string.Empty;
             return settings;
         }
 
