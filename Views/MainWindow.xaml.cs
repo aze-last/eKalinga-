@@ -470,14 +470,34 @@ namespace AttendanceShiftingManagement.Views
                 return;
             }
 
+            var downloadWindow = new UpdateDownloadWindow(result.LatestVersion)
+            {
+                Owner = this
+            };
+            downloadWindow.Show();
+
             PendingAppUpdate downloadedUpdate;
             try
             {
-                Mouse.OverrideCursor = Cursors.Wait;
-                downloadedUpdate = await AppUpdatePackageService.DownloadUpdateAsync(result);
+                var progress = new Progress<UpdateDownloadProgress>(downloadWindow.ReportProgress);
+                downloadedUpdate = await AppUpdatePackageService.DownloadUpdateAsync(
+                    result,
+                    progress,
+                    downloadWindow.CancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                downloadWindow.Close();
+                MessageBox.Show(
+                    "The update download was cancelled.",
+                    "Update Download",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
             }
             catch (Exception ex)
             {
+                downloadWindow.Close();
                 MessageBox.Show(
                     $"Unable to download the installer.\n\n{ex.Message}",
                     "Update Download Failed",
@@ -485,16 +505,35 @@ namespace AttendanceShiftingManagement.Views
                     MessageBoxImage.Warning);
                 return;
             }
+
+            downloadWindow.Close();
+
+            var installNow = MessageBox.Show(
+                $"{summary}\n\nVersion {downloadedUpdate.Version} was downloaded and verified.\n\nInstall it now? The app will close and reopen automatically after the upgrade completes.",
+                "Update Ready",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+
+            if (installNow != MessageBoxResult.Yes)
+            {
+                MessageBox.Show(
+                    $"Version {downloadedUpdate.Version} is downloaded and ready.\n\nSelect DOWNLOAD & INSTALL on the dashboard banner anytime to install it.",
+                    "Update Ready",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                RefreshDashboardUpdateBanner();
+                return;
+            }
+
+            try
+            {
+                Mouse.OverrideCursor = Cursors.Wait;
+                await Task.Delay(500);
+            }
             finally
             {
                 Mouse.OverrideCursor = null;
             }
-
-            MessageBox.Show(
-                $"{summary}\n\nVersion {downloadedUpdate.Version} was downloaded and verified.\n\nThe app will now close and launch the installer. It will reopen automatically after the upgrade completes.",
-                "Update Ready",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
 
             LaunchPendingInstaller(downloadedUpdate);
         }

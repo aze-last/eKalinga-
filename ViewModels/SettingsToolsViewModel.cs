@@ -1826,7 +1826,20 @@ namespace AttendanceShiftingManagement.ViewModels
                 return;
             }
 
-            SetUpdateSuccess($"Downloaded version {downloadedUpdate.Version}. Launching the installer now...");
+            var installNow = MessageBox.Show(
+                $"Version {downloadedUpdate.Version} was downloaded and verified.\n\nInstall it now? The app will close and reopen automatically after the upgrade completes.",
+                "Update Ready",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+
+            if (installNow != MessageBoxResult.Yes)
+            {
+                ExecuteRemindMeLater();
+                return;
+            }
+
+            SetUpdateSuccess($"Starting installer for version {downloadedUpdate.Version}. The app will close now...");
+            await Task.Delay(500);
             ExecuteInstallPendingUpdate(skipConfirmation: true);
         }
 

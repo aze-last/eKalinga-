@@ -13,6 +13,17 @@ namespace AttendanceShiftingManagement.Services
         [
             new()
             {
+                Version = "1.0.12",
+                PublishedAt = "2026-09-12",
+                Notes =
+                [
+                    "New download progress window with live percentage, file size, and cancel option.",
+                    "Install permission prompt before the app closes, so upgrades never surprise you.",
+                    "Fixed banner and Settings staying in sync after download, cancel, or install-later."
+                ]
+            },
+            new()
+            {
                 Version = "1.0.11",
                 PublishedAt = "2026-09-12",
                 Notes =
