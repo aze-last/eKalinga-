@@ -95,6 +95,46 @@
             </Setter>
         </Style>
 
+        <Style x:Key="TabsNavChevronStyle"
+               TargetType="RepeatButton">
+            <Setter Property="Width" Value="34" />
+            <Setter Property="Height" Value="34" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Foreground" Value="{DynamicResource BrandMidnightBrush}" />
+            <Setter Property="Background" Value="{DynamicResource ThemeCardBrush}" />
+            <Setter Property="BorderBrush" Value="#F59E0B" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Delay" Value="300" />
+            <Setter Property="Interval" Value="60" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RepeatButton">
+                        <Border x:Name="NavBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="17">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="NavBorder" Property="Background" Value="{DynamicResource ThemeAccentSoftBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="NavBorder" Property="Background" Value="#F59E0B" />
+                                <Setter Property="Foreground" Value="White" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="NavBorder" Property="Opacity" Value="0.3" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style x:Key="SettingsSectionCardStyle"
                TargetType="Border">
             <Setter Property="Background" Value="{DynamicResource ThemeCardBrush}" />
@@ -287,7 +327,66 @@
                     Margin="0,20,0,0"
                     Background="Transparent"
                     BorderThickness="0"
-                    ItemContainerStyle="{StaticResource SettingsTabItemStyle}">
+                    ItemContainerStyle="{StaticResource SettingsTabItemStyle}"
+                    SelectionChanged="SettingsTabs_SelectionChanged">
+            <TabControl.Template>
+                <ControlTemplate TargetType="TabControl">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+
+                        <!-- Ledger-tape tab strip: swipe on touch screens, or hold a chevron to wind. -->
+                        <Grid Grid.Row="0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <RepeatButton x:Name="TabsNavLeft"
+                                          Grid.Column="0"
+                                          Margin="0,0,8,10"
+                                          Style="{StaticResource TabsNavChevronStyle}"
+                                          ToolTip="Scroll settings tabs left"
+                                          Click="TabsNavLeft_Click">
+                                <materialDesign:PackIcon Kind="ChevronLeft" Width="18" Height="18" />
+                            </RepeatButton>
+
+                            <ScrollViewer x:Name="TabsScroll"
+                                          Grid.Column="1"
+                                          HorizontalScrollBarVisibility="Hidden"
+                                          VerticalScrollBarVisibility="Disabled"
+                                          PanningMode="HorizontalOnly"
+                                          Focusable="False"
+                                          ScrollChanged="TabsScroll_ScrollChanged">
+                                <ScrollViewer.OpacityMask>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                        <GradientStop Offset="0" Color="Transparent" />
+                                        <GradientStop Offset="0.05" Color="Black" />
+                                        <GradientStop Offset="0.95" Color="Black" />
+                                        <GradientStop Offset="1" Color="Transparent" />
+                                    </LinearGradientBrush>
+                                </ScrollViewer.OpacityMask>
+                                <TabPanel IsItemsHost="True" />
+                            </ScrollViewer>
+
+                            <RepeatButton x:Name="TabsNavRight"
+                                          Grid.Column="2"
+                                          Margin="8,0,0,10"
+                                          Style="{StaticResource TabsNavChevronStyle}"
+                                          ToolTip="Scroll settings tabs right"
+                                          Click="TabsNavRight_Click">
+                                <materialDesign:PackIcon Kind="ChevronRight" Width="18" Height="18" />
+                            </RepeatButton>
+                        </Grid>
+
+                        <ContentPresenter Grid.Row="1"
+                                          ContentSource="SelectedContent" />
+                    </Grid>
+                </ControlTemplate>
+            </TabControl.Template>
             <TabItem Header="System User Management" Visibility="{Binding UserManagementVisibility}">
                 <Grid Margin="0,20,0,0">
                     <Grid Style="{StaticResource ProtectedSettingsContentGridStyle}">

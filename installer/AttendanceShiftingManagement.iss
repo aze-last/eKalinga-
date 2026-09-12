@@ -3,7 +3,7 @@
 #define MyAppURL "https://github.com/BarangayAyudaSys"
 
 #ifndef MyAppVersion
-  #define MyAppVersion "1.0.12.0"
+  #define MyAppVersion "1.0.13.0"
 #endif
 
 #ifndef MyAppExeName

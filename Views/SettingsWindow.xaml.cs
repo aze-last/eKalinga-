@@ -4,6 +4,7 @@ using AttendanceShiftingManagement.ViewModels;
 using System;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Threading;
 
 namespace AttendanceShiftingManagement.Views
@@ -27,6 +28,9 @@ namespace AttendanceShiftingManagement.Views
     {
         private readonly SettingsWindowSection _initialSection;
         private readonly bool _checkForUpdatesOnOpen;
+        private ScrollViewer? _tabsScroll;
+        private RepeatButton? _tabsNavLeft;
+        private RepeatButton? _tabsNavRight;
 
         private SettingsToolsViewModel ViewModel => (SettingsToolsViewModel)DataContext;
 
@@ -53,6 +57,8 @@ namespace AttendanceShiftingManagement.Views
         {
             Loaded -= SettingsWindow_Loaded;
             SelectInitialSection();
+            HookupTabsNavigation();
+            ScrollSelectedTabIntoView();
 
             if (_initialSection != SettingsWindowSection.Updates || !_checkForUpdatesOnOpen)
             {
@@ -78,6 +84,59 @@ namespace AttendanceShiftingManagement.Views
             }
 
             SettingsTabs.SelectedIndex = (int)_initialSection;
+        }
+
+        private void HookupTabsNavigation()
+        {
+            _tabsScroll = SettingsTabs.Template.FindName("TabsScroll", SettingsTabs) as ScrollViewer;
+            _tabsNavLeft = SettingsTabs.Template.FindName("TabsNavLeft", SettingsTabs) as RepeatButton;
+            _tabsNavRight = SettingsTabs.Template.FindName("TabsNavRight", SettingsTabs) as RepeatButton;
+            UpdateTabsNavButtons();
+        }
+
+        private void SettingsTabs_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (!ReferenceEquals(e.Source, SettingsTabs))
+            {
+                return;
+            }
+
+            ScrollSelectedTabIntoView();
+        }
+
+        private void ScrollSelectedTabIntoView()
+        {
+            var selectedHeader = SettingsTabs.ItemContainerGenerator
+                .ContainerFromItem(SettingsTabs.SelectedItem) as TabItem;
+
+            selectedHeader?.BringIntoView();
+            UpdateTabsNavButtons();
+        }
+
+        private void TabsScroll_ScrollChanged(object sender, ScrollChangedEventArgs e)
+        {
+            UpdateTabsNavButtons();
+        }
+
+        private void TabsNavLeft_Click(object sender, RoutedEventArgs e)
+        {
+            _tabsScroll?.LineLeft();
+        }
+
+        private void TabsNavRight_Click(object sender, RoutedEventArgs e)
+        {
+            _tabsScroll?.LineRight();
+        }
+
+        private void UpdateTabsNavButtons()
+        {
+            if (_tabsScroll == null || _tabsNavLeft == null || _tabsNavRight == null)
+            {
+                return;
+            }
+
+            _tabsNavLeft.IsEnabled = _tabsScroll.HorizontalOffset > 1;
+            _tabsNavRight.IsEnabled = _tabsScroll.HorizontalOffset < _tabsScroll.ScrollableWidth - 1;
         }
 
         private void OpenAdvancedLoadTables()

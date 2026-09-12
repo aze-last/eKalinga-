@@ -1,14 +1,13 @@
 {
-  "version": "1.0.12",
+  "version": "1.0.13",
   "notes": [
-    "New download progress window with live percentage, file size, and cancel option.",
-    "Install permission prompt before the app closes, so upgrades never surprise you.",
-    "Fixed banner and Settings staying in sync after download, cancel, or install-later."
+    "Settings tab strip is now scrollable: swipe on touch screens or use the gold chevron arrows to reach hidden tabs like Updates.",
+    "Active tab always scrolls into view, and arrows dim at each end so you know when more settings remain."
   ],
   "publishedAt": "2026-09-12",
-  "releasePageUrl": "https://github.com/aze-last/eKalinga-/releases/tag/v1.0.12",
-  "installerFileName": "eKalingaPlus-Setup-1.0.12.exe",
-  "installerUrl": "https://github.com/aze-last/eKalinga-/releases/download/v1.0.12/eKalingaPlus-Setup-1.0.12.exe",
-  "sha256": "e90e17c38a038542fc8dd81a458a57215cd2f7056f007e69820549a43d7603df"
+  "releasePageUrl": "https://github.com/aze-last/eKalinga-/releases/tag/v1.0.13",
+  "installerFileName": "eKalingaPlus-Setup-1.0.13.exe",
+  "installerUrl": "https://github.com/aze-last/eKalinga-/releases/download/v1.0.13/eKalingaPlus-Setup-1.0.13.exe",
+  "sha256": "8e9397f550670908a2acbfa60c7a71265d59a7e41e239c4bfa667172df8739e7"
 }
 

@@ -13,6 +13,16 @@ namespace AttendanceShiftingManagement.Services
         [
             new()
             {
+                Version = "1.0.13",
+                PublishedAt = "2026-09-12",
+                Notes =
+                [
+                    "Settings tab strip is now scrollable: swipe on touch screens or use the gold chevron arrows to reach hidden tabs like Updates.",
+                    "Active tab always scrolls into view, and arrows dim at each end so you know when more settings remain."
+                ]
+            },
+            new()
+            {
                 Version = "1.0.12",
                 PublishedAt = "2026-09-12",
                 Notes =
