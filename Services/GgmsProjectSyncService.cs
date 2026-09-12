@@ -41,6 +41,11 @@ namespace AttendanceShiftingManagement.Services
                 return new GgmsProjectSyncResult(false, "The Ayuda office code is not configured, so GGMS projects cannot be filtered.");
             }
 
+            if (string.Equals(context.Database.ProviderName, "Pomelo.EntityFrameworkCore.MySql", StringComparison.OrdinalIgnoreCase))
+            {
+                return new GgmsProjectSyncResult(false, "The GGMS project mirror lives in the local database, which is unavailable on a shared MySQL connection. Switch to the Local connection to sync GGMS projects.");
+            }
+
             List<GgmsProjectRow> remoteProjects;
             try
             {

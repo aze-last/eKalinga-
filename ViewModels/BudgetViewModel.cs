@@ -2909,7 +2909,32 @@ namespace AttendanceShiftingManagement.ViewModels
                 });
             }
 
-            // GGMS Projects
+            // GGMS Projects (local-only mirror — skipped on shared MySQL connections).
+            await LoadGgmsProjectBudgetsIntoViewAsync(context, ayudaPrograms, cfwBudgets);
+
+            if (currentSelectedId.HasValue)
+            {
+                SelectedBudget = AllBudgets.FirstOrDefault(b => b.Id == currentSelectedId && b.Category == currentCategory);
+            }
+
+            RefreshFundingSourceOptions();
+        }
+
+        /// <summary>
+        /// Appends GGMS Project rows from the local-only ggms_project_cache mirror.
+        /// The mirror lives in ams.db and is absent from legacy MySQL databases, so on
+        /// the MySQL provider this is a no-op instead of breaking the whole Budget load.
+        /// </summary>
+        private async Task LoadGgmsProjectBudgetsIntoViewAsync(
+            LocalDbContext context,
+            IReadOnlyList<AyudaProgram> ayudaPrograms,
+            IReadOnlyList<CashForWorkBudget> cfwBudgets)
+        {
+            if (context.Database.ProviderName == "Pomelo.EntityFrameworkCore.MySql")
+            {
+                return;
+            }
+
             var ggmsProjects = await context.GgmsProjectCache
                 .AsNoTracking()
                 .OrderByDescending(p => p.SourceCreatedAt)
@@ -2953,13 +2978,6 @@ namespace AttendanceShiftingManagement.ViewModels
                     LinkedProjectName = linkedName
                 });
             }
-
-            if (currentSelectedId.HasValue)
-            {
-                SelectedBudget = AllBudgets.FirstOrDefault(b => b.Id == currentSelectedId && b.Category == currentCategory);
-            }
-
-            RefreshFundingSourceOptions();
         }
 
         public void OpenEditProject(BudgetRecordListItem? item)
@@ -4089,6 +4107,13 @@ namespace AttendanceShiftingManagement.ViewModels
             try
             {
                 await using var context = new LocalDbContext();
+                if (context.Database.ProviderName == "Pomelo.EntityFrameworkCore.MySql")
+                {
+                    // The ggms_project_cache mirror is local-only (ams.db) — nothing to
+                    // sync into on a shared MySQL connection.
+                    return;
+                }
+
                 await new GgmsProjectSyncService().RefreshProjectCacheAsync(context);
             }
             catch

@@ -13,6 +13,16 @@ namespace AttendanceShiftingManagement.Services
         [
             new()
             {
+                Version = "1.0.15",
+                PublishedAt = "2026-09-12",
+                Notes =
+                [
+                    "Fixed login failing with Unknown column 'u.is_active' on stale LAN/remote databases: startup now repairs 17 missing columns automatically.",
+                    "Any shared database behind on schema now self-heals at launch instead of blocking sign-in."
+                ]
+            },
+            new()
+            {
                 Version = "1.0.14",
                 PublishedAt = "2026-09-12",
                 Notes =

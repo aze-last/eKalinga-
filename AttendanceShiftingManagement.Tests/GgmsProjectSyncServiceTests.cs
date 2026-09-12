@@ -1,5 +1,7 @@
+using AttendanceShiftingManagement.Data;
 using AttendanceShiftingManagement.Models;
 using AttendanceShiftingManagement.Services;
+using Microsoft.EntityFrameworkCore;
 
 namespace AttendanceShiftingManagement.Tests;
 
@@ -37,6 +39,30 @@ public sealed class GgmsProjectSyncServiceTests
 
         Assert.Contains("`custom_project_details`", query, StringComparison.Ordinal);
         Assert.DoesNotContain("`project_details`", query, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RefreshProjectCacheAsync_OnMySqlProvider_ReturnsGracefulFailureWithoutThrowing()
+    {
+        var options = new BudgetRuntimeOptions { AyudaOfficeCode = "OFF-2026-0006" };
+        options.GgmsConnection = new DatabaseConnectionPreset
+        {
+            Server = "127.0.0.1",
+            Database = "ggms",
+            Username = "user"
+        };
+
+        var mysqlOptions = new DbContextOptionsBuilder<LocalDbContext>()
+            .UseMySql(
+                "server=127.0.0.1;database=ggms;user=user;password=secret;",
+                new MySqlServerVersion(new Version(8, 0, 36)))
+            .Options;
+        await using var context = new LocalDbContext(mysqlOptions);
+
+        var result = await new GgmsProjectSyncService(options).RefreshProjectCacheAsync(context);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("local database", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

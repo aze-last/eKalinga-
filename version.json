@@ -1,13 +1,13 @@
 {
-  "version": "1.0.14",
+  "version": "1.0.15",
   "notes": [
-    "Fixed updates not appearing on machines installed by older versions: the app now self-repairs a stale update address on launch.",
-    "Fresh installs default to the correct update manifest out of the box."
+    "Fixed login failing with Unknown column 'u.is_active' on stale LAN/remote databases: startup now repairs 17 missing columns automatically.",
+    "Any shared database behind on schema now self-heals at launch instead of blocking sign-in."
   ],
   "publishedAt": "2026-09-12",
-  "releasePageUrl": "https://github.com/aze-last/eKalinga-/releases/tag/v1.0.14",
-  "installerFileName": "eKalingaPlus-Setup-1.0.14.exe",
-  "installerUrl": "https://github.com/aze-last/eKalinga-/releases/download/v1.0.14/eKalingaPlus-Setup-1.0.14.exe",
-  "sha256": "f7cc7b3d35ee55a2640717ec7c82cfa35303e4e93f46cb68e7fdacb8176c6e4a"
+  "releasePageUrl": "https://github.com/aze-last/eKalinga-/releases/tag/v1.0.15",
+  "installerFileName": "eKalingaPlus-Setup-1.0.15.exe",
+  "installerUrl": "https://github.com/aze-last/eKalinga-/releases/download/v1.0.15/eKalingaPlus-Setup-1.0.15.exe",
+  "sha256": "6ddc91e7b83c24434dfb8560dbcf0d76be00293ed4b38bd3fbcf78195add31dc"
 }
 

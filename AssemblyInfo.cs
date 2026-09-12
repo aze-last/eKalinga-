@@ -5,9 +5,9 @@ using System.Runtime.Versioning;
 
 [assembly: AssemblyTitle("eKalinga+")]
 [assembly: AssemblyProduct("eKalinga+")]
-[assembly: AssemblyVersion("1.0.14.0")]
-[assembly: AssemblyFileVersion("1.0.14.0")]
-[assembly: AssemblyInformationalVersion("1.0.14")]
+[assembly: AssemblyVersion("1.0.15.0")]
+[assembly: AssemblyFileVersion("1.0.15.0")]
+[assembly: AssemblyInformationalVersion("1.0.15")]
 [assembly: TargetFramework(".NETCoreApp,Version=v9.0", FrameworkDisplayName = ".NET 9.0")]
 
 [assembly: ThemeInfo(

@@ -454,6 +454,111 @@ namespace AttendanceShiftingManagement.Data
                 "is_deleted",
                 "ALTER TABLE `users` ADD COLUMN `is_deleted` tinyint(1) NOT NULL DEFAULT 0;");
 
+            // Stale shared databases (e.g. older Hostinger exports restored onto a LAN
+            // server) can miss columns the login query needs. Repair them here so any
+            // preset self-heals at startup instead of failing with "Unknown column".
+            EnsureColumnExists(
+                connection,
+                "users",
+                "is_active",
+                "ALTER TABLE `users` ADD COLUMN `is_active` tinyint(1) NOT NULL DEFAULT 1;");
+
+            EnsureColumnExists(
+                connection,
+                "users",
+                "SyncId",
+                "ALTER TABLE `users` ADD COLUMN `SyncId` char(36) NOT NULL DEFAULT '00000000-0000-0000-0000-000000000000';");
+
+            EnsureColumnExists(
+                connection,
+                "ayuda_project_claims",
+                "is_deleted",
+                "ALTER TABLE `ayuda_project_claims` ADD COLUMN `is_deleted` tinyint(1) NOT NULL DEFAULT 0;");
+
+            EnsureColumnExists(
+                connection,
+                "cash_for_work_budgets",
+                "daily_rate",
+                "ALTER TABLE `cash_for_work_budgets` ADD COLUMN `daily_rate` decimal(18,2) NULL;");
+
+            EnsureColumnExists(
+                connection,
+                "cash_for_work_budgets",
+                "start_date",
+                "ALTER TABLE `cash_for_work_budgets` ADD COLUMN `start_date` datetime(6) NULL;");
+
+            EnsureColumnExists(
+                connection,
+                "cash_for_work_budgets",
+                "end_date",
+                "ALTER TABLE `cash_for_work_budgets` ADD COLUMN `end_date` datetime(6) NULL;");
+
+            EnsureColumnExists(
+                connection,
+                "cash_for_work_budgets",
+                "source_donation_id",
+                "ALTER TABLE `cash_for_work_budgets` ADD COLUMN `source_donation_id` int NULL;");
+
+            EnsureColumnExists(
+                connection,
+                "cash_for_work_budgets",
+                "source_ggms_budget_id",
+                "ALTER TABLE `cash_for_work_budgets` ADD COLUMN `source_ggms_budget_id` int NULL;");
+
+            EnsureColumnExists(
+                connection,
+                "cash_for_work_budgets",
+                "source_project_details_id",
+                "ALTER TABLE `cash_for_work_budgets` ADD COLUMN `source_project_details_id` varchar(45) NULL;");
+
+            EnsureColumnExists(
+                connection,
+                "government_budget_snapshots",
+                "target_assistance_case_budget_id",
+                "ALTER TABLE `government_budget_snapshots` ADD COLUMN `target_assistance_case_budget_id` int NULL;");
+
+            EnsureColumnExists(
+                connection,
+                "government_budget_snapshots",
+                "target_cash_for_work_budget_id",
+                "ALTER TABLE `government_budget_snapshots` ADD COLUMN `target_cash_for_work_budget_id` int NULL;");
+
+            EnsureColumnExists(
+                connection,
+                "government_budget_snapshots",
+                "target_program_id",
+                "ALTER TABLE `government_budget_snapshots` ADD COLUMN `target_program_id` int NULL;");
+
+            EnsureColumnExists(
+                connection,
+                "private_donations",
+                "target_assistance_case_budget_id",
+                "ALTER TABLE `private_donations` ADD COLUMN `target_assistance_case_budget_id` int NULL;");
+
+            EnsureColumnExists(
+                connection,
+                "private_donations",
+                "target_cash_for_work_budget_id",
+                "ALTER TABLE `private_donations` ADD COLUMN `target_cash_for_work_budget_id` int NULL;");
+
+            EnsureColumnExists(
+                connection,
+                "private_donations",
+                "target_program_id",
+                "ALTER TABLE `private_donations` ADD COLUMN `target_program_id` int NULL;");
+
+            EnsureColumnExists(
+                connection,
+                "scanner_sessions",
+                "last_scanned_at",
+                "ALTER TABLE `scanner_sessions` ADD COLUMN `last_scanned_at` datetime(6) NULL;");
+
+            EnsureColumnExists(
+                connection,
+                "scanner_sessions",
+                "last_scanned_payload",
+                "ALTER TABLE `scanner_sessions` ADD COLUMN `last_scanned_payload` longtext NULL;");
+
             EnsureColumnExists(
                 connection,
                 "user_permissions",
