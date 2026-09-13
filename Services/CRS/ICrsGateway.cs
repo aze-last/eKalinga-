@@ -59,6 +59,16 @@ namespace AttendanceShiftingManagement.Services
         string? SeniorIdNo);
 
     /// <summary>
+    /// A current-year Cedula issuance for a beneficiary (Cedula Verification
+    /// Contract, Sept 2026). Read-only projection of the eTaxCollect-owned
+    /// tax_transactions + cedula_details rows; never written by this system.
+    /// </summary>
+    public sealed record CrsCedulaVerificationRow(
+        string ReferenceNumber,
+        DateTime? PaymentDate,
+        int? YearCovered);
+
+    /// <summary>
     /// A digital_ids row tagged with its beneficiary id, for bulk cache pulls.
     /// Same most-recent-row semantics as <see cref="CrsDigitalIdRow"/> — never
     /// filtered by status.
@@ -89,7 +99,9 @@ namespace AttendanceShiftingManagement.Services
     /// The ONLY code path that talks SQL to the e-Kard CRS database.
     /// Contract hard rules: digital_ids / val_beneficiaries / demographic_characteristics
     /// are READ only; record_access_logs is INSERT only; the photo lookup is raw SQL,
-    /// never mapped through an ORM.
+    /// never mapped through an ORM. Cedula tables (tax_types / tax_transactions /
+    /// cedula_details, eTaxCollect-owned) are READ only; the check is informational
+    /// and must never block a transaction.
     /// </summary>
     public interface ICrsGateway
     {
@@ -115,5 +127,16 @@ namespace AttendanceShiftingManagement.Services
         /// Excludes the profile_picture blob.
         /// </summary>
         Task<IReadOnlyList<CrsDemographicRow>> GetAllDemographicCharacteristicsAsync(CancellationToken cancellationToken);
+
+        /// <summary>
+        /// Current-year Cedula issuance for a beneficiary (Cedula Verification
+        /// Contract, Sept 2026 — READ only, single row, never a blocker).
+        /// Default implementation returns null so existing fakes keep compiling;
+        /// <see cref="CrsGateway"/> overrides with the contract query.
+        /// </summary>
+        Task<CrsCedulaVerificationRow?> GetValidCedulaAsync(string beneficiaryId, int year, CancellationToken cancellationToken)
+        {
+            return Task.FromResult<CrsCedulaVerificationRow?>(null);
+        }
     }
 }

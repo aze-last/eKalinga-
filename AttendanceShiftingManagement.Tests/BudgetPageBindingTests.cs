@@ -113,8 +113,10 @@ public sealed class BudgetPageBindingTests
         Assert.Contains("BulkAddBeneficiariesAsync(", source, StringComparison.Ordinal);
         Assert.Contains("new ProjectDistributionService(", source, StringComparison.Ordinal);
 
-        // Only Approved masterlist beneficiaries are offered
-        Assert.Contains("VerificationStatus.Approved", source, StringComparison.Ordinal);
+        // Enrollment mirrors the MasterList registry call: every local staging row is
+        // offered (case-insensitive lower() search), scoped by targeted barangays.
+        Assert.Contains("BeneficiaryStaging", source, StringComparison.Ordinal);
+        Assert.Contains("ToLower().Contains(", source, StringComparison.Ordinal);
 
         // Donation + project stay linked 1:1
         Assert.Contains("NewProjectSourceDonationId", source, StringComparison.Ordinal);

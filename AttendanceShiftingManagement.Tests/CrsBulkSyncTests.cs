@@ -57,11 +57,12 @@ namespace AttendanceShiftingManagement.Tests
             string beneficiaryId,
             string firstName,
             string lastName,
-            string dateOfBirth = "1990-01-01")
+            string dateOfBirth = "1990-01-01",
+            string address = "Purok 1")
         {
             return new CrsValBeneficiaryRow(
                 residentsId, beneficiaryId, $"CR-{residentsId}", lastName, firstName, null,
-                $"{firstName} {lastName}", "Male", dateOfBirth, "35", "Single", "Purok 1",
+                $"{firstName} {lastName}", "Male", dateOfBirth, "35", "Single", address,
                 false, null, null, null, false, null);
         }
 
@@ -163,6 +164,91 @@ namespace AttendanceShiftingManagement.Tests
             Assert.True(result.IsSuccess);
             Assert.Equal(0, result.AddedCount);
             Assert.Equal(1, result.SkippedCount);
+        }
+
+        [Fact]
+        public async Task Mirror_BackfillsMissingAddress_FromMatchedCrsRow_WithoutTouchingOtherFields()
+        {
+            // Remote registries whose staging rows were created before addresses were
+            // mirrored carry NULL addresses, which breaks barangay-scoped enrollment.
+            var dbName = Guid.NewGuid().ToString("N");
+            using (var seedContext = TestDbContextFactory.CreateContext(dbName))
+            {
+                seedContext.BeneficiaryStaging.Add(new BeneficiaryStaging
+                {
+                    ResidentsId = 1001,
+                    BeneficiaryId = "BEN-2026-0001",
+                    FirstName = "Juan",
+                    LastName = "Reyes",
+                    FullName = "Juan Reyes",
+                    DateOfBirth = "1990-01-01",
+                    Address = null,
+                    VerificationStatus = VerificationStatus.Approved,
+                    ReviewNotes = "seeded locally"
+                });
+                await seedContext.SaveChangesAsync();
+            }
+
+            var gateway = new FakeBulkCrsGateway
+            {
+                Beneficiaries = new[]
+                {
+                    MakeRow(1001, "BEN-2026-0001", "Juan", "Reyes", "1990-01-01", "Purok-01, Kiblagon, Sulop, Davao del Sur")
+                }
+            };
+            var service = new CrsMasterlistMirrorService(gateway, () => TestDbContextFactory.CreateContext(dbName));
+
+            var result = await service.MirrorValidatedBeneficiariesAsync();
+
+            Assert.True(result.IsSuccess);
+            Assert.Equal(0, result.AddedCount);
+            Assert.Equal(1, result.SkippedCount);
+            Assert.Equal(1, result.BackfilledCount);
+
+            using var context = TestDbContextFactory.CreateContext(dbName);
+            var existing = await context.BeneficiaryStaging.FirstAsync(r => r.ResidentsId == 1001);
+            Assert.Equal("Purok-01, Kiblagon, Sulop, Davao del Sur", existing.Address);
+            Assert.Equal("seeded locally", existing.ReviewNotes);
+            Assert.Equal(1, await context.BeneficiaryStaging.CountAsync());
+        }
+
+        [Fact]
+        public async Task Mirror_DoesNotOverwriteExistingAddress_OnMatchedCrsRow()
+        {
+            var dbName = Guid.NewGuid().ToString("N");
+            using (var seedContext = TestDbContextFactory.CreateContext(dbName))
+            {
+                seedContext.BeneficiaryStaging.Add(new BeneficiaryStaging
+                {
+                    ResidentsId = 1001,
+                    BeneficiaryId = "BEN-2026-0001",
+                    FirstName = "Juan",
+                    LastName = "Reyes",
+                    FullName = "Juan Reyes",
+                    DateOfBirth = "1990-01-01",
+                    Address = "Purok 9, Poblacion",
+                    VerificationStatus = VerificationStatus.Approved
+                });
+                await seedContext.SaveChangesAsync();
+            }
+
+            var gateway = new FakeBulkCrsGateway
+            {
+                Beneficiaries = new[]
+                {
+                    MakeRow(1001, "BEN-2026-0001", "Juan", "Reyes", "1990-01-01", "Purok-01, Kiblagon, Sulop, Davao del Sur")
+                }
+            };
+            var service = new CrsMasterlistMirrorService(gateway, () => TestDbContextFactory.CreateContext(dbName));
+
+            var result = await service.MirrorValidatedBeneficiariesAsync();
+
+            Assert.True(result.IsSuccess);
+            Assert.Equal(0, result.BackfilledCount);
+
+            using var context = TestDbContextFactory.CreateContext(dbName);
+            var existing = await context.BeneficiaryStaging.FirstAsync(r => r.ResidentsId == 1001);
+            Assert.Equal("Purok 9, Poblacion", existing.Address);
         }
 
         [Fact]

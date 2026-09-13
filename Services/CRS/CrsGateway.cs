@@ -301,6 +301,60 @@ namespace AttendanceShiftingManagement.Services
             };
         }
 
+        public async Task<CrsCedulaVerificationRow?> GetValidCedulaAsync(string beneficiaryId, int year, CancellationToken cancellationToken)
+        {
+            await using var connection = new MySqlConnection(_connectionProvider.GetConnectionString());
+            await connection.OpenAsync(cancellationToken);
+
+            // Cedula Verification Contract (Sept 2026) query verbatim: a Cedula is
+            // valid through Dec 31 of its year_covered, so a PAID non-deleted row
+            // for the current year is the whole check. READ only, single row.
+            await using var command = new MySqlCommand(@"
+                SELECT t.reference_number, t.payment_date, c.year_covered
+                FROM tax_transactions t
+                JOIN cedula_details c ON c.tax_transaction_id = t.id
+                WHERE t.beneficiary_id = @beneficiaryId
+                  AND t.tax_type_id = (SELECT id FROM tax_types WHERE type_code = 'CEDULA')
+                  AND c.year_covered = @currentYear
+                  AND t.status = 'PAID'
+                  AND t.is_deleted = 0
+                LIMIT 1;", connection);
+            command.Parameters.AddWithValue("@beneficiaryId", beneficiaryId);
+            command.Parameters.AddWithValue("@currentYear", year);
+
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            if (!await reader.ReadAsync(cancellationToken))
+            {
+                return null;
+            }
+
+            int? yearCovered = null;
+            if (!reader.IsDBNull(2))
+            {
+                try
+                {
+                    yearCovered = Convert.ToInt32(reader.GetValue(2), System.Globalization.CultureInfo.InvariantCulture);
+                }
+                catch (FormatException)
+                {
+                    yearCovered = null;
+                }
+                catch (InvalidCastException)
+                {
+                    yearCovered = null;
+                }
+                catch (OverflowException)
+                {
+                    yearCovered = null;
+                }
+            }
+
+            return new CrsCedulaVerificationRow(
+                reader.IsDBNull(0) ? string.Empty : reader.GetString(0),
+                reader.IsDBNull(1) ? null : ReadDateTime(reader, 1),
+                yearCovered);
+        }
+
         public async Task<CrsSchemaProbeResult> ProbeSchemaAsync(CancellationToken cancellationToken)
         {
             try

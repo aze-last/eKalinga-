@@ -3558,17 +3558,22 @@ namespace AttendanceShiftingManagement.ViewModels
             string? search, 
             IReadOnlyList<string>? targetBarangays = null)
         {
-            var query = context.BeneficiaryStaging
-                .AsNoTracking()
-                .Where(item => item.VerificationStatus == VerificationStatus.Approved);
+            // Mirrors MasterListService.LoadPageAsync: the local staging registry is the
+            // source of truth and is listed without a VerificationStatus gate (MasterList
+            // shows every local row). Scoping to targeted barangays is address-substring
+            // only, case-insensitive via lower() like the MasterList search.
+            var query = context.BeneficiaryStaging.AsNoTracking();
 
             if (!string.IsNullOrWhiteSpace(search))
             {
+                var searchLower = search.Trim().ToLowerInvariant();
                 query = query.Where(item =>
-                    (item.FullName != null && item.FullName.Contains(search)) ||
-                    (item.LastName != null && item.LastName.Contains(search)) ||
-                    (item.FirstName != null && item.FirstName.Contains(search)) ||
-                    (item.BeneficiaryId != null && item.BeneficiaryId.Contains(search)));
+                    (item.FullName != null && item.FullName.ToLower().Contains(searchLower)) ||
+                    (item.BeneficiaryId != null && item.BeneficiaryId.ToLower().Contains(searchLower)) ||
+                    (item.CivilRegistryId != null && item.CivilRegistryId.ToLower().Contains(searchLower)) ||
+                    (item.LastName != null && item.LastName.ToLower().Contains(searchLower)) ||
+                    (item.FirstName != null && item.FirstName.ToLower().Contains(searchLower)) ||
+                    (item.Address != null && item.Address.ToLower().Contains(searchLower)));
             }
 
             if (targetBarangays != null && targetBarangays.Count > 0 && targetBarangays.Count < SulopBarangays.Length)
@@ -3576,6 +3581,8 @@ namespace AttendanceShiftingManagement.ViewModels
                 var parameter = System.Linq.Expressions.Expression.Parameter(typeof(BeneficiaryStaging), "item");
                 var addressProp = System.Linq.Expressions.Expression.Property(parameter, nameof(BeneficiaryStaging.Address));
                 var notNullExp = System.Linq.Expressions.Expression.NotEqual(addressProp, System.Linq.Expressions.Expression.Constant(null, typeof(string)));
+                var toLowerMethod = typeof(string).GetMethod(nameof(string.ToLower), Type.EmptyTypes)!;
+                var addressLowerExp = System.Linq.Expressions.Expression.Call(addressProp, toLowerMethod);
                 var containsMethod = typeof(string).GetMethod(nameof(string.Contains), new[] { typeof(string) })!;
 
                 var searchTerms = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -3603,7 +3610,8 @@ namespace AttendanceShiftingManagement.ViewModels
                 System.Linq.Expressions.Expression? orExp = null;
                 foreach (var term in searchTerms)
                 {
-                    var call = System.Linq.Expressions.Expression.Call(addressProp, containsMethod, System.Linq.Expressions.Expression.Constant(term, typeof(string)));
+                    var termLower = term.ToLowerInvariant();
+                    var call = System.Linq.Expressions.Expression.Call(addressLowerExp, containsMethod, System.Linq.Expressions.Expression.Constant(termLower, typeof(string)));
                     orExp = orExp == null ? call : System.Linq.Expressions.Expression.OrElse(orExp, call);
                 }
 

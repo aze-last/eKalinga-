@@ -497,7 +497,16 @@
                                 <RowDefinition Height="*"/>
                             </Grid.RowDefinitions>
 
-                            <TextBlock Grid.Row="0" Text="COMMUNITY TAX PAYMENT (CEDULA)" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}" Margin="0,0,0,8"/>
+                            <StackPanel Grid.Row="0" Margin="0,0,0,8">
+                                <TextBlock Text="COMMUNITY TAX PAYMENT (CEDULA)" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource BrandTextSecondaryBrush}"/>
+                                <Border Background="#DCFCE7" BorderBrush="#15803D" BorderThickness="1" CornerRadius="6" Padding="8,4" Margin="0,8,0,0"
+                                        Visibility="{Binding CedulaBadgeVisibility}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="✓ " Foreground="#15803D" FontSize="11" FontWeight="Bold" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding CedulaBadgeText}" Foreground="#166534" FontSize="11" FontWeight="SemiBold" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
                             <Grid Grid.Row="1" Margin="0,0,0,16">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="*"/>

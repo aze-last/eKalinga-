@@ -173,6 +173,9 @@ namespace AttendanceShiftingManagement.ViewModels
         private bool _householdConfirmFromPendingList;
         private bool _isBeneficiaryValidationModalOpen;
         private DistributionBeneficiaryOption? _validatingBeneficiary;
+        private int _cedulaBadgeVersion;
+        private Visibility _cedulaBadgeVisibility = Visibility.Collapsed;
+        private string _cedulaBadgeText = string.Empty;
 
         // Interactive Walkthrough Tour Commands & Fields
         private readonly RelayCommand _openOnboardingCommand;
@@ -414,6 +417,23 @@ namespace AttendanceShiftingManagement.ViewModels
         {
             get => _validatingBeneficiary;
             private set => SetProperty(ref _validatingBeneficiary, value);
+        }
+
+        /// <summary>
+        /// Cedula Verification Contract badge (Sept 2026): informational only.
+        /// Visible solely when CRS confirms a current-year PAID Cedula; an empty
+        /// or failed check stays hidden (neutral) and never gates validation.
+        /// </summary>
+        public Visibility CedulaBadgeVisibility
+        {
+            get => _cedulaBadgeVisibility;
+            private set => SetProperty(ref _cedulaBadgeVisibility, value);
+        }
+
+        public string CedulaBadgeText
+        {
+            get => _cedulaBadgeText;
+            private set => SetProperty(ref _cedulaBadgeText, value);
         }
 
         public ProjectDistributionBeneficiaryListItem? ScannedBeneficiary
@@ -1361,6 +1381,33 @@ namespace AttendanceShiftingManagement.ViewModels
             if (option == null) return;
             ValidatingBeneficiary = option;
             IsBeneficiaryValidationModalOpen = true;
+            _ = RefreshCedulaBadgeAsync(option);
+        }
+
+        /// <summary>
+        /// Best-effort live Cedula badge. Fire-and-forget on purpose: the result
+        /// only ever shows a badge, it can never delay or prevent validation.
+        /// </summary>
+        private async Task RefreshCedulaBadgeAsync(DistributionBeneficiaryOption option)
+        {
+            var version = ++_cedulaBadgeVersion;
+            CedulaBadgeVisibility = Visibility.Collapsed;
+            CedulaBadgeText = string.Empty;
+            try
+            {
+                var result = await new CedulaVerificationService().CheckCurrentYearAsync(option.BeneficiaryId);
+                if (version != _cedulaBadgeVersion) return;
+                if (!result.HasValidCedula) return;
+                if (!ReferenceEquals(ValidatingBeneficiary, option)) return;
+                CedulaBadgeText = $"Valid Cedula {result.YearCovered} • {result.ReferenceNumber}"
+                    + (result.PaymentDate.HasValue ? $" • Paid {result.PaymentDate.Value:MMM d, yyyy}" : string.Empty);
+                CedulaBadgeVisibility = Visibility.Visible;
+            }
+            catch
+            {
+                // Badge is best-effort; a failure here must never surface as a
+                // validation error or block the staff workflow.
+            }
         }
 
         private void ConfirmAddRecipient()
@@ -1378,6 +1425,9 @@ namespace AttendanceShiftingManagement.ViewModels
 
         private void CancelBeneficiaryValidation()
         {
+            _cedulaBadgeVersion++;
+            CedulaBadgeVisibility = Visibility.Collapsed;
+            CedulaBadgeText = string.Empty;
             ValidatingBeneficiary = null;
             IsBeneficiaryValidationModalOpen = false;
         }

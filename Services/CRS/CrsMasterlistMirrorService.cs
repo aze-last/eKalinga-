@@ -11,6 +11,7 @@ namespace AttendanceShiftingManagement.Services
         public bool IsSuccess { get; init; }
         public int AddedCount { get; init; }
         public int SkippedCount { get; init; }
+        public int BackfilledCount { get; init; }
         public string Message { get; init; } = string.Empty;
     }
 
@@ -19,7 +20,10 @@ namespace AttendanceShiftingManagement.Services
     /// CRS is the source of truth: rows it holds that are missing locally are
     /// auto-created as Approved (the masterlist no longer has a pending stage for
     /// CRS-validated residents). CRS stays strictly READ only; existing local rows
-    /// (including seeded test profiles) are never modified or deleted.
+    /// (including seeded test profiles) are never modified or deleted — except for
+    /// backfilling a NULL/empty Address from the matched CRS row, which heals
+    /// registries whose staging rows were created before addresses were mirrored
+    /// (barangay-scoped enrollment filters match on the address text).
     /// </summary>
     public class CrsMasterlistMirrorService
     {
@@ -92,6 +96,34 @@ namespace AttendanceShiftingManagement.Services
 
             var addedCount = 0;
             var skippedCount = 0;
+            var backfilledCount = 0;
+            var backfilledEntities = new HashSet<BeneficiaryStaging>();
+
+            // Tracked lookup of staging rows missing an address, keyed by the same
+            // identity keys the dedup snapshot uses. Only these rows are eligible
+            // for an address backfill; everything else stays untouched.
+            var addressMissingByResidentsId = new Dictionary<long, BeneficiaryStaging>();
+            var addressMissingByBeneficiaryId = new Dictionary<string, BeneficiaryStaging>(StringComparer.OrdinalIgnoreCase);
+            var addressMissingByCivilRegistryId = new Dictionary<string, BeneficiaryStaging>(StringComparer.OrdinalIgnoreCase);
+            foreach (var existing in await context.BeneficiaryStaging
+                .Where(row => row.Address == null || row.Address == string.Empty)
+                .ToListAsync(cancellationToken))
+            {
+                if (existing.ResidentsId.HasValue)
+                {
+                    addressMissingByResidentsId.TryAdd(existing.ResidentsId.Value, existing);
+                }
+
+                if (!string.IsNullOrWhiteSpace(existing.BeneficiaryId))
+                {
+                    addressMissingByBeneficiaryId.TryAdd(existing.BeneficiaryId.Trim(), existing);
+                }
+
+                if (!string.IsNullOrWhiteSpace(existing.CivilRegistryId))
+                {
+                    addressMissingByCivilRegistryId.TryAdd(existing.CivilRegistryId.Trim(), existing);
+                }
+            }
 
             foreach (var row in sourceRows)
             {
@@ -116,6 +148,23 @@ namespace AttendanceShiftingManagement.Services
                 if (decision.ShouldSkip)
                 {
                     skippedCount++;
+                    if (!string.IsNullOrWhiteSpace(row.Address))
+                    {
+                        var match = FindAddressMissingMatch(
+                            addressMissingByResidentsId,
+                            addressMissingByBeneficiaryId,
+                            addressMissingByCivilRegistryId,
+                            row.ResidentsId,
+                            beneficiaryId,
+                            civilRegistryId);
+                        if (match != null && backfilledEntities.Add(match))
+                        {
+                            match.Address = row.Address.Trim();
+                            match.UpdatedAt = DateTime.Now;
+                            backfilledCount++;
+                        }
+                    }
+
                     continue;
                 }
 
@@ -170,7 +219,7 @@ namespace AttendanceShiftingManagement.Services
                 addedCount++;
             }
 
-            if (addedCount > 0)
+            if (addedCount > 0 || backfilledCount > 0)
             {
                 await context.SaveChangesAsync(cancellationToken);
             }
@@ -182,10 +231,39 @@ namespace AttendanceShiftingManagement.Services
                 IsSuccess = true,
                 AddedCount = addedCount,
                 SkippedCount = skippedCount,
+                BackfilledCount = backfilledCount,
                 Message = addedCount > 0
                     ? $"Masterlist refreshed — {addedCount} new beneficiary record(s) added."
-                    : "Masterlist is up to date."
+                    : backfilledCount > 0
+                        ? $"Masterlist refreshed — {backfilledCount} address(es) restored from CRS."
+                        : "Masterlist is up to date."
             };
+        }
+
+        private static BeneficiaryStaging? FindAddressMissingMatch(
+            Dictionary<long, BeneficiaryStaging> byResidentsId,
+            Dictionary<string, BeneficiaryStaging> byBeneficiaryId,
+            Dictionary<string, BeneficiaryStaging> byCivilRegistryId,
+            long? residentsId,
+            string? beneficiaryId,
+            string? civilRegistryId)
+        {
+            if (residentsId.HasValue && byResidentsId.TryGetValue(residentsId.Value, out var byResidents))
+            {
+                return byResidents;
+            }
+
+            if (!string.IsNullOrWhiteSpace(beneficiaryId) && byBeneficiaryId.TryGetValue(beneficiaryId.Trim(), out var byBen))
+            {
+                return byBen;
+            }
+
+            if (!string.IsNullOrWhiteSpace(civilRegistryId) && byCivilRegistryId.TryGetValue(civilRegistryId.Trim(), out var byCivil))
+            {
+                return byCivil;
+            }
+
+            return null;
         }
 
         private static async Task TouchSyncMetadataAsync(LocalDbContext context, CancellationToken cancellationToken)
