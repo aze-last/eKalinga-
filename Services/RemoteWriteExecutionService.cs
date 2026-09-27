@@ -70,6 +70,11 @@ namespace AttendanceShiftingManagement.Services
 
         private static bool IsRemoteContext(LocalDbContext context, ConnectionSettingsModel settings)
         {
+            if (!string.Equals(context.Database.ProviderName, "Pomelo.EntityFrameworkCore.MySql", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
             var remotePreset = settings.GetPreset(RemotePresetKey);
             if (!ConnectionSettingsService.IsPresetConfigured(remotePreset))
             {
@@ -83,7 +88,25 @@ namespace AttendanceShiftingManagement.Services
             }
 
             var remoteConnectionString = ConnectionSettingsService.BuildConnectionString(remotePreset);
-            return string.Equals(currentConnectionString, remoteConnectionString, StringComparison.Ordinal);
+            if (string.Equals(currentConnectionString, remoteConnectionString, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            try
+            {
+                var currentBuilder = new MySqlConnector.MySqlConnectionStringBuilder(currentConnectionString);
+                var remoteBuilder = new MySqlConnector.MySqlConnectionStringBuilder(remoteConnectionString);
+
+                return string.Equals(currentBuilder.Server, remoteBuilder.Server, StringComparison.OrdinalIgnoreCase)
+                    && currentBuilder.Port == remoteBuilder.Port
+                    && string.Equals(currentBuilder.Database, remoteBuilder.Database, StringComparison.OrdinalIgnoreCase)
+                    && string.Equals(currentBuilder.UserID, remoteBuilder.UserID, StringComparison.OrdinalIgnoreCase);
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         private static bool IsInMemoryProvider(LocalDbContext context)

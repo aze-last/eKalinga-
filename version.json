@@ -1,13 +1,13 @@
 {
-  "version": "1.0.15",
+  "version": "1.0.16",
   "notes": [
-    "Fixed login failing with Unknown column 'u.is_active' on stale LAN/remote databases: startup now repairs 17 missing columns automatically.",
-    "Any shared database behind on schema now self-heals at launch instead of blocking sign-in."
+    "Budget project wizard: added project code auto-suggest and fair family-aware enrollment lottery keeping households together.",
+    "Integrated CRS cedula verification gateway and verification panel."
   ],
-  "publishedAt": "2026-09-12",
-  "releasePageUrl": "https://github.com/aze-last/eKalinga-/releases/tag/v1.0.15",
-  "installerFileName": "eKalingaPlus-Setup-1.0.15.exe",
-  "installerUrl": "https://github.com/aze-last/eKalinga-/releases/download/v1.0.15/eKalingaPlus-Setup-1.0.15.exe",
-  "sha256": "6ddc91e7b83c24434dfb8560dbcf0d76be00293ed4b38bd3fbcf78195add31dc"
+  "publishedAt": "2026-09-13",
+  "releasePageUrl": "https://github.com/aze-last/eKalinga-/releases/tag/v1.0.16",
+  "installerFileName": "eKalingaPlus-Setup-1.0.16.exe",
+  "installerUrl": "https://github.com/aze-last/eKalinga-/releases/download/v1.0.16/eKalingaPlus-Setup-1.0.16.exe",
+  "sha256": "a35836180059926c58580aa859786a632bee6e4505fe9cc3fdb622557b2eda50"
 }
 

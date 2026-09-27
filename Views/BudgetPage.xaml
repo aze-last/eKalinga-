@@ -1499,9 +1499,15 @@
                                                 <TextBox Grid.Column="0" materialDesign:HintAssist.Hint="Project Name *"
                                                          Style="{StaticResource MaterialDesignOutlinedTextBox}"
                                                          Text="{Binding NewProjectName, UpdateSourceTrigger=PropertyChanged}"/>
-                                                <TextBox Grid.Column="2" materialDesign:HintAssist.Hint="Project Code *"
-                                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                                         Text="{Binding NewProjectCode, UpdateSourceTrigger=PropertyChanged}"/>
+                                                <StackPanel Grid.Column="2">
+                                                    <TextBox materialDesign:HintAssist.Hint="Project Code *"
+                                                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                                             Text="{Binding NewProjectCode, UpdateSourceTrigger=PropertyChanged}"/>
+                                                    <Button Content="SUGGEST CODE" Style="{StaticResource MaterialDesignFlatButton}"
+                                                            FontSize="11" Foreground="{StaticResource PrimaryBrandBrush}" HorizontalAlignment="Left"
+                                                            Padding="8,0" Height="28" Margin="0,4,0,0"
+                                                            Command="{Binding SuggestProjectCodeCommand}" ToolTip="Fill the next available project code"/>
+                                                </StackPanel>
                                             </Grid>
 
                                             <ComboBox materialDesign:HintAssist.Hint="Project Purpose *"
@@ -1911,6 +1917,9 @@
                                             </StackPanel>
 
                                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                                <Button Content="CLEAR" Style="{StaticResource MaterialDesignOutlinedButton}" Height="34" Padding="12,0" Margin="0,0,8,0"
+                                                        Foreground="#BE123C" BorderBrush="#BE123C"
+                                                        Command="{Binding DeselectAllEnrollmentCommand}" ToolTip="Remove everyone from the project roster"/>
                                                 <Button Content="⚡ AUTO-FILL SLOTS" Style="{StaticResource MaterialDesignOutlinedButton}" Height="34" Padding="12,0" Margin="0,0,8,0"
                                                         Command="{Binding AutoFillCandidatesCommand}" ToolTip="Automatically fill target slots from scoped barangays"/>
                                                 <Button Content="ADD BENEFICIARIES"

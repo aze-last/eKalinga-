@@ -167,6 +167,7 @@ namespace AttendanceShiftingManagement.ViewModels
         private readonly RelayCommand _navigateNextCommand;
         private readonly RelayCommand _selectAllFilteredEnrollmentCommand;
         private readonly RelayCommand _deselectAllEnrollmentCommand;
+        private readonly RelayCommand _suggestProjectCodeCommand;
         private readonly RelayCommand _openNewDonationProjectCommand;
 
         private readonly RelayCommand _openRecordDonationModalCommand;
@@ -1273,7 +1274,9 @@ namespace AttendanceShiftingManagement.ViewModels
                     }
                 }
 
-                ProjectWizardStep = 3;
+                // Uniqueness is checked here (not only at CREATE) so a taken code
+                // surfaces before enrollment work begins. Suggest fills a free one.
+                _ = ValidateProjectCodeAndAdvanceAsync();
             }
             else if (ProjectWizardStep == 3)
             {
@@ -1295,6 +1298,87 @@ namespace AttendanceShiftingManagement.ViewModels
                     ProjectWizardStep = 4;
                     _ = QueryEnrollmentBeneficiariesAsync();
                 }
+            }
+        }
+
+        /// <summary>
+        /// Step-2 exit gate: the typed code must be unique in the namespace it will
+        /// be created in (AyudaPrograms for Distribution, CFW-/SEM- prefixed
+        /// CashForWorkBudgets otherwise), compared case-insensitively so SQLite and
+        /// MySQL agree. Runs before any enrollment work begins.
+        /// </summary>
+        private async Task ValidateProjectCodeAndAdvanceAsync()
+        {
+            if (IsBusy) return;
+            var code = (NewProjectCode ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(code)) return;
+            IsBusy = true;
+            try
+            {
+                if (await IsProjectCodeTakenAsync(code))
+                {
+                    ProjectCreationErrorMessage = $"Project code '{code}' already exists. Change it or tap SUGGEST CODE.";
+                    return;
+                }
+
+                ProjectCreationErrorMessage = null;
+                ProjectWizardStep = 3;
+            }
+            catch (Exception ex)
+            {
+                // Fail-open: the authoritative check still runs at CREATE; a check
+                // hiccup must not trap the user on this step.
+                ProjectCreationErrorMessage = null;
+                ProjectWizardStep = 3;
+                SetNeutralStatus($"Code check skipped ({ex.Message}).");
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
+        private async Task<bool> IsProjectCodeTakenAsync(string code)
+        {
+            var normalized = code.Trim().ToLowerInvariant();
+            await using var context = new LocalDbContext();
+            if (SelectedProgramType == AyudaProgramType.CashForWork || SelectedProgramType == AyudaProgramType.Seminar)
+            {
+                var prefix = SelectedProgramType == AyudaProgramType.CashForWork ? "cfw-" : "sem-";
+                var effective = prefix + normalized;
+                return await context.CashForWorkBudgets.AsNoTracking()
+                    .AnyAsync(b => b.BudgetCode != null && b.BudgetCode.ToLower() == effective);
+            }
+
+            return await context.AyudaPrograms.AsNoTracking()
+                .AnyAsync(p => p.ProgramCode != null && p.ProgramCode.ToLower() == normalized);
+        }
+
+        /// <summary>Fills the next free PROJ- code for the selected program type.</summary>
+        private async Task SuggestProjectCodeAsync()
+        {
+            if (IsBusy) return;
+            IsBusy = true;
+            try
+            {
+                var baseCode = $"PROJ-{DateTime.Now:yyyyMMddHHmm}";
+                var candidate = baseCode;
+                var suffix = 2;
+                while (await IsProjectCodeTakenAsync(candidate) && suffix < 500)
+                {
+                    candidate = $"{baseCode}-{suffix++}";
+                }
+
+                NewProjectCode = candidate;
+                ProjectCreationErrorMessage = null;
+            }
+            catch (Exception ex)
+            {
+                SetNeutralStatus($"Suggest skipped ({ex.Message}).");
+            }
+            finally
+            {
+                IsBusy = false;
             }
         }
 
@@ -1872,6 +1956,7 @@ namespace AttendanceShiftingManagement.ViewModels
 
             _selectAllFilteredEnrollmentCommand = new RelayCommand(async _ => await SelectAllFilteredEnrollmentAsync());
             _deselectAllEnrollmentCommand = new RelayCommand(_ => DeselectAllEnrollment());
+            _suggestProjectCodeCommand = new RelayCommand(async _ => await SuggestProjectCodeAsync());
             _previousEnrollmentPageCommand = new RelayCommand(
                 _ => { CurrentEnrollmentPage--; _ = QueryEnrollmentBeneficiariesAsync(); },
                 _ => CurrentEnrollmentPage > 1);
@@ -2210,6 +2295,7 @@ namespace AttendanceShiftingManagement.ViewModels
         public ICommand SaveEditProjectCommand => _saveEditProjectCommand;
         public ICommand SelectAllFilteredEnrollmentCommand => _selectAllFilteredEnrollmentCommand;
         public ICommand DeselectAllEnrollmentCommand => _deselectAllEnrollmentCommand;
+        public ICommand SuggestProjectCodeCommand => _suggestProjectCodeCommand;
         public ICommand PreviousEnrollmentPageCommand => _previousEnrollmentPageCommand;
         public ICommand NextEnrollmentPageCommand => _nextEnrollmentPageCommand;
 
@@ -3808,14 +3894,15 @@ namespace AttendanceShiftingManagement.ViewModels
                     .Select(b => b.Name)
                     .ToList();
 
-                var candidatesToAdd = await Task.Run(async () =>
+                var scopedCandidates = await Task.Run(async () =>
                 {
                     await using var context = new LocalDbContext();
                     var existingIds = _selectedEnrollmentStagingIds.ToList();
+                    // Intentionally no Take() here: fair family grouping needs the
+                    // whole scoped pool, not just the first N alphabetically.
                     return await BuildEnrollmentQuery(context, null, targetBarangays)
                         .Where(b => !existingIds.Contains(b.StagingID))
-                        .OrderBy(b => b.FullName ?? b.LastName)
-                        .Take(needed)
+                        .OrderBy(b => b.StagingID)
                         .Select(b => new EnrollmentBeneficiaryRow(
                             b.StagingID,
                             b.BeneficiaryId,
@@ -3825,6 +3912,60 @@ namespace AttendanceShiftingManagement.ViewModels
                             b.Address))
                         .ToListAsync();
                 });
+
+                // Group into families by BEN household prefix (same key the household
+                // fallback uses); rows without one stand as single-person families.
+                var families = new List<List<EnrollmentBeneficiaryRow>>();
+                var familiesByKey = new Dictionary<string, List<EnrollmentBeneficiaryRow>>(StringComparer.OrdinalIgnoreCase);
+                foreach (var candidate in scopedCandidates)
+                {
+                    var key = TryGetHouseholdPrefix(candidate.BeneficiaryId);
+                    if (key == null)
+                    {
+                        families.Add(new List<EnrollmentBeneficiaryRow> { candidate });
+                        continue;
+                    }
+
+                    if (!familiesByKey.TryGetValue(key, out var family))
+                    {
+                        family = new List<EnrollmentBeneficiaryRow>();
+                        familiesByKey[key] = family;
+                        families.Add(family);
+                    }
+
+                    family.Add(candidate);
+                }
+
+                // Lottery order over families (Fisher-Yates); members head-first.
+                for (var i = families.Count - 1; i > 0; i--)
+                {
+                    var j = Random.Shared.Next(i + 1);
+                    (families[i], families[j]) = (families[j], families[i]);
+                }
+
+                foreach (var family in families)
+                {
+                    family.Sort(static (a, b) => HouseholdMemberOrder(a).CompareTo(HouseholdMemberOrder(b)));
+                }
+
+                // Whole families only: take a family when it fits, otherwise skip
+                // it whole and try the next fit — the roster never splits a family.
+                var remaining = needed;
+                var familiesTaken = 0;
+                var candidatesToAdd = new List<EnrollmentBeneficiaryRow>();
+                foreach (var family in families)
+                {
+                    if (family.Count <= remaining)
+                    {
+                        candidatesToAdd.AddRange(family);
+                        remaining -= family.Count;
+                        familiesTaken++;
+                        if (remaining == 0)
+                        {
+                            break;
+                        }
+                    }
+                }
 
                 foreach (var c in candidatesToAdd)
                 {
@@ -3853,12 +3994,38 @@ namespace AttendanceShiftingManagement.ViewModels
                 }
 
                 SelectedEnrollmentCount = _selectedEnrollmentStagingIds.Count;
-                SetSuccessStatus($"Auto-filled {candidatesToAdd.Count} candidate(s) into project roster ({SelectedEnrollmentCount}/{targetSlots} slots).");
+                SetSuccessStatus($"Auto-filled {candidatesToAdd.Count} candidate(s) from {familiesTaken} family(ies) into project roster ({SelectedEnrollmentCount}/{targetSlots} slots).");
             }
             catch (Exception ex)
             {
                 SetErrorStatus($"Auto-fill candidates failed: {ex.Message}");
             }
+        }
+
+        /// <summary>
+        /// Household key for family-aware auto-fill (same key the household-roster
+        /// fallback groups by): everything up to the last dash of a BEN-style id
+        /// (e.g. "BEN-2026-689557631" for "...-689557631-1"). Returns null for ids
+        /// too short to imply a family, which then stand alone.
+        /// </summary>
+        private static string? TryGetHouseholdPrefix(string? beneficiaryId)
+        {
+            if (string.IsNullOrWhiteSpace(beneficiaryId)) return null;
+            var trimmed = beneficiaryId.Trim();
+            var lastDash = trimmed.LastIndexOf('-');
+            if (lastDash <= 0) return null;
+            var key = trimmed.Substring(0, lastDash);
+            return key.Contains('-') ? key : null;
+        }
+
+        /// <summary>Head ("-1" line) first, then line number, then id — for roster order inside one family.</summary>
+        private static (int Head, int Line, string Fallback) HouseholdMemberOrder(EnrollmentBeneficiaryRow candidate)
+        {
+            var id = candidate.BeneficiaryId ?? string.Empty;
+            var tail = id.Substring(id.LastIndexOf('-') + 1);
+            var head = tail == "1" ? 0 : 1;
+            var line = int.TryParse(tail, out var n) ? n : int.MaxValue;
+            return (head, line, id);
         }
 
         private void DeselectAllEnrollment()

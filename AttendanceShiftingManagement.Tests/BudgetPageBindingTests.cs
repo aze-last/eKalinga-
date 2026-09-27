@@ -92,6 +92,7 @@ public sealed class BudgetPageBindingTests
         Assert.Contains("Text=\"{Binding EnrollmentSearchText, UpdateSourceTrigger=PropertyChanged}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding DataContext.RequestAddBeneficiaryCommand, RelativeSource={RelativeSource AncestorType=UserControl}}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding DataContext.RemoveSelectedBeneficiaryCommand, RelativeSource={RelativeSource AncestorType=UserControl}}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding DeselectAllEnrollmentCommand}\"", xaml, StringComparison.Ordinal);
 
         // Household records confirmation modal shown before every add
         Assert.Contains("Text=\"HOUSEHOLD RECORDS REVIEW\"", xaml, StringComparison.Ordinal);
@@ -125,6 +126,43 @@ public sealed class BudgetPageBindingTests
         Assert.DoesNotContain("OtpChallengeSession", source, StringComparison.Ordinal);
         Assert.DoesNotContain("CreateAssistanceCaseBudgetCommand", source, StringComparison.Ordinal);
         Assert.DoesNotContain("CreateCashForWorkBudgetCommand", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BudgetViewModel_ProjectCodeCheckedEarly_WithSuggestFallback()
+    {
+        var vmPath = GetProjectFilePath("ViewModels", "BudgetViewModel.cs");
+
+        var source = File.ReadAllText(vmPath);
+
+        // Uniqueness is validated when leaving Particulars (before enrollment),
+        // with a suggest command as fallback — never only at CREATE.
+        Assert.Contains("IsProjectCodeTakenAsync", source, StringComparison.Ordinal);
+        Assert.Contains("ValidateProjectCodeAndAdvanceAsync", source, StringComparison.Ordinal);
+        Assert.Contains("SuggestProjectCodeCommand", source, StringComparison.Ordinal);
+
+        var xamlPath = GetProjectFilePath("Views", "BudgetPage.xaml");
+
+        var xaml = File.ReadAllText(xamlPath);
+
+        Assert.Contains("Command=\"{Binding SuggestProjectCodeCommand}\"", xaml, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BudgetViewModel_AutoFill_TakesWholeFamiliesInLotteryOrder()
+    {
+        var vmPath = GetProjectFilePath("ViewModels", "BudgetViewModel.cs");
+
+        var source = File.ReadAllText(vmPath);
+
+        // Family-aware lottery: group by household prefix, shuffle families,
+        // take whole families only (skip-and-take-next-fit on overflow).
+        Assert.Contains("TryGetHouseholdPrefix", source, StringComparison.Ordinal);
+        Assert.Contains("Random.Shared", source, StringComparison.Ordinal);
+        Assert.Contains("HouseholdMemberOrder", source, StringComparison.Ordinal);
+
+        // The old alphabetical first-N fill must be gone from auto-fill.
+        Assert.DoesNotContain(".OrderBy(b => b.FullName ?? b.LastName)", source, StringComparison.Ordinal);
     }
 
     [Fact]

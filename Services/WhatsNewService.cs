@@ -13,6 +13,16 @@ namespace AttendanceShiftingManagement.Services
         [
             new()
             {
+                Version = "1.0.16",
+                PublishedAt = "2026-09-13",
+                Notes =
+                [
+                    "Budget project wizard: added project code auto-suggest and fair family-aware enrollment lottery keeping households together.",
+                    "Integrated CRS cedula verification gateway and verification panel."
+                ]
+            },
+            new()
+            {
                 Version = "1.0.15",
                 PublishedAt = "2026-09-12",
                 Notes =
